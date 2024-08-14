@@ -10,9 +10,9 @@ import { EntryTranslation } from "@renderer/modules/entry-column/translation"
 import { useEntry } from "@renderer/store/entry/hooks"
 import { useFeedById } from "@renderer/store/feed"
 
-import { ReactVirtuosoItemPlaceholder } from "../../components/ui/placeholder"
-import { StarIcon } from "./star-icon"
-import type { UniversalItemProps } from "./types"
+import { ReactVirtuosoItemPlaceholder } from "../../../components/ui/placeholder"
+import { StarIcon } from "../star-icon"
+import type { UniversalItemProps } from "../types"
 
 export function ListItem({
   entryId,
@@ -46,7 +46,7 @@ export function ListItem({
       className={cn(
         "group relative flex py-4 pl-3 pr-2",
         !asRead &&
-        "before:absolute before:left-0 before:top-[1.4375rem] before:block before:size-1.5 before:rounded-full before:bg-theme-accent",
+        "before:absolute before:-left-0.5 before:top-[1.4375rem] before:block before:size-2 before:rounded-full before:bg-theme-accent",
       )}
     >
       {!withAudio && <FeedIcon feed={feed} fallback entry={entry.entries} />}

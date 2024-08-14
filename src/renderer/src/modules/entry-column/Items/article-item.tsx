@@ -1,7 +1,7 @@
 import { Skeleton } from "@renderer/components/ui/skeleton"
-import { ListItem } from "@renderer/modules/entry-column/list-item-template"
+import { ListItem } from "@renderer/modules/entry-column/templates/list-item-template"
 
-import type { UniversalItemProps } from "./types"
+import type { UniversalItemProps } from "../types"
 
 export function ArticleItem({
   entryId,
@@ -20,7 +20,7 @@ export function ArticleItem({
 
 export const ArticleItemSkeleton = (
   <div className="relative h-[120px] rounded-md bg-theme-background text-zinc-700 transition-colors dark:text-neutral-400">
-    <div className="relative z-[1]">
+    <div className="relative">
       <div className="group relative flex py-4 pl-3 pr-2">
         <Skeleton className="mr-2 size-5 rounded-sm" />
         <div className="-mt-0.5 flex-1 text-sm leading-tight">

@@ -12,11 +12,10 @@ import { cn } from "@renderer/lib/utils"
 import { useEntry } from "@renderer/store/entry/hooks"
 import { useFeedById } from "@renderer/store/feed"
 
-import { ReactVirtuosoItemPlaceholder } from "../../components/ui/placeholder"
-import { MarkAllButton } from "./mark-all-button"
-import { StarIcon } from "./star-icon"
-import { EntryTranslation } from "./translation"
-import type { EntryListItemFC } from "./types"
+import { ReactVirtuosoItemPlaceholder } from "../../../components/ui/placeholder"
+import { StarIcon } from "../star-icon"
+import { EntryTranslation } from "../translation"
+import type { EntryListItemFC } from "../types"
 
 export const SocialMediaItem: EntryListItemFC = ({
   entryId,
@@ -74,7 +73,7 @@ export const SocialMediaItem: EntryListItemFC = ({
             {!!entry.collections && <StarIcon />}
           </div>
         </div>
-        <div className="mt-1 flex gap-2 overflow-x-auto">
+        <div className="mt-1 flex gap-2 overflow-x-auto pb-2">
           {entry.entries.media?.map((media, i, mediaList) => (
             <Media
               key={media.url}
@@ -116,11 +115,14 @@ const ActionBar = ({ entryId }: { entryId: string }) => {
   const { items } = useEntryActions({
     entry,
     view,
+    type: "toolbar",
   })
   return (
     <div className="flex origin-right scale-90 items-center gap-1">
       {items
-        .filter((item) => !item.hide && (item.key !== "read" && item.key !== "unread"))
+        .filter(
+          (item) => !item.hide && item.key !== "read" && item.key !== "unread",
+        )
         .map((item) => (
           <ActionButton
             icon={
@@ -141,7 +143,7 @@ const ActionBar = ({ entryId }: { entryId: string }) => {
 
 export const SocialMediaItemSkeleton = (
   <div className="relative m-auto w-[75ch] rounded-md bg-theme-background text-zinc-700 transition-colors dark:text-neutral-400">
-    <div className="relative z-[1]">
+    <div className="relative">
       <div className="group relative flex py-4 pl-3 pr-2">
         <Skeleton className="mr-2 size-9" />
         <div className="ml-2 min-w-0 flex-1">
@@ -165,28 +167,3 @@ export const SocialMediaItemSkeleton = (
     </div>
   </div>
 )
-
-export const SocialMediaDateItem = ({
-  date,
-  className,
-}: {
-  date: string
-  className?: string
-}) => {
-  const dateObj = new Date(date)
-  const dateString = dateObj.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
-  const startOfDay = new Date(dateObj.setHours(0, 0, 0, 0)).getTime()
-  const endOfDay = new Date(dateObj.setHours(23, 59, 59, 999)).getTime()
-
-  return (
-    <div className={cn(className, "m-auto w-[75ch] gap-3 pl-5 text-base")}>
-      <MarkAllButton
-        filter={{
-          startTime: startOfDay,
-          endTime: endOfDay,
-        }}
-      />
-      {dateString}
-    </div>
-  )
-}
