@@ -8,8 +8,8 @@ import { createHighlighterCoreSync, createJavaScriptRegexEngine } from "shiki"
 
 export const shikiTransformers: ShikiTransformer[] = [
   transformerMetaHighlight(),
-  transformerNotationDiff(),
-  transformerNotationHighlight(),
+  transformerNotationDiff({ matchAlgorithm: "v3" }),
+  transformerNotationHighlight({ matchAlgorithm: "v3" }),
 ]
 
 const js = createJavaScriptRegexEngine()
