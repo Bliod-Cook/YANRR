@@ -2,7 +2,7 @@ appId: is.follow
 ---
 - runFlow: open-auth.yaml
 - tapOn:
-    text: Continue with Email
+    id: login-provider-credential
 - extendedWaitUntil:
     visible:
       id: register-email-input
@@ -13,15 +13,12 @@ appId: is.follow
 - tapOn:
     id: register-password-input
 - eraseText
-- setClipboard: ${E2E_PASSWORD}
-- pasteText
+- inputText: ${E2E_PASSWORD}
 - tapOn:
     id: register-confirm-password-input
 - eraseText
-- setClipboard: ${E2E_PASSWORD}
-- pasteText
-- tapOn:
-    id: register-submit
+- inputText: ${E2E_PASSWORD}
+- pressKey: Enter
 - runFlow:
     when:
       visible:
