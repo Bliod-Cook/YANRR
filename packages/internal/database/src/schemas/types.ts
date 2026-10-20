@@ -4,7 +4,6 @@ import type {
   feedsTable,
   imagesTable,
   inboxesTable,
-  listsTable,
   subscriptionsTable,
   summariesTable,
   syncMetaTable,
@@ -19,8 +18,6 @@ export type SubscriptionSchema = typeof subscriptionsTable.$inferInsert
 export type FeedSchema = typeof feedsTable.$inferInsert
 
 export type InboxSchema = typeof inboxesTable.$inferInsert
-
-export type ListSchema = typeof listsTable.$inferInsert
 
 export type UnreadSchema = typeof unreadTable.$inferInsert
 

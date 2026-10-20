@@ -384,7 +384,6 @@ describe("syncEngine", () => {
     subscriptionActions.upsertManyInSession([
       {
         feedId: "feed-1",
-        listId: null,
         inboxId: null,
         userId: "user-1",
         view: FeedViewType.Articles,
@@ -396,7 +395,6 @@ describe("syncEngine", () => {
       },
       {
         feedId: "feed-2",
-        listId: null,
         inboxId: null,
         userId: "user-1",
         view: FeedViewType.Articles,
@@ -454,7 +452,6 @@ describe("syncEngine", () => {
     }
     const feedSubscription = {
       feedId: "feed-1",
-      listId: null,
       inboxId: null,
       userId: "user-1",
       view: FeedViewType.Articles,
@@ -535,7 +532,6 @@ describe("syncEngine", () => {
       await import("../modules/subscription/store")
     const feedSubscription = {
       feedId: "feed-1",
-      listId: null,
       inboxId: null,
       userId: "user-1",
       view: FeedViewType.Articles,
@@ -584,7 +580,6 @@ describe("syncEngine", () => {
     subscriptionActions.upsertManyInSession([
       {
         feedId: "feed-2",
-        listId: null,
         inboxId: null,
         userId: "user-1",
         view: FeedViewType.Articles,

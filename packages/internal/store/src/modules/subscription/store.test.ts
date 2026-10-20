@@ -66,7 +66,6 @@ const createSubscription = (
   category: string | null,
 ): SubscriptionModel => ({
   feedId,
-  listId: null,
   inboxId: null,
   userId: "user",
   view,
