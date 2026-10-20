@@ -17,19 +17,6 @@ import i18nCompleteness from "../plugins/vite/utils/i18n-completeness"
 const pkgDir = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const pkg = JSON.parse(readFileSync(resolve(pkgDir, "./package.json"), "utf8"))
 
-const getChangelogFileContent = () => {
-  const { version: pkgVersion } = pkg
-  const isDev = process.env.NODE_ENV === "development"
-  // get major-minor-patch, e.g. 0.2.0-beta.2 -> 0.2.0
-  const version = pkgVersion.split("-")[0]
-  try {
-    return readFileSync(resolve(pkgDir, "./changelog", `${isDev ? "next" : version}.md`), "utf8")
-  } catch {
-    return ""
-  }
-}
-
-const changelogFile = getChangelogFileContent()
 export const viteRenderBaseConfig = {
   worker: {
     format: "es",
@@ -88,7 +75,6 @@ export const viteRenderBaseConfig = {
     DEBUG: process.env.DEBUG === "true",
 
     I18N_COMPLETENESS_MAP: JSON.stringify({ ...i18nCompleteness, en: 100 }),
-    CHANGELOG_CONTENT: JSON.stringify(changelogFile),
     "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV),
   },
 } satisfies UserConfig

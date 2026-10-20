@@ -9,7 +9,6 @@ import {
 import { getDBFile } from "@follow/database/db"
 import { DEV, MODE } from "@follow/shared/constants"
 import { env } from "@follow/shared/env.desktop"
-import { useUserRole } from "@follow/store/user/hooks"
 
 import { useDebugFeatureValue, useSetDebugFeatureValue } from "~/atoms/debug-feature"
 import { PlainModal } from "~/components/ui/modal/stacked/custom-modal"
@@ -80,7 +79,6 @@ export const EnvironmentDebugModalContent = () => {
 }
 
 export const EnvironmentIndicator = () => {
-  const role = useUserRole()
   const { present } = useModalStack()
   return (
     <Tooltip>
@@ -99,7 +97,7 @@ export const EnvironmentIndicator = () => {
           }}
         >
           <div className="center fixed bottom-0 right-0 z-[99999] flex rounded-tl bg-folo px-1 py-0.5 text-xs text-white">
-            {role}:{DEV && <i className="i-mgc-bug-cute-re size-3" />}
+            {DEV && <i className="i-mgc-bug-cute-re size-3" />}
             {MODE}
           </div>
         </button>

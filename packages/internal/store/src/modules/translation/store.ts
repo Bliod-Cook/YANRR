@@ -1,4 +1,3 @@
-import { UserRole } from "@follow/constants"
 import type { TranslationSchema } from "@follow/database/schemas/types"
 import { TranslationService } from "@follow/database/services/translation"
 import type { SupportedActionLanguage } from "@follow/shared"
@@ -11,7 +10,6 @@ import type { Hydratable, Resetable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
 import { readNdjsonStream } from "../../lib/stream"
 import { getEntry } from "../entry/getter"
-import { useUserStore } from "../user/store"
 import type { EntryTranslation, TranslationFieldArray, TranslationMode } from "./types"
 import { translationFields } from "./types"
 
@@ -230,9 +228,6 @@ class TranslationSyncService {
     target: "content" | "readabilityContent"
     mode?: TranslationMode
   }) {
-    const userRole = useUserStore.getState().role
-
-    if (userRole === UserRole.Free) return null
     const translationMode = mode ?? "bilingual"
     await this.ensureMode(translationMode)
 

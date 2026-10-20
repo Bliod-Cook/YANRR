@@ -24,7 +24,7 @@ describe("userSyncService.whoami", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useUserStore.setState({ users: {}, whoami: me, role: null, roleEndAt: null })
+    useUserStore.setState({ users: {}, whoami: me })
     apiContext.provide({ auth: { getSession: getSessionMock } } as unknown as FollowAPI)
   })
 
@@ -65,7 +65,7 @@ describe("userSyncService.updateProfile", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useUserStore.setState({ users: {}, whoami: me, role: null, roleEndAt: null })
+    useUserStore.setState({ users: {}, whoami: me })
     authClientContext.provide({ updateUser: updateUserMock } as unknown as AuthClient)
   })
 
@@ -183,7 +183,7 @@ describe("userSyncService.updateEmail", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useUserStore.setState({ users: {}, whoami: me, role: null, roleEndAt: null })
+    useUserStore.setState({ users: {}, whoami: me })
     authClientContext.provide({ changeEmail: changeEmailMock } as unknown as AuthClient)
   })
 
@@ -221,7 +221,7 @@ describe("userSyncService.fetchUsers", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useUserStore.setState({ users: {}, whoami: me, role: null, roleEndAt: null })
+    useUserStore.setState({ users: {}, whoami: me })
     getBatchMock.mockImplementation(async ({ ids }: { ids: string[] }) => ({
       code: 0,
       data: Object.fromEntries(ids.map((id) => [id, { id, name: id }])),

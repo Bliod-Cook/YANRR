@@ -417,7 +417,6 @@
   "tasks.view_in_settings": "查看已计划任务",
   "token_usage_pill.billed": "计费",
   "token_usage_pill.byok": "BYOK",
-  "token_usage_pill.credits": "额度",
   "token_usage_pill.credits_usage": "AI 额度使用",
   "token_usage_pill.duration": "持续时间",
   "token_usage_pill.model_info": "模型信息",

@@ -1,5 +1,5 @@
 import { isMobile } from "@follow/components/hooks/useMobile.js"
-import { FeedViewType, getView, UserRole } from "@follow/constants"
+import { FeedViewType, getView } from "@follow/constants"
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { useIsEntryStarred } from "@follow/store/collection/hooks"
 import { isOnboardingEntryUrl } from "@follow/store/constants/onboarding"
@@ -8,7 +8,6 @@ import { entrySyncServices } from "@follow/store/entry/store"
 import type { EntryModel } from "@follow/store/entry/types"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useIsInbox } from "@follow/store/inbox/hooks"
-import { useUserRole } from "@follow/store/user/hooks"
 import { doesTextContainHTML } from "@follow/utils/utils"
 import { useMemo } from "react"
 
@@ -260,7 +259,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
   const runCmdFn = useRunCommandFn()
   const hasEntry = !!entry
 
-  const userRole = useUserRole()
   const integrationSettings = useIntegrationSettingValue()
 
   const shortcuts = useCommandShortcuts()
@@ -381,7 +379,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
             view,
           ),
         active: isShowAITranslationOnce,
-        disabled: userRole === UserRole.Free || userRole === UserRole.Trial,
         entryId,
       }),
       new EntryActionMenuItem({
@@ -485,7 +482,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
     isInCollection,
     isCurrentVisitEntry,
     isShowSourceContent,
-    userRole,
     isShowAITranslationAuto,
     isShowAITranslationOnce,
     isCollection,

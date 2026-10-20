@@ -4,60 +4,11 @@ import { Input, TextArea } from "@follow/components/ui/input/index.js"
 import { Label } from "@follow/components/ui/label/index.jsx"
 import { SegmentGroup, SegmentItem } from "@follow/components/ui/segment/index.jsx"
 import { Switch } from "@follow/components/ui/switch/index.jsx"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipPortal,
-  TooltipTrigger,
-} from "@follow/components/ui/tooltip/index.js"
 import { cn } from "@follow/utils/utils"
 import type { ChangeEventHandler, FocusEventHandler, KeyboardEventHandler, ReactNode } from "react"
-import { useCallback, useId, useState } from "react"
-import { useTranslation } from "react-i18next"
+import { useId, useState } from "react"
 
-import { useIsPaymentEnabled } from "~/atoms/server-configs"
 import { useTitleCaseIfEnglish } from "~/hooks/common/useTitleCaseIfEnglish"
-
-import { SettingPaidLevels } from "./helper/setting-builder"
-import { useSetSettingTab } from "./modal/context"
-
-export const PaidBadge: Component<{
-  paidLevel: SettingPaidLevels
-}> = ({ paidLevel }) => {
-  const { t } = useTranslation("settings")
-  const setTab = useSetSettingTab()
-  const isPaymentEnabled = useIsPaymentEnabled()
-
-  const handleClick = useCallback(
-    (e) => {
-      e.preventDefault()
-      setTab("plan")
-    },
-    [setTab],
-  )
-
-  if (!isPaymentEnabled) {
-    return null
-  }
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <i className="i-mgc-power block text-accent" onClick={handleClick} />
-      </TooltipTrigger>
-      <TooltipPortal>
-        <TooltipContent>
-          {paidLevel === SettingPaidLevels.FreeLimited && (
-            <span>{t("control.paid_badge.free_limited")}</span>
-          )}
-          {paidLevel === SettingPaidLevels.Basic && (
-            <span>{t("control.paid_badge.basic_or_higher")}</span>
-          )}
-        </TooltipContent>
-      </TooltipPortal>
-    </Tooltip>
-  )
-}
 
 export const SettingCheckbox: Component<{
   label: string
@@ -84,8 +35,7 @@ export const SettingSwitch: Component<{
   checked: boolean
   onCheckedChange: (checked: boolean) => void
   disabled?: boolean
-  paidLevel?: SettingPaidLevels
-}> = ({ checked, label, onCheckedChange, className, disabled, paidLevel }) => {
+}> = ({ checked, label, onCheckedChange, className, disabled }) => {
   const id = useId()
   const titleCaseIfEnglish = useTitleCaseIfEnglish()
   const handleCheckedChange = (checked: boolean) => {
@@ -93,10 +43,7 @@ export const SettingSwitch: Component<{
   }
   return (
     <div className={cn("mb-3 flex items-center justify-between gap-4", className)}>
-      <Label htmlFor={id} className="flex items-center gap-1">
-        <span>{titleCaseIfEnglish(label)}</span>
-        {!!paidLevel && <PaidBadge paidLevel={paidLevel} />}
-      </Label>
+      <Label htmlFor={id}>{titleCaseIfEnglish(label)}</Label>
       <Switch id={id} checked={checked} onCheckedChange={handleCheckedChange} disabled={disabled} />
     </div>
   )

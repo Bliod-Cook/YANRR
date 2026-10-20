@@ -1,10 +1,8 @@
 import { ResponsiveSelect } from "@follow/components/ui/select/responsive.js"
-import { UserRole } from "@follow/constants"
 import { useTypeScriptHappyCallback } from "@follow/hooks"
 import { ACTION_LANGUAGE_MAP } from "@follow/shared"
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { START_IN_TRAY_ARGS } from "@follow/shared/desktop-launch"
-import { useUserRole } from "@follow/store/user/hooks"
 import { cn } from "@follow/utils/utils"
 import dayjs from "dayjs"
 import { useAtom } from "jotai"
@@ -14,7 +12,6 @@ import { useTranslation } from "react-i18next"
 import { currentSupportedLanguages } from "~/@types/constants"
 import { defaultResources } from "~/@types/default-resource"
 import { langLoadingLockMapAtom } from "~/atoms/lang"
-import { useIsPaymentEnabled } from "~/atoms/server-configs"
 import {
   DEFAULT_ACTION_LANGUAGE,
   getGeneralSettings,
@@ -30,9 +27,8 @@ import { fallbackLanguage } from "~/i18n"
 import { ipcServices } from "~/lib/client"
 import { setTranslationCache } from "~/modules/entry-content/atoms"
 
-import { PaidBadge, SettingDescription, SettingInput, SettingSwitch } from "../control"
+import { SettingDescription, SettingInput, SettingSwitch } from "../control"
 import { createSetting } from "../helper/builder"
-import { SettingPaidLevels } from "../helper/setting-builder"
 import {
   useWrapEnhancedSettingItem,
   WrapEnhancedSettingTab,
@@ -40,7 +36,6 @@ import {
 import { SettingItemGroup } from "../section"
 
 const { defineSettingItem: _defineSettingItem, SettingBuilder } = createSetting(
-  "general",
   useGeneralSettingValue,
   setGeneralSetting,
 )
@@ -270,17 +265,11 @@ export const LanguageSelector = ({
 const TranslationModeSelector = () => {
   const { t } = useTranslation("settings")
   const translationMode = useGeneralSettingKey("translationMode")
-  const role = useUserRole()
-  const isPaymentEnabled = useIsPaymentEnabled()
-  const disabledForRole = role === UserRole.Free && isPaymentEnabled
 
   return (
     <>
       <div className="mt-4 flex items-center justify-between">
-        <span className="flex shrink-0 items-center gap-1 text-sm font-medium">
-          <span>{t("general.translation_mode.label")}</span>
-          <PaidBadge paidLevel={SettingPaidLevels.Basic} />
-        </span>
+        <span className="shrink-0 text-sm font-medium">{t("general.translation_mode.label")}</span>
         <ResponsiveSelect
           size="sm"
           triggerClassName="w-48"
@@ -293,7 +282,6 @@ const TranslationModeSelector = () => {
             { label: t("general.translation_mode.bilingual"), value: "bilingual" },
             { label: t("general.translation_mode.translation-only"), value: "translation-only" },
           ]}
-          disabled={disabledForRole}
         />
       </div>
       <SettingDescription>{t("general.translation_mode.description")}</SettingDescription>

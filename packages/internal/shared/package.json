@@ -31,7 +31,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@better-auth/stripe": "1.7.5",
     "@electron-toolkit/preload": "3.0.2",
     "@electron-toolkit/tsconfig": "2.0.0",
     "@follow-app/client-sdk": "catalog:",
@@ -40,7 +39,6 @@
     "better-auth": "1.7.5",
     "drizzle-orm": "0.45.3",
     "sonner": "2.0.8",
-    "stripe": "22.6.2",
     "zod": "4.6.5"
   }
 }

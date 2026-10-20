@@ -1,4 +1,3 @@
-import { useUserRole } from "@follow/store/user/hooks"
 import { useMemo } from "react"
 
 import { useDebugFeatureValue } from "~/atoms/debug-feature"
@@ -8,9 +7,8 @@ import { getMemoizedSettings } from "../settings-glob"
 import type { SettingPageContext } from "../utils"
 
 export const useSettingPageContext = (): SettingPageContext => {
-  const role = useUserRole()
   const isInMASReview = useIsInMASReview()
-  return useMemo(() => ({ role, isInMASReview }), [role, isInMASReview])
+  return useMemo(() => ({ isInMASReview }), [isInMASReview])
 }
 
 export const useAvailableSettings = () => {
@@ -18,7 +16,7 @@ export const useAvailableSettings = () => {
   const serverConfigs = useServerConfigs()
   const debugFeatureValue = useDebugFeatureValue()
   return useMemo(
-    () => getMemoizedSettings().filter((t) => !t.loader.hideIf?.(ctx, serverConfigs)),
+    () => getMemoizedSettings().filter((t) => !t.loader.hideIf?.(ctx)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [ctx, serverConfigs, debugFeatureValue],
   )

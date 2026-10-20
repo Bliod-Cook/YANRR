@@ -1,4 +1,3 @@
-import type { UserRole } from "@follow/constants"
 import { TOTP_ISSUER } from "@follow/constants"
 import type { UserSchema } from "@follow/database/schemas/types"
 import { UserService } from "@follow/database/services/user"
@@ -16,24 +15,21 @@ import type { UserProfileEditable } from "./types"
 
 export type UserModel = UserSchema
 
-export type MeModel = AuthUser & {
+export type MeModel = Omit<
+  AuthUser,
+  "role" | "roleEndAt" | "stripeCustomerId" | "appleAppAccountToken"
+> & {
   emailVerified?: boolean
   twoFactorEnabled?: boolean | null
 }
 export type UserStore = {
   users: Record<string, UserModel>
   whoami: MeModel | null
-  role: UserRole | null
-  roleEndAt: Date | null
-  rsshubSubscriptionLimit?: number | null
-  feedSubscriptionLimit?: number | null
 }
 
 const defaultState: UserStore = {
   users: {},
   whoami: null,
-  role: null,
-  roleEndAt: null,
 }
 
 export const useUserStore = createZustandStore<UserStore>("user")(() => defaultState)
@@ -155,10 +151,6 @@ class UserSyncService {
     if (!res) {
       immerSet((state) => {
         state.whoami = null
-        state.role = null
-        state.roleEndAt = null
-        state.rsshubSubscriptionLimit = null
-        state.feedSubscriptionLimit = null
       })
       return null
     }
@@ -167,12 +159,6 @@ class UserSyncService {
     const user = apiMorph.toWhoami(res.user)
     immerSet((state) => {
       state.whoami = { ...user, emailVerified: res.user?.emailVerified ?? false }
-      state.role = res.user?.role as UserRole | null
-      if (res.user?.roleEndAt) {
-        state.roleEndAt = new Date(res.user?.roleEndAt)
-      }
-      state.rsshubSubscriptionLimit = res.rsshubSubscriptionLimit ?? null
-      state.feedSubscriptionLimit = res.feedSubscriptionLimit ?? null
     })
     userActions.upsertMany([user as unknown as UserModel])
 
@@ -342,8 +328,6 @@ class UserActions implements Hydratable, Resetable {
     tx.store(() => {
       immerSet((state) => {
         state.whoami = null
-        state.role = null
-        state.roleEndAt = null
       })
     })
     tx.persist(() => UserService.removeCurrentUser())

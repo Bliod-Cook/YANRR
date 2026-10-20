@@ -1,7 +1,5 @@
-import { isFreeRole } from "@follow/constants"
 import { useEntry, usePrefetchEntryDetail } from "@follow/store/entry/hooks"
 import { useEntryTranslation, usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
-import { useUserRole } from "@follow/store/user/hooks"
 import { createElement, useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
@@ -45,8 +43,6 @@ export const useEntryContent = (entryId: string) => {
   const isReadabilitySuccess = useEntryIsInReadabilitySuccess(entryId)
 
   const enableTranslation = useShowAITranslation()
-  const userRole = useUserRole()
-  const shouldPrefetchTranslation = enableTranslation && !isFreeRole(userRole)
   const actionLanguage = useActionLanguage()
   const translationMode = useGeneralSettingKey("translationMode")
   const contentTranslated = useEntryTranslation({
@@ -56,7 +52,7 @@ export const useEntryContent = (entryId: string) => {
   })
   usePrefetchEntryTranslation({
     entryIds: [entryId],
-    enabled: shouldPrefetchTranslation,
+    enabled: enableTranslation,
     language: actionLanguage,
     withContent: true,
     target: isReadabilitySuccess ? "readabilityContent" : "content",

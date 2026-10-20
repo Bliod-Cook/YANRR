@@ -4,7 +4,7 @@ import { useWhoami } from "@follow/store/user/hooks"
 import { preventDefault } from "@follow/utils/dom"
 import type { PropsWithChildren } from "react"
 import * as React from "react"
-import { Suspense, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Outlet } from "react-router"
 
@@ -23,7 +23,6 @@ import { DebugRegistry } from "~/modules/debug/registry"
 import { EntriesProvider } from "~/modules/entry-column/context/EntriesContext"
 import { SearchCmdK } from "~/modules/panel/cmdk"
 import { CmdNTrigger } from "~/modules/panel/cmdn"
-import { AppNotificationContainer } from "~/modules/upgrade/lazy/index"
 
 import { SubscriptionColumnContainer } from "./subscription-column/SubscriptionColumn"
 
@@ -130,7 +129,7 @@ const errorTypes = [
  * - `/timeline/*` → TimelineEntryTwoColumnLayout (two-column feed reader)
  * - `/discover` → SubviewLayout (full-screen discovery)
  * - `/ai` → AIChatLayout (AI chat interface)
- * - `/power`, `/action`, `/rsshub` → SubviewLayout (utility pages)
+ * - `/action`, `/rsshub` → SubviewLayout (utility pages)
  *
  * @component
  * @example
@@ -172,10 +171,6 @@ export function MainDestopLayout() {
   return (
     <RootContainer ref={containerRef}>
       {!PROD && <EnvironmentIndicator />}
-
-      <Suspense>
-        <AppNotificationContainer />
-      </Suspense>
 
       <EntriesProvider>
         <SubscriptionColumnContainer />

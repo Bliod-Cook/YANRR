@@ -1,14 +1,9 @@
-import { UserRole } from "@follow/constants"
-import { SettingPaidLevels } from "@follow/shared/settings/constants"
-import { useUserRole } from "@follow/store/user/hooks"
 import type { FC, ReactNode } from "react"
 import * as React from "react"
 import { isValidElement } from "react"
 
 import { SettingActionItem, SettingDescription, SettingInput, SettingSwitch } from "../control"
 import { SettingItemGroup, SettingSectionTitle } from "../section"
-
-export { SettingPaidLevels } from "@follow/shared/settings/constants"
 
 type SharedSettingItem = {
   disabled?: boolean
@@ -29,7 +24,6 @@ export type SettingItem<T, K extends keyof T = keyof T> = {
     className?: string
     [key: string]: any
   }
-  paidLevel?: SettingPaidLevels
 } & SharedSettingItem
 
 type SectionSettingItem = {
@@ -55,7 +49,6 @@ export const createSettingBuilder =
   }) => {
     const { settings } = props
     const settingObject = useSetting()
-    const role = useUserRole()
 
     const filteredSettings = settings.filter((i) => !!i)
     return filteredSettings.map((setting, index) => {
@@ -92,12 +85,6 @@ export const createSettingBuilder =
       if ("type" in assertSetting && assertSetting.type === "title") {
         return null
       }
-      const disabledForRole =
-        role === UserRole.Free &&
-        "paidLevel" in assertSetting &&
-        assertSetting.paidLevel !== undefined &&
-        assertSetting.paidLevel !== SettingPaidLevels.Free &&
-        assertSetting.paidLevel !== SettingPaidLevels.FreeLimited
 
       let ControlElement: React.ReactNode
 
@@ -118,8 +105,7 @@ export const createSettingBuilder =
                   assertSetting.onChange(checked as T[keyof T])
                 }}
                 label={assertSetting.label}
-                disabled={assertSetting.disabled || disabledForRole}
-                paidLevel={assertSetting.paidLevel}
+                disabled={assertSetting.disabled}
               />
             )
             break
