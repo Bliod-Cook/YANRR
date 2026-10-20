@@ -19,8 +19,7 @@
   "github.copilot.chat.codeGeneration.useInstructionFiles": true,
   "tailwindCSS.experimental.configFile": {
     "apps/mobile/tailwind.config.ts": "apps/mobile/**",
-    "apps/ssr/tailwind.config.ts": "apps/ssr/**",
-    "apps/desktop/tailwind.config.ts": ["!apps/mobile/**", "!apps/ssr/**", "**"]
+    "apps/desktop/tailwind.config.ts": ["!apps/mobile/**", "**"]
   },
   "typescript.tsserver.maxTsServerMemory": 8096,
   "typescript.tsserver.nodePath": "node",

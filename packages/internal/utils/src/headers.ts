@@ -116,22 +116,6 @@ export const createDesktopAPIHeaders = ({ version }: { version: string }) => {
   }
 }
 
-enum SSRPlatform {
-  SSR = "ssr",
-}
-
-export const createSSRAPIHeaders = ({ version }: { version: string }) => {
-  return {
-    ...commonHeaders,
-    "X-App-Platform": SSRPlatform.SSR,
-    "X-App-Name": "Folo SSR",
-    "X-App-Version": version,
-    "User-Agent":
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Folo",
-    ...(DEV ? { "X-App-Dev": "1" } : {}),
-  }
-}
-
 enum MobilePlatform {
   MobileIOSiPhone = "mobile/ios/iphone",
   MobileIOSiPad = "mobile/ios/ipad",

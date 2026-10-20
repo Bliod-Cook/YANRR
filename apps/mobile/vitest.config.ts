@@ -10,7 +10,6 @@ export default defineConfig({
       "src/**/*.spec.ts",
       "scripts/**/*.test.ts",
       "plugins/**/*.test.ts",
-      "../../.github/scripts/**/*.test.ts",
     ],
   },
 })

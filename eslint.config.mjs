@@ -177,14 +177,6 @@ export default defineConfig(
     },
   },
   {
-    files: ["apps/ssr/**/*"],
-    settings: {
-      tailwindcss: {
-        config: path.join(import.meta.dirname, "apps/ssr/tailwind.config.ts"),
-      },
-    },
-  },
-  {
     files: ["apps/mobile/**/*"],
     settings: {
       tailwindcss: {

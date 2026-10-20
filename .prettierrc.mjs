@@ -21,11 +21,5 @@ export default {
         tailwindConfig: "./apps/mobile/web-app/html-renderer/tailwind.config.ts",
       },
     },
-    {
-      files: "apps/ssr/**/*.{css,html,js,jsx,ts,tsx}",
-      options: {
-        tailwindConfig: "./apps/ssr/tailwind.config.ts",
-      },
-    },
   ],
 }
