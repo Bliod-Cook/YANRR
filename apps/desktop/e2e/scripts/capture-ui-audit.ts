@@ -3,7 +3,7 @@ import { mkdir } from "node:fs/promises"
 import { chromium } from "@playwright/test"
 import { join } from "pathe"
 
-import { createTestAccount, tryDeleteCurrentUser } from "../support/account"
+import { createTestAccount } from "../support/account"
 import {
   closeSettings,
   dismissFeedForm,
@@ -169,7 +169,6 @@ async function main() {
     await waitForUiSettled(page)
     await capture("home-after-settings")
   } finally {
-    await tryDeleteCurrentUser(page, env).catch(() => null)
     await context.close().catch(() => {})
     await browser.close().catch(() => {})
   }

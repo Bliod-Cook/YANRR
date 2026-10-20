@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 
-import { createTestAccount, tryDeleteCurrentUser } from "../../support/account"
+import { createTestAccount } from "../../support/account"
 import {
   dismissFeedForm,
   expectTimelineSwitchAndEntryReadFlow,
@@ -103,13 +103,6 @@ test.describe("electron core flows", () => {
 
       await test.step("unsubscribes onboarding feed from settings", async () => {
         await unsubscribeFirstFeedFromSettings(electronApp.page)
-      })
-
-      const cleanup = await tryDeleteCurrentUser(electronApp.page, env)
-      expect(cleanup.status).toBeGreaterThanOrEqual(-1)
-      test.info().annotations.push({
-        type: "cleanup",
-        description: `delete-user-custom status=${cleanup.status}`,
       })
     } finally {
       await closeElectronApp(electronApp)

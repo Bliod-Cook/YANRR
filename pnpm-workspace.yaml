@@ -90,6 +90,7 @@ packageExtensions:
         optional: true
 
 patchedDependencies:
+  "@follow-app/client-sdk@0.3.98": patches/@follow-app__client-sdk@0.3.98.patch
   "@mozilla/readability@0.6.0": patches/@mozilla__readability@0.6.0.patch
   "@pengx17/electron-forge-maker-appimage": patches/@pengx17__electron-forge-maker-appimage.patch
   re-resizable@6.11.2: patches/re-resizable@6.11.2.patch

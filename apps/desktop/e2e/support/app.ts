@@ -3,9 +3,11 @@ import { expect } from "@playwright/test"
 
 import type { TestAccount } from "./account"
 import type { DesktopE2EEnv } from "./env"
-import { buildWebAppURL } from "./env"
+import { buildWebAppURL, FEED_SERVER_PORT } from "./env"
 
-const ONBOARDING_FEED_URL = "folo://onboarding"
+const ONBOARDING_FEED_URL = `http://localhost:${FEED_SERVER_PORT}/rss.xml`
+/** The title of `server/tests/fixtures/rss2.xml`, served at `ONBOARDING_FEED_URL`. */
+const ONBOARDING_FEED_TITLE = "Example Blog"
 
 const isVisible = async (locator: Locator) => locator.isVisible().catch(() => false)
 const visibleByTestId = (page: Page, testId: string) =>
@@ -750,7 +752,7 @@ export const openOnboardingFeedForm = async (
         const url = new URL(response.url())
         return (
           response.request().method() === "GET" &&
-          url.pathname === "/feeds" &&
+          url.pathname.endsWith("/feeds") &&
           url.searchParams.get("url") === ONBOARDING_FEED_URL
         )
       },
@@ -772,16 +774,17 @@ export const followOnboardingFeed = async (
   options?: { electron?: boolean },
 ) => {
   await openOnboardingFeedForm(page, env, options)
-  const onboardingDiscoverCard = page
-    .locator("[data-feed-id]")
-    .filter({ hasText: "Welcome to Folo" })
-    .first()
-  const followButton = onboardingDiscoverCard.getByRole("button", { name: /^Follow$/i })
-  if (await followButton.isVisible().catch(() => false)) {
-    await expect(followButton).toBeEnabled({ timeout: 15_000 })
-    await followButton.click()
-  }
-  await expect(page.getByText("Welcome to Folo").first()).toBeVisible({ timeout: 15_000 })
+  const subscribeResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.endsWith("/subscriptions"),
+    { timeout: 30_000 },
+  )
+  await visibleByTestId(page, "feed-form-submit").click()
+  expect((await subscribeResponse).ok()).toBe(true)
+  await expect(
+    page.locator("[data-feed-id]").filter({ hasText: ONBOARDING_FEED_TITLE }).first(),
+  ).toBeVisible({ timeout: 15_000 })
 }
 
 export const dismissFeedForm = async (page: Page) => {
@@ -827,7 +830,7 @@ const findSettingsFeedRow = async (page: Page, onboardingFeedId: string | null) 
   const fallbackFeedRow = page
     .locator('[data-testid^="settings-feed-row-"]')
     .filter({
-      hasText: "Welcome to Folo",
+      hasText: ONBOARDING_FEED_TITLE,
     })
     .first()
   const settingsViewport = page.locator("#setting-modal [data-radix-scroll-area-viewport]").first()
@@ -861,7 +864,7 @@ export const unsubscribeFirstFeedFromSettings = async (page: Page, _env?: Deskto
   const onboardingFeedItem = page
     .locator("[data-feed-id]")
     .filter({
-      hasText: "Welcome to Folo",
+      hasText: ONBOARDING_FEED_TITLE,
     })
     .first()
   const onboardingFeedId =
