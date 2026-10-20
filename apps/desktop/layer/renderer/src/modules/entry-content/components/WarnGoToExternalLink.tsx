@@ -25,8 +25,6 @@ const trustedDefaultLinks = new Set([
   "sspai.com",
   "x.com",
   "twitter.com",
-  "diygod.me",
-  "diygod.cc",
 
   "v2ex.com",
   "pixiv.net",
@@ -34,8 +32,6 @@ const trustedDefaultLinks = new Set([
 
   "bilibili.com",
   "xiaoyuzhoufm.com",
-  "xlog.app",
-  "rss3.io",
 ])
 
 const getURLDomain = (url: string) => {

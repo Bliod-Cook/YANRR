@@ -4,7 +4,7 @@ export class JsonObfuscatedCodec {
   private static charsetLength = JsonObfuscatedCodec.charset.length
 
   // Generate a key
-  private static key = "Folo"
+  private static key = "Yannr"
 
   // Convert string to byte array
   private static toBytes(str: string): Uint8Array {

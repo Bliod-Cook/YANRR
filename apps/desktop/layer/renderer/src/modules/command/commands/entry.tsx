@@ -178,7 +178,7 @@ export const useRegisterEntryCommands = () => {
             toast.error(t("entry_actions.unavailable.copy_link"), { duration: 3000 })
             return
           }
-          // The onboarding entries link to an internal folo:// address nobody else can open
+          // The onboarding entries link to an internal yannr:// address nobody else can open
           if (!entry.url || isOnboardingEntryUrl(entry.url)) return
           copyToClipboard(entry.url)
           toast(t("entry_actions.copied_notify", { which: t("words.link") }), {
@@ -254,7 +254,7 @@ export const useRegisterEntryCommands = () => {
               toast.error(t("entry_actions.unavailable.view_source_content"), { duration: 3000 })
               return
             }
-            // The onboarding entries have no source page, only an internal folo:// address
+            // The onboarding entries have no source page, only an internal yannr:// address
             if (isOnboardingEntryUrl(entry.url)) return
             const routeParams = getRouteParams()
             const viewPreviewInModal = [

@@ -145,7 +145,7 @@ describe("SharePanel", () => {
 
     expect(share).toHaveBeenCalledWith({
       text: "Example description | share.discover_more",
-      title: "Example entry - Folo",
+      title: `Example entry - ${APP_NAME}`,
       url: "https://example.com/article",
     })
     expect(mocks.dismissPopover).toHaveBeenCalledOnce()

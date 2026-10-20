@@ -222,27 +222,27 @@ const ShareImportSection = () => {
     }
   }, [t])
 
-  const foloPrefix = "folo:actions#"
+  const clipboardPrefix = "yannr:actions#"
   const handleCopyToClipboard = useCallback(async () => {
     try {
       const jsonData = actionActions.exportRules()
       const codecData = JsonObfuscatedCodec.encode(jsonData)
-      await copyToClipboard(`${foloPrefix}${codecData}`)
+      await copyToClipboard(`${clipboardPrefix}${codecData}`)
       toast.success(t("actions.share.copy_success"))
     } catch (error) {
       toast.error(t("actions.share.copy_failed"))
       console.error(error)
     }
-  }, [foloPrefix, t])
+  }, [clipboardPrefix, t])
 
   const handleImportFromClipboard = useCallback(async () => {
     try {
       const clipboardData = await readFromClipboard()
-      if (!clipboardData.startsWith(foloPrefix)) {
+      if (!clipboardData.startsWith(clipboardPrefix)) {
         toast.error(t("actions.share.invalid_clipboard"))
         return
       }
-      const codecData = clipboardData.slice(foloPrefix.length)
+      const codecData = clipboardData.slice(clipboardPrefix.length)
       const jsonData = JsonObfuscatedCodec.decode(codecData)
       const result = actionActions.importRules(jsonData)
 
@@ -258,7 +258,7 @@ const ShareImportSection = () => {
       }
       console.error(error)
     }
-  }, [foloPrefix, t])
+  }, [clipboardPrefix, t])
 
   return (
     <div className="mb-4 flex justify-end">

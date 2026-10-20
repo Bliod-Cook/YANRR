@@ -33,8 +33,7 @@ import { DiscoverTransform } from "./DiscoverTransform"
 import { FeedForm } from "./FeedForm"
 import { isDiscoveredFeedItself } from "./utils"
 
-const isFeedLikeUrl = (value: string) =>
-  /^(?:https?:\/\/|rsshub:\/\/|folo:\/\/|follow:\/\/)/.test(value)
+const isFeedLikeUrl = (value: string) => /^(?:https?:\/\/|rsshub:\/\/|yannr:\/\/)/.test(value)
 
 const isWebUrl = (value: string) => /^https?:\/\//.test(value)
 

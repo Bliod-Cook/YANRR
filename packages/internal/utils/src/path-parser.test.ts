@@ -97,17 +97,17 @@ describe("test `regexpPathToPath()`", () => {
   test("path with many optional params", () => {
     expect(
       regexpPathToPath("/issue/:user/:repo/:state?/:labels?", {
-        user: "rssnext",
-        repo: "follow",
+        user: "octocat",
+        repo: "hello-world",
       }),
-    ).toMatchInlineSnapshot(`"/issue/rssnext/follow"`)
+    ).toMatchInlineSnapshot(`"/issue/octocat/hello-world"`)
   })
 
   test("path with many optional params, but when using the optional parameter(s) after the optional parameter(s), the previous optional parameter(s) is/are not filled in.", () => {
     expect(() =>
       regexpPathToPath("/issue/:user/:repo/:state?/:labels?", {
-        user: "rssnext",
-        repo: "follow",
+        user: "octocat",
+        repo: "hello-world",
         labels: "rss",
       }),
     ).toThrowError(MissingOptionalParamError)
@@ -129,12 +129,12 @@ describe("test `regexpPathToPath()`", () => {
   test("path with many optional params and all inputted", () => {
     expect(
       regexpPathToPath("/issue/:user/:repo/:state?/:labels?", {
-        user: "rssnext",
-        repo: "follow",
+        user: "octocat",
+        repo: "hello-world",
         state: "open",
         labels: "rss",
       }),
-    ).toMatchInlineSnapshot(`"/issue/rssnext/follow/open/rss"`)
+    ).toMatchInlineSnapshot(`"/issue/octocat/hello-world/open/rss"`)
   })
 
   test("omit empty string and nil value", () => {
@@ -142,8 +142,8 @@ describe("test `regexpPathToPath()`", () => {
       regexpPathToPath(
         "/issue/:user/:repo/:state?/:labels?",
         {
-          user: "rssnext",
-          repo: "follow",
+          user: "octocat",
+          repo: "hello-world",
           state: "open",
           labels: "",
         },
@@ -151,7 +151,7 @@ describe("test `regexpPathToPath()`", () => {
           omitNilAndEmptyString: true,
         },
       ),
-    ).toMatchInlineSnapshot(`"/issue/rssnext/follow/open"`)
+    ).toMatchInlineSnapshot(`"/issue/octocat/hello-world/open"`)
   })
 
   test("omit empty string and nil value will throw", () => {
@@ -159,8 +159,8 @@ describe("test `regexpPathToPath()`", () => {
       regexpPathToPath(
         "/issue/:user/:repo/:state?/:labels?",
         {
-          user: "rssnext",
-          repo: "follow",
+          user: "octocat",
+          repo: "hello-world",
           state: "",
           labels: "l",
         },
@@ -174,8 +174,8 @@ describe("test `regexpPathToPath()`", () => {
   test("omit empty string and nil value will throw (default behavior)", () => {
     expect(() =>
       regexpPathToPath("/issue/:user/:repo/:state?/:labels?", {
-        user: "rssnext",
-        repo: "follow",
+        user: "octocat",
+        repo: "hello-world",
         state: "",
         labels: "l",
       }),
@@ -187,14 +187,14 @@ describe("test `regexpPathToPath()`", () => {
       regexpPathToPath(
         "/issue/:user/:repo/:state?/:labels?",
         {
-          user: "rssnext",
-          repo: "follow",
+          user: "octocat",
+          repo: "hello-world",
           state: "",
           labels: "l",
         },
         { omitNilAndEmptyString: false },
       ),
-    ).toMatchInlineSnapshot(`"/issue/rssnext/follow//l"`)
+    ).toMatchInlineSnapshot(`"/issue/octocat/hello-world//l"`)
   })
 })
 
