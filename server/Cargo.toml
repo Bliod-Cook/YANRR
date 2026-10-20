@@ -1,0 +1,33 @@
+[package]
+name = "yannr"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+publish = false
+
+[dependencies]
+axum = { version = "0.8", features = ["macros"] }
+better-auth = { git = "https://github.com/better-auth-rs/better-auth-rs", rev = "9f91cd7fdb8a5f73a9c69d5c56d363468a7dc281", default-features = false, features = ["axum", "seaorm2", "rustls"] }
+chrono = { version = "0.4", features = ["serde"] }
+feed-rs = "3"
+isolang = { version = "2", default-features = false }
+# Only enables vendored OpenSSL for better-auth-api, which depends on it directly.
+openssl = { version = "0.10", features = ["vendored"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+scraper = "0.24"
+sea-orm = { version = "2.0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-chrono", "with-json", "postgres-array"] }
+sea-orm-migration = { version = "2.0", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "time"] }
+toml = "1"
+tower-http = { version = "0.6", features = ["fs"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+whatlang = "0.18"
+
+[dev-dependencies]
+postgresql_embedded = { version = "0.21", default-features = false, features = ["bundled", "tokio", "tls-rustls-ring"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "rustls-tls"] }
+tempfile = "3"
