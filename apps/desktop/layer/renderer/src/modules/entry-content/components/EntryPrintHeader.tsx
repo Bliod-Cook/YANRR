@@ -27,18 +27,13 @@ export const EntryPrintHeader = ({ entryId }: { entryId: string }) => {
           <Wordmark className="text-sm text-text" />
         </div>
 
-        <div className="mt-3 space-y-1.5">
-          <p className="text-sm font-medium text-text-secondary">
-            {t("entry_content.print.tagline")}
+        {sourceTitle ? (
+          <p className="mt-3 text-sm text-text-secondary">
+            {t("entry_content.print.source", {
+              source: sourceTitle,
+            })}
           </p>
-          {sourceTitle ? (
-            <p className="text-sm text-text-secondary">
-              {t("entry_content.print.source", {
-                source: sourceTitle,
-              })}
-            </p>
-          ) : null}
-        </div>
+        ) : null}
       </div>
     </div>
   )
