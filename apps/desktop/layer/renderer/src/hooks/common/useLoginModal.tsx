@@ -14,7 +14,7 @@ export const useLoginModal = () => {
       CustomModalComponent: PlainModal,
       title: t("words.login"),
       id: "login",
-      content: () => <LoginModalContent runtime={window.electron ? "app" : "browser"} />,
+      content: () => <LoginModalContent />,
       clickOutsideToDismiss: true,
     })
   }, [present, t])

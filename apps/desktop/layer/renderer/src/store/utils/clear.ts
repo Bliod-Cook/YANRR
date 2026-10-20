@@ -1,5 +1,5 @@
 import { deleteDB } from "@follow/database/db"
-import { clearStorage, getStorageNS } from "@follow/utils/ns"
+import { clearStorage } from "@follow/utils/ns"
 
 import { getAuthSessionToken, setAuthSessionToken } from "~/lib/client-session"
 import { reloadAtAppRoot } from "~/lib/reload-at-app-root"
@@ -24,13 +24,4 @@ export const clearLocalDataOfAnotherAccount = async () => {
   clearStorage()
   if (authSessionToken) setAuthSessionToken(authSessionToken)
   reloadAtAppRoot()
-}
-
-const storedUserId = getStorageNS("user_id")
-export const clearDataIfLoginOtherAccount = (newUserId: string) => {
-  const oldUserId = localStorage.getItem(storedUserId)
-  localStorage.setItem(storedUserId, newUserId)
-  if (oldUserId !== newUserId) {
-    return clearLocalPersistStoreData()
-  }
 }

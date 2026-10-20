@@ -2,19 +2,13 @@ import { IN_ELECTRON } from "@follow/shared/constants"
 import { useWhoami, whoamiQueryKey } from "@follow/store/user/hooks"
 import { userSyncService } from "@follow/store/user/store"
 import { clearStorage } from "@follow/utils/ns"
-import { FollowAPIError } from "@follow-app/client-sdk"
 import type { FetchError } from "ofetch"
 import { useEffect } from "react"
 
 import { setLoginModalShow } from "~/atoms/user"
 import { QUERY_PERSIST_KEY } from "~/constants"
 import { useAuthQuery } from "~/hooks/common"
-import {
-  deleteUserCustom as deleteUserFn,
-  getAccountInfo,
-  getSession as refreshBetterAuthSession,
-  signOut as signOutFn,
-} from "~/lib/auth"
+import { getSession as refreshBetterAuthSession, signOut as signOutFn } from "~/lib/auth"
 import { ipcServices } from "~/lib/client"
 import { clearAuthSessionToken, getAuthSessionToken } from "~/lib/client-session"
 import { defineQuery } from "~/lib/defineQuery"
@@ -66,27 +60,6 @@ const refreshAuthSessionCookie = async () => {
 
 export const auth = {
   getSession: () => defineQuery(whoamiQueryKey, () => userSyncService.whoami()),
-  getAccounts: () => defineQuery(["auth", "accounts"], () => getAccountInfo()),
-}
-
-export const useAccounts = () => {
-  return useAuthQuery(auth.getAccounts())
-}
-
-export const useSocialAccounts = () => {
-  const accounts = useAccounts()
-  return {
-    ...accounts,
-    data: accounts.data?.data?.filter((account) => account.provider !== "credential"),
-  }
-}
-
-export const useHasPassword = () => {
-  const accounts = useAccounts()
-  return {
-    ...accounts,
-    data: !!accounts.data?.data?.find((account) => account.provider === "credential"),
-  }
 }
 
 export const useSession = (options?: { enabled?: boolean }) => {
@@ -213,23 +186,4 @@ export const signOut = async () => {
   }
 
   reloadAtAppRoot()
-}
-
-export const deleteUser = async ({ TOTPCode }: { TOTPCode?: string }) => {
-  if (!TOTPCode) {
-    return
-  }
-  const res = await deleteUserFn({
-    TOTPCode,
-  })
-  // The auth client resolves with the error instead of throwing. Keep the session when the
-  // account was not deleted, and keep the code so the form can tell a wrong TOTP code apart.
-  if (res.error) {
-    throw new FollowAPIError(
-      res.error.message || res.error.statusText,
-      res.error.status,
-      res.error.code ? String(res.error.code) : undefined,
-    )
-  }
-  await signOut()
 }

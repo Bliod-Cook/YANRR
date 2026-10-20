@@ -1,11 +1,9 @@
 import { rmSync } from "node:fs"
 
 import { electronApp, optimizer } from "@electron-toolkit/utils"
-import { callWindowExpose } from "@follow/shared/bridge"
 import { DEV, LEGACY_APP_PROTOCOL } from "@follow/shared/constants"
 import { env } from "@follow/shared/env.desktop"
 import { createBuildSafeHeaders } from "@follow/utils/headers"
-import { parse } from "cookie-es"
 import { app, BrowserWindow, net, protocol, session } from "electron"
 import { join } from "pathe"
 
@@ -15,12 +13,10 @@ import { isMacOS } from "../env"
 import { dedupeManagedAuthCookies } from "../lib/auth-cookies"
 import { isDeepLink, openDeepLink, setDeepLinkHandler } from "../lib/deep-link"
 import { handleUrlRouting } from "../lib/router"
-import { updateNotificationsToken } from "../lib/user"
 import { logger } from "../logger"
 import { cleanupOldRender } from "../updater/hot-updater"
 import { AppManager } from "./app"
 
-const apiURL = process.env["VITE_API_URL"] || import.meta.env.VITE_API_URL
 const buildSafeHeaders = createBuildSafeHeaders(env.VITE_WEB_URL, [
   env.VITE_API_URL,
   "https://readwise.io",
@@ -113,9 +109,7 @@ export class BootstrapManager {
         logger.error("Failed to clean up old renderer bundles:", error)
       })
 
-      setDeepLinkHandler((url) => {
-        void this.handleOpen(url)
-      })
+      setDeepLinkHandler(handleUrlRouting)
       // Windows and Linux pass the link that launched the app as an argument
       for (const arg of process.argv) {
         if (isDeepLink(arg)) openDeepLink(arg)
@@ -174,56 +168,5 @@ export class BootstrapManager {
         })
       },
     )
-  }
-
-  private static async handleOpen(url: string) {
-    const mainWindow = WindowManager.getMainWindow()
-    if (!mainWindow) return
-
-    const isValid = URL.canParse(url)
-    if (!isValid) return
-    const urlObj = new URL(url)
-
-    if (urlObj.hostname === "auth" || urlObj.pathname === "//auth") {
-      const token = urlObj.searchParams.get("token")
-
-      if (token) {
-        await callWindowExpose(mainWindow).applyOneTimeToken(token)
-      } else {
-        const ck = urlObj.searchParams.get("ck")
-        const userId = urlObj.searchParams.get("userId")
-
-        if (ck && apiURL) {
-          const cookie = parse(atob(ck), { decode: (value) => value })
-          await Promise.all(
-            Object.keys(cookie).map(async (name) => {
-              const value = cookie[name]!
-              await mainWindow.webContents.session.cookies.set({
-                url: apiURL,
-                name,
-                value,
-                secure: true,
-                httpOnly: true,
-                sameSite: "no_restriction",
-                expirationDate: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30,
-              })
-            }),
-          )
-          await dedupeManagedAuthCookies({
-            apiURL,
-            session: mainWindow.webContents.session,
-          })
-
-          if (userId) {
-            await callWindowExpose(mainWindow).clearIfLoginOtherAccount(userId)
-          }
-          mainWindow.reload()
-
-          updateNotificationsToken()
-        }
-      }
-    } else {
-      handleUrlRouting(url)
-    }
   }
 }

@@ -265,8 +265,6 @@ class APIMorph {
       email: data.email,
       handle: data.handle,
       image: data.image,
-      emailVerified: data.emailVerified ?? false,
-      twoFactorEnabled: (data.twoFactorEnabled ?? null) as boolean | null,
       bio: data.bio,
       website: data.website,
       socialLinks: data.socialLinks,
@@ -276,7 +274,6 @@ class APIMorph {
       suspended: data.suspended,
       deleted: data.deleted,
       inactive: data.inactive,
-      lastLoginMethod: data.lastLoginMethod,
     }
   }
 }

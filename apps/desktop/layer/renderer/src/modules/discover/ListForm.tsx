@@ -33,7 +33,6 @@ import { useFormHasChanges } from "~/hooks/common/useFormHasChanges"
 import { getFetchErrorMessage, toastFetchError } from "~/lib/error-parser"
 import { getNewIssueUrl } from "~/lib/issues"
 
-import { useTOTPModalWrapper } from "../profile/hooks"
 import { ViewSelectorRadioGroup } from "../shared/ViewSelectorRadioGroup"
 import { FeedSummary } from "./FeedSummary"
 
@@ -211,10 +210,7 @@ const ListInnerForm = ({
   const followMutation = useMutation({
     // Whether the form edits the subscription is decided when it is sent: a follow stores the
     // subscription before the request settles, so by then the form reads as followed
-    mutationFn: async ({
-      isEdit,
-      ...values
-    }: z.infer<typeof formSchema> & { TOTPCode?: string; isEdit: boolean }) => {
+    mutationFn: async ({ isEdit, ...values }: z.infer<typeof formSchema> & { isEdit: boolean }) => {
       const userId = whoami()?.id || ""
       const body = {
         listId: list.id,
@@ -223,7 +219,6 @@ const ListInnerForm = ({
         isPrivate: values.isPrivate || false,
         hideFromTimeline: values.hideFromTimeline,
         title: values.title,
-        TOTPCode: values.TOTPCode,
         userId,
         type: "list",
         url: undefined,
@@ -254,13 +249,8 @@ const ListInnerForm = ({
       ? followMutation.variables.isEdit
       : isSubscribed
 
-  const preset = useTOTPModalWrapper(followMutation.mutateAsync)
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (isSubscribed) {
-      followMutation.mutate({ ...values, isEdit: true })
-    } else {
-      preset({ ...values, isEdit: false })
-    }
+    followMutation.mutate({ ...values, isEdit: isSubscribed })
   }
 
   const t = useI18n()

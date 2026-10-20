@@ -1,9 +1,8 @@
 import { isMobile } from "@follow/components/hooks/useMobile.js"
-import { usePrefetchUser, useWhoami } from "@follow/store/user/hooks"
+import { usePrefetchUser } from "@follow/store/user/hooks"
 import { capitalizeFirstLetter } from "@follow/utils/utils"
 import { createElement, lazy, useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import { toast } from "sonner"
 import { parse } from "tldts"
 
 import { useAsyncModal } from "~/components/ui/modal/helper/useAsyncModal"
@@ -12,9 +11,6 @@ import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { useAuthQuery } from "~/hooks/common"
 import { followClient } from "~/lib/api-client"
 import { defineQuery } from "~/lib/defineQuery"
-import { getFetchErrorInfo } from "~/lib/error-parser"
-
-import { TOTPForm, TwoFactorForm } from "./two-factor"
 
 const LazyUserProfileModalContent = lazy(() =>
   import("./user-profile-modal").then((mod) => ({ default: mod.UserProfileModalContent })),
@@ -101,58 +97,5 @@ export const usePresentUserProfileModal = (variant: Variant = "dialog") => {
       })
     },
     [present, presentAsync, t, variant],
-  )
-}
-
-export function useTOTPModalWrapper<T extends { TOTPCode?: string }>(
-  callback: (input: T) => Promise<any>,
-  options?: { force?: boolean },
-) {
-  const { present } = useModalStack()
-  const { t } = useTranslation("settings")
-  const user = useWhoami()
-  return useCallback(
-    async (input: T) => {
-      const presentTOTPModal = () => {
-        if (!user?.twoFactorEnabled) {
-          toast.error(t("profile.two_factor.enable_notice"))
-          present({
-            title: t("profile.two_factor.enable"),
-            content: TwoFactorForm,
-          })
-          return
-        }
-
-        present({
-          title: t("profile.totp_code.title"),
-          content: ({ dismiss }) => {
-            return createElement(TOTPForm, {
-              async onSubmitMutationFn(values) {
-                await callback({
-                  ...input,
-                  TOTPCode: values.code,
-                })
-                dismiss()
-              },
-            })
-          },
-        })
-      }
-
-      if (options?.force) {
-        presentTOTPModal()
-        return
-      }
-
-      try {
-        await callback(input)
-      } catch (error) {
-        const { code } = getFetchErrorInfo(error as Error)
-        if (code === 4008) {
-          presentTOTPModal()
-        }
-      }
-    },
-    [callback, options?.force, present, t, user?.twoFactorEnabled],
   )
 }

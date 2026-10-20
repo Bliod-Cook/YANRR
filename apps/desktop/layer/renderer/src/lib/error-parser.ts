@@ -46,7 +46,7 @@ const translateErrorCode = (code: unknown, fallback: string) => {
     : fallback
 }
 
-export const getFetchErrorInfo = (
+const getFetchErrorInfo = (
   error: Error,
 ): {
   message: string
@@ -151,11 +151,6 @@ export const toastFetchError = (
     } catch {
       message = error.message
     }
-  }
-
-  // 2fa errors are handled by the form
-  if (code === 4007 || code === 4008) {
-    return
   }
 
   if (isConnectionFailure(error)) {

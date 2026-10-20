@@ -7,8 +7,6 @@ import { useTranslation } from "react-i18next"
 import { UserAvatar } from "~/modules/user/UserAvatar"
 import { useSetRSSHubMutation } from "~/queries/rsshub"
 
-import { useTOTPModalWrapper } from "../profile/hooks"
-
 export function SetModalContent({
   dismiss,
   instance,
@@ -18,7 +16,6 @@ export function SetModalContent({
 }) {
   const { t } = useTranslation("settings")
   const setRSSHubMutation = useSetRSSHubMutation()
-  const preset = useTOTPModalWrapper(setRSSHubMutation.mutateAsync)
 
   useEffect(() => {
     if (setRSSHubMutation.isSuccess) {
@@ -63,7 +60,7 @@ export function SetModalContent({
         <Button
           type="button"
           isLoading={setRSSHubMutation.isPending}
-          onClick={() => preset({ id: instance.id })}
+          onClick={() => setRSSHubMutation.mutate({ id: instance.id })}
         >
           {t("rsshub.table.use_as_fallback")}
         </Button>
