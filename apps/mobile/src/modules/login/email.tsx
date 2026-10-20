@@ -7,20 +7,16 @@ import type { Control } from "react-hook-form"
 import { useController, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 import type { TextInputProps } from "react-native"
-import { Alert, Pressable, View } from "react-native"
+import { Alert, View } from "react-native"
 import { KeyboardController } from "react-native-keyboard-controller"
 import { z } from "zod"
 
 import { SubmitButton } from "@/src/components/common/SubmitButton"
 import { PlainTextField } from "@/src/components/ui/form/TextField"
-import { Text } from "@/src/components/ui/typography/Text"
 import { getCookie, signIn, signUp } from "@/src/lib/auth"
 import { getAuthErrorMessage } from "@/src/lib/error-parser"
-import { useNavigation } from "@/src/lib/navigation/hooks"
 import { Navigation } from "@/src/lib/navigation/Navigation"
 import { toast } from "@/src/lib/toast"
-import { ForgetPasswordScreen } from "@/src/screens/(modal)/ForgetPasswordScreen"
-import { TwoFactorAuthScreen } from "@/src/screens/(modal)/TwoFactorAuthScreen"
 import { accentColor } from "@/src/theme/colors"
 
 const formSchema = z.object({
@@ -50,11 +46,6 @@ async function signInWithEmail(values: FormValue) {
     if (res.error) {
       throw new Error(getAuthErrorMessage(res.error))
     }
-
-    if (res.data?.twoFactorRedirect) {
-      Navigation.rootNavigation.presentControllerView(TwoFactorAuthScreen, { isSignIn: true })
-      return false
-    }
   } catch (error) {
     Alert.alert(
       error instanceof Error
@@ -82,7 +73,6 @@ export function EmailLogin() {
       password: passwordValue,
     })
   }, [emailValue, passwordValue, submitMutation])
-  const navigation = useNavigation()
 
   return (
     <View className="mx-auto flex w-full max-w-sm">
@@ -129,18 +119,12 @@ export function EmailLogin() {
           />
         </View>
       </View>
-
-      <Pressable
-        className="mx-auto my-5"
-        onPress={() => navigation.presentControllerView(ForgetPasswordScreen)}
-      >
-        <Text className="text-sm text-secondary-label">{t("login.forget_password.note")}</Text>
-      </Pressable>
       <SubmitButton
         isLoading={submitMutation.isPending}
         testID="login-submit"
         onPress={onLogin}
         title={t("login.submit")}
+        className="mt-8"
       />
     </View>
   )

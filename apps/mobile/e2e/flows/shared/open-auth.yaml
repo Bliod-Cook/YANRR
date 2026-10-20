@@ -22,13 +22,5 @@ appId: is.follow
       - waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
-      id: login-provider-credential
-    timeout: 60000
-- extendedWaitUntil:
-    visible:
-      id: login-provider-google
-    timeout: 60000
-- extendedWaitUntil:
-    visible:
-      id: login-provider-github
+      id: login-screen
     timeout: 60000

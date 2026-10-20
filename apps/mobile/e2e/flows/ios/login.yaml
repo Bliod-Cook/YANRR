@@ -4,15 +4,7 @@ appId: is.follow
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: login-provider-credential
-    timeout: 60000
-- extendedWaitUntil:
-    visible:
-      id: login-provider-google
-    timeout: 60000
-- extendedWaitUntil:
-    visible:
-      id: login-provider-github
+      id: login-screen
     timeout: 60000
 - runFlow:
     when:
@@ -21,20 +13,6 @@ appId: is.follow
       - tapOn:
           id: auth-toggle-mode
       - waitForAnimationToEnd
-- extendedWaitUntil:
-    visible:
-      id: login-provider-credential
-    timeout: 60000
-- extendedWaitUntil:
-    visible:
-      id: login-provider-google
-    timeout: 60000
-- extendedWaitUntil:
-    visible:
-      id: login-provider-github
-    timeout: 60000
-- tapOn:
-    id: login-provider-credential
 - extendedWaitUntil:
     visible:
       id: login-email-input
@@ -50,7 +28,7 @@ appId: is.follow
     id: login-submit
 - extendedWaitUntil:
     notVisible:
-      id: login-provider-credential
+      id: login-screen
     timeout: 30000
 - assertNotVisible:
-    id: login-provider-credential
+    id: login-screen

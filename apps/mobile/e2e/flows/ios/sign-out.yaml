@@ -48,7 +48,7 @@ appId: is.follow
     timeout: 15000
 - extendedWaitUntil:
     visible:
-      id: login-provider-credential
+      id: login-screen
     timeout: 30000
 - assertVisible:
-    id: login-provider-credential
+    id: login-screen

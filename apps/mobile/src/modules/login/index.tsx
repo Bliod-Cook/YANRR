@@ -11,7 +11,6 @@ import { useIsTabletLayout, useReadableContainerStyle, useScaleHeight } from "@/
 
 import { EmailLogin, EmailSignUp } from "./email"
 import { hasSignedInBefore } from "./returning-user"
-import { SocialLogin } from "./social"
 
 export function Login() {
   const insets = useSafeAreaInsets()
@@ -25,7 +24,6 @@ export function Login() {
   const { t } = useTranslation()
   // Whoever signed in on this device before, as before an expired session, comes back to sign in
   const [isRegister, setIsRegister] = useState(() => !hasSignedInBefore())
-  const [isEmail, setIsEmail] = useState(false)
   return (
     <View
       testID="login-screen"
@@ -63,72 +61,39 @@ export function Login() {
               <Text className="text-3xl font-semibold">{`${isRegister ? t("signin.sign_up_to") : t("signin.sign_in_to")} `}</Text>
               <Text className="text-3xl font-bold">Folo</Text>
             </Text>
-            {isEmail ? (
-              isRegister ? (
-                <EmailSignUp />
-              ) : (
-                <EmailLogin />
-              )
-            ) : (
-              <SocialLogin onPressEmail={() => setIsEmail(true)} isRegister={isRegister} />
-            )}
+            {isRegister ? <EmailSignUp /> : <EmailLogin />}
           </View>
         </TouchableWithoutFeedback>
         {!isTablet && (
-          <>
-            <View className="mt-14">
-              {isEmail ? (
-                <Text
-                  className="pb-2 text-center text-lg font-medium text-label"
-                  testID="auth-back"
-                  onPress={() => setIsEmail(false)}
-                >
-                  {t("login.back")}
-                </Text>
-              ) : (
-                <Pressable testID="auth-toggle-mode" onPress={() => setIsRegister(!isRegister)}>
-                  <Text className="pb-2 text-center text-lg font-medium text-label">
-                    <Trans
-                      t={t}
-                      i18nKey={isRegister ? "login.have_account" : "login.no_account"}
-                      components={{
-                        strong: <Text className="text-accent" />,
-                      }}
-                    />
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          </>
+          <View className="mt-14">
+            <AuthModeToggle isRegister={isRegister} onToggle={() => setIsRegister(!isRegister)} />
+          </View>
         )}
       </KeyboardAvoidingView>
       {isTablet && (
         <View style={contentWidthStyle}>
           <View className="mt-8">
-            {isEmail ? (
-              <Text
-                className="pb-2 text-center text-lg font-medium text-label"
-                testID="auth-back"
-                onPress={() => setIsEmail(false)}
-              >
-                {t("login.back")}
-              </Text>
-            ) : (
-              <Pressable testID="auth-toggle-mode" onPress={() => setIsRegister(!isRegister)}>
-                <Text className="pb-2 text-center text-lg font-medium text-label">
-                  <Trans
-                    t={t}
-                    i18nKey={isRegister ? "login.have_account" : "login.no_account"}
-                    components={{
-                      strong: <Text className="text-accent" />,
-                    }}
-                  />
-                </Text>
-              </Pressable>
-            )}
+            <AuthModeToggle isRegister={isRegister} onToggle={() => setIsRegister(!isRegister)} />
           </View>
         </View>
       )}
     </View>
+  )
+}
+
+function AuthModeToggle({ isRegister, onToggle }: { isRegister: boolean; onToggle: () => void }) {
+  const { t } = useTranslation()
+  return (
+    <Pressable testID="auth-toggle-mode" onPress={onToggle}>
+      <Text className="pb-2 text-center text-lg font-medium text-label">
+        <Trans
+          t={t}
+          i18nKey={isRegister ? "login.have_account" : "login.no_account"}
+          components={{
+            strong: <Text className="text-accent" />,
+          }}
+        />
+      </Text>
+    </Pressable>
   )
 }

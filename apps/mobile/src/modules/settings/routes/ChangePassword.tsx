@@ -20,7 +20,7 @@ import { changePassword } from "@/src/lib/auth"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { toast } from "@/src/lib/toast"
 
-export const ResetPassword = () => {
+export const ChangePassword = () => {
   const { t } = useTranslation("settings")
   const labelColor = useColor("label")
   const navigation = useNavigation()

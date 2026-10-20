@@ -104,7 +104,7 @@ describe("mobile auth cookie sync", () => {
     expect(onSessionChange).toHaveBeenCalledTimes(2)
   })
 
-  it("keeps the two-factor cookie from a React Native style combined Set-Cookie header", () => {
+  it("keeps the auth cookies of a React Native style combined Set-Cookie header", () => {
     const previousCookie = JSON.stringify({
       "better-auth.session_token": {
         value: "old-session",
@@ -114,8 +114,7 @@ describe("mobile auth cookie sync", () => {
     const combinedSetCookie = [
       "better-auth.session_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax",
       "better-auth.session_data=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax",
-      "better-auth.two_factor=signed-two-factor; Max-Age=600; Path=/; HttpOnly; SameSite=Lax",
-      "better-auth.last_used_login_method=email; Max-Age=2592000; Path=/; HttpOnly; SameSite=Lax",
+      "better-auth.dont_remember=signed-true; Max-Age=600; Path=/; HttpOnly; SameSite=Lax",
     ].join(", ")
 
     const storedCookie = mergeStoredAuthCookies([combinedSetCookie], previousCookie)
@@ -123,23 +122,22 @@ describe("mobile auth cookie sync", () => {
 
     expect(parsed["better-auth.session_token"]).toBeUndefined()
     expect(parsed["better-auth.session_data"]).toBeUndefined()
-    expect(parsed["better-auth.two_factor"]?.value).toBe("signed-two-factor")
-    expect(parsed["better-auth.last_used_login_method"]?.value).toBe("email")
+    expect(parsed["better-auth.dont_remember"]?.value).toBe("signed-true")
   })
 
   it("reads Set-Cookie values from standard and React Native header shapes", () => {
     const headers = new Headers({
-      "set-cookie": "better-auth.two_factor=signed-two-factor; Path=/; HttpOnly",
+      "set-cookie": "better-auth.session_token=token; Path=/; HttpOnly",
     }) as Headers & {
       _headers?: Record<string, string[]>
     }
     headers._headers = {
-      "set-cookie": ["better-auth.last_used_login_method=email; Path=/; HttpOnly"],
+      "set-cookie": ["better-auth.session_data=data; Path=/; HttpOnly"],
     }
 
     expect(extractSetCookieHeaderValues(headers)).toEqual([
-      "better-auth.two_factor=signed-two-factor; Path=/; HttpOnly",
-      "better-auth.last_used_login_method=email; Path=/; HttpOnly",
+      "better-auth.session_token=token; Path=/; HttpOnly",
+      "better-auth.session_data=data; Path=/; HttpOnly",
     ])
   })
 
@@ -155,8 +153,8 @@ describe("mobile auth cookie sync", () => {
   it("ignores expiry and ancillary cookie updates when the session values stay the same", () => {
     const previousCookie = createStoredCookie({
       extra: {
-        "better-auth.two_factor": {
-          value: "old-two-factor",
+        "better-auth.dont_remember": {
+          value: "old-value",
           expires: "2026-09-01T12:00:00.000Z",
         },
       },
@@ -165,8 +163,8 @@ describe("mobile auth cookie sync", () => {
       tokenExpires: "2026-09-02T12:00:00.000Z",
       dataExpires: "2026-09-02T12:00:00.000Z",
       extra: {
-        "better-auth.two_factor": {
-          value: "new-two-factor",
+        "better-auth.dont_remember": {
+          value: "new-value",
           expires: "2026-09-02T12:00:00.000Z",
         },
       },
@@ -202,7 +200,7 @@ describe("mobile auth cookie sync", () => {
       onSessionChange,
     })
     const largeAncillaryCookie = {
-      "better-auth.two_factor": {
+      "better-auth.dont_remember": {
         value: "x".repeat(storageValueLimit),
         expires: "2026-09-01T12:00:00.000Z",
       },
@@ -249,7 +247,7 @@ describe("mobile auth cookie sync", () => {
       onSessionChange,
     })
     const largeAncillaryCookie = {
-      "better-auth.two_factor": {
+      "better-auth.dont_remember": {
         value: "x".repeat(storageValueLimit),
         expires: "2026-09-01T12:00:00.000Z",
       },
@@ -303,7 +301,7 @@ describe("mobile auth cookie sync", () => {
     const changedCookie = createStoredCookie({
       token: "next-token",
       extra: {
-        "better-auth.two_factor": {
+        "better-auth.dont_remember": {
           value: "x".repeat(storageValueLimit),
           expires: "2026-09-01T12:00:00.000Z",
         },

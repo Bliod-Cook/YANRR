@@ -25,18 +25,13 @@ import { PlainTextField } from "@/src/components/ui/form/TextField"
 import {
   GroupedInsetListCard,
   GroupedInsetListCell,
-  GroupedInsetListNavigationLink,
   GroupedInsetListSectionHeader,
   GroupedOutlineDescription,
 } from "@/src/components/ui/grouped/GroupedList"
 import { PlatformActivityIndicator } from "@/src/components/ui/loading/PlatformActivityIndicator"
 import { Text } from "@/src/components/ui/typography/Text"
-import { CheckCircleCuteReIcon } from "@/src/icons/check_circle_cute_re"
-import { CloseCircleFillIcon } from "@/src/icons/close_circle_fill"
 import { followApi } from "@/src/lib/api-client"
-import { useNavigation } from "@/src/lib/navigation/hooks"
 import { toast } from "@/src/lib/toast"
-import { EditEmailScreen } from "@/src/screens/(modal)/EditEmailScreen"
 import { accentColor } from "@/src/theme/colors"
 
 import type { ProfileTextField } from "../profile-validation"
@@ -207,7 +202,6 @@ const ProfileForm: FC<{
   errors: FieldErrors
 }> = ({ whoami, dirtyFields, setDirtyFields, errors }) => {
   const { t } = useTranslation("settings")
-  const navigation = useNavigation()
   type SocialLinkKey = "twitter" | "github" | "instagram" | "facebook" | "youtube" | "discord"
   const socialLinkFields: SocialLinkKey[] = [
     "twitter",
@@ -286,34 +280,6 @@ const ProfileForm: FC<{
           </GroupedInsetListCard>
           <FieldErrorText message={errors.handle} />
           <GroupedOutlineDescription description={t("profile.handle.description")} />
-
-          {/* Email */}
-          <GroupedInsetListCard className="mt-4">
-            <GroupedInsetListNavigationLink
-              label={t("profile.email.label")}
-              onPress={() => {
-                navigation.presentControllerView(EditEmailScreen)
-              }}
-              leftClassName="flex-none"
-              rightClassName="flex-1"
-              postfix={
-                <View className="ml-auto shrink flex-row items-center gap-2">
-                  <Text
-                    className="shrink text-secondary-label"
-                    numberOfLines={1}
-                    ellipsizeMode="middle"
-                  >
-                    {whoami.email}
-                  </Text>
-                  {whoami.emailVerified ? (
-                    <CheckCircleCuteReIcon height={18} width={18} color={"#00C75F"} />
-                  ) : (
-                    <CloseCircleFillIcon height={18} width={18} color={"#FF3B30"} />
-                  )}
-                </View>
-              }
-            />
-          </GroupedInsetListCard>
 
           <GroupedInsetListSectionHeader label={t("profile.profile.bio")} />
           <GroupedInsetListCard>
