@@ -18,7 +18,6 @@ import { FlashlightCuteReIcon } from "@/src/icons/flashlight_cute_re"
 import { Magic2CuteFiIcon } from "@/src/icons/magic_2_cute_fi"
 import { NotificationCuteReIcon } from "@/src/icons/notification_cute_re"
 import { PaletteCuteFiIcon } from "@/src/icons/palette_cute_fi"
-import { RadaCuteFiIcon } from "@/src/icons/rada_cute_fi"
 import { Settings1CuteFiIcon } from "@/src/icons/settings_1_cute_fi"
 import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
 import { UserSettingCuteFiIcon } from "@/src/icons/user_setting_cute_fi"
@@ -34,7 +33,6 @@ import { AppearanceScreen } from "./routes/Appearance"
 import { DataScreen } from "./routes/Data"
 import { FeedsScreen } from "./routes/Feeds"
 import { GeneralScreen } from "./routes/General"
-import { ListsScreen } from "./routes/Lists"
 import { NotificationsScreen } from "./routes/Notifications"
 import { SpotlightScreen } from "./routes/Spotlight"
 
@@ -47,7 +45,6 @@ type SettingsNavigationTranslationKey =
   | "titles.account"
   | "titles.actions"
   | "titles.feeds"
-  | "titles.lists"
   | "titles.about"
   | "titles.sign_out"
 
@@ -148,15 +145,6 @@ const DataGroupNavigationLinks: GroupNavigationLink[] = [
     todo: true,
     anonymous: false,
     testID: "settings-feeds-link",
-  },
-  {
-    translationKey: "titles.lists",
-    icon: RadaCuteFiIcon,
-    onPress: ({ navigation }) => {
-      navigation.pushControllerView(ListsScreen)
-    },
-    iconBackgroundColor: "#0EA5E9",
-    anonymous: false,
   },
 ]
 

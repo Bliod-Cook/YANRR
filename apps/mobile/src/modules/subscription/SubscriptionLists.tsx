@@ -3,9 +3,7 @@ import { FEED_COLLECTION_LIST } from "@follow/store/constants/app"
 import { useInboxList } from "@follow/store/inbox/hooks"
 import {
   useGroupedSubscription,
-  useListSubscriptionIds,
   useSortedGroupedSubscription,
-  useSortedListSubscription,
   useSortedUngroupedSubscription,
 } from "@follow/store/subscription/hooks"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
@@ -39,7 +37,6 @@ import { FeedScreen } from "@/src/screens/(stack)/feeds/[feedId]/FeedScreen"
 import { useFeedListSortMethod, useFeedListSortOrder } from "./atoms"
 import { CategoryGrouped } from "./CategoryGrouped"
 import { InboxItem } from "./items/InboxItem"
-import { ListSubscriptionItem } from "./items/ListSubscriptionItem"
 import { SubscriptionItem } from "./items/SubscriptionItem"
 
 const keyExtractor = (
@@ -64,12 +61,6 @@ const SubscriptionListImpl = ({
 }) => {
   const hideAllReadSubscriptions = useHideAllReadSubscriptions()
   const autoGroup = useGeneralSettingKey("autoGroup")
-  const listIds = useListSubscriptionIds(view)
-  const sortedListIds = useSortedListSubscription({
-    ids: listIds,
-    sortBy: "alphabet",
-    hideAllReadSubscriptions,
-  })
   const inboxes = useInboxList(
     useCallback(
       (inboxes) => (view === FeedViewType.Articles ? inboxes.map((inbox) => inbox.id) : []),
@@ -98,20 +89,16 @@ const SubscriptionListImpl = ({
   const data = useMemo(
     () => [
       "words.starred",
-      "words.lists",
-      ...sortedListIds,
       "words.inbox",
       ...inboxes,
       "words.feeds",
       ...sortedGrouped,
       ...sortedUnGrouped,
     ],
-    [inboxes, sortedListIds, sortedGrouped, sortedUnGrouped],
+    [inboxes, sortedGrouped, sortedUnGrouped],
   )
   const extraData = useMemo(() => {
-    const listsIndexStart = 2
-    const listsIndexEnd = listsIndexStart + sortedListIds.length - 1
-    const inboxIndexStart = listsIndexEnd + 2
+    const inboxIndexStart = 2
     const inboxIndexEnd = inboxIndexStart + inboxes.length - 1
     const feedsIndexStart = inboxIndexEnd + 2
     const feedsIndexEnd = feedsIndexStart + sortedGrouped.length + sortedUnGrouped.length - 1
@@ -120,10 +107,9 @@ const SubscriptionListImpl = ({
     return {
       inboxIndexRange: [inboxIndexStart, inboxIndexEnd],
       feedsIndexRange: [feedsIndexStart, feedsIndexEnd],
-      listsIndexRange: [listsIndexStart, listsIndexEnd],
       groupedIndexRange: [groupedIndexStart, groupedIndexEnd],
     }
-  }, [inboxes.length, sortedGrouped.length, sortedListIds.length, sortedUnGrouped.length])
+  }, [inboxes.length, sortedGrouped.length, sortedUnGrouped.length])
   const [refreshing, setRefreshing] = useState(false)
   const onRefresh = useEventCallback(() => {
     return subscriptionSyncService.refresh(view)
@@ -163,7 +149,6 @@ const ItemRender = ({
   extraData?: {
     inboxIndexRange: [number, number]
     feedsIndexRange: [number, number]
-    listsIndexRange: [number, number]
     groupedIndexRange: [number, number]
   }
 }) => {
@@ -178,12 +163,6 @@ const ItemRender = ({
         if (inboxIndexRange[0] > inboxIndexRange[1]) return null
         return <SectionTitle transKey={item} />
       }
-      case "words.lists": {
-        if (!extraData) return null
-        const { listsIndexRange } = extraData
-        if (listsIndexRange[0] > listsIndexRange[1]) return null
-        return <SectionTitle transKey={item} />
-      }
       case "words.feeds": {
         if (!extraData) return null
         const { feedsIndexRange } = extraData
@@ -192,12 +171,7 @@ const ItemRender = ({
       }
       default: {
         if (!extraData) return null
-        const { inboxIndexRange, feedsIndexRange, listsIndexRange } = extraData
-        if (listsIndexRange[0] <= index && index <= listsIndexRange[1]) {
-          const isFirst = index === listsIndexRange[0]
-          const isLast = index === listsIndexRange[1]
-          return <ListSubscriptionItem id={item} isFirst={isFirst} isLast={isLast} />
-        }
+        const { inboxIndexRange, feedsIndexRange } = extraData
         if (inboxIndexRange[0] <= index && index <= inboxIndexRange[1]) {
           const isFirst = index === inboxIndexRange[0]
           const isLast = index === inboxIndexRange[1]

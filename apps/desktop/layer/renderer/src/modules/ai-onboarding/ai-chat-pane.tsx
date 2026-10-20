@@ -488,7 +488,6 @@ function AIChatInterface({ inputRef }: AIChatInterfaceProps) {
             hideFromTimeline: null,
             title: feed.title ?? null,
             feedId: feed.id,
-            listId: undefined,
           })
           .catch((error) => {
             console.error("Failed to subscribe feed during onboarding", { feedId: feed.id, error })

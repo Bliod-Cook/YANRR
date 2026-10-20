@@ -5,10 +5,8 @@
 
 export type SyncActionModelName =
   | "subscription"
-  | "list_subscription"
   | "collection"
   | "timeline"
-  | "list"
   | "inbox"
   | "inbox_entry"
   // Models handled through `registerSyncModel`: "action", "setting", "messaging", ...
@@ -20,7 +18,7 @@ export interface SyncAction {
   /** Global, monotonically increasing sync id */
   id: number
   model: SyncActionModelName
-  /** feedId, listId or entryId; null for batch timeline updates */
+  /** feedId or entryId; null for batch timeline updates */
   modelId: string | null
   action: SyncActionType
   data: unknown
@@ -68,7 +66,7 @@ export interface TimelineReadActionData {
 }
 
 export interface TimelineNewEntriesActionData {
-  /** Set for entries delivered by a feed or a list */
+  /** Set for entries delivered by a feed */
   feedId?: string
   /** Set together with `isInbox` for entries delivered to an inbox */
   inboxId?: string
@@ -79,15 +77,6 @@ export interface TimelineNewEntriesActionData {
   unread?: number
   latestPublishedAt: string
   from: string[]
-}
-
-export interface ListActionData {
-  title?: string
-  description?: string | null
-  image?: string | null
-  view?: number
-  fee?: number
-  feedIds?: string[]
 }
 
 export interface InboxEntryActionData {

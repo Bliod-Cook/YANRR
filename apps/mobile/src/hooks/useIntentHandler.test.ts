@@ -64,6 +64,13 @@ describe("handleIncomingUrl", () => {
     expect(routes[0]!.props).toMatchObject({ id: "1337497420971380736", type: "feed" })
   })
 
+  it("ignores a list link, as lists do not exist", async () => {
+    handleIncomingUrl("folo://list?id=1337497420971380736", navigation)
+    await settle()
+
+    expect(routesOf(navigation)).toHaveLength(0)
+  })
+
   it("closes the in-app browser first, which would cover the form", async () => {
     let closeBrowser!: () => void
     mocks.dismissInAppBrowser.mockImplementationOnce(

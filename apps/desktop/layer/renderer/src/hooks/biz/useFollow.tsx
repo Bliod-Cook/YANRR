@@ -7,18 +7,13 @@ import { withoutTrailingSlash, withTrailingSlash } from "ufo"
 
 import { previewBackPath } from "~/atoms/preview"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
-import type { FeedFormDataValuesType } from "~/modules/discover/FeedForm"
 import { FeedForm } from "~/modules/discover/FeedForm"
-import type { ListFormDataValuesType } from "~/modules/discover/ListForm"
-import { ListForm } from "~/modules/discover/ListForm"
 
 export interface FollowOptions {
-  isList: boolean
   id?: string
   url?: string
 
   onSuccess?: () => void
-  defaultValues?: Partial<ListFormDataValuesType> | Partial<FeedFormDataValuesType>
 }
 export const useFollow = () => {
   const { present } = useModalStack()
@@ -36,17 +31,8 @@ export const useFollow = () => {
       const subscription = getSubscriptionByFeedId(id)
       const isFollowed = !!subscription
 
-      // Whole phrases, since joining "Edit" and a plural noun reads wrong in every language
-      const title = options?.isList
-        ? isFollowed
-          ? t("sidebar.feed_actions.edit_list")
-          : t("feed_form.add_list")
-        : isFollowed
-          ? t("sidebar.feed_actions.edit_feed")
-          : t("feed_form.add_feed")
-
       present({
-        title,
+        title: isFollowed ? t("sidebar.feed_actions.edit_feed") : t("feed_form.add_feed"),
         modalContentClassName: "overflow-visible",
         content: ({ dismiss }) => {
           const onSuccess = () => {
@@ -56,20 +42,7 @@ export const useFollow = () => {
             backPath && navigate(backPath)
             dismiss()
           }
-          return options?.isList ? (
-            <ListForm
-              id={options?.id}
-              defaultValues={options?.defaultValues as ListFormDataValuesType}
-              onSuccess={onSuccess}
-            />
-          ) : (
-            <FeedForm
-              id={id}
-              url={url}
-              defaultValues={options?.defaultValues as FeedFormDataValuesType}
-              onSuccess={onSuccess}
-            />
-          )
+          return <FeedForm id={id} url={url} onSuccess={onSuccess} />
         },
       })
     },

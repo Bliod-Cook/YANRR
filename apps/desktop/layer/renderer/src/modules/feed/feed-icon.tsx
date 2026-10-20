@@ -109,12 +109,11 @@ const FallbackableImage = function FallbackableImage({
   )
 }
 
-// type FeedIconFeed = Pick<FeedModel, "title" | "image" | "siteUrl" | "type"> | ListModel
 type IconTarget = {
   title?: Nullable<string>
   image?: Nullable<string>
   siteUrl?: Nullable<string>
-  type: "feed" | "list" | "inbox"
+  type: "feed" | "inbox"
   entry?: FeedIconEntry | null
   useMedia?: boolean
   feed?: FeedModel | null

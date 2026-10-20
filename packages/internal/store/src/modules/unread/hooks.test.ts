@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useEntryStore } from "../entry/store"
 import type { EntryModel } from "../entry/types"
-import { useListStore } from "../list/store"
 import { useSubscriptionStore } from "../subscription/store"
 import { getUnreadScopeIds } from "./getters"
 import { hasUnreadCounterAboveList } from "./hooks"
@@ -61,12 +60,7 @@ describe("hasUnreadCounterAboveList", () => {
         [FeedViewType.Articles]: new Set(["feed1", "feed2", "feed4"]),
         [FeedViewType.SocialMedia]: new Set(),
       },
-      listIdByView: { ...state.listIdByView, [FeedViewType.Articles]: new Set() },
     }))
-    useListStore.setState({
-      lists: { list1: { id: "list1", feedIds: ["feed1", "feed2"] } as never },
-      listIds: ["list1"],
-    })
     unreadActions.upsertManyInSession(
       [
         { id: "feed1", count: 1 },
@@ -88,9 +82,8 @@ describe("hasUnreadCounterAboveList", () => {
     expect(hasUnreadCounterAboveList(["entry2"], { feedId: "feed1" })).toBe(true)
   })
 
-  it("sums a folder, a list and a view the way the timeline is filtered", () => {
+  it("sums a folder and a view the way the timeline is filtered", () => {
     expect(getUnreadScopeIds({ feedId: "feed1,feed2" })).toEqual(["feed1", "feed2"])
-    expect(getUnreadScopeIds({ listId: "list1" })).toEqual(["feed1", "feed2"])
     expect(getUnreadScopeIds({ feedIdList: ["feed2"] })).toEqual(["feed2"])
     expect(getUnreadScopeIds({ inboxId: "inbox-a" })).toEqual(["inbox-a"])
     // Hidden subscriptions never reach the timeline

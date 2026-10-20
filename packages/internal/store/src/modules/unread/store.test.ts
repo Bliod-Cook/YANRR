@@ -104,7 +104,6 @@ describe("unreadSyncService", () => {
       entryIdByCategory: {},
       entryIdByFeed: {},
       entryIdByInbox: {},
-      entryIdByList: {},
       entryIdSet: new Set(),
     })
     seedUnread({})

@@ -25,7 +25,6 @@ export interface UnreadListScope {
   /** A feed id, or several joined with commas for a folder. */
   feedId?: string
   feedIdList?: string[]
-  listId?: string
   inboxId?: string
   isCollection?: boolean
 }

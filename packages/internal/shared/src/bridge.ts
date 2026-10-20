@@ -40,13 +40,12 @@ interface RenderGlobalContext {
   onWindowShow: () => void
 
   /// Actions
-  follow: (options?: { isList: boolean; id?: string; url?: string }) => void
+  follow: (options?: { id?: string; url?: string }) => void
   quickAdd: () => void
   rsshubRoute: (route: string) => void
   // Navigate
   goToDiscover: () => void
   goToFeed: ({ id, view }: { id: string; view?: number }) => void
-  goToList: ({ id, view }: { id: string; view?: number }) => void
 
   /// Utils
   toast: typeof toast

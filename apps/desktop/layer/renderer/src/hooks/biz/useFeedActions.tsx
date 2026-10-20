@@ -2,19 +2,14 @@ import { IN_ELECTRON } from "@follow/shared/constants"
 import { getFeedById } from "@follow/store/feed/getter"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useInboxById, useIsInbox } from "@follow/store/inbox/hooks"
-import { useListById, useOwnedListByView } from "@follow/store/list/hooks"
-import { listSyncServices } from "@follow/store/list/store"
 import {
   useCategoriesByView,
   useSubscriptionByFeedId,
   useSubscriptionsByFeedIds,
 } from "@follow/store/subscription/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
-import { whoami } from "@follow/store/user/getters"
-import { useMutation } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import { toast } from "sonner"
 
 import type { FollowMenuItem, MenuItemInput } from "~/atoms/context-menu"
 import { MenuItemSeparator, MenuItemText } from "~/atoms/context-menu"
@@ -25,10 +20,8 @@ import { COMMAND_ID } from "~/modules/command/commands/id"
 import { useCommandShortcuts } from "~/modules/command/hooks/use-command-binding"
 import { FeedForm } from "~/modules/discover/FeedForm"
 import { InboxForm } from "~/modules/discover/InboxForm"
-import { ListForm } from "~/modules/discover/ListForm"
 import { useConfirmUnsubscribeSubscriptionModal } from "~/modules/modal/hooks/useConfirmUnsubscribeSubscriptionModal"
-import { useCategoryCreationModal } from "~/modules/settings/tabs/lists/hooks"
-import { ListCreationModalContent } from "~/modules/settings/tabs/lists/modals"
+import { useCategoryCreationModal } from "~/modules/subscription-column/CategoryCreationModalContent"
 
 import { useBatchUpdateSubscription, useDeleteSubscription } from "./useSubscriptionActions"
 
@@ -66,12 +59,9 @@ export const useFeedActions = ({
 
   const isEntryList = type === "entryList"
 
-  const { mutateAsync: addFeedToListMutation } = useAddFeedToFeedList()
-  const { mutateAsync: removeFeedFromListMutation } = useRemoveFeedFromFeedList()
   const { mutate: addFeedsToCategoryMutation } = useBatchUpdateSubscription()
   const presentCategoryCreationModal = useCategoryCreationModal()
 
-  const listByView = useOwnedListByView(view!)
   const categories = useCategoriesByView(view!)
 
   const isMultipleSelection = feedIds && feedIds.length > 1 && feedIds.includes(feedId)
@@ -124,55 +114,6 @@ export const useFeedActions = ({
         requiresLogin: true,
       }),
       new MenuItemSeparator(isEntryList),
-      new MenuItemText({
-        label: t("sidebar.feed_column.context_menu.add_feeds_to_list"),
-        disabled: isInbox,
-        supportMultipleSelection: true,
-        requiresLogin: true,
-        submenu: [
-          ...listByView.map((list) => {
-            const isIncluded = list.feedIds.includes(feedId)
-            return new MenuItemText({
-              label: list.title || "",
-              checked: isIncluded,
-              click() {
-                if (isMultipleSelection) {
-                  addFeedToListMutation({
-                    feedIds,
-                    listId: list.id,
-                  })
-                  return
-                }
-
-                if (!isIncluded) {
-                  addFeedToListMutation({
-                    feedId,
-                    listId: list.id,
-                  })
-                } else {
-                  removeFeedFromListMutation({
-                    feedId,
-                    listId: list.id,
-                  })
-                }
-              },
-              requiresLogin: true,
-            })
-          }),
-          listByView.length > 0 && new MenuItemSeparator(),
-          new MenuItemText({
-            label: t("sidebar.feed_actions.create_list"),
-            icon: <i className="i-mgc-add-cute-re" />,
-            click() {
-              present({
-                title: t("sidebar.feed_actions.create_list"),
-                content: () => <ListCreationModalContent />,
-              })
-            },
-            requiresLogin: true,
-          }),
-        ],
-      }),
       new MenuItemText({
         label: t("sidebar.feed_column.context_menu.add_feeds_to_category"),
         disabled: isInbox,
@@ -240,7 +181,6 @@ export const useFeedActions = ({
           item.supportMultipleSelection),
     )
   }, [
-    addFeedToListMutation,
     addFeedsToCategoryMutation,
     categories,
     deleteSubscription,
@@ -251,82 +191,15 @@ export const useFeedActions = ({
     isEntryList,
     isInbox,
     isMultipleSelection,
-    listByView,
     present,
     presentCategoryCreationModal,
     presentDeleteSubscription,
-    removeFeedFromListMutation,
     shortcuts,
     subscription,
     subscriptions,
     t,
     view,
   ])
-
-  return items
-}
-
-export const useListActions = ({ listId }: { listId: string }) => {
-  const { t } = useTranslation()
-  const list = useListById(listId)
-  const subscription = useSubscriptionByFeedId(listId)!
-
-  const { present } = useModalStack()
-  const { mutateAsync: deleteSubscription } = useDeleteSubscription({})
-
-  const shortcuts = useCommandShortcuts()
-
-  const items = useMemo(() => {
-    if (!list) return []
-
-    const items: MenuItemInput[] = [
-      new MenuItemText({
-        label: t("sidebar.feed_actions.mark_all_as_read"),
-        shortcut: shortcuts[COMMAND_ID.subscription.markAllAsRead],
-        click: () => {
-          unreadSyncService.markFeedAsRead(list.feedIds)
-        },
-        requiresLogin: true,
-      }),
-      MenuItemSeparator.default,
-      new MenuItemText({
-        label: t("sidebar.feed_actions.edit"),
-        shortcut: "E",
-        click: () => {
-          present({
-            title: t("sidebar.feed_actions.edit_list"),
-            content: ({ dismiss }) => <ListForm id={listId} onSuccess={dismiss} />,
-          })
-        },
-        requiresLogin: true,
-      }),
-      new MenuItemText({
-        label: t("sidebar.feed_actions.unfollow"),
-        shortcut: "$mod+Backspace",
-        click: () => deleteSubscription({ subscription }),
-        requiresLogin: true,
-      }),
-      MenuItemSeparator.default,
-      ...(list.ownerUserId === whoami()?.id
-        ? [
-            new MenuItemText({
-              label: t("sidebar.feed_actions.list_owned_by_you"),
-              disabled: true,
-            }),
-            MenuItemSeparator.default,
-          ]
-        : []),
-      new MenuItemText({
-        label: t("sidebar.feed_actions.copy_list_id"),
-        shortcut: "$mod+Shift+C",
-        click: () => {
-          void copyToClipboardWithFeedback(listId)
-        },
-      }),
-    ]
-
-    return items
-  }, [list, t, shortcuts, listId, present, deleteSubscription, subscription])
 
   return items
 }
@@ -365,47 +238,4 @@ export const useInboxActions = ({ inboxId }: { inboxId: string }) => {
   }, [isInbox, t, inboxId, present])
 
   return { items }
-}
-
-export const useAddFeedToFeedList = (options?: {
-  onSuccess?: () => void
-  onError?: () => void
-}) => {
-  const { t } = useTranslation("settings")
-  return useMutation({
-    mutationFn: async (
-      payload: { feedId: string; listId: string } | { feedIds: string[]; listId: string },
-    ) => {
-      await listSyncServices.addFeedsToFeedList(payload)
-    },
-    onSuccess: () => {
-      toast.success(t("lists.feeds.add.success"))
-
-      options?.onSuccess?.()
-    },
-    async onError() {
-      toast.error(t("lists.feeds.add.error"))
-      options?.onError?.()
-    },
-  })
-}
-
-export const useRemoveFeedFromFeedList = (options?: {
-  onSuccess: () => void
-  onError: () => void
-}) => {
-  const { t } = useTranslation("settings")
-  return useMutation({
-    mutationFn: async (payload: { feedId: string; listId: string }) => {
-      await listSyncServices.removeFeedFromFeedList(payload)
-    },
-    onSuccess: () => {
-      toast.success(t("lists.feeds.delete.success"))
-      options?.onSuccess?.()
-    },
-    async onError() {
-      toast.error(t("lists.feeds.delete.error"))
-      options?.onError?.()
-    },
-  })
 }

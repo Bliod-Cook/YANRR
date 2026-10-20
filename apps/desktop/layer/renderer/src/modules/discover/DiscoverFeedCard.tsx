@@ -46,7 +46,6 @@ function FeedCardActions({ item, isSubscribed }: { item: DiscoveryItem; isSubscr
         variant={isSubscribed ? "ghost" : undefined}
         onClick={() => {
           follow({
-            isList: false,
             id: item.feed?.id,
             url: item.feed?.url,
           })

@@ -9,8 +9,6 @@ import type { FollowAPI } from "../../types"
 import { getFeedByIdOrUrl } from "../feed/getter"
 import { feedSyncServices, useFeedStore } from "../feed/store"
 import type { FeedModel } from "../feed/types"
-import { useListStore } from "../list/store"
-import type { ListModel } from "../list/types"
 import { useUnreadStore } from "../unread/store"
 import { getSortedGroupedSubscriptionSelector, getSubscriptionByFeedId } from "./getter"
 import {
@@ -258,7 +256,7 @@ describe("subscriptionSyncService", () => {
     })
 
     expect(mocks.update).toHaveBeenCalledTimes(1)
-    expect(mocks.update).toHaveBeenCalledWith({ title: "BBC W", feedId: "a", listId: undefined })
+    expect(mocks.update).toHaveBeenCalledWith({ title: "BBC W", feedId: "a" })
     expect(useSubscriptionStore.getState().data.a).toMatchObject({
       title: "BBC W",
       category: "World",
@@ -273,7 +271,7 @@ describe("subscriptionSyncService", () => {
       category: "Blogs",
     })
 
-    expect(mocks.update).toHaveBeenCalledWith({ category: "Blogs", feedId: "a", listId: undefined })
+    expect(mocks.update).toHaveBeenCalledWith({ category: "Blogs", feedId: "a" })
     const state = useSubscriptionStore.getState()
     expect(state.data.a!.category).toBe("Blogs")
     expect(state.categories[FeedViewType.Articles].has("Blogs")).toBe(true)
@@ -429,121 +427,43 @@ describe("subscriptionSyncService", () => {
     ])
   })
 
-  test("moves a list to its new view when the list is edited", async () => {
-    const list: SubscriptionModel = {
-      ...createSubscription("", FeedViewType.Articles, null),
-      feedId: null,
-      listId: "list1",
-      type: "list",
-    }
-    const state = useSubscriptionStore.getState()
-    useSubscriptionStore.setState({
-      data: { list1: list },
-      listIdByView: {
-        ...state.listIdByView,
-        [FeedViewType.Articles]: new Set(["list1"]),
-        [FeedViewType.Pictures]: new Set(),
-      },
-    })
-
-    await subscriptionSyncService.edit({ ...list, view: FeedViewType.Pictures })
-
-    const { listIdByView } = useSubscriptionStore.getState()
-    expect(listIdByView[FeedViewType.Articles].has("list1")).toBe(false)
-    expect(listIdByView[FeedViewType.Pictures].has("list1")).toBe(true)
-  })
-
-  test("clears the unread counts of feeds followed only through an unfollowed list", async () => {
-    const list: SubscriptionModel = {
-      ...createSubscription("", FeedViewType.Articles, null),
-      feedId: null,
-      listId: "list1",
-      type: "list",
-    }
-    seed([createSubscription("direct", FeedViewType.Articles, null)])
-    useSubscriptionStore.setState((state) => ({ data: { ...state.data, list1: list } }))
-    useListStore.setState({
-      lists: { list1: { id: "list1", feedIds: ["direct", "listOnly"] } as ListModel },
-    })
-    useUnreadStore.setState({ data: { direct: 3, listOnly: 5 } })
-
-    await subscriptionSyncService.unsubscribe("list1")
-    await vi.waitFor(() => expect(useUnreadStore.getState().data.listOnly).toBe(0))
-    expect(useUnreadStore.getState().data.direct).toBe(3)
-  })
-
-  test("unfollows the selected feeds and lists in one request", async () => {
-    const createList = (listId: string): SubscriptionModel => ({
-      ...createSubscription("", FeedViewType.Articles, null),
-      feedId: null,
-      listId,
-      type: "list",
-    })
+  test("unfollows the selected feeds in one request", async () => {
     seed([
       createSubscription("feed1", FeedViewType.Articles, null),
       createSubscription("feed2", FeedViewType.Articles, null),
     ])
-    useSubscriptionStore.setState((state) => ({
-      data: { ...state.data, list1: createList("list1"), list2: createList("list2") },
-      listIdByView: {
-        ...state.listIdByView,
-        [FeedViewType.All]: new Set(["list1", "list2"]),
-        [FeedViewType.Articles]: new Set(["list1", "list2"]),
-      },
-    }))
     let syncId = 40
     mocks.deleteSubscriptions.mockImplementation(async () => ({ code: 0, lastSyncId: ++syncId }))
 
-    await subscriptionSyncService.unsubscribe(["feed1", "list1", "feed2", "list2"])
+    await subscriptionSyncService.unsubscribe(["feed1", "feed2"])
 
-    expect(mocks.deleteSubscriptions.mock.calls).toEqual([
-      [{ feedIdList: ["feed1", "feed2"], listIdList: ["list1", "list2"] }],
-    ])
+    expect(mocks.deleteSubscriptions.mock.calls).toEqual([[{ feedIdList: ["feed1", "feed2"] }]])
     const state = useSubscriptionStore.getState()
     expect(Object.keys(state.data)).toEqual([])
-    expect([...state.listIdByView[FeedViewType.Articles]]).toEqual([])
-    expect(mocks.deleteSubscriptionRows).toHaveBeenCalledWith([
-      "feed/feed1",
-      "list/list1",
-      "feed/feed2",
-      "list/list2",
-    ])
+    expect([...state.feedIdByView[FeedViewType.Articles]]).toEqual([])
+    expect(mocks.deleteSubscriptionRows).toHaveBeenCalledWith(["feed/feed1", "feed/feed2"])
     // The unfollows stay confirmed until the change log reaches the request's sync id
+    expect(getConfirmedSubscriptionChange("feed1")).toEqual({ subscription: null, syncId: 41 })
     expect(getConfirmedSubscriptionChange("feed2")).toEqual({ subscription: null, syncId: 41 })
-    expect(getConfirmedSubscriptionChange("list1")).toEqual({ subscription: null, syncId: 41 })
-    expect(getConfirmedSubscriptionChange("list2")).toEqual({ subscription: null, syncId: 41 })
   })
 
   test("puts the selection back when its unfollow failed", async () => {
-    const list: SubscriptionModel = {
-      ...createSubscription("", FeedViewType.Articles, null),
-      feedId: null,
-      listId: "failingList",
-      type: "list",
-    }
-    seed([createSubscription("leaving", FeedViewType.Articles, null)])
-    useSubscriptionStore.setState((state) => ({
-      data: { ...state.data, failingList: list },
-      listIdByView: {
-        ...state.listIdByView,
-        [FeedViewType.All]: new Set(["failingList"]),
-        [FeedViewType.Articles]: new Set(["failingList"]),
-      },
-    }))
+    seed([
+      createSubscription("leaving", FeedViewType.Articles, null),
+      createSubscription("failing", FeedViewType.Articles, null),
+    ])
     const error = new Error("Network error")
-    // The server unfollows the feeds and lists of one request together, or none of them
+    // The server unfollows the feeds of one request together, or none of them
     mocks.deleteSubscriptions.mockRejectedValue(error)
 
-    await expect(subscriptionSyncService.unsubscribe(["leaving", "failingList"])).rejects.toBe(
-      error,
-    )
+    await expect(subscriptionSyncService.unsubscribe(["leaving", "failing"])).rejects.toBe(error)
 
     const state = useSubscriptionStore.getState()
-    expect(Object.keys(state.data).sort()).toEqual(["failingList", "leaving"])
-    expect(state.listIdByView[FeedViewType.Articles].has("failingList")).toBe(true)
+    expect(Object.keys(state.data).sort()).toEqual(["failing", "leaving"])
+    expect(state.feedIdByView[FeedViewType.Articles].has("failing")).toBe(true)
     expect(state.feedIdByView[FeedViewType.Articles].has("leaving")).toBe(true)
     expect(mocks.deleteSubscriptionRows).not.toHaveBeenCalled()
-    expect(getConfirmedSubscriptionChange("failingList")).toBeUndefined()
+    expect(getConfirmedSubscriptionChange("failing")).toBeUndefined()
     expect(getConfirmedSubscriptionChange("leaving")).toBeUndefined()
   })
 
@@ -558,14 +478,12 @@ describe("subscriptionSyncService", () => {
     mocks.create.mockResolvedValue({
       code: 0,
       feed: { type: "feed", id: "feed-sort", url, title: "Sort" },
-      list: null,
       unread: {},
     })
 
     await subscriptionSyncService.subscribe({
       url,
       feedId: "nonce",
-      listId: undefined,
       view: FeedViewType.Articles,
       category: null,
       hideFromTimeline: null,
@@ -583,13 +501,12 @@ describe("subscriptionSyncService", () => {
   test("fails a follow the server answered without what it followed, storing nothing", async () => {
     const url = "https://example.com/new-feed.xml"
     seed([])
-    mocks.create.mockResolvedValue({ code: 0, feed: null, list: null, unread: {} })
+    mocks.create.mockResolvedValue({ code: 0, feed: null, unread: {} })
 
     await expect(
       subscriptionSyncService.subscribe({
         url,
         feedId: undefined,
-        listId: undefined,
         view: FeedViewType.Articles,
         category: null,
         hideFromTimeline: null,
@@ -616,7 +533,6 @@ describe("subscriptionSyncService", () => {
     mocks.create.mockResolvedValue({
       code: 0,
       feed: { type: "feed", id: "feed-sort", url, title: "Sort" },
-      list: null,
       unread: {},
     })
 
@@ -624,7 +540,6 @@ describe("subscriptionSyncService", () => {
     await subscriptionSyncService.subscribe({
       url: feed.url,
       feedId: feed.id,
-      listId: undefined,
       view: FeedViewType.Articles,
       category: null,
       hideFromTimeline: null,

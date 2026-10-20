@@ -6,14 +6,14 @@ import { logger } from "~/logger"
 import { WindowManager } from "~/manager/window"
 
 export const handleUrlRouting = (url: string) => {
-  // For example, the url is "follow://add?id=123&type=list&url=https://example.com"
+  // For example, the url is "follow://add?id=123&url=https://example.com"
   const doubleSlash = url.indexOf("://")
   if (doubleSlash === -1) {
     logger.error("url routing error: no protocol found", url)
     return
   }
   // Remove the protocol
-  // For example, the uri is "/add?id=123&type=list&url=https://example.com"
+  // For example, the uri is "/add?id=123&url=https://example.com"
   const uri = url.slice(doubleSlash + 2)
   try {
     const { pathname, searchParams } = new URL(uri, "https://follow.dev")
@@ -26,10 +26,9 @@ export const handleUrlRouting = (url: string) => {
           const caller = callWindowExpose(mainWindow)
 
           const id = searchParams.get("id") ?? undefined
-          const isList = searchParams.get("type") === "list"
           const urlParam = searchParams.get("url") ?? undefined
           if (!id && !urlParam) return
-          caller.follow({ isList, id, url: urlParam })
+          caller.follow({ id, url: urlParam })
         })
         return
       }
@@ -52,20 +51,6 @@ export const handleUrlRouting = (url: string) => {
           const view = searchParams.get("view") ?? "0"
           if (!id) return
           caller.goToFeed({
-            id,
-            view: Number.parseInt(view, 10),
-          })
-        })
-        return
-      }
-      case "/list": {
-        callMainWindow(url, (mainWindow) => {
-          const caller = callWindowExpose(mainWindow)
-
-          const id = searchParams.get("id") ?? undefined
-          const view = searchParams.get("view") ?? "0"
-          if (!id) return
-          caller.goToList({
             id,
             view: Number.parseInt(view, 10),
           })

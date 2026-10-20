@@ -1,7 +1,6 @@
 import { FeedViewType } from "@follow/constants"
 import { EntryService } from "@follow/database/services/entry"
 import { InboxService } from "@follow/database/services/inbox"
-import { ListService } from "@follow/database/services/list"
 import { SubscriptionService } from "@follow/database/services/subscription"
 import { SyncMetaService } from "@follow/database/services/sync-meta"
 import { FollowAPIError } from "@follow-app/client-sdk"
@@ -14,8 +13,6 @@ import { entryActions } from "../modules/entry/store"
 import { setFeedUnreadDirty, setFeedUnreadDirtyMany } from "../modules/feed/hooks"
 import { feedActions } from "../modules/feed/store"
 import { inboxActions, useInboxStore } from "../modules/inbox/store"
-import { getListById } from "../modules/list/getters"
-import { listActions } from "../modules/list/store"
 import { getSubscriptionById } from "../modules/subscription/getter"
 import {
   getConfirmedSubscriptionChange,
@@ -39,7 +36,6 @@ import { isNavigatorOnline, transactionQueue } from "./transaction-queue"
 import type {
   CollectionActionData,
   InboxEntryActionData,
-  ListActionData,
   SyncAction,
   TimelineNewEntriesActionData,
   TimelineReadActionData,
@@ -84,7 +80,7 @@ type SubscriptionSyncPayload = Parameters<typeof apiMorph.toSubscription>[0][num
 interface PullSummary {
   /** An action changed unread counters in a way only a recount can resolve. */
   refreshUnread: boolean
-  /** Views whose timelines changed structurally: a subscription or list membership moved. */
+  /** Views whose timelines changed structurally: a subscription moved. */
   invalidateViews: Set<FeedViewType>
   /** Views that received new entries; only the head of their lists needs fetching. */
   newEntryViews: Set<FeedViewType>
@@ -124,9 +120,9 @@ const isCountRecord = (value: unknown): value is Record<string, number> =>
   isRecord(value) && Object.values(value).every((count) => typeof count === "number")
 
 /**
- * The row was logged before a follow or unfollow of the same feed or list that the server
- * already confirmed to this device. The delta lags behind such a response, so applying the row
- * would bring back the state before it, such as an unfollowed list.
+ * The row was logged before a follow or unfollow of the same feed that the server already
+ * confirmed to this device. The delta lags behind such a response, so applying the row would
+ * bring back the state before it, such as an unfollowed feed.
  */
 const isOlderThanConfirmedChange = (action: SyncAction) => {
   if (!action.modelId) return false
@@ -512,8 +508,7 @@ class SyncEngine implements Resetable {
 
   private async applyAction(action: SyncAction, summary: PullSummary) {
     switch (action.model) {
-      case "subscription":
-      case "list_subscription": {
+      case "subscription": {
         await this.applySubscriptionAction(action, summary)
         return
       }
@@ -523,10 +518,6 @@ class SyncEngine implements Resetable {
       }
       case "timeline": {
         await this.applyTimelineAction(action, summary)
-        return
-      }
-      case "list": {
-        await this.applyListAction(action, summary)
         return
       }
       case "inbox": {
@@ -561,12 +552,11 @@ class SyncEngine implements Resetable {
     if (!action.modelId || isOlderThanConfirmedChange(action)) return
 
     if (action.action === "I") {
-      if (!isRecord(action.data) || !("feeds" in action.data || "lists" in action.data)) return
+      if (!isRecord(action.data) || !("feeds" in action.data)) return
       const { subscriptions, collections } = apiMorph.toSubscription([
         action.data as unknown as SubscriptionSyncPayload,
       ])
       await feedActions.upsertMany(collections.feeds)
-      await listActions.upsertMany(collections.lists)
       await subscriptionActions.upsertMany(subscriptions)
       for (const subscription of subscriptions) {
         addView(summary.invalidateViews, subscription.view)
@@ -602,10 +592,6 @@ class SyncEngine implements Resetable {
       await SubscriptionService.delete([getSubscriptionDBId(current)])
       if (current.feedId) {
         await unreadActions.updateById(current.feedId, 0)
-      }
-      // The list's feeds may no longer be followed, which only a recount can tell
-      if (current.listId) {
-        summary.refreshUnread = true
       }
       addView(summary.invalidateViews, current.view)
     }
@@ -677,10 +663,6 @@ class SyncEngine implements Resetable {
         addView(summary.newEntryViews, FeedViewType.Articles)
       } else {
         addView(summary.newEntryViews, getSubscriptionById(id)?.view)
-        for (const source of data.from ?? []) {
-          if (source === "feed") continue
-          addView(summary.newEntryViews, getSubscriptionById(source)?.view)
-        }
       }
       const loggedAt = Date.parse(action.createdAt)
       if (Number.isFinite(loggedAt)) {
@@ -693,42 +675,6 @@ class SyncEngine implements Resetable {
       } else {
         summary.refreshUnread = true
       }
-    }
-  }
-
-  private async applyListAction(action: SyncAction, summary: PullSummary) {
-    const listId = action.modelId
-    if (!listId) return
-
-    if (action.action === "U") {
-      if (!isRecord(action.data)) return
-      const current = getListById(listId)
-      if (!current) return
-
-      const patch = Object.fromEntries(
-        Object.entries(action.data as ListActionData).filter(([, value]) => value !== undefined),
-      ) as Partial<typeof current>
-      await listActions.upsertMany([{ ...current, ...patch }])
-
-      if ("feedIds" in patch) {
-        // Membership changed: the list's timeline and unread counts are different now.
-        addView(summary.invalidateViews, current.view)
-        summary.refreshUnread = true
-      }
-      return
-    }
-
-    if (action.action === "D") {
-      const subscription = getSubscriptionById(listId)
-      if (subscription?.listId) {
-        subscriptionActions.removeManyInSession([getSubscriptionStoreId(subscription)])
-        await SubscriptionService.delete([getSubscriptionDBId(subscription)])
-        addView(summary.invalidateViews, subscription.view)
-      }
-      listActions.removeInSession(listId)
-      await ListService.deleteList(listId)
-      // The server removed the timeline rows the list brought, which only a recount can tell
-      summary.refreshUnread = true
     }
   }
 

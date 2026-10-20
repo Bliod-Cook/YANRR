@@ -5,8 +5,7 @@ import { createSingleArgGetter, createStaticGetter } from "../../lib/helper"
 import { getEntry } from "../entry/getter"
 import { getFeedById } from "../feed/getter"
 import { getInboxList } from "../inbox/getters"
-import { getListById, getListFeedIds } from "../list/getters"
-import { getUnreadById, getUnreadByListId } from "../unread/getters"
+import { getUnreadById } from "../unread/getters"
 import { folderFeedsByFeedIdSelector } from "./selectors"
 import { useSubscriptionStore } from "./store"
 import { getDefaultCategory } from "./utils"
@@ -21,10 +20,7 @@ export const getSubscriptionByEntryId = (entryId: string | undefined) => {
   if (!entryId) return
   const entry = getEntry(entryId)
   if (!entry) return
-  const { feedId, sources } = entry
-  const possibleSource = (sources?.concat(feedId || "") ?? []).filter((s) => !!s && s !== "feed")
-  if (!possibleSource || possibleSource.length === 0) return
-  return possibleSource.map((id) => getSubscriptionByFeedId(id)).find((s) => !!s)
+  return getSubscriptionByFeedId(entry.feedId ?? undefined)
 }
 
 export const getSubscribedFeedIdAndInboxHandlesByView = ({
@@ -43,12 +39,7 @@ export const getSubscribedFeedIdAndInboxHandlesByView = ({
 
   const inboxIds = view === FeedViewType.Articles ? getInboxList().map((i) => i.id) : []
 
-  const listFeedIds = Array.from(state.listIdByView[view] ?? [])
-    .filter((i) => !excludeHidden || !state.data[i]?.hideFromTimeline)
-    .flatMap((id) => getListFeedIds(id) ?? [])
-
-  // Use Set to remove duplicates when feeds exist in both subscriptions and lists
-  return Array.from(new Set([...feedIds, ...inboxIds, ...listFeedIds]))
+  return [...feedIds, ...inboxIds]
 }
 
 export const getSubscribedFeedIdsByView = (view: FeedViewType): string[] => {
@@ -110,23 +101,19 @@ const sortByUnread = (leftSubscriptionId: string, rightSubscriptionId: string) =
   const leftSubscription = getSubscriptionById(leftSubscriptionId)
   const rightSubscription = getSubscriptionById(rightSubscriptionId)
 
-  const nextLeftSubscriptionId = leftSubscription?.feedId || leftSubscription?.listId
-  const nextRightSubscriptionId = rightSubscription?.feedId || rightSubscription?.listId
+  const leftFeedId = leftSubscription?.feedId
+  const rightFeedId = rightSubscription?.feedId
 
-  if (!nextLeftSubscriptionId || !nextRightSubscriptionId) return 0
-  return getUnreadById(nextRightSubscriptionId) - getUnreadById(nextLeftSubscriptionId)
+  if (!leftFeedId || !rightFeedId) return 0
+  return getUnreadById(rightFeedId) - getUnreadById(leftFeedId)
 }
 
 // Store selector functions (for React hooks)
 export const getSubscriptionIdsByViewSelector = (state: StateType) => (view: FeedViewType) => {
   const feedIds = Array.from(state.feedIdByView[view] ?? [])
   const inboxIds = view === FeedViewType.Articles ? getInboxList().map((i) => i.id) : []
-  const listFeedIds = Array.from(state.listIdByView[view] ?? []).flatMap(
-    (id) => getListFeedIds(id) ?? [],
-  )
 
-  // Use Set to remove duplicates when feeds exist in both subscriptions and lists
-  return Array.from(new Set([...feedIds, ...inboxIds, ...listFeedIds]))
+  return [...feedIds, ...inboxIds]
 }
 
 export const getFeedSubscriptionIdsByViewSelector =
@@ -138,12 +125,6 @@ export const getFeedSubscriptionByViewSelector = (state: StateType) => (view: Fe
   return Array.from(state.feedIdByView[view] ?? [])
     .map((feedId) => state.data[feedId])
     .filter((feed) => !!feed)
-}
-
-export const getListSubscriptionByViewSelector = (state: StateType) => (view: FeedViewType) => {
-  return Array.from(state.listIdByView[view] ?? [])
-    .map((listId) => state.data[listId])
-    .filter((list) => !!list)
 }
 
 export const getGroupedSubscriptionSelector =
@@ -275,18 +256,6 @@ export const getSubscriptionsByIdsSelector = (state: StateType) => (ids: string[
   return ids.map((id) => state.data[id])
 }
 
-export const getAllListSubscriptionSelector = (state: StateType) => () => {
-  return Object.values(state.listIdByView).flatMap((list) => Array.from(list))
-}
-
-export const getListSubscriptionSelector = (state: StateType) => (view: FeedViewType) => {
-  return Array.from(state.listIdByView[view] ?? []).map((listId) => state.data[listId])
-}
-
-export const getListSubscriptionIdsSelector = (state: StateType) => (view: FeedViewType) => {
-  return Array.from(state.listIdByView[view] ?? [])
-}
-
 export const getFeedSubscriptionSelector = (state: StateType) => (view: FeedViewType) => {
   return Array.from(state.feedIdByView[view] ?? []).map((feedId) => state.data[feedId])
 }
@@ -313,31 +282,6 @@ export const getAllSubscriptionSelector = (state: StateType) => () => {
   return Object.values(state.data).filter((subscription) => !!subscription)
 }
 
-export const getSortedListSubscriptionSelector =
-  (_state: StateType) =>
-  ({
-    ids,
-    sortBy,
-    hideAllReadSubscriptions,
-  }: {
-    ids: string[]
-    sortBy: "alphabet" | "unread"
-    hideAllReadSubscriptions: boolean
-  }) => {
-    return ids
-      .concat()
-      .filter((id) => !hideAllReadSubscriptions || getUnreadByListId(id) > 0)
-      .sort((a, b) => {
-        const leftList = getListById(a)
-        const rightList = getListById(b)
-        if (!leftList || !rightList) return 0
-        if (sortBy === "alphabet") {
-          return sortByAlphabet(leftList.title || "", rightList.title || "")
-        }
-        return sortByUnread(a, b)
-      })
-  }
-
 export const getCategoriesSelector = (state: StateType) => (view?: FeedViewType) => {
   return view === undefined
     ? Array.from(
@@ -356,10 +300,6 @@ export const getCategoriesByViewSelector = (state: StateType) => (view: FeedView
   return state.categories[view] ?? new Set<string>()
 }
 
-export const getListSubscriptionCountSelector = (state: StateType) => () => {
-  return Array.from(state.subscriptionIdSet).filter((id) => id.startsWith("list/")).length
-}
-
 export const getFeedSubscriptionCountSelector = (state: StateType) => () => {
   return Array.from(state.subscriptionIdSet).filter((id) => id.startsWith("feed/")).length
 }
@@ -369,14 +309,8 @@ export const getIsSubscribedSelector = (state: StateType) => (id: string | undef
   return (
     state.subscriptionIdSet.has(id) ||
     state.subscriptionIdSet.has(`feed/${id}`) ||
-    state.subscriptionIdSet.has(`list/${id}`) ||
     state.subscriptionIdSet.has(`inbox/${id}`)
   )
-}
-
-export const getIsListSubscriptionSelector = (state: StateType) => (id: string | undefined) => {
-  if (!id) return false
-  return state.subscriptionIdSet.has(`list/${id}`)
 }
 
 export const getCategoryOpenStateByViewSelector = (state: StateType) => (view: FeedViewType) => {
@@ -395,10 +329,6 @@ export const getFeedSubscriptionIdsByView = createSingleArgGetter(
 export const getFeedSubscriptionByView = createSingleArgGetter(
   getState,
   getFeedSubscriptionByViewSelector,
-)
-export const getListSubscriptionByView = createSingleArgGetter(
-  getState,
-  getListSubscriptionByViewSelector,
 )
 export const getGroupedSubscription = createSingleArgGetter(
   getState,
@@ -421,12 +351,6 @@ export const getSubscriptionByIdStatic = createSingleArgGetter(
   getSubscriptionByIdSelector,
 )
 export const getSubscriptionsByIds = createSingleArgGetter(getState, getSubscriptionsByIdsSelector)
-export const getAllListSubscription = createStaticGetter(getState, getAllListSubscriptionSelector)
-export const getListSubscription = createSingleArgGetter(getState, getListSubscriptionSelector)
-export const getListSubscriptionIds = createSingleArgGetter(
-  getState,
-  getListSubscriptionIdsSelector,
-)
 export const getFeedSubscription = createSingleArgGetter(getState, getFeedSubscriptionSelector)
 export const getFeedSubscriptionIds = createSingleArgGetter(
   getState,
@@ -438,26 +362,17 @@ export const getAllFeedSubscriptionIds = createStaticGetter(
   getAllFeedSubscriptionIdsSelector,
 )
 export const getAllSubscription = createStaticGetter(getState, getAllSubscriptionSelector)
-export const getSortedListSubscription = createSingleArgGetter(
-  getState,
-  getSortedListSubscriptionSelector,
-)
 export const getCategories = createSingleArgGetter(getState, getCategoriesSelector)
 export const getSubscriptionCategoryExist = createSingleArgGetter(
   getState,
   getSubscriptionCategoryExistSelector,
 )
 export const getCategoriesByView = createSingleArgGetter(getState, getCategoriesByViewSelector)
-export const getListSubscriptionCount = createStaticGetter(
-  getState,
-  getListSubscriptionCountSelector,
-)
 export const getFeedSubscriptionCount = createStaticGetter(
   getState,
   getFeedSubscriptionCountSelector,
 )
 export const getIsSubscribed = createSingleArgGetter(getState, getIsSubscribedSelector)
-export const getIsListSubscription = createSingleArgGetter(getState, getIsListSubscriptionSelector)
 export const getCategoryOpenStateByView = createSingleArgGetter(
   getState,
   getCategoryOpenStateByViewSelector,

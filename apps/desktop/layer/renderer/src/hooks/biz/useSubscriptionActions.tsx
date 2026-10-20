@@ -31,10 +31,7 @@ export const useDeleteSubscription = ({ onSuccess }: { onSuccess?: () => void } 
       if (!subscription) return
 
       // Awaited so a failed request reaches onError; the store rolls the unfollow back
-      const [feed] = await subscriptionSyncService.unsubscribe([
-        subscription.feedId,
-        subscription.listId,
-      ])
+      const [feed] = await subscriptionSyncService.unsubscribe(subscription.feedId)
       // Already applied locally; only servers without a change log need the full list.
       void subscriptionSyncService.refresh()
 
@@ -43,12 +40,10 @@ export const useDeleteSubscription = ({ onSuccess }: { onSuccess?: () => void } 
       const undo = async () => {
         try {
           await subscriptionSyncService.subscribe({
-            url: feed.type === "feed" ? feed.url : undefined,
-            listId: feed.type === "list" ? feed.id : undefined,
+            url: feed.url,
             view: subscription.view,
             category: subscription.category,
-            // The server looks a feed id up before a list id, so a list must not send one
-            feedId: feed.type === "feed" ? feed.id : undefined,
+            feedId: feed.id,
             // The custom title, or none so the feed keeps following its own title
             title: subscription.title,
             hideFromTimeline: subscription.hideFromTimeline,

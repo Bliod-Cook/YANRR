@@ -24,17 +24,12 @@ const EntryHeadDateItem: FC<{
   entryId: string
   isSticky?: boolean
 }> = ({ entryId, isSticky }) => {
-  const entry = useEntry(entryId, (state) => {
-    const { insertedAt, publishedAt } = state
+  const publishedAt = useEntry(entryId, (state) => state.publishedAt)
 
-    return { insertedAt, publishedAt }
-  })
+  const { view } = useRouteParams()
 
-  const { listId, view } = useRouteParams()
-
-  if (!entry) return null
-  // Match the grouping in useEntriesByView: lists are grouped by insertion time
-  const date = new Date(listId ? entry.insertedAt : entry.publishedAt).toDateString()
+  if (!publishedAt) return null
+  const date = new Date(publishedAt).toDateString()
 
   return <DateItem isSticky={isSticky} date={date} view={view} />
 }

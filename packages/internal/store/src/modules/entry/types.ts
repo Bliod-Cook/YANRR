@@ -7,7 +7,6 @@ export type FetchEntriesProps = {
   feedId?: string
   feedIdList?: string[]
   inboxId?: string
-  listId?: string
   view?: number
   read?: boolean
   limit?: number

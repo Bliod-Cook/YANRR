@@ -8,12 +8,7 @@ import { ScrollArea } from "@follow/components/ui/scroll-area/index.js"
 import { Skeleton } from "@follow/components/ui/skeleton/index.jsx"
 import { FeedViewType } from "@follow/constants"
 import { useInboxList } from "@follow/store/inbox/hooks"
-import { useListById } from "@follow/store/list/hooks"
-import {
-  useCategoryOpenStateByView,
-  useFeedsGroupedData,
-  useSubscriptionListIds,
-} from "@follow/store/subscription/hooks"
+import { useCategoryOpenStateByView, useFeedsGroupedData } from "@follow/store/subscription/hooks"
 import { nextFrame } from "@follow/utils/dom"
 import { EventBus } from "@follow/utils/event-bus"
 import { cn, combineCleanupFunctions, isKeyForMultiSelectPressed } from "@follow/utils/utils"
@@ -39,9 +34,9 @@ import {
   useSelectedFeedIdsState,
 } from "../atom"
 import { DraggableContext } from "../context"
-import { FeedItem, ListItemAutoHideUnread } from "../FeedItem"
+import { FeedItem } from "../FeedItem"
 import { useShouldFreeUpSpace } from "../hook"
-import { SortableFeedList, SortByAlphabeticalInbox, SortByAlphabeticalList } from "../sort-by"
+import { SortableFeedList, SortByAlphabeticalInbox } from "../sort-by"
 import { EmptyFeedList, SubscriptionLoadError } from "./EmptyFeedList"
 import { ListHeader } from "./ListHeader"
 import { StarredItem } from "./StarredItem"
@@ -57,7 +52,6 @@ const SubscriptionImpl = ({
   const autoGroup = useGeneralSettingKey("autoGroup")
   const feedsData = useFeedsGroupedData(view, autoGroup)
 
-  const listSubIds = useSubscriptionListIds(view)
   const inboxSubIds = useInboxList(
     useCallback(
       // Inboxes belong to Articles, and the All view lists every view
@@ -71,12 +65,10 @@ const SubscriptionImpl = ({
 
   const categoryOpenStateData = useCategoryOpenStateByView(view)
 
-  const hasData =
-    Object.keys(feedsData).length > 0 || listSubIds.length > 0 || inboxSubIds.length > 0
+  const hasData = Object.keys(feedsData).length > 0 || inboxSubIds.length > 0
 
   const { t } = useTranslation()
 
-  const hasListData = listSubIds.length > 0
   const hasInboxData = inboxSubIds.length > 0
 
   const scrollerRef = useRef<HTMLDivElement | null>(null)
@@ -146,7 +138,7 @@ const SubscriptionImpl = ({
   const shouldFreeUpSpace = useShouldFreeUpSpace()
 
   const routerParams = useRouteParams()
-  const { listId, feedId } = routerParams
+  const { feedId } = routerParams
 
   // A sidebar selection no longer applies once another feed is opened from elsewhere, such as
   // the entry header or search, or else the opened feed isn't highlighted
@@ -156,12 +148,9 @@ const SubscriptionImpl = ({
     if (feedId && selectedFeedIds.includes(feedId)) return
     resetSelectedFeedIds()
   }, [feedId])
-  const isPreview = useIsPreviewFeed()
-  const isFeedPreview = isPreview && !listId
-  const isListPreview = isPreview && listId
+  const isFeedPreview = useIsPreviewFeed()
 
   useFeedQuery({ id: isFeedPreview ? feedId : undefined })
-  useListById(isListPreview ? listId : undefined)
 
   useRegisterCommand()
 
@@ -266,22 +255,6 @@ const SubscriptionImpl = ({
         rootClassName={cn("h-full", shouldFreeUpSpace && "overflow-visible")}
       >
         <StarredItem view={view} />
-        {(hasListData || (isListPreview && listId)) && (
-          <>
-            <div className="mt-1 flex h-6 w-full shrink-0 items-center rounded-md px-2.5 text-xs font-semibold text-text-secondary transition-colors">
-              {t("words.lists")}
-            </div>
-            {isListPreview && listId && (
-              <ListItemAutoHideUnread
-                listId={listId}
-                view={view}
-                className="pl-2.5 pr-0"
-                isPreview
-              />
-            )}
-            <SortByAlphabeticalList view={view} data={listSubIds} />
-          </>
-        )}
         {hasInboxData && (
           <>
             <div className="mt-1 flex h-6 w-full shrink-0 items-center rounded-md px-2.5 text-xs font-semibold text-text-secondary transition-colors">
@@ -291,7 +264,7 @@ const SubscriptionImpl = ({
           </>
         )}
 
-        {(hasListData || hasInboxData) && (
+        {hasInboxData && (
           <div
             className={cn(
               "mb-1 flex h-6 w-full shrink-0 items-center rounded-md px-2.5 text-xs font-semibold text-text-secondary transition-colors",

@@ -10,7 +10,6 @@ export interface SubscriptionForm {
   hideFromTimeline: Nullable<boolean>
   title: Nullable<string>
   feedId: Nullable<string>
-  listId: string | undefined
 }
 
 /** `isPrivate` is a column the server no longer has; the database is written `false` */

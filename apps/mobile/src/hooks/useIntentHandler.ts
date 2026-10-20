@@ -17,13 +17,13 @@ let lastHandledLink: { url: string; at: number } | null = null
 let initialUrlChecked = false
 
 type DeepLinkParams =
-  | { id: string | null; type: "url" | "feed" | "list"; url?: string | null; view?: string | null }
+  | { id: string | null; type: "url" | "feed"; url?: string | null; view?: string | null }
   | "refresh"
   | null
 
 type FollowScreenProps = {
   id?: string
-  type: "feed" | "list" | "url"
+  type: "feed" | "url"
   url?: string
   view?: string
 }
@@ -138,20 +138,7 @@ const extractParamsFromDeepLink = (incomingUrl: string | null): DeepLinkParams =
         const view = searchParams.get("view")
         // Without an id the feed is looked up by its URL
         if (!id) return feedUrl ? { id: null, type: "url", url: feedUrl, view } : null
-
-        const isList = url.hostname === "add" && searchParams.get("type") === "list"
-        return { id, type: isList ? "list" : "feed", view }
-      }
-      case "list": {
-        const { searchParams } = url
-        const id = searchParams.get("id")
-        if (!id) return null
-
-        return {
-          id,
-          type: "list",
-          view: searchParams.get("view"),
-        }
+        return { id, type: "feed", view }
       }
       case "refresh": {
         return "refresh"

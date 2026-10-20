@@ -4,7 +4,6 @@ import {
   useReadonlyRouteSelector,
 } from "@follow/components/atoms/route.js"
 import { FeedViewType } from "@follow/constants"
-import { getListById } from "@follow/store/list/getters"
 import { useMemo } from "react"
 import type { Params } from "react-router"
 import { useParams } from "react-router"
@@ -14,7 +13,6 @@ import {
   ROUTE_ENTRY_PENDING,
   ROUTE_FEED_IN_FOLDER,
   ROUTE_FEED_IN_INBOX,
-  ROUTE_FEED_IN_LIST,
   ROUTE_FEED_PENDING,
   ROUTE_TIMELINE_OF_VIEW,
   ROUTE_VIEW_ALL,
@@ -39,7 +37,6 @@ export interface BizRouteParams {
   isPendingEntry: boolean
   folderName?: string
   inboxId?: string
-  listId?: string
   timelineId?: string
 }
 
@@ -99,13 +96,8 @@ export function parseView(input: string | undefined): FeedViewType | undefined {
 }
 
 const parseRouteParams = (params: Params<any>, _searchParams: URLSearchParams): BizRouteParams => {
-  const listId = params.feedId?.startsWith(ROUTE_FEED_IN_LIST)
-    ? params.feedId.slice(ROUTE_FEED_IN_LIST.length)
-    : undefined
-  const list = listId ? getListById(listId) : undefined
-
   return {
-    view: parseView(params.timelineId) ?? list?.view ?? FeedViewType.Articles,
+    view: parseView(params.timelineId) ?? FeedViewType.Articles,
     entryId: params.entryId || undefined,
     feedId: params.feedId || undefined,
     // alias
@@ -118,7 +110,6 @@ const parseRouteParams = (params: Params<any>, _searchParams: URLSearchParams): 
     inboxId: params.feedId?.startsWith(ROUTE_FEED_IN_INBOX)
       ? params.feedId.slice(ROUTE_FEED_IN_INBOX.length)
       : undefined,
-    listId,
     timelineId: params.timelineId,
   }
 }

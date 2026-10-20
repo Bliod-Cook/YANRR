@@ -37,9 +37,6 @@ export const ExtensionExposeProvider = () => {
       goToFeed: ({ id, view }: { id: string; view?: number }) => {
         navigateEntry({ feedId: id, view: view ?? 0, backPath: location.pathname })
       },
-      goToList: ({ id, view }: { id: string; view?: number }) => {
-        navigateEntry({ listId: id, view: view ?? 0, backPath: location.pathname })
-      },
     })
   }, [location.pathname])
 

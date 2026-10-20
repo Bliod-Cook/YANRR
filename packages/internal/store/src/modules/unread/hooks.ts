@@ -8,7 +8,6 @@ import {
   requestUnreadCalibration,
 } from "../../sync/sync-status"
 import { getEntry } from "../entry/getter"
-import { useListFeedIds } from "../list/hooks"
 import { useSubscriptionIdsByView } from "../subscription/hooks"
 import { useIsLoggedIn } from "../user/hooks"
 import { getUnreadCountForScope } from "./getters"
@@ -138,11 +137,6 @@ export const useUnreadByIds = (ids: string[]): number => {
 
 export const useUnreadAll = (): number => {
   return useUnreadStore(unreadCountAllSelector)
-}
-
-export const useUnreadByListId = (listId: string) => {
-  const feedIds = useListFeedIds(listId)
-  return useUnreadByIds(feedIds ?? [])
 }
 
 export const useUnreadByView = (view: FeedViewType) => {

@@ -38,12 +38,11 @@ describe("getEffectiveEntrySortOrder", () => {
 })
 
 describe("isTimelineEntriesSource", () => {
-  test("supports root, feed, folder, multi-feed, and list timeline sources", () => {
+  test("supports root, feed, folder, and multi-feed timeline sources", () => {
     expect(isTimelineEntriesSource({})).toBe(true)
     expect(isTimelineEntriesSource({ feedId: "feed-1" })).toBe(true)
     expect(isTimelineEntriesSource({ feedId: "folder-news" })).toBe(true)
     expect(isTimelineEntriesSource({ feedId: "feed-1,feed-2" })).toBe(true)
-    expect(isTimelineEntriesSource({ feedId: "list-list-1" })).toBe(true)
   })
 
   test("excludes inbox and collection sources", () => {

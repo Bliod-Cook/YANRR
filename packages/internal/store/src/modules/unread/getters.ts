@@ -1,7 +1,6 @@
 import { FeedViewType } from "@follow/constants"
 
 import { FEED_COLLECTION_LIST, ROUTE_FEED_PENDING } from "../../constants/app"
-import { getListFeedIds } from "../list/getters"
 import { getSubscribedFeedIdAndInboxHandlesByView } from "../subscription/getter"
 import { unreadCountAllSelector, unreadCountIdSelector, unreadCountIdsSelector } from "./selectors"
 import { useUnreadStore } from "./store"
@@ -10,13 +9,6 @@ import type { FeedIdOrInboxHandle, UnreadListScope } from "./types"
 export const getUnreadById = (id: FeedIdOrInboxHandle) => {
   const state = useUnreadStore.getState()
   return unreadCountIdSelector(id)(state)
-}
-
-export const getUnreadByListId = (listId: string) => {
-  const state = useUnreadStore.getState()
-  const feedIds = getListFeedIds(listId)
-  if (!feedIds) return 0
-  return unreadCountIdsSelector(feedIds)(state)
 }
 
 export const getUnreadAll = () => {
@@ -40,7 +32,6 @@ const TIMELINE_VIEWS = [
 export const getUnreadScopeIds = (scope: UnreadListScope): string[] | undefined => {
   if (scope.isCollection || scope.feedId === FEED_COLLECTION_LIST) return
   if (scope.inboxId) return [scope.inboxId]
-  if (scope.listId) return getListFeedIds(scope.listId) ?? []
   if (scope.feedIdList) return scope.feedIdList
   if (scope.feedId && scope.feedId !== ROUTE_FEED_PENDING) {
     return scope.feedId.split(",").filter((id) => id.length > 0)

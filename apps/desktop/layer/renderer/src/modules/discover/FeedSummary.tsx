@@ -1,8 +1,7 @@
 import { Skeleton } from "@follow/components/ui/skeleton/index.js"
 import type { FeedModel } from "@follow/store/feed/types"
-import type { ListModel } from "@follow/store/list/types"
 import { formatNumber } from "@follow/utils"
-import type { FeedAnalyticsModel, ListAnalyticsSchema } from "@follow-app/client-sdk"
+import type { FeedAnalyticsModel } from "@follow-app/client-sdk"
 import type { FC } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -11,9 +10,9 @@ import { RelativeTime } from "~/components/ui/datetime"
 import { FollowSummary } from "../feed/feed-summary"
 
 export interface FeedSummaryProps {
-  feed: FeedModel | ListModel
+  feed: FeedModel
 
-  analytics?: FeedAnalyticsModel | ListAnalyticsSchema
+  analytics?: FeedAnalyticsModel
 
   showAnalytics?: boolean
   isLoading?: boolean

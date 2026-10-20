@@ -13,7 +13,6 @@ import {
   getEntryIdsByFeedIdSelector,
   getEntryIdsByFeedIdsSelector,
   getEntryIdsByInboxIdSelector,
-  getEntryIdsByListIdSelector,
   getEntryIdsByViewSelector,
   getEntryIsInboxSelector,
   getHasEntrySelector,
@@ -40,9 +39,9 @@ export const invalidateEntriesQuery = ({
       const { queryKey } = query
       if (Array.isArray(queryKey) && queryKey[0] === "entries") {
         const feedId = queryKey[1]
-        const view = queryKey[4]
+        const view = queryKey[3]
 
-        const isCollection = queryKey[7]
+        const isCollection = queryKey[6]
         if (views) {
           return views.includes(view as FeedViewType)
         }
@@ -60,35 +59,22 @@ type EntriesPage = Awaited<ReturnType<typeof entrySyncServices.fetchEntries>>
 type EntriesQueryData = InfiniteData<EntriesPage, string | undefined>
 
 const readEntriesQueryKey = (queryKey: QueryKey) => {
-  const [
-    ,
-    feedId,
-    inboxId,
-    listId,
-    view,
-    limit,
-    feedIdList,
-    isCollection,
-    unreadOnly,
-    aiSort,
-    sortOrder,
-  ] = queryKey as [
-    string,
-    FetchEntriesProps["feedId"],
-    FetchEntriesProps["inboxId"],
-    FetchEntriesProps["listId"],
-    FetchEntriesProps["view"],
-    FetchEntriesProps["limit"],
-    FetchEntriesProps["feedIdList"],
-    FetchEntriesProps["isCollection"],
-    boolean | undefined,
-    boolean | undefined,
-    FetchEntriesProps["sortOrder"],
-  ]
+  const [, feedId, inboxId, view, limit, feedIdList, isCollection, unreadOnly, aiSort, sortOrder] =
+    queryKey as [
+      string,
+      FetchEntriesProps["feedId"],
+      FetchEntriesProps["inboxId"],
+      FetchEntriesProps["view"],
+      FetchEntriesProps["limit"],
+      FetchEntriesProps["feedIdList"],
+      FetchEntriesProps["isCollection"],
+      boolean | undefined,
+      boolean | undefined,
+      FetchEntriesProps["sortOrder"],
+    ]
   return {
     feedId,
     inboxId,
-    listId,
     view,
     limit,
     feedIdList,
@@ -150,7 +136,7 @@ export const refreshEntriesHead = async ({
       return (
         Array.isArray(queryKey) &&
         queryKey[0] === "entries" &&
-        views.includes(queryKey[4] as FeedViewType)
+        views.includes(queryKey[3] as FeedViewType)
       )
     },
   })
@@ -175,7 +161,6 @@ export const refreshEntriesHead = async ({
       const head = await entrySyncServices.fetchEntries({
         feedId: params.feedId,
         inboxId: params.inboxId,
-        listId: params.listId,
         view: params.view,
         limit: params.limit,
         feedIdList: params.feedIdList,
@@ -203,18 +188,8 @@ export const useEntriesQuery = (
     subscribed?: boolean
   },
 ) => {
-  const {
-    feedId,
-    inboxId,
-    listId,
-    view,
-    limit,
-    feedIdList,
-    isCollection,
-    unreadOnly,
-    aiSort,
-    sortOrder,
-  } = props || {}
+  const { feedId, inboxId, view, limit, feedIdList, isCollection, unreadOnly, aiSort, sortOrder } =
+    props || {}
 
   const fetchUnread = unreadOnly
   const feedUnreadDirty = useFeedUnreadIsDirty((feedId as string) || "")
@@ -232,7 +207,6 @@ export const useEntriesQuery = (
       "entries",
       feedId,
       inboxId,
-      listId,
       view,
       limit,
       feedIdList,
@@ -244,7 +218,6 @@ export const useEntriesQuery = (
     [
       feedId,
       inboxId,
-      listId,
       view,
       limit,
       feedIdList,
@@ -330,11 +303,10 @@ export const useEntriesQuery = (
       view,
       feedId: feedId === undefined ? undefined : String(feedId),
       feedIdList,
-      listId: listId === undefined ? undefined : String(listId),
       inboxId: inboxId === undefined ? undefined : String(inboxId),
       isCollection,
     }),
-    [view, feedId, feedIdList?.toString(), listId, inboxId, isCollection],
+    [view, feedId, feedIdList?.toString(), inboxId, isCollection],
   )
   // Once every unread entry is on screen, a counter above the list can only be wrong.
   const unreadListComplete =
@@ -423,10 +395,6 @@ export const useEntryIdsByCategory = (category: string) => {
   return useEntryStore(
     useCallback((state) => getEntryIdsByCategorySelector(state)(category), [category]),
   )
-}
-
-export const useEntryIdsByListId = (listId: string | undefined) => {
-  return useEntryStore(useCallback((state) => getEntryIdsByListIdSelector(state)(listId), [listId]))
 }
 
 export const useEntryIsInbox = (entryId: string) => {

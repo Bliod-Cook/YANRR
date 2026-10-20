@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getMainWindow: vi.fn(),
   goToFeed: vi.fn(),
   openDeepLink: vi.fn(),
+  warn: vi.fn(),
 }))
 
 vi.mock("@follow/shared/bridge", () => ({
@@ -19,7 +20,7 @@ vi.mock("~/lib/deep-link", () => ({
 vi.mock("~/logger", () => ({
   logger: {
     error: vi.fn(),
-    warn: vi.fn(),
+    warn: mocks.warn,
   },
 }))
 
@@ -49,9 +50,11 @@ describe("handleUrlRouting", () => {
 
     handleUrlRouting("folo://this/is/not-a-route?x=1")
     handleUrlRouting("folo://entry?id=1&view=0")
+    handleUrlRouting("folo://list?id=1&view=0")
 
     expect(mocks.createWindow).not.toHaveBeenCalled()
-    expect(mainWindow.focus).toHaveBeenCalledTimes(2)
+    expect(mocks.warn).toHaveBeenCalledTimes(3)
+    expect(mainWindow.focus).toHaveBeenCalledTimes(3)
   })
 
   it("opens the main window first when it is gone, then routes the link again", () => {

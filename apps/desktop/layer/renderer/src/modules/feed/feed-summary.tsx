@@ -8,7 +8,6 @@ import {
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/EllipsisWithTooltip.js"
 import type { FeedModel } from "@follow/store/feed/types"
 import type { InboxModel } from "@follow/store/inbox/types"
-import type { ListModel } from "@follow/store/list/types"
 import { cn } from "@follow/utils/utils"
 import { useTranslation } from "react-i18next"
 
@@ -22,7 +21,7 @@ export function FollowSummary({
   className,
   simple,
 }: {
-  feed: FeedModel | ListModel | InboxModel
+  feed: FeedModel | InboxModel
   docs?: string
   className?: string
   simple?: boolean
@@ -31,9 +30,6 @@ export function FollowSummary({
   let isRSSHub = false
 
   switch (feed.type) {
-    case "list": {
-      break
-    }
     case "inbox": {
       feedText = `${feed.id}${INBOX_EMAIL_DOMAIN}`
       break

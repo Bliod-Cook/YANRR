@@ -2,7 +2,7 @@ import type { FeedViewType } from "@follow/constants"
 import { and, eq, inArray, notInArray } from "drizzle-orm"
 
 import { db } from "../db"
-import { feedsTable, inboxesTable, listsTable, subscriptionsTable } from "../schemas"
+import { feedsTable, inboxesTable, subscriptionsTable } from "../schemas"
 import type { SubscriptionSchema } from "../schemas/types"
 import type { Resetable } from "./internal/base"
 import { conflictUpdateAllExcept } from "./internal/utils"
@@ -60,7 +60,6 @@ class SubscriptionServiceStatic implements Resetable {
       where: inArray(subscriptionsTable.id, ids),
       columns: {
         feedId: true,
-        listId: true,
         type: true,
         inboxId: true,
       },
@@ -72,16 +71,11 @@ class SubscriptionServiceStatic implements Resetable {
 
     // Cleanup
     for (const result of results) {
-      const { type, feedId, listId, inboxId } = result
+      const { type, feedId, inboxId } = result
       switch (type) {
         case "feed": {
           if (!feedId) break
           await db.delete(feedsTable).where(eq(feedsTable.id, feedId)).execute()
-          break
-        }
-        case "list": {
-          if (!listId) break
-          await db.delete(listsTable).where(eq(listsTable.id, listId)).execute()
           break
         }
         case "inbox": {

@@ -12,7 +12,6 @@ import type {
   InboxListEntry,
   InboxListEntryResponse,
   InboxSubscriptionResponse,
-  ListSchema,
   ListSubscriptionResponse,
   SubscriptionWithFeed,
 } from "@follow-app/client-sdk"
@@ -20,32 +19,10 @@ import type {
 import type { CollectionModel } from "../modules/collection/types"
 import type { EntryModel } from "../modules/entry/types"
 import type { FeedModel } from "../modules/feed/types"
-import type { ListModel } from "../modules/list/types"
 import type { SubscriptionModel } from "../modules/subscription/types"
 import type { MeModel } from "../modules/user/store"
 
 class APIMorph {
-  toList(data: ListSchema): ListModel {
-    return {
-      id: data.id,
-      title: data.title!,
-      userId: ("ownerUserId" in data && data.ownerUserId ? data.ownerUserId : data.owner?.id)!,
-      description: data.description!,
-      view: data.view,
-      image: data.image!,
-      ownerUserId: ("ownerUserId" in data && data.ownerUserId ? data.ownerUserId : data.owner?.id)!,
-      feedIds: (data.feedIds ?? []) as string[],
-      fee: (data.fee ?? 0) as number,
-      subscriptionCount:
-        "subscriptionCount" in data ? (data.subscriptionCount as number | null) : null,
-      purchaseAmount:
-        "purchaseAmount" in data && data.purchaseAmount != null
-          ? String(data.purchaseAmount)
-          : null,
-      type: "list",
-    }
-  }
-
   toEntry(data?: InboxEntryGetResponse["data"] | EntryGetByIdResponse["data"]): EntryModel | null {
     if (!data) return null
 
@@ -87,11 +64,9 @@ class APIMorph {
     const collections = {
       feeds: [],
       inboxes: [],
-      lists: [],
     } as {
       feeds: FeedSchema[]
       inboxes: InboxSchema[]
-      lists: ListModel[]
     }
 
     for (const item of data) {
@@ -120,9 +95,7 @@ class APIMorph {
           title: feed.title!,
           url: feed.url,
         })
-      }
-
-      if ("inboxes" in item) {
+      } else if ("inboxes" in item) {
         baseSubscription.inboxId = item.inboxId
         baseSubscription.type = "inbox"
         const inbox = item.inboxes
@@ -132,27 +105,9 @@ class APIMorph {
           title: inbox.title,
           secret: inbox.secret,
         })
-      }
-
-      if ("lists" in item) {
-        baseSubscription.listId = item.listId
-        baseSubscription.type = "list"
-        const list = item.lists
-        if (list.owner)
-          collections.lists.push({
-            id: list.id,
-            title: list.title!,
-            userId: list.owner!.id,
-            description: list.description!,
-            view: list.view,
-            image: list.image!,
-            ownerUserId: list.owner.id,
-            feedIds: list.feedIds!,
-            fee: list.fee ?? 0,
-            subscriptionCount: null,
-            purchaseAmount: null,
-            type: "list",
-          })
+      } else {
+        // The server has no lists; the client SDK still types their subscriptions
+        continue
       }
 
       subscriptions.push(baseSubscription)

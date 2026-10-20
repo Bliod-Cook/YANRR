@@ -6,7 +6,6 @@ import {
   useEntryIdsByFeedId,
   useEntryIdsByFeedIds,
   useEntryIdsByInboxId,
-  useEntryIdsByListId,
   useEntryIdsByView,
 } from "@follow/store/entry/hooks"
 import { entryActions, entrySyncServices, useEntryStore } from "@follow/store/entry/store"
@@ -14,7 +13,6 @@ import type { UseEntriesReturn } from "@follow/store/entry/types"
 import { useFolderFeedsByFeedId } from "@follow/store/subscription/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { nextFrame } from "@follow/utils"
-import { isBizId } from "@follow/utils/utils"
 import { useMutation } from "@tanstack/react-query"
 import { debounce } from "es-toolkit/compat"
 import { useAtomValue } from "jotai"
@@ -33,7 +31,7 @@ import { getRemoteEntriesFallback } from "./remote-entries-fallback"
 import { useIsPreviewFeed } from "./useIsPreviewFeed"
 
 const useRemoteEntries = (): RemoteEntriesReturn => {
-  const { feedId, view, inboxId, listId, isCollection } = useRouteParams()
+  const { feedId, view, inboxId, isCollection } = useRouteParams()
   const isPreview = useIsPreviewFeed()
 
   const unreadOnly = useGeneralSettingKey("unreadOnly")
@@ -55,34 +53,27 @@ const useRemoteEntries = (): RemoteEntriesReturn => {
     isPreview,
   })
 
-  const entriesOptions = useMemo(() => {
-    const params = {
+  const entriesOptions = useMemo(
+    () => ({
       feedId: folderIds?.join(",") || feedId,
       inboxId,
-      listId,
       view,
       ...(effectiveUnreadOnly && { unreadOnly: true }),
       ...(view === FeedViewType.All && { limit: 40 }),
       ...(aiTimelineEnabled && aiEnabled && effectiveSortOrder === "desc" && { aiSort: true }),
       sortOrder: effectiveSortOrder,
-    }
-
-    if (feedId && listId && isBizId(feedId)) {
-      delete params.listId
-    }
-
-    return params
-  }, [
-    feedId,
-    folderIds,
-    inboxId,
-    listId,
-    effectiveUnreadOnly,
-    view,
-    aiTimelineEnabled,
-    aiEnabled,
-    effectiveSortOrder,
-  ])
+    }),
+    [
+      feedId,
+      folderIds,
+      inboxId,
+      effectiveUnreadOnly,
+      view,
+      aiTimelineEnabled,
+      aiEnabled,
+      effectiveSortOrder,
+    ],
+  )
   const query = useEntriesQuery(entriesOptions)
 
   // "Mark above as read" sends this as `insertedBefore`, so it must only move
@@ -125,7 +116,7 @@ function getEntryIdsFromMultiplePlace(...entryIds: Array<string[] | undefined | 
 }
 
 const useLocalEntries = (): UseEntriesReturn => {
-  const { feedId, view, inboxId, listId, isCollection } = useRouteParams()
+  const { feedId, view, inboxId, isCollection } = useRouteParams()
   const isPreview = useIsPreviewFeed()
   const unreadOnly = useGeneralSettingKey("unreadOnly")
   const savedSortOrder = useGeneralSettingKey("timelineSortOrder")
@@ -147,27 +138,18 @@ const useLocalEntries = (): UseEntriesReturn => {
   const entryIdsByCollections = useCollectionEntryList(view)
   const entryIdsByFeedId = useEntryIdsByFeedId(feedId)
   const entryIdsByCategory = useEntryIdsByFeedIds(folderIds)
-  const entryIdsByListId = useEntryIdsByListId(listId)
   const entryIdsByInboxId = useEntryIdsByInboxId(inboxId)
 
   const showEntriesByView =
     (!feedId || feedId === ROUTE_FEED_PENDING) &&
     folderIds.length === 0 &&
     !isCollection &&
-    !inboxId &&
-    !listId
+    !inboxId
 
   const localQueryKey = useMemo(
     () =>
-      [
-        feedId || "",
-        view,
-        inboxId || "",
-        listId || "",
-        isCollection ? "1" : "0",
-        effectiveSortOrder,
-      ].join(":"),
-    [effectiveSortOrder, feedId, inboxId, isCollection, listId, view],
+      [feedId || "", view, inboxId || "", isCollection ? "1" : "0", effectiveSortOrder].join(":"),
+    [effectiveSortOrder, feedId, inboxId, isCollection, view],
   )
   const stickyVisibleStateRef = useRef<{
     queryKey: string
@@ -187,7 +169,6 @@ const useLocalEntries = (): UseEntriesReturn => {
             : (getEntryIdsFromMultiplePlace(
                 entryIdsByFeedId,
                 entryIdsByCategory,
-                entryIdsByListId,
                 entryIdsByInboxId,
               ) ?? [])
 
@@ -208,7 +189,6 @@ const useLocalEntries = (): UseEntriesReturn => {
         entryIdsByCollections,
         entryIdsByFeedId,
         entryIdsByInboxId,
-        entryIdsByListId,
         entryIdsByView,
         isCollection,
         localQueryKey,
@@ -267,7 +247,7 @@ const useLocalEntries = (): UseEntriesReturn => {
 }
 
 export const useEntriesByView = ({ onReset }: { onReset?: () => void }) => {
-  const { view, listId } = useRouteParams()
+  const { view } = useRouteParams()
 
   const remoteQuery = useRemoteEntries()
   const localQuery = useLocalEntries()
@@ -314,7 +294,7 @@ export const useEntriesByView = ({ onReset }: { onReset?: () => void }) => {
       if (isOnboardingEntryUrl(entry.url)) {
         continue
       }
-      const date = new Date(listId ? entry.insertedAt : entry.publishedAt).toDateString()
+      const date = new Date(entry.publishedAt).toDateString()
       if (date !== lastDate) {
         counts.push(1)
         lastDate = date
@@ -325,7 +305,7 @@ export const useEntriesByView = ({ onReset }: { onReset?: () => void }) => {
     }
 
     return counts
-  }, [groupByDate, listId, entryIds, view])
+  }, [groupByDate, entryIds, view])
 
   return {
     ...query,

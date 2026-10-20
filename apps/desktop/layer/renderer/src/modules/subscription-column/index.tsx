@@ -69,7 +69,6 @@ export function SubscriptionColumn({
   const routeParams = useRouteParamsSelector((s) => ({
     timelineId: s.timelineId,
     view: s.view,
-    listId: s.listId,
   }))
 
   const [timelineId, setMemoizedTimelineId] = useState(routeParams.timelineId ?? timelineList[0])

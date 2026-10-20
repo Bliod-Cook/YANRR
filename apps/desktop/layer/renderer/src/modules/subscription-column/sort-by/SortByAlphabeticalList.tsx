@@ -9,8 +9,8 @@ import { getPreferredTitle } from "~/store/feed/hooks"
 
 import { useFeedListSortSelector } from "../atom"
 import { FeedCategoryAutoHideUnread } from "../FeedCategory"
-import { InboxItem, ListItemAutoHideUnread } from "../FeedItem"
-import type { FeedListProps, ListListProps } from "./types"
+import { InboxItem } from "../FeedItem"
+import type { FeedListProps, InboxListProps } from "./types"
 
 export const SortByAlphabeticalFeedList = ({
   view,
@@ -126,17 +126,7 @@ export const SortByAlphabeticalFeedList = ({
   )
 }
 
-export const SortByAlphabeticalListList = ({ view, data }: ListListProps) => {
-  return (
-    <div>
-      {data.map((listId) => (
-        <ListItemAutoHideUnread key={listId} listId={listId} view={view} />
-      ))}
-    </div>
-  )
-}
-
-export const SortByAlphabeticalInboxList = ({ view, data }: ListListProps) => {
+export const SortByAlphabeticalInboxList = ({ view, data }: InboxListProps) => {
   return (
     <div>
       {data.map((feedId) => (
