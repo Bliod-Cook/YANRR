@@ -5,9 +5,11 @@ pub mod entity;
 pub mod fetch;
 mod id;
 mod migration;
+mod subscription;
 pub mod sync;
 mod time;
 mod web;
+mod wire;
 
 use std::{error::Error, sync::Arc};
 

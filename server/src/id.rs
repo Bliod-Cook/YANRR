@@ -24,6 +24,11 @@ pub fn next_id() -> i64 {
     floor.max(previous + 1)
 }
 
+/// A feed or entry id as clients send it: a decimal string.
+pub fn parse(id: &str) -> Option<i64> {
+    id.parse().ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

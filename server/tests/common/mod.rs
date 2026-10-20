@@ -111,6 +111,21 @@ impl TestApp {
             .unwrap()
     }
 
+    pub async fn delete(&self, path: &str, body: Value) -> Response {
+        self.client
+            .delete(format!("{}{path}", self.url))
+            .json(&body)
+            .send()
+            .await
+            .unwrap()
+    }
+
+    /// The signed-in user's whole change log.
+    pub async fn actions(&self) -> Vec<Value> {
+        let delta = json(self.get("/api/sync/delta?lastSyncId=0").await).await;
+        delta["data"]["actions"].as_array().unwrap().clone()
+    }
+
     pub async fn session(&self) -> Value {
         self.get("/api/better-auth/get-session")
             .await
@@ -141,6 +156,16 @@ impl TestApp {
         let res = self.post("/api/better-auth/sign-up/email", body).await;
         assert_eq!(res.status(), 200, "{}", res.text().await.unwrap());
     }
+}
+
+pub async fn json(response: Response) -> Value {
+    response.json().await.unwrap()
+}
+
+/// Asserts an API error by status and `code`.
+pub async fn assert_error(response: Response, status: u16, code: i32) {
+    assert_eq!(response.status(), status);
+    assert_eq!(json(response).await["code"], code);
 }
 
 pub const RSS2: &str = include_str!("../fixtures/rss2.xml");
