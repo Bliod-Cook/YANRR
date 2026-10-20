@@ -89,27 +89,3 @@ describe("userSyncService.updateProfile", () => {
     expect(useUserStore.getState().whoami).toEqual({ ...me, name: "New Name" })
   })
 })
-
-describe("userSyncService.fetchUsers", () => {
-  const getBatchMock = vi.fn()
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    useUserStore.setState({ users: {}, whoami: me })
-    getBatchMock.mockImplementation(async ({ ids }: { ids: string[] }) => ({
-      code: 0,
-      data: Object.fromEntries(ids.map((id) => [id, { id, name: id }])),
-    }))
-    apiContext.provide({ profiles: { getBatch: getBatchMock } } as unknown as FollowAPI)
-  })
-
-  it("asks for at most 100 profiles a request", async () => {
-    const ids = Array.from({ length: 250 }, (_, index) => `user${index}`)
-
-    const users = await userSyncService.fetchUsers(ids)
-
-    expect(users).toHaveLength(250)
-    const sizes = getBatchMock.mock.calls.map((call) => (call[0] as { ids: string[] }).ids.length)
-    expect(sizes).toEqual([100, 100, 50])
-  })
-})

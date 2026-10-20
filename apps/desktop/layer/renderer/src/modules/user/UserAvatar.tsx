@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@follow/components/ui/avatar/index.jsx"
-import { usePrefetchUser, useUserById, useWhoami } from "@follow/store/user/hooks"
+import { useWhoami } from "@follow/store/user/hooks"
 import { getColorScheme, stringToHue } from "@follow/utils/color"
 import { cn } from "@follow/utils/utils"
 
@@ -10,23 +10,16 @@ export const UserAvatar = ({
   className,
   avatarClassName,
   hideName,
-  userId,
   style,
   ...props
 }: {
   className?: string
   avatarClassName?: string
   hideName?: boolean
-  userId?: string
 } & LoginProps &
   React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement | null> }) => {
   const whoami = useWhoami()
-
-  usePrefetchUser(userId)
-  const profile = useUserById(userId)
-
-  const renderUserData = userId ? profile : whoami
-  const randomColor = stringToHue(renderUserData?.name || "")
+  const randomColor = stringToHue(whoami?.name || "")
   return (
     <div
       style={style}
@@ -45,16 +38,16 @@ export const UserAvatar = ({
       >
         <AvatarImage
           className="duration-200 animate-in fade-in-0"
-          src={renderUserData?.image || undefined}
+          src={whoami?.image || undefined}
         />
         <AvatarFallback
           style={{ backgroundColor: getColorScheme(randomColor, true).light.accent }}
           className="text-xs text-white"
         >
-          {renderUserData?.name?.[0]}
+          {whoami?.name?.[0]}
         </AvatarFallback>
       </Avatar>
-      {!hideName && <div>{renderUserData?.name || renderUserData?.handle}</div>}
+      {!hideName && <div>{whoami?.name}</div>}
     </div>
   )
 }

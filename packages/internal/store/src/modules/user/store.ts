@@ -2,7 +2,6 @@ import type { UserSchema } from "@follow/database/schemas/types"
 import { UserService } from "@follow/database/services/user"
 import type { AuthUser } from "@follow-app/client-sdk"
 import { FollowAPIError } from "@follow-app/client-sdk"
-import { create, indexedResolver, windowedFiniteBatchScheduler } from "@yornaath/batshit"
 
 import { api, authClient, queryClient } from "../../context"
 import type { Hydratable, Resetable } from "../../lib/base"
@@ -44,38 +43,7 @@ const immerSet = createImmerSetter(useUserStore)
 const toProfileChanges = ({ name, ...rest }: Partial<UserProfileEditable>) =>
   name === undefined ? rest : { ...rest, name: name.trim() }
 
-/** The most profiles one request asks for */
-const USER_BATCH_SIZE = 100
-
 class UserSyncService {
-  private userBatcher = create({
-    fetcher: async (userIds: string[]) => {
-      const res = await api().profiles.getBatch({ ids: userIds })
-
-      if (res.code === 0) {
-        const { whoami } = get()
-        const usersObject = res.data
-        const usersArray = Object.values(usersObject)
-
-        immerSet((state) => {
-          for (const user of usersArray) {
-            state.users[user.id] = {
-              ...user,
-              email: null,
-              isMe: whoami?.id === user.id,
-            } as UserModel
-          }
-        })
-        return usersObject
-      }
-      return {}
-    },
-    resolver: indexedResolver(),
-    // The server reads at most 1000 ids of a request; a page of a list or a timeline asks for far
-    // fewer, and smaller requests keep each answer quick
-    scheduler: windowedFiniteBatchScheduler({ windowMs: 100, maxBatchSize: USER_BATCH_SIZE }),
-  })
-
   async whoami() {
     // The answer also tells the transaction queue whose credentials it would send changes with.
     const sessionCheck = startSessionCheck()
@@ -154,22 +122,6 @@ class UserSyncService {
       })
     })
     await tx.run()
-  }
-
-  async fetchUser(userId: string | undefined) {
-    if (!userId) return null
-
-    const user = await this.userBatcher.fetch(userId)
-
-    return user || null
-  }
-
-  async fetchUsers(userIds: string[]) {
-    const validUserIds = userIds.filter(Boolean)
-    if (validUserIds.length === 0) return []
-
-    const users = await Promise.all(validUserIds.map((id) => this.userBatcher.fetch(id)))
-    return users.filter(Boolean)
   }
 }
 

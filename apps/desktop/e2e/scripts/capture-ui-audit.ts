@@ -28,7 +28,7 @@ const SETTING_TABS = [
   "about",
 ] as const
 
-const SUBVIEW_ROUTES = ["discover", "action", "rsshub", "ai"] as const
+const SUBVIEW_ROUTES = ["discover", "action", "ai"] as const
 
 const waitForUiSettled = async (page: import("@playwright/test").Page, delay = 1200) => {
   await page.waitForLoadState("domcontentloaded")
