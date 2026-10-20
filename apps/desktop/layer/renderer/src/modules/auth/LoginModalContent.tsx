@@ -9,6 +9,7 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
+import { CurrentServer } from "~/modules/server-setup/CurrentServer"
 import { useSession } from "~/queries/auth"
 
 import { LoginWithPassword, RegisterForm } from "./Form"
@@ -92,6 +93,12 @@ export const LoginModalContent = (props: LoginModalContentProps) => {
           <LoginWithPassword onLoginStateChange={handleLoginStateChange} />
         )}
       </m.div>
+      {/* Last, so the modal still focuses the first credential field */}
+      {IN_ELECTRON && (
+        <div className="mt-2">
+          <CurrentServer />
+        </div>
+      )}
     </>
   )
   if (isMobile) {

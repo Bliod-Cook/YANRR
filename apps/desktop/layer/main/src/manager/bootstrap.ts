@@ -2,8 +2,8 @@ import { rmSync } from "node:fs"
 
 import { electronApp, optimizer } from "@electron-toolkit/utils"
 import { DEV, LEGACY_APP_PROTOCOL } from "@follow/shared/constants"
-import { env } from "@follow/shared/env.desktop"
 import { createBuildSafeHeaders } from "@follow/utils/headers"
+import { getApiUrl } from "@follow/utils/server-url"
 import { app, BrowserWindow, net, protocol, session } from "electron"
 import { join } from "pathe"
 
@@ -13,13 +13,9 @@ import { isMacOS } from "../env"
 import { dedupeManagedAuthCookies } from "../lib/auth-cookies"
 import { isDeepLink, openDeepLink, setDeepLinkHandler } from "../lib/deep-link"
 import { handleUrlRouting } from "../lib/router"
+import { getServerUrl } from "../lib/server-url"
 import { logger } from "../logger"
 import { AppManager } from "./app"
-
-const buildSafeHeaders = createBuildSafeHeaders(env.VITE_WEB_URL, [
-  env.VITE_API_URL,
-  "https://readwise.io",
-])
 
 export class BootstrapManager {
   public static start() {
@@ -81,6 +77,11 @@ export class BootstrapManager {
 
       electronApp.setAppUserModelId(`re.${LEGACY_APP_PROTOCOL}`)
 
+      const server = getServerUrl()
+      const buildSafeHeaders = createBuildSafeHeaders(server ?? "", [
+        server ? getApiUrl(server) : "",
+        "https://readwise.io",
+      ])
       session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
         details.requestHeaders = buildSafeHeaders({
           url: details.url,
@@ -91,13 +92,15 @@ export class BootstrapManager {
       })
 
       // A failed cookie cleanup must not keep the main window from opening
-      try {
-        await dedupeManagedAuthCookies({
-          apiURL: env.VITE_API_URL,
-          session: session.defaultSession,
-        })
-      } catch (error) {
-        logger.error("Failed to clean up auth cookies:", error)
+      if (server) {
+        try {
+          await dedupeManagedAuthCookies({
+            apiURL: getApiUrl(server),
+            session: session.defaultSession,
+          })
+        } catch (error) {
+          logger.error("Failed to clean up auth cookies:", error)
+        }
       }
 
       WindowManager.getMainWindowOrCreate()

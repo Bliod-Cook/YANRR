@@ -13,6 +13,8 @@ type StoreData = {
   minimizeToTray?: boolean | null
   proxy?: string | null
   qbittorrentSID?: string | null
+  /** The server's address, see `server-url.ts` */
+  serverUrl?: string | null
   user?: string | null
   windowState?: {
     height: number

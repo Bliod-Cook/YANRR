@@ -5,6 +5,8 @@ declare global {
     electron?: ElectronAPI
     api?: { canWindowBlur: boolean; isWindowsStore: boolean }
     platform: NodeJS.Platform
+    /** The server's addresses overriding `@follow/shared/env.desktop`, see `env.desktop.ts` */
+    __followEnv?: Record<string, string>
   }
   export const APP_NAME = "Folo"
 }

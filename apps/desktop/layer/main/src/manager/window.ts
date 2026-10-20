@@ -4,6 +4,7 @@ import { is } from "@electron-toolkit/utils"
 import { LEGACY_APP_PROTOCOL } from "@follow/shared"
 import { callWindowExpose, WindowState } from "@follow/shared/bridge"
 import { APP_PROTOCOL, DEV } from "@follow/shared/constants"
+import { SERVER_URL_ARG } from "@follow/shared/desktop-launch"
 import type { BrowserWindowConstructorOptions } from "electron"
 import { BrowserWindow, screen, shell } from "electron"
 import type { Event } from "electron/main"
@@ -13,6 +14,7 @@ import { isMacOS, isWindows } from "~/env"
 import { filePathToAppUrl, getIconPath } from "~/helper"
 import { setRendererReady } from "~/lib/deep-link"
 import { t } from "~/lib/i18n"
+import { getServerUrl } from "~/lib/server-url"
 import { store } from "~/lib/store"
 import { getTrayConfig } from "~/lib/tray"
 import { refreshBound } from "~/lib/utils"
@@ -369,6 +371,7 @@ class WindowManagerStatic {
     } & BrowserWindowConstructorOptions,
   ) => {
     const { extraPath, height, width, ...configs } = options
+    const server = getServerUrl()
 
     const baseWindowConfig: Electron.BrowserWindowConstructorOptions = {
       width,
@@ -384,6 +387,7 @@ class WindowManagerStatic {
         webSecurity: !DEV,
         nodeIntegration: true,
         contextIsolation: false,
+        additionalArguments: server ? [`${SERVER_URL_ARG}${server}`] : [],
       },
       ...this.getPlatformSpecificWindowConfig(),
     }

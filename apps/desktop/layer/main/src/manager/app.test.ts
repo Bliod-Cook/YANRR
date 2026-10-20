@@ -97,11 +97,7 @@ vi.mock("@follow/shared/constants", () => ({
   LEGACY_APP_PROTOCOL: "follow",
 }))
 
-vi.mock("@follow/shared/env.desktop", () => ({
-  env: {
-    VITE_FIREBASE_CONFIG: JSON.stringify(mocks.firebaseConfig),
-  },
-}))
+vi.stubEnv("VITE_FIREBASE_CONFIG", JSON.stringify(mocks.firebaseConfig))
 
 vi.mock("electron", () => ({
   app: mocks.app,

@@ -3,48 +3,11 @@ import "./wdyr"
 // and loses the font files' relative url()s, so the fonts were never bundled
 import "@follow/components/assets/font.css"
 import "./styles/main.css"
-// Registers the "messaging" sync model before the sync engine starts.
-import "./lib/web-push-registration"
 
-import { IN_ELECTRON, WEB_BUILD } from "@follow/shared/constants"
-import {
-  apiContext,
-  authClientContext,
-  queryClientContext,
-  syncApiContext,
-} from "@follow/store/context"
+import { IN_ELECTRON } from "@follow/shared/constants"
 import { getOS } from "@follow/utils/utils"
-import * as React from "react"
-import { flushSync } from "react-dom"
-import ReactDOM from "react-dom/client"
-import { RouterProvider } from "react-router/dom"
 
-import { authClient } from "~/lib/auth"
-
-import { setAppIsReady } from "./atoms/app"
-import { ElECTRON_CUSTOM_TITLEBAR_HEIGHT } from "./constants"
-import { initializeApp } from "./initialize"
-import { registerAppGlobalShortcuts } from "./initialize/global-shortcuts"
-import { followApi } from "./lib/api-client"
-import { queryClient } from "./lib/query-client"
-import { router } from "./router"
-
-authClientContext.provide(authClient)
-queryClientContext.provide(queryClient)
-apiContext.provide(followApi)
-syncApiContext.provide(followApi.sync)
-
-initializeApp().finally(() => {
-  import("./push-notification").then(({ registerWebPushNotifications }) => {
-    if (navigator.serviceWorker && WEB_BUILD) {
-      registerWebPushNotifications()
-    }
-  })
-
-  flushSync(() => setAppIsReady(true))
-})
-
-const $container = document.querySelector("#root") as HTMLElement
+import { ElECTRON_CUSTOM_TITLEBAR_HEIGHT } from "./constants/ui"
 
 if (IN_ELECTRON) {
   const os = getOS()
@@ -60,12 +23,14 @@ if (IN_ELECTRON) {
     }
   }
   document.documentElement.dataset.os = getOS()
-} else {
-  registerAppGlobalShortcuts()
 }
 
-ReactDOM.createRoot($container).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>,
-)
+// Electron learns the server from its preload script. Until the user has set one, the app, whose
+// modules capture the server's address as they load, cannot start; only the screen asking for it.
+if (IN_ELECTRON && !window.__followEnv) {
+  void import("./modules/server-setup/ServerSetupScreen").then(({ renderServerSetup }) =>
+    renderServerSetup(),
+  )
+} else {
+  void import("./bootstrap")
+}

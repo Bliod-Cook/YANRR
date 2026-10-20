@@ -4,13 +4,13 @@
 import { createEnv } from "@t3-oss/env-core"
 import { z } from "zod"
 
-import { DEFAULT_VALUES } from "./env.common"
-
 export const env = createEnv({
   clientPrefix: "VITE_",
+  // The server and its API: the web build defaults to the server that hosts it (see
+  // `plugins/vite/html-inject.ts`), Electron gets the one the user set from its preload script
   client: {
-    VITE_WEB_URL: z.string().url().default(DEFAULT_VALUES.PROD.WEB_URL),
-    VITE_API_URL: z.string().default(DEFAULT_VALUES.PROD.API_URL),
+    VITE_WEB_URL: z.string().url(),
+    VITE_API_URL: z.string(),
     /** Firebase web config (JSON) of the deployment, for push notifications */
     VITE_FIREBASE_CONFIG: z.string().optional(),
   },

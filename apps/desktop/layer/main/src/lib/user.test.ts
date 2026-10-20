@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { logger } from "~/logger"
 
-import { apiClient } from "./api-client"
 import { store } from "./store"
 import {
   deleteNotificationsToken,
@@ -19,12 +18,12 @@ const { createTokenMock, getSessionTokenMock, storeData } = vi.hoisted(() => ({
 }))
 
 vi.mock("./api-client", () => ({
-  apiClient: {
+  getApiClient: () => ({
     messaging: {
       createToken: createTokenMock,
       deleteToken: vi.fn(),
     },
-  },
+  }),
 }))
 
 vi.mock("./auth-cookies", () => ({
@@ -101,7 +100,7 @@ describe("updateNotificationsToken", () => {
     await updateNotificationsToken(credentials)
 
     expect(store.set).toHaveBeenCalledWith("notifications-credentials", credentials)
-    expect(apiClient.messaging.createToken).toHaveBeenCalledWith({
+    expect(createTokenMock).toHaveBeenCalledWith({
       channel: "macos",
       token: credentials.fcm.token,
     })

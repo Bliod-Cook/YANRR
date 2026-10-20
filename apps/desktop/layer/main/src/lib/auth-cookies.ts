@@ -2,10 +2,11 @@ import {
   BETTER_AUTH_SECURE_SESSION_TOKEN_COOKIE_NAME,
   BETTER_AUTH_SESSION_TOKEN_COOKIE_NAME,
 } from "@follow/shared/auth-cookie"
-import { env } from "@follow/shared/env.desktop"
 import type { Cookie, CookiesSetDetails, Session } from "electron"
 
 import { WindowManager } from "~/manager/window"
+
+import { getServerUrl } from "./server-url"
 
 const MANAGED_AUTH_COOKIE_NAMES = [
   BETTER_AUTH_SECURE_SESSION_TOKEN_COOKIE_NAME,
@@ -276,10 +277,11 @@ export const getPreferredSessionTokenCookie = (cookies: ManagedAuthCookie[]) => 
 
 export const getSessionTokenFromCookies = async (): Promise<string | undefined> => {
   const window = WindowManager.getMainWindow()
-  if (!window) return undefined
+  const server = getServerUrl()
+  if (!window || !server) return undefined
 
   const cookies = await window.webContents.session.cookies.get({
-    domain: new URL(env.VITE_API_URL).hostname,
+    domain: new URL(server).hostname,
   })
 
   return getPreferredSessionTokenCookie(cookies)?.value

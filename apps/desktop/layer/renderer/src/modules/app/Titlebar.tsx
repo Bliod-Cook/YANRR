@@ -1,5 +1,6 @@
 import { WindowState } from "@follow/shared/bridge"
 import { preventDefault } from "@follow/utils/dom"
+import { cn, getOS } from "@follow/utils/utils"
 import { useTranslation } from "react-i18next"
 
 import { useWindowState } from "~/atoms/app"
@@ -58,6 +59,22 @@ export const Titlebar = () => {
       >
         <i className="i-mingcute-close-line" />
       </button>
+    </div>
+  )
+}
+
+/** The window is dragged by its top edge; Windows also gets the window controls there */
+export const WindowTitlebarRegion = () => {
+  const isWindows = getOS() === "Windows"
+  return (
+    <div
+      className={cn(
+        "drag-region fixed inset-x-0 top-0 h-12 shrink-0",
+        isWindows && "pointer-events-none z-[9999]",
+      )}
+      aria-hidden
+    >
+      {isWindows && <Titlebar />}
     </div>
   )
 }

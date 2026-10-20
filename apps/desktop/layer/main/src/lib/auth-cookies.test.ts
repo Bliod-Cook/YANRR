@@ -8,6 +8,7 @@ import {
 } from "./auth-cookies"
 
 vi.mock("~/manager/window", () => ({ WindowManager: { getMainWindow: () => null } }))
+vi.mock("./server-url", () => ({ getServerUrl: () => null }))
 
 describe("auth cookies", () => {
   beforeEach(() => {

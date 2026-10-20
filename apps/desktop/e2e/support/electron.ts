@@ -8,25 +8,19 @@ import { join } from "pathe"
 
 import type { DesktopE2EEnv } from "./env"
 
-let buildSignature: string | null = null
+let built = false
 
 const ensureElectronBuilt = (env: DesktopE2EEnv) => {
-  const nextSignature = `${env.apiURL}|${env.webURL}`
-  if (buildSignature === nextSignature) {
+  if (built) {
     return
   }
 
   execSync("pnpm run build:electron-vite", {
     cwd: env.desktopAppDir,
-    env: {
-      ...process.env,
-      VITE_API_URL: env.apiURL,
-      VITE_WEB_URL: env.webURL,
-    },
     stdio: "inherit",
   })
 
-  buildSignature = nextSignature
+  built = true
 }
 
 export const launchElectronApp = async (env: DesktopE2EEnv) => {
@@ -40,8 +34,7 @@ export const launchElectronApp = async (env: DesktopE2EEnv) => {
       ...process.env,
       CI: process.env.CI ?? "1",
       NODE_ENV: "test",
-      VITE_API_URL: env.apiURL,
-      VITE_WEB_URL: env.webURL,
+      YANNR_SERVER_URL: env.serverURL,
       FOLO_E2E_USER_DATA_DIR: userDataDir,
     },
     timeout: 120_000,

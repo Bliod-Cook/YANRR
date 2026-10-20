@@ -2,8 +2,8 @@ import {
   buildBetterAuthSessionTokenCookieHeader,
   getBetterAuthSessionTokenCookieName,
 } from "@follow/shared/auth-cookie"
-import { env } from "@follow/shared/env.desktop"
 import { createAuthRequestOriginHeaders, createDesktopAPIHeaders } from "@follow/utils/headers"
+import { getApiUrl, normalizeServerUrl } from "@follow/utils/server-url"
 import PKG from "@pkg"
 import { net } from "electron"
 import { IpcMethod, IpcService } from "electron-ipc-decorator"
@@ -18,7 +18,24 @@ import {
   persistManagedAuthCookiesFromSetCookieHeader,
   removeManagedAuthCookies,
 } from "../../lib/auth-cookies"
+import { getApiURL, getServerUrl, getWebURL } from "../../lib/server-url"
+import { store } from "../../lib/store"
 import { deleteNotificationsToken, updateNotificationsToken } from "../../lib/user"
+
+/** Whether a Yannr server answers at this address */
+const answersAsServer = async (server: string) => {
+  try {
+    const response = await net.fetch(`${getApiUrl(server)}/status/configs`, {
+      credentials: "omit",
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    })
+    const body = (await response.json()) as { code?: unknown }
+    return body.code === 0
+  } catch {
+    return false
+  }
+}
 
 export class AuthService extends IpcService {
   static override readonly groupName = "auth"
@@ -31,7 +48,7 @@ export class AuthService extends IpcService {
 
     return buildManagedAuthCookieHeader(
       await getManagedAuthCookies({
-        apiURL: env.VITE_API_URL,
+        apiURL: getApiURL(),
         session: mainWindow.webContents.session,
       }),
     )
@@ -47,7 +64,7 @@ export class AuthService extends IpcService {
     const mainWindow = WindowManager.getMainWindow()
     if (response.ok && setCookie && mainWindow) {
       await persistManagedAuthCookiesFromSetCookieHeader({
-        apiURL: env.VITE_API_URL,
+        apiURL: getApiURL(),
         session: mainWindow.webContents.session,
         setCookieHeader: setCookie,
       })
@@ -57,7 +74,7 @@ export class AuthService extends IpcService {
   private getAuthRequestHeaders(additionalHeaders?: Record<string, string>) {
     return {
       ...createDesktopAPIHeaders({ version: PKG.version }),
-      ...createAuthRequestOriginHeaders(env.VITE_WEB_URL),
+      ...createAuthRequestOriginHeaders(getWebURL()),
       ...additionalHeaders,
     }
   }
@@ -68,7 +85,7 @@ export class AuthService extends IpcService {
       return
     }
 
-    const apiURL = env.VITE_API_URL
+    const apiURL = getApiURL()
     const url = new URL(apiURL)
     const isSecure =
       url.protocol === "https:" || url.hostname === "localhost" || url.hostname === "127.0.0.1"
@@ -100,7 +117,7 @@ export class AuthService extends IpcService {
     }
 
     const { session } = mainWindow.webContents
-    const apiURL = env.VITE_API_URL
+    const apiURL = getApiURL()
     await removeManagedAuthCookies({ apiURL, session })
   }
 
@@ -108,7 +125,7 @@ export class AuthService extends IpcService {
     path: "/sign-in/email" | "/sign-up/email",
     payload: Record<string, unknown>,
   ) {
-    const response = await net.fetch(`${env.VITE_API_URL}/better-auth${path}`, {
+    const response = await net.fetch(`${getApiURL()}/better-auth${path}`, {
       method: "POST",
       credentials: "omit",
       headers: {
@@ -169,7 +186,7 @@ export class AuthService extends IpcService {
     url: string
   }) {
     const requestURL = new URL(payload.url)
-    const apiURL = new URL(env.VITE_API_URL)
+    const apiURL = new URL(getApiURL())
     if (requestURL.origin !== apiURL.origin) {
       throw new Error("Refusing to proxy non-API request")
     }
@@ -220,14 +237,15 @@ export class AuthService extends IpcService {
 
   @IpcMethod()
   async signOutRemote(token?: string): Promise<void> {
+    const apiURL = getApiURL()
     await net
-      .fetch(`${env.VITE_API_URL}/better-auth/sign-out`, {
+      .fetch(`${apiURL}/better-auth/sign-out`, {
         method: "POST",
         credentials: "omit",
         headers: this.getAuthRequestHeaders(
           token
             ? {
-                Cookie: buildBetterAuthSessionTokenCookieHeader(env.VITE_API_URL, token),
+                Cookie: buildBetterAuthSessionTokenCookieHeader(apiURL, token),
               }
             : undefined,
         ),
@@ -235,6 +253,22 @@ export class AuthService extends IpcService {
       .catch(() => {})
 
     await this.clearSessionToken()
+  }
+
+  /**
+   * Switches to the server at the address the user typed, once it answers like one. The session
+   * with the server before ends here; the renderer clears its own data and relaunches the app,
+   * which captures the address at startup.
+   */
+  @IpcMethod()
+  async setServerUrl(input: string): Promise<"invalid" | "unreachable" | null> {
+    const server = normalizeServerUrl(input)
+    if (!server) return "invalid"
+    if (!(await answersAsServer(server))) return "unreachable"
+
+    if (getServerUrl()) await this.clearSessionToken()
+    store.set("serverUrl", server)
+    return null
   }
 
   @IpcMethod()
