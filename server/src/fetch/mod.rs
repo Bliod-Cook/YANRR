@@ -5,6 +5,7 @@ pub mod parse;
 pub mod scheduler;
 
 use chrono::{DateTime, SubsecRound, Utc};
+use reqwest::Url;
 use sea_orm::{
     ActiveModelTrait,
     ActiveValue::{Set, Unchanged},
@@ -54,6 +55,56 @@ pub async fn add_feed(state: &AppState, url: &str) -> Result<feed::Model, FetchE
         .await?
         .ok_or(FetchError::Fetch("HTTP 304".into()))?;
     insert(state, url, update).await
+}
+
+/// Feeds found at `keyword`: the feed it addresses, or those the web page there links to. Only addresses are
+/// understood, so anything else finds nothing.
+pub async fn discover(state: &AppState, keyword: &str) -> Result<Vec<feed::Model>, FetchError> {
+    let keyword = keyword.trim();
+    if keyword.starts_with("rsshub://") {
+        return Ok(vec![add_feed(state, keyword).await?]);
+    }
+    let address = if keyword.contains("://") {
+        keyword.to_string()
+    } else {
+        format!("https://{keyword}")
+    };
+    let Some(url) = Url::parse(&address).ok().filter(|url| {
+        matches!(url.scheme(), "http" | "https")
+            && url.host_str().is_some_and(|host| host.contains('.'))
+    }) else {
+        return Ok(Vec::new());
+    };
+    let url = url.to_string();
+    if let Some(feed) = feed::Entity::find()
+        .filter(feed::Column::Url.eq(&url))
+        .one(&state.db)
+        .await?
+    {
+        return Ok(vec![freshen(state, feed).await?]);
+    }
+    let fetched = http::get(&state.http, &url, &Validators::default())
+        .await
+        .map_err(FetchError::Fetch)?
+        .ok_or(FetchError::Fetch("HTTP 304".into()))?;
+    if let Ok(parsed) = parse::parse(&fetched.body, &url) {
+        let update = Update {
+            feed: parsed,
+            validators: fetched.validators,
+            moved_to: fetched.moved_to,
+        };
+        return Ok(vec![insert(state, &url, update).await?]);
+    }
+    let page = Url::parse(fetched.moved_to.as_deref().unwrap_or(&url)).expect("fetched URL");
+    let mut feeds: Vec<feed::Model> = Vec::new();
+    for link in html::feed_links(&String::from_utf8_lossy(&fetched.body), &page) {
+        match add_feed(state, &link).await {
+            Ok(feed) if feeds.iter().all(|found| found.id != feed.id) => feeds.push(feed),
+            Ok(_) => {}
+            Err(err) => tracing::debug!("discovered feed {link} failed: {err:?}"),
+        }
+    }
+    Ok(feeds)
 }
 
 /// Refreshes a feed nobody follows, which the scheduler leaves alone, so whoever looks at it sees recent entries.

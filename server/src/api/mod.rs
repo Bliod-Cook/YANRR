@@ -1,4 +1,5 @@
 mod categories;
+mod discover;
 mod error;
 mod feeds;
 mod response;
@@ -12,7 +13,7 @@ use std::sync::Arc;
 
 use axum::{
     Router,
-    routing::{get, patch},
+    routing::{get, patch, post},
 };
 use better_auth::integrations::axum::AxumIntegration;
 
@@ -26,6 +27,8 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
             "/categories",
             patch(categories::update).delete(categories::delete),
         )
+        .route("/discover", post(discover::discover))
+        .route("/feeds", get(feeds::get))
         .route("/feeds/refresh", get(feeds::refresh))
         .route("/settings", get(settings::get))
         .route("/settings/{tab}", patch(settings::update))
