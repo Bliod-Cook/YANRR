@@ -4,7 +4,7 @@ import { clsx } from "@follow/utils"
 import { AnimatePresence, m } from "motion/react"
 import { useTranslation } from "react-i18next"
 
-import { AISpline } from "~/modules/ai-chat/components/3d-models/AISpline"
+import { AIIcon } from "~/modules/ai-chat/components/AIIcon"
 
 import { useAttachScrollBeyond } from "../../hooks/useAttachScrollBeyond"
 import { useMainEntryId } from "../../hooks/useMainEntryId"
@@ -65,7 +65,7 @@ const DefaultWelcomeHeader = ({ title, description }: { title: string; descripti
   >
     <div data-testid="welcome-screen-header">
       <div className="center">
-        <AISpline />
+        <AIIcon />
       </div>
       <div className="flex flex-col gap-2">
         <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold text-text">

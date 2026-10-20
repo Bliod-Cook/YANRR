@@ -65,15 +65,6 @@ export const LoginModalContent = (props: LoginModalContentProps) => {
   const [isRegister, setIsRegister] = useState(true)
   const [isEmail, setIsEmail] = useState(false)
 
-  const handleOpenLegal = (type: "privacy" | "tos") => {
-    const path = {
-      privacy: "privacy-policy",
-      tos: "terms-of-service",
-    }
-
-    window.open(`https://folo.is/${path[type]}`, "_blank")
-  }
-
   const handleOpenToken = () => {
     present({
       id: "token",
@@ -242,24 +233,6 @@ export const LoginModalContent = (props: LoginModalContentProps) => {
               >
                 <i aria-hidden className="i-mgc-key-2-cute-re size-3.5" />
                 <span>{t("login.enter_token")}</span>
-              </button>
-            </div>
-            <div className="text-center text-xs leading-relaxed text-text-tertiary">
-              <span>{t("login.agree_to")} </span>
-              <button
-                type="button"
-                onClick={() => handleOpenLegal("tos")}
-                className="text-accent transition-colors hover:text-accent/80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
-              >
-                {t("login.terms")}
-              </button>
-              <span> & </span>
-              <button
-                type="button"
-                onClick={() => handleOpenLegal("privacy")}
-                className="text-accent transition-colors hover:text-accent/80 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
-              >
-                {t("login.privacy")}
               </button>
             </div>
           </div>

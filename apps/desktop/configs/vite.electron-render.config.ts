@@ -28,7 +28,6 @@ export default {
       enableInDev: true,
     }),
     cleanupUnnecessaryFilesPlugin([
-      "og-image.png",
       "icon-512x512.png",
       "opengraph-image.png",
       "favicon.ico",

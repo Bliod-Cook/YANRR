@@ -7,7 +7,7 @@ import { m } from "motion/react"
 import * as React from "react"
 import { useTranslation } from "react-i18next"
 
-import { AISpline } from "~/modules/ai-chat/components/3d-models/AISpline"
+import { AIIcon } from "~/modules/ai-chat/components/AIIcon"
 import { AIMarkdownStreamingMessage } from "~/modules/ai-chat/components/message/AIMarkdownMessage"
 import { UserMessageParts } from "~/modules/ai-chat/components/message/UserMessageParts"
 import type { BizUIMessage } from "~/modules/ai-chat/store/types"
@@ -146,7 +146,7 @@ const Header: React.FC = () => {
             animate={{ scale: 1, opacity: 1 }}
             transition={Spring.bouncy(0.5, 0.1)}
           >
-            <AISpline className="size-8" />
+            <AIIcon className="size-8" />
           </m.div>
 
           {/* Text content */}

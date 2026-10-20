@@ -4,6 +4,7 @@ import type { PropsWithChildren } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ContextMenu } from "@/src/components/ui/context-menu"
+import { proxyEnv } from "@/src/lib/proxy-env"
 import { toast } from "@/src/lib/toast"
 
 type InboxContextMenuProps = PropsWithChildren<{
@@ -26,7 +27,7 @@ export const InboxContextMenu = ({ inboxId, children }: InboxContextMenuProps) =
         <ContextMenu.Item
           key="CopyEmailAddress"
           onSelect={() => {
-            setStringAsync(`${inboxId}@follow.re`).then(() => {
+            setStringAsync(`${inboxId}@${new URL(proxyEnv.WEB_URL).hostname}`).then(() => {
               toast.success(
                 t("operation.copy_which_success", { which: t("operation.copy.email_address") }),
               )

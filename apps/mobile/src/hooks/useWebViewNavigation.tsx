@@ -7,7 +7,6 @@ import type { WebViewNavigation } from "react-native-webview"
 import { openLink } from "../lib/native"
 import { resolveVideoUrlForMobileOpen } from "../lib/video-url"
 
-const allowHosts = new Set(["app.follow.is", "app.folo.is"])
 export function useWebViewNavigation({ webViewRef }: { webViewRef: RefObject<WebView> }) {
   const onNavigationStateChange = useCallback(
     (newNavState: WebViewNavigation) => {
@@ -15,7 +14,6 @@ export function useWebViewNavigation({ webViewRef }: { webViewRef: RefObject<Web
       const url = parseSafeUrl(urlStr)
       if (!url) return
       if (url.protocol === "file:") return
-      if (allowHosts.has(url.host)) return
 
       webViewRef.current?.stopLoading()
 

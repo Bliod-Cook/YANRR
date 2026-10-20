@@ -12,7 +12,6 @@ import { join } from "pathe"
 import { WindowManager } from "~/manager/window"
 
 import { isMacOS } from "../env"
-import { migrateAuthCookiesToNewApiDomain } from "../lib/auth-cookie-migration"
 import { dedupeManagedAuthCookies } from "../lib/auth-cookies"
 import { isDeepLink, openDeepLink, setDeepLinkHandler } from "../lib/deep-link"
 import { handleUrlRouting } from "../lib/router"
@@ -98,9 +97,6 @@ export class BootstrapManager {
 
       // A failed cookie cleanup must not keep the main window from opening
       try {
-        await migrateAuthCookiesToNewApiDomain(session.defaultSession, {
-          currentApiURL: env.VITE_API_URL,
-        })
         await dedupeManagedAuthCookies({
           apiURL: env.VITE_API_URL,
           session: session.defaultSession,

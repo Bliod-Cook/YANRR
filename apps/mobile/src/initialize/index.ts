@@ -4,7 +4,6 @@ import { ensureSyncedThroughEngine } from "@follow/store/sync/sync-status"
 import { whoami } from "@follow/store/user/getters"
 import { fetchSessionUser } from "@follow/store/user/hooks"
 
-import { migrateLegacyApiSession } from "../lib/auth-cookie-migration"
 import { applyStoredAppColorScheme } from "../lib/color-scheme"
 import { settingSyncQueue } from "../modules/settings/sync-queue"
 import { initBackgroundTask } from "./background"
@@ -39,9 +38,6 @@ export const initializeApp = async () => {
 
   await initDeviceType()
   await initializeDB()
-  void apm("migrateLegacyApiSession", migrateLegacyApiSession).catch((error) => {
-    console.error("migrateLegacyApiSession failed", error)
-  })
 
   await apm("migrateDatabase", migrateDatabase)
   initializeDayjs()

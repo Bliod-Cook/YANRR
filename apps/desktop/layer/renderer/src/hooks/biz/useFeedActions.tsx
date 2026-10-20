@@ -1,6 +1,5 @@
 import type { FeedViewType } from "@follow/constants"
 import { IN_ELECTRON } from "@follow/shared/constants"
-import { env } from "@follow/shared/env.desktop"
 import { getFeedById } from "@follow/store/feed/getter"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useInboxById, useIsInbox } from "@follow/store/inbox/hooks"
@@ -23,6 +22,7 @@ import type { FollowMenuItem, MenuItemInput } from "~/atoms/context-menu"
 import { MenuItemSeparator, MenuItemText } from "~/atoms/context-menu"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { copyToClipboardWithFeedback } from "~/lib/clipboard"
+import { INBOX_EMAIL_DOMAIN } from "~/lib/inbox"
 import { UrlBuilder } from "~/lib/url-builder"
 import { useFeedClaimModal } from "~/modules/claim"
 import { COMMAND_ID } from "~/modules/command/commands/id"
@@ -422,7 +422,7 @@ export const useInboxActions = ({ inboxId }: { inboxId: string }) => {
         label: t("sidebar.feed_actions.copy_email_address"),
         shortcut: "$mod+Shift+C",
         click: () => {
-          void copyToClipboardWithFeedback(`${inboxId}${env.VITE_INBOXES_EMAIL}`)
+          void copyToClipboardWithFeedback(`${inboxId}${INBOX_EMAIL_DOMAIN}`)
         },
       }),
     ]

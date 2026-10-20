@@ -12,8 +12,8 @@ export const env = createEnv({
     VITE_WEB_URL: z.string().url().default(DEFAULT_VALUES.PROD.WEB_URL),
     VITE_API_URL: z.string().default(DEFAULT_VALUES.PROD.API_URL),
     VITE_OTA_URL: z.string().url().default(DEFAULT_VALUES.PROD.OTA_URL),
-    VITE_INBOXES_EMAIL: z.string().default(DEFAULT_VALUES.PROD.INBOXES_EMAIL),
-    VITE_FIREBASE_CONFIG: z.string().default(DEFAULT_VALUES.PROD.FIREBASE_CONFIG),
+    /** Firebase web config (JSON) of the deployment, for push notifications */
+    VITE_FIREBASE_CONFIG: z.string().optional(),
   },
 
   emptyStringAsUndefined: true,
