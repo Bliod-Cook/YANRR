@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => {
   return {
     secureStore,
     expoStorage: null as { setItem: (key: string, value: string) => unknown } | null,
+    authClientOptions: null as {
+      fetchOptions: { onRequest: (context: { headers: Headers }) => Promise<unknown> }
+    } | null,
     authSignOut: vi.fn(async () => {}),
     invalidateQueries: vi.fn(async () => {}),
     resetQueries: vi.fn(async () => {}),
@@ -29,7 +32,10 @@ vi.mock("@better-auth/expo/client", () => ({
   storageAdapter: () => ({ getItem: vi.fn(), getItemAsync: vi.fn(), setItemAsync: vi.fn() }),
 }))
 vi.mock("better-auth/react", () => ({
-  createAuthClient: () => ({ signOut: mocks.authSignOut }),
+  createAuthClient: (options: NonNullable<typeof mocks.authClientOptions>) => {
+    mocks.authClientOptions = options
+    return { signOut: mocks.authSignOut }
+  },
 }))
 vi.mock("@follow/store/sync/account", () => ({
   invalidateSessionUser: mocks.invalidateSessionUser,
@@ -52,10 +58,6 @@ vi.mock("./native/user-agent", () => ({ getUserAgent: async () => "Folo" }))
 vi.mock("./navigation/Navigation", () => ({
   Navigation: { rootNavigation: { popToRoot: vi.fn() } },
 }))
-vi.mock("./proxy-env", () => ({
-  getEnvProfile: () => "local",
-  proxyEnv: { API_URL: "http://localhost:3000" },
-}))
 vi.mock("./push-token", () => ({ unregisterPushToken: vi.fn(async () => {}) }))
 vi.mock("./query-client", () => ({
   queryClient: { invalidateQueries: mocks.invalidateQueries, resetQueries: mocks.resetQueries },
@@ -68,6 +70,9 @@ vi.mock("./secure-store", () => ({
     removeItem: (key: string) => void mocks.secureStore.delete(key),
     removeItemAsync: async (key: string) => void mocks.secureStore.delete(key),
   },
+}))
+vi.mock("./server-env", () => ({
+  serverEnv: { API_URL: "http://localhost:3000/api", WEB_URL: "http://localhost:3000" },
 }))
 
 const { cookieKey, signOut } = await import("./auth")
@@ -122,5 +127,15 @@ describe("signOut", () => {
     mocks.resetQueries.mockClear()
     await storeSessionCookie("next-session-token")
     expect(mocks.resetQueries).toHaveBeenCalledWith({ queryKey: ["entries"] })
+  })
+})
+
+describe("authClient", () => {
+  // The server refuses state-changing requests that carry the session cookie but no own origin
+  it("sends the server's origin", async () => {
+    const headers = new Headers()
+    await mocks.authClientOptions!.fetchOptions.onRequest({ headers })
+
+    expect(headers.get("Origin")).toBe("http://localhost:3000")
   })
 })

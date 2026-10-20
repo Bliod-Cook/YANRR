@@ -24,26 +24,13 @@ pnpm run e2e:ios:bootstrap
 - The iOS runner resets the simulator, disables password autofill prompts, installs the provided app bundle, then executes Maestro.
 - Auth and content run sequentially against the same signed-in app. Each journey writes its own debug artifacts and JUnit report under `auth/` or `content/` in `MAESTRO_DEBUG_OUTPUT` (default: `e2e/artifacts/ios`). A failed journey stops the runner.
 
-## Prod iOS auth bootstrap
+## iOS auth bootstrap
 
-When non-auth iOS self-tests need a signed-in simulator quickly, bootstrap auth through the standard iOS runner mode:
+When non-auth iOS self-tests need a signed-in simulator quickly, run the registration flow alone:
 
 ```bash
 pnpm run e2e:ios:bootstrap
 ```
-
-This mode uses the auth bootstrap helper on iOS when `EXPO_PUBLIC_E2E_ENV_PROFILE=prod` or `EXPO_PUBLIC_E2E_ENV_PROFILE=local`, and falls back to the normal iOS registration flow for other environments.
-
-Optional environment variables:
-
-- `E2E_EMAIL`
-- `E2E_PASSWORD`
-- `MAESTRO_IOS_DEVICE_ID`
-- `E2E_API_URL`
-- `E2E_CALLBACK_URL`
-- `E2E_BUNDLE_ID`
-
-The bootstrap script signs in against prod using the mobile fallback token header, writes the auth cookie into the simulator's `ExpoSQLiteStorage` fallback store, and relaunches the app.
 
 ## Environment
 
@@ -51,5 +38,5 @@ The bootstrap script signs in against prod using the mobile fallback token heade
 - `E2E_PASSWORD`
 - `MAESTRO_DEBUG_OUTPUT`
 - `MAESTRO_IOS_APP_PATH`
-- `EXPO_PUBLIC_E2E_ENV_PROFILE`
+- `EXPO_PUBLIC_YANNR_SERVER_URL`: the server the build talks to; without it the login screen asks for one
 - `EXPO_PUBLIC_E2E_LANGUAGE`

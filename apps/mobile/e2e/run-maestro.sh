@@ -128,7 +128,7 @@ build_ios_simulator_app() {
     pod install
     set -- $(append_ios_arch_args)
     PROFILE=e2e-ios-simulator \
-    EXPO_PUBLIC_E2E_ENV_PROFILE="${EXPO_PUBLIC_E2E_ENV_PROFILE:-}" \
+    EXPO_PUBLIC_YANNR_SERVER_URL="${EXPO_PUBLIC_YANNR_SERVER_URL:-}" \
     EXPO_PUBLIC_E2E_LANGUAGE="${EXPO_PUBLIC_E2E_LANGUAGE:-en}" \
     xcodebuild -workspace Folo.xcworkspace \
       -scheme Folo \
@@ -145,15 +145,8 @@ build_ios_simulator_app() {
 run_ios_bootstrap_auth() {
   device_id="$1"
 
-  case "${EXPO_PUBLIC_E2E_ENV_PROFILE:-prod}" in
-    prod|local)
-      pnpm run e2e:bootstrap:ios:prod-auth -- --udid "${device_id}"
-      ;;
-    *)
-      maestro test --format junit --platform ios --device "${device_id}" --debug-output "${debug_output}/bootstrap-auth" \
-        -e E2E_EMAIL="${E2E_EMAIL}" -e E2E_PASSWORD="${E2E_PASSWORD}" e2e/flows/ios/register.yaml
-      ;;
-  esac
+  maestro test --format junit --platform ios --device "${device_id}" --debug-output "${debug_output}/bootstrap-auth" \
+    -e E2E_EMAIL="${E2E_EMAIL}" -e E2E_PASSWORD="${E2E_PASSWORD}" e2e/flows/ios/register.yaml
 }
 
 case "${platform}" in

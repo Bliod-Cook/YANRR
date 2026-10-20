@@ -1,4 +1,3 @@
-import type { envProfileMap } from "@follow/shared/env.rn"
 import { sleep } from "@follow/utils"
 import { requireNativeModule } from "expo"
 import * as Clipboard from "expo-clipboard"
@@ -18,7 +17,6 @@ import {
 } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Select } from "@/src/components/ui/form/Select"
 import { Text } from "@/src/components/ui/typography/Text"
 import { getDbPath } from "@/src/database"
 import { cookieKey, getCookie, sessionTokenKey, signOut } from "@/src/lib/auth"
@@ -28,8 +26,8 @@ import { DebugButtonGroup } from "@/src/lib/navigation/debug/DebugButtonGroup"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { NavigationSitemapRegistry } from "@/src/lib/navigation/sitemap/registry"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
-import { setEnvProfile, useEnvProfile } from "@/src/lib/proxy-env"
 import { reloadApp } from "@/src/lib/reload-app"
+import { useServerUrl } from "@/src/lib/server-env"
 import { toast } from "@/src/lib/toast"
 
 import { MarkdownScreen } from "./(debug)/markdown"
@@ -46,7 +44,7 @@ interface MenuItem {
 }
 export const DebugScreen: NavigationControllerView = () => {
   const insets = useSafeAreaInsets()
-  const envProfile = useEnvProfile()
+  const serverUrl = useServerUrl()
   const menuSections: MenuSection[] = [
     {
       title: "Users",
@@ -178,33 +176,7 @@ export const DebugScreen: NavigationControllerView = () => {
         paddingTop: insets.top,
       }}
     >
-      <View className="flex-row items-center justify-between px-8">
-        <Text className="text-2xl font-medium text-white">Current Env Profile: {envProfile}</Text>
-        <Select
-          options={[
-            {
-              label: "Dev",
-              value: "dev",
-            },
-            {
-              label: "Prod",
-              value: "prod",
-            },
-            {
-              label: "Staging",
-              value: "staging",
-            },
-            {
-              label: "Local",
-              value: "local",
-            },
-          ]}
-          value={envProfile}
-          onValueChange={(value) => {
-            setEnvProfile(value as keyof typeof envProfileMap)
-          }}
-        />
-      </View>
+      <Text className="px-8 text-2xl font-medium text-white">Server: {serverUrl ?? "-"}</Text>
       {menuSections.map((section) => {
         const functionItemKeyCounter = new Map<string, number>()
         return (

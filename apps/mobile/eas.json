@@ -30,7 +30,6 @@
       "extends": "preview",
       "env": {
         "PROFILE": "e2e-android",
-        "EXPO_PUBLIC_E2E_ENV_PROFILE": "prod",
         "EXPO_PUBLIC_E2E_LANGUAGE": "en"
       }
     },
@@ -41,7 +40,6 @@
       },
       "env": {
         "PROFILE": "e2e-ios-simulator",
-        "EXPO_PUBLIC_E2E_ENV_PROFILE": "prod",
         "EXPO_PUBLIC_E2E_LANGUAGE": "en"
       }
     },
