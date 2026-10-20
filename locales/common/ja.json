@@ -113,9 +113,7 @@
   "words.items_one": "アイテム",
   "words.items_other": "アイテム",
   "words.letsGo": "はじめる",
-  "words.lists": "リスト",
   "words.local": "ローカル",
-  "words.manage": "マネージ",
   "words.maximize": "最大化",
   "words.minimize": "最小化",
   "words.next": "次へ",
@@ -134,7 +132,6 @@
   "words.submit": "送信",
   "words.time": "時刻",
   "words.unsaved_changes": "未保存の変更",
-  "words.update": "更新",
   "words.which.above": "上記",
   "words.which.all": "すべて"
 }

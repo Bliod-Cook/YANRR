@@ -113,9 +113,7 @@
   "words.items_one": "Item",
   "words.items_other": "Items",
   "words.letsGo": "Let's Go",
-  "words.lists": "Lists",
   "words.local": "local",
-  "words.manage": "Manage",
   "words.maximize": "Maximize",
   "words.minimize": "Minimize",
   "words.next": "Next",
@@ -134,7 +132,6 @@
   "words.submit": "Submit",
   "words.time": "Time",
   "words.unsaved_changes": "Unsaved changes",
-  "words.update": "Update",
   "words.which.above": "above",
   "words.which.all": "all"
 }
