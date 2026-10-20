@@ -1,9 +1,11 @@
 mod categories;
+mod collections;
 mod discover;
 mod entries;
 mod error;
 mod feeds;
 mod opml;
+mod reads;
 mod response;
 mod session;
 mod settings;
@@ -29,12 +31,24 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
             "/categories",
             patch(categories::update).delete(categories::delete),
         )
+        .route(
+            "/collections",
+            post(collections::collect).delete(collections::uncollect),
+        )
         .route("/discover", post(discover::discover))
         .route("/entries", get(entries::get).post(entries::timeline))
         .route("/entries/stream", post(entries::stream))
         .route("/entries/readability", get(entries::readability))
         .route("/feeds", get(feeds::get))
         .route("/feeds/refresh", get(feeds::refresh))
+        .route(
+            "/reads",
+            get(reads::counts)
+                .post(reads::mark_read)
+                .delete(reads::mark_unread),
+        )
+        .route("/reads/all", post(reads::mark_all_read))
+        .route("/reads/total-count", get(reads::total))
         .route("/settings", get(settings::get))
         .route("/settings/{tab}", patch(settings::update))
         .route(
