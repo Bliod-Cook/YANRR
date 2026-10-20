@@ -1,6 +1,9 @@
 use axum::{
     Json,
-    extract::{FromRequestParts, rejection::QueryRejection},
+    extract::{
+        FromRequest, FromRequestParts,
+        rejection::{JsonRejection, QueryRejection},
+    },
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -11,11 +14,13 @@ use crate::fetch::FetchError;
 /// Error codes from the Folo API contract; add variants as features need them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExceptionCode {
+    UnprocessableContent = 3,
     InvalidInput = 4,
     NotFound = 6,
     AuthError = 1000,
     InternalError = 1005,
     FeedNoFound = 2001,
+    FeedMissingId = 2002,
     FeedFetchError = 2003,
     FeedParseError = 2004,
     SettingInvalidTab = 7001,
@@ -30,6 +35,7 @@ impl ExceptionCode {
             | Self::FeedParseError
             | Self::SettingInvalidTab
             | Self::SettingPayloadInvalid => StatusCode::BAD_REQUEST,
+            Self::UnprocessableContent | Self::FeedMissingId => StatusCode::UNPROCESSABLE_ENTITY,
             Self::NotFound | Self::FeedNoFound => StatusCode::NOT_FOUND,
             Self::AuthError => StatusCode::UNAUTHORIZED,
             Self::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
@@ -53,6 +59,14 @@ impl ApiError {
             message: message.into(),
             data: None,
         }
+    }
+
+    pub fn feed_not_found() -> Self {
+        Self::new(ExceptionCode::FeedNoFound, "Feed not found")
+    }
+
+    pub fn feed_missing_id() -> Self {
+        Self::new(ExceptionCode::FeedMissingId, "feedId or url required")
     }
 
     fn validation(message: String) -> Self {
@@ -96,7 +110,30 @@ impl From<QueryRejection> for ApiError {
     }
 }
 
+impl From<JsonRejection> for ApiError {
+    fn from(rejection: JsonRejection) -> Self {
+        Self::validation(rejection.body_text())
+    }
+}
+
 /// `Query` whose rejection follows the API error format.
 #[derive(FromRequestParts)]
 #[from_request(via(axum::extract::Query), rejection(ApiError))]
 pub struct ApiQuery<T>(pub T);
+
+/// `Json` whose rejection follows the API error format.
+#[derive(FromRequest)]
+#[from_request(via(axum::Json), rejection(ApiError))]
+pub struct ApiJson<T>(pub T);
+
+/// A `FeedViewType`; All (-1) included, as the contract allows it wherever a view is written.
+pub fn view(view: i16) -> ApiResult<i16> {
+    if (-1..=5).contains(&view) {
+        Ok(view)
+    } else {
+        Err(ApiError::new(
+            ExceptionCode::UnprocessableContent,
+            "Invalid view",
+        ))
+    }
+}
