@@ -1,0 +1,284 @@
+import { FeedViewType, UserRole } from "@follow/constants"
+import { useEntry, useEntryReadHistory, usePrefetchEntryDetail } from "@follow/store/entry/hooks"
+import { entrySyncServices } from "@follow/store/entry/store"
+import { useFeedById } from "@follow/store/feed/hooks"
+import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
+import { useAutoMarkAsRead } from "@follow/store/unread/hooks"
+import { useIsLoggedIn, useUserRole } from "@follow/store/user/hooks"
+import { PortalProvider } from "@gorhom/portal"
+import { useQuery } from "@tanstack/react-query"
+import * as WebBrowser from "expo-web-browser"
+import { atom, useAtomValue, useSetAtom } from "jotai"
+import { useCallback, useEffect, useMemo } from "react"
+import { View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { useColor } from "react-native-uikit-colors"
+
+import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
+import { useUISettingKey } from "@/src/atoms/settings/ui"
+import { BottomTabBarHeightContext } from "@/src/components/layouts/tabbar/contexts/BottomTabBarHeightContext"
+import { SafeNavigationScrollView } from "@/src/components/layouts/views/SafeNavigationScrollView"
+import { EntryContentWebView } from "@/src/components/native/webview/EntryContentWebView"
+import { RelativeDateTime } from "@/src/components/ui/datetime/RelativeDateTime"
+import { FeedIcon } from "@/src/components/ui/icon/feed-icon"
+import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
+import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
+import { Text } from "@/src/components/ui/typography/Text"
+import { CalendarTimeAddCuteReIcon } from "@/src/icons/calendar_time_add_cute_re"
+import { Eye2CuteReIcon } from "@/src/icons/eye_2_cute_re"
+import { openLink } from "@/src/lib/native"
+import { useNavigation } from "@/src/lib/navigation/hooks"
+import type { NavigationControllerView } from "@/src/lib/navigation/types"
+import { isWebUrl } from "@/src/lib/web-url"
+import { EntryContentContext, useEntryContentContext } from "@/src/modules/entry-content/ctx"
+import { EntryAISummary } from "@/src/modules/entry-content/EntryAISummary"
+import { EntryNavigationHeader } from "@/src/modules/entry-content/EntryNavigationHeader"
+import { useEntryExternalUrl } from "@/src/modules/entry-content/external-url"
+import { usePullUpToNext } from "@/src/modules/entry-content/pull-up-navigation/use-pull-up-navigation"
+import { usePreferredFeedTitle } from "@/src/modules/feed/feed-title"
+import { useFloatingPlayerBarInset } from "@/src/modules/player/hooks"
+
+import { EntrySocialTitle, EntryTitle } from "../../../../modules/entry-content/EntryTitle"
+
+export const EntryDetailScreen: NavigationControllerView<{
+  entryId: string
+  entryIds?: string[]
+  view: FeedViewType
+  isInbox?: boolean
+}> = ({ entryId, entryIds, view: viewType, isInbox }) => {
+  usePrefetchEntryDetail(entryId, isInbox)
+  const entry = useEntry(entryId, (state) => ({
+    title: state.title,
+    summary: state.settings?.summary,
+    translation: state.settings?.translation,
+    readability: state.settings?.readability,
+    sourceContent: state.settings?.sourceContent,
+  }))
+  // Onboarding entries have no link outside the app, and relative links resolve first
+  const externalUrl = useEntryExternalUrl(entryId)
+  const isLoggedIn = useIsLoggedIn()
+  useAutoMarkAsRead(entryId, !!entry && isLoggedIn)
+  const insets = useSafeAreaInsets()
+  const floatingPlayerBarInset = useFloatingPlayerBarInset()
+  const ctxValue = useMemo(
+    () => ({
+      showAISummaryAtom: atom(entry?.summary || false),
+      showAITranslationAtom: atom(!!entry?.translation || false),
+      showReadabilityAtom: atom(entry?.readability || false),
+      showSourceContentAtom: atom(entry?.sourceContent || false),
+      titleHeightAtom: atom(0),
+    }),
+    [entry?.readability, entry?.sourceContent, entry?.summary, entry?.translation],
+  )
+  const navigation = useNavigation()
+  const nextEntryId = useMemo(() => {
+    if (!entryIds) return
+    const currentEntryIdx = entryIds.indexOf(entryId)
+    return entryIds[currentEntryIdx + 1]
+  }, [entryId, entryIds])
+  const {
+    EntryPullUpToNext,
+    scrollViewEventHandlers,
+    pullUpViewProps,
+    GestureWrapper,
+    gestureWrapperProps,
+  } = usePullUpToNext({
+    enabled: !!nextEntryId,
+    onRefresh: useCallback(() => {
+      if (!nextEntryId) return
+      navigation.replaceControllerView(
+        EntryDetailScreen,
+        {
+          entryId: nextEntryId,
+          entryIds,
+          view: viewType,
+        },
+        {
+          // Ensure that the replace animation is used
+          stackAnimation: "fade_from_bottom",
+          transitionDuration: 300,
+        },
+      )
+    }, [entryIds, navigation, nextEntryId, viewType]),
+  })
+  return (
+    <EntryContentContext value={ctxValue}>
+      <PortalProvider>
+        <BottomTabBarHeightContext value={insets.bottom + floatingPlayerBarInset}>
+          <GestureWrapper {...gestureWrapperProps}>
+            <SafeNavigationScrollView
+              Header={<EntryNavigationHeader entryId={entryId} />}
+              ScrollViewBottom={<EntryPullUpToNext {...pullUpViewProps} />}
+              automaticallyAdjustContentInsets={false}
+              contentContainerMaxWidth={680}
+              contentContainerClassName="flex min-h-full pb-16"
+              {...scrollViewEventHandlers}
+            >
+              <ItemPressable
+                itemStyle={ItemPressableStyle.UnStyled}
+                onPress={() => externalUrl && openLink(externalUrl)}
+                className="rounded-xl px-5 py-4"
+              >
+                {viewType === FeedViewType.SocialMedia ? (
+                  <EntrySocialTitle entryId={entryId} />
+                ) : (
+                  <>
+                    <EntryTitle title={entry?.title || ""} entryId={entryId} />
+                    <EntryInfo entryId={entryId} />
+                  </>
+                )}
+              </ItemPressable>
+              <View className="px-5">
+                <EntryAISummary entryId={entryId} />
+              </View>
+              {entry && (
+                <View className="mt-3 w-full px-5">
+                  <EntryContentWebViewWithContext entryId={entryId} />
+                </View>
+              )}
+              {viewType === FeedViewType.SocialMedia && (
+                <View className="mt-2 px-5">
+                  <EntryInfoSocial entryId={entryId} />
+                </View>
+              )}
+            </SafeNavigationScrollView>
+          </GestureWrapper>
+        </BottomTabBarHeightContext>
+      </PortalProvider>
+    </EntryContentContext>
+  )
+}
+const EntryContentWebViewWithContext = ({ entryId }: { entryId: string }) => {
+  const { showReadabilityAtom, showAITranslationAtom, showSourceContentAtom } =
+    useEntryContentContext()
+  const showReadabilityOnce = useAtomValue(showReadabilityAtom)
+  const translationSetting = useGeneralSettingKey("translation")
+  const translationMode = useGeneralSettingKey("translationMode")
+  const showTranslationOnce = useAtomValue(showAITranslationAtom)
+  const actionLanguage = useActionLanguage()
+  const userRole = useUserRole()
+  const showTranslation = translationSetting || showTranslationOnce
+  const translationPrefetchEnabled =
+    showTranslation &&
+    (userRole == null || (userRole !== UserRole.Free && userRole !== UserRole.Trial))
+  const entry = useEntry(entryId, (state) => ({
+    content: state.content,
+    readabilityContent: state.readabilityContent,
+  }))
+  const externalUrl = useEntryExternalUrl(entryId)
+  usePrefetchEntryTranslation({
+    entryIds: [entryId],
+    withContent: true,
+    target: showReadabilityOnce && entry?.readabilityContent ? "readabilityContent" : "content",
+    language: actionLanguage,
+    enabled: translationPrefetchEnabled,
+    mode: translationMode,
+  })
+
+  // Auto toggle readability when content is empty
+  const setShowReadability = useSetAtom(showReadabilityAtom)
+  const {
+    isPending,
+    isFetching,
+    isError,
+    refetch: refetchEntryDetail,
+  } = usePrefetchEntryDetail(entryId)
+  useEffect(() => {
+    // Only once the server said there is no content; a request that failed, as offline, says
+    // nothing about it
+    if (!isPending && !isError && !entry?.content) {
+      setShowReadability(true)
+    }
+  }, [isPending, isError, entry?.content, setShowReadability])
+  const readabilityQuery = useQuery({
+    queryKey: ["entry-readability", entryId],
+    queryFn: async () => {
+      await entrySyncServices.fetchEntryReadabilityContent(entryId)
+      return null
+    },
+    enabled: showReadabilityOnce,
+    retry: false,
+  })
+
+  const showSourceContent = useAtomValue(showSourceContentAtom)
+  useEffect(() => {
+    // The browser shows web pages only
+    if (showSourceContent && externalUrl && isWebUrl(externalUrl)) {
+      WebBrowser.openBrowserAsync(externalUrl).catch((error: unknown) => {
+        console.warn("[entry] the browser did not open the source", error)
+      })
+    }
+  }, [externalUrl, showSourceContent])
+
+  const refetchReadability = readabilityQuery.refetch
+  const retryContent = useCallback(() => {
+    void refetchEntryDetail()
+    if (showReadabilityOnce) void refetchReadability()
+  }, [refetchEntryDetail, refetchReadability, showReadabilityOnce])
+
+  return (
+    <EntryContentWebView
+      entryId={entryId}
+      showReadability={showReadabilityOnce}
+      showTranslation={showTranslation}
+      // A retry of a failed request keeps its error until it settles, so it counts as pending
+      isContentPending={showReadabilityOnce ? readabilityQuery.isFetching : isPending || isFetching}
+      onRetry={retryContent}
+    />
+  )
+}
+const EntryInfo = ({ entryId }: { entryId: string }) => {
+  const entry = useEntry(entryId, (state) => ({
+    publishedAt: state.publishedAt,
+    feedId: state.feedId,
+  }))
+  const isLoggedIn = useIsLoggedIn()
+  const feed = useFeedById(entry?.feedId)
+  const feedTitle = usePreferredFeedTitle(entry?.feedId)
+  const secondaryLabelColor = useColor("secondaryLabel")
+  const readCount = useEntryReadHistory(entryId, 20, isLoggedIn)?.entryReadHistories?.readCount ?? 0
+  const hideRecentReader = useUISettingKey("hideRecentReader")
+  if (!entry) return null
+  const { publishedAt } = entry
+  return (
+    <View className="mt-4 flex flex-row items-center gap-4">
+      {feed && (
+        <View className="flex shrink flex-row items-center gap-2">
+          <FeedIcon feed={feed} />
+          <Text className="shrink text-xs font-medium leading-tight text-label" numberOfLines={1}>
+            {feedTitle?.trim()}
+          </Text>
+        </View>
+      )}
+      <View className="flex flex-row items-center gap-1">
+        <CalendarTimeAddCuteReIcon width={16} height={16} color={secondaryLabelColor} />
+        <RelativeDateTime
+          date={publishedAt}
+          className="text-xs leading-tight text-secondary-label"
+        />
+      </View>
+      {isLoggedIn && !hideRecentReader && (
+        <View className="flex flex-row items-center gap-1">
+          <Eye2CuteReIcon width={16} height={16} color={secondaryLabelColor} />
+          <Text className="text-xs leading-tight text-secondary-label">{readCount}</Text>
+        </View>
+      )}
+    </View>
+  )
+}
+const EntryInfoSocial = ({ entryId }: { entryId: string }) => {
+  const entry = useEntry(entryId, (state) => ({
+    publishedAt: state.publishedAt,
+  }))
+  if (!entry) return null
+  return (
+    <View className="mt-3">
+      <Text className="text-sm text-secondary-label">
+        {entry.publishedAt.toLocaleString(undefined, {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })}
+      </Text>
+    </View>
+  )
+}
