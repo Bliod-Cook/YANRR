@@ -7,16 +7,6 @@ const IOS_RESOURCES = [
     source: path.resolve(__dirname, "..", "assets", "ios-native", "Assets.xcassets"),
     destination: "Assets.xcassets",
   },
-  {
-    source: path.resolve(
-      __dirname,
-      "..",
-      "assets",
-      "ios-native",
-      "Folo - Follow everything.storekit",
-    ),
-    destination: "Folo - Follow everything.storekit",
-  },
 ]
 
 function assertResourceExists(resource) {

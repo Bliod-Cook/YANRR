@@ -3,9 +3,9 @@ import { useEffect, useRef } from "react"
 import { Alert, AppState, Linking, Platform } from "react-native"
 
 import { nativeAlertCountAtom } from "@/src/lib/dialog-state"
+import { isAndroidApkInstall } from "@/src/lib/install-source"
 import { jotaiStore } from "@/src/lib/jotai"
 import { kv } from "@/src/lib/kv"
-import { isAndroidApkInstall } from "@/src/lib/payment"
 
 import type { StorePolicyResponse } from "./client"
 import type { StoreUpdateTarget } from "./store-update"

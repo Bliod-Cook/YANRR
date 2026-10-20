@@ -9,15 +9,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { getFetchErrorMessage, isNotFoundError, toastFetchError } from "./error-parser"
 
 const mocks = vi.hoisted(() => ({
-  isPaymentEnabled: false,
-  showUpgradeRequiredDialog: vi.fn(),
   toastError: vi.fn(),
 }))
 
 vi.mock("i18next", () => ({
   t: (key: string) => {
-    if (key === "errors:2012") {
-      return "RSSHub feed subscription limit exceeded"
+    if (key === "errors:2001") {
+      return "Feed not found"
     }
     if (key === "errors:3") {
       return "Unprocessable content"
@@ -29,14 +27,6 @@ vi.mock("i18next", () => ({
   },
 }))
 
-vi.mock("@/src/atoms/server-configs", () => ({
-  getIsPaymentEnabled: () => mocks.isPaymentEnabled,
-}))
-
-vi.mock("@/src/modules/dialogs/UpgradeRequiredDialog", () => ({
-  showUpgradeRequiredDialog: mocks.showUpgradeRequiredDialog,
-}))
-
 vi.mock("./toast", () => ({
   toast: {
     error: mocks.toastError,
@@ -45,22 +35,7 @@ vi.mock("./toast", () => ({
 
 describe("toastFetchError", () => {
   beforeEach(() => {
-    mocks.isPaymentEnabled = false
-    mocks.showUpgradeRequiredDialog.mockClear()
     mocks.toastError.mockClear()
-  })
-
-  it("shows a concise upgrade dialog for RSSHub subscription limits", () => {
-    mocks.isPaymentEnabled = true
-    const error = new FollowAPIError("RSSHub feed subscription limit exceeded", 402, "2012")
-
-    toastFetchError(error)
-
-    expect(mocks.showUpgradeRequiredDialog).toHaveBeenCalledWith({
-      title: "RSSHub feed subscription limit exceeded",
-      message: "settings:subscription.summary.free_description",
-    })
-    expect(mocks.toastError).not.toHaveBeenCalled()
   })
 
   it("shows the server's message when an API error code has no translation", () => {
@@ -183,9 +158,9 @@ describe("an error the SDK names its own way", () => {
   })
 
   it("translates a refused session the server gave another code by that code", () => {
-    const refused = new FollowAuthError("limit", undefined, { serverCode: 2012 })
+    const refused = new FollowAuthError("not found", undefined, { serverCode: 2001 })
 
-    expect(getFetchErrorMessage(refused)).toBe("RSSHub feed subscription limit exceeded")
+    expect(getFetchErrorMessage(refused)).toBe("Feed not found")
   })
 
   it("names the field a refused request body got wrong under the translated code", () => {
@@ -227,8 +202,8 @@ describe("getFetchErrorMessage for API errors", () => {
   })
 
   it("translates a known API error code", () => {
-    const error = new FollowAPIError("limit", 402, "2012")
-    expect(getFetchErrorMessage(error)).toBe("RSSHub feed subscription limit exceeded")
+    const error = new FollowAPIError("not found", 404, "2001")
+    expect(getFetchErrorMessage(error)).toBe("Feed not found")
   })
 })
 

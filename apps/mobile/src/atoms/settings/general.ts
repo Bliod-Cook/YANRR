@@ -21,7 +21,6 @@ export const {
   useSettingKey: useGeneralSettingKey,
   useSettingSelector: useGeneralSettingSelector,
   useSettingKeys: useGeneralSettingKeys,
-  usePaidSettingLocked: useGeneralPaidSettingLocked,
   setSetting: setGeneralSetting,
   clearSettings: clearGeneralSettings,
   initializeDefaultSettings: initializeDefaultGeneralSettings,

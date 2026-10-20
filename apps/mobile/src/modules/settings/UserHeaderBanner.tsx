@@ -1,6 +1,5 @@
-import { UserRole, UserRoleName } from "@follow/constants"
 import { useImageColors } from "@follow/store/image/hooks"
-import { useUserById, useUserRole } from "@follow/store/user/hooks"
+import { useUserById } from "@follow/store/user/hooks"
 import { cn } from "@follow/utils"
 import { LinearGradient } from "expo-linear-gradient"
 import type { FC } from "react"
@@ -12,7 +11,6 @@ import ReAnimated, { FadeIn, FadeOut, interpolate, useAnimatedStyle } from "reac
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useColor } from "react-native-uikit-colors"
 
-import { useServerConfigs } from "@/src/atoms/server-configs"
 import { UserAvatar } from "@/src/components/ui/avatar/UserAvatar"
 import { Text } from "@/src/components/ui/typography/Text"
 import { DiscordCuteFiIcon } from "@/src/icons/discord_cute_fi"
@@ -20,14 +18,12 @@ import { FacebookCuteFiIcon } from "@/src/icons/facebook_cute_fi"
 import { GithubCuteFiIcon } from "@/src/icons/github_cute_fi"
 import { InstagramCuteFiIcon } from "@/src/icons/instagram_cute_fi"
 import { LinkCuteReIcon } from "@/src/icons/link_cute_re"
-import { PowerIcon } from "@/src/icons/power"
 import { TwitterCuteFiIcon } from "@/src/icons/twitter_cute_fi"
 import { WebCuteReIcon } from "@/src/icons/web_cute_re"
 import { YoutubeCuteFiIcon } from "@/src/icons/youtube_cute_fi"
 import { useNavigation, useScreenIsInSheetModal } from "@/src/lib/navigation/hooks"
 import { LoginScreen } from "@/src/screens/(modal)/LoginScreen"
 import { usePrefetchImageColors } from "@/src/store/image/hooks"
-import { accentColor } from "@/src/theme/colors"
 
 import { isUserHeaderGradientLight, USER_HEADER_BANNER_TOP_SPACING } from "./layout"
 
@@ -107,18 +103,14 @@ const PlatformInfoMap: Record<
 export const UserHeaderBanner = ({
   scrollY,
   userId,
-  showRoleBadge,
 }: {
   scrollY: SharedValue<number>
   userId?: string
-  showRoleBadge?: boolean
 }) => {
   const { t } = useTranslation()
-  const serverConfigs = useServerConfigs()
   const bgColor = useColor("systemGroupedBackground")
   const avatarIconColor = useColor("secondaryLabel")
   const user = useUserById(userId)
-  const role = useUserRole()
   usePrefetchImageColors(user?.image)
   const insets = useSafeAreaInsets()
   const MAX_PULL = 100
@@ -239,7 +231,6 @@ export const UserHeaderBanner = ({
           <UserAvatar
             image={user?.image}
             name={user?.name}
-            role={showRoleBadge && serverConfigs?.REFERRAL_ENABLED ? role : undefined}
             size={60}
             className={!user?.name ? "bg-system-grouped-background" : ""}
             color={avatarIconColor}
@@ -259,34 +250,6 @@ export const UserHeaderBanner = ({
             </Text>
           ) : (
             <Text className="text-xl font-bold text-text">{t("settings.folo_account")}</Text>
-          )}
-
-          {!!role && serverConfigs?.REFERRAL_ENABLED && (
-            <View className="my-1 flex flex-row items-center gap-2">
-              <PowerIcon
-                color={
-                  role === UserRole.Trial || role === UserRole.Free
-                    ? gradientLight
-                      ? "rgba(0,0,0,0.7)"
-                      : "rgba(255,255,255,0.7)"
-                    : accentColor
-                }
-                width={16}
-                height={16}
-              />
-              <Text
-                className={cn(
-                  role === UserRole.Trial || role === UserRole.Free
-                    ? gradientLight
-                      ? "text-black/70"
-                      : "text-white/70"
-                    : "text-accent",
-                  "text-sm font-semibold",
-                )}
-              >
-                {UserRoleName[role]}
-              </Text>
-            </View>
           )}
 
           {user?.handle ? (

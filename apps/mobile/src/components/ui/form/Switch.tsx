@@ -1,4 +1,3 @@
-import type { ReactNode } from "react"
 import type { StyleProp, ViewStyle } from "react-native"
 import { View } from "react-native"
 
@@ -12,8 +11,6 @@ interface Props {
   wrapperClassName?: string
   wrapperStyle?: StyleProp<ViewStyle>
   label?: string
-  /** Shown after the label, such as a paid badge */
-  labelAccessory?: ReactNode
   description?: string
   size?: "sm" | "default"
 }
@@ -22,7 +19,6 @@ export const FormSwitch = ({
   wrapperClassName,
   wrapperStyle,
   label,
-  labelAccessory,
   description,
   size = "default",
   ...rest
@@ -45,10 +41,7 @@ export const FormSwitch = ({
   return (
     <View className={"w-full flex-row"}>
       <View className="flex-1 gap-1">
-        <View className="flex-row items-center gap-1.5 pl-1">
-          <FormLabel className="shrink" label={label} optional />
-          {labelAccessory}
-        </View>
+        <FormLabel className="pl-1" label={label} optional />
         {!!description && (
           <Text className="mb-1 pl-1 text-sm text-secondary-label">{description}</Text>
         )}

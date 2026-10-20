@@ -865,8 +865,6 @@
   "titles.shortcuts": "ショートカット",
   "titles.sign_out": "サインアウト",
   "titles.spotlight": "Spotlight",
-  "titles.subscription.long": "サブスクリプション管理",
-  "titles.subscription.short": "サブスクリプション",
   "wallet.balance.title": "残高",
   "wallet.balance.withdrawable": "引き出し可能",
   "wallet.balance.withdrawableTooltip": "引き出し可能な Power には、受け取ったチップと、再チャージした Power の両方が含まれます。",

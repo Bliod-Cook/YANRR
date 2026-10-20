@@ -1,8 +1,6 @@
 import type { FeedViewType } from "@follow/constants"
-import { UserRole } from "@follow/constants"
 import { shouldRenderScrollMarkReadEndSpacer } from "@follow/shared/scroll-mark-read"
 import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
-import { useUserRole } from "@follow/store/user/hooks"
 import type { FlashListRef, ListRenderItemInfo } from "@shopify/flash-list"
 import type { ElementRef } from "react"
 import { useCallback, useImperativeHandle, useMemo, useRef } from "react"
@@ -114,14 +112,11 @@ export const EntryListContentArticle = ({
   const translation = useGeneralSettingKey("translation")
   const translationMode = useGeneralSettingKey("translationMode")
   const actionLanguage = useActionLanguage()
-  const userRole = useUserRole()
-  const translationPrefetchEnabled =
-    translation && (userRole == null || (userRole !== UserRole.Free && userRole !== UserRole.Trial))
 
   usePrefetchEntryTranslation({
     entryIds: active ? viewableItems.map((item) => item.key) : [],
     language: actionLanguage,
-    enabled: translationPrefetchEnabled,
+    enabled: translation,
     mode: translationMode,
   })
 

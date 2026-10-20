@@ -1,9 +1,7 @@
 import type { FeedViewType } from "@follow/constants"
-import { UserRole } from "@follow/constants"
 import { useTypeScriptHappyCallback } from "@follow/hooks"
 import { shouldRenderScrollMarkReadEndSpacer } from "@follow/shared/scroll-mark-read"
 import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
-import { useUserRole } from "@follow/store/user/hooks"
 import type { FlashListProps, FlashListRef } from "@shopify/flash-list"
 import type { ElementRef } from "react"
 import { useImperativeHandle, useMemo, useRef } from "react"
@@ -72,13 +70,10 @@ export const EntryListContentVideo = ({
   const translation = useGeneralSettingKey("translation")
   const translationMode = useGeneralSettingKey("translationMode")
   const actionLanguage = useActionLanguage()
-  const userRole = useUserRole()
-  const translationPrefetchEnabled =
-    translation && (userRole == null || (userRole !== UserRole.Free && userRole !== UserRole.Trial))
   usePrefetchEntryTranslation({
     entryIds: active ? viewableItems.map((item) => item.key) : [],
     language: actionLanguage,
-    enabled: translationPrefetchEnabled,
+    enabled: translation,
     mode: translationMode,
   })
 

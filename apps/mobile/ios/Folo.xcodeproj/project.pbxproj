@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		038E5829162E48D4B3663A1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4715D9509C1A44E88E5665A8 /* Assets.xcassets */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		203021DA277C4486BE4C1F09 /* Folo - Follow everything.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 3F2251E654BF491FBAD32B83 /* Folo - Follow everything.storekit */; };
 		31F8750620E5432290142586 /* rn-web in Resources */ = {isa = PBXBuildFile; fileRef = 0C4357DCFE674ADA9B15936F /* rn-web */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		6C357ADA29DBB2EAA608BF25 /* Pods_Folo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EF7A06C0FCC7DF7CB24E902 /* Pods_Folo.framework */; };
@@ -26,7 +25,6 @@
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = Folo/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = Folo/Info.plist; sourceTree = "<group>"; };
 		1D4520ACE29B7516C4656671 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = Folo/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		3F2251E654BF491FBAD32B83 /* Folo - Follow everything.storekit */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Folo - Follow everything.storekit"; path = "Folo - Follow everything.storekit"; sourceTree = "<group>"; };
 		4715D9509C1A44E88E5665A8 /* Assets.xcassets */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Assets.xcassets; sourceTree = "<group>"; };
 		6B84AC3B1B4CB7E804B4AC7A /* Pods-Folo.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Folo.release.xcconfig"; path = "Target Support Files/Pods-Folo/Pods-Folo.release.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = Folo/SplashScreen.storyboard; sourceTree = "<group>"; };
@@ -60,7 +58,6 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
 				4715D9509C1A44E88E5665A8 /* Assets.xcassets */,
-				3F2251E654BF491FBAD32B83 /* Folo - Follow everything.storekit */,
 				1D4520ACE29B7516C4656671 /* PrivacyInfo.xcprivacy */,
 			);
 			name = Folo;
@@ -219,7 +216,6 @@
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
 				038E5829162E48D4B3663A1F /* Assets.xcassets in Resources */,
-				203021DA277C4486BE4C1F09 /* Folo - Follow everything.storekit in Resources */,
 				31F8750620E5432290142586 /* rn-web in Resources */,
 				FF7574027187BEBA617A174B /* PrivacyInfo.xcprivacy in Resources */,
 			);
