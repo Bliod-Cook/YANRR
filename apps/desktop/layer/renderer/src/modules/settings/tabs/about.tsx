@@ -1,5 +1,5 @@
-import { Folo } from "@follow/components/icons/folo.js"
 import { Logo } from "@follow/components/icons/logo.jsx"
+import { Wordmark } from "@follow/components/icons/wordmark.jsx"
 import { SocialMediaLinks } from "@follow/constants"
 import { MODE, ModeEnum } from "@follow/shared/constants"
 import { getCurrentEnvironment } from "@follow/utils/environment"
@@ -95,13 +95,11 @@ export const SettingAbout = () => {
         <div className="mb-6 flex justify-center">
           <Logo className="size-20" />
         </div>
-        <h1 className="-mt-6 flex justify-center">
-          <Folo className="size-16" />
+        <h1 className="text-4xl">
+          <Wordmark />
         </h1>
         {MODE !== ModeEnum.production && (
-          <span className="block -translate-y-2 text-sm font-normal text-text-tertiary">
-            {MODE}
-          </span>
+          <span className="mt-1 block text-sm font-normal text-text-tertiary">{MODE}</span>
         )}
         <p className="mt-2 text-sm text-text-secondary">
           {t("about.licenseInfo", { appName: APP_NAME, currentYear: new Date().getFullYear() })}

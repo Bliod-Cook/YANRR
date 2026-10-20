@@ -64,7 +64,7 @@ export const EntryPlaceholderLogo = () => {
         "flex w-full min-w-0 flex-col items-center justify-center gap-2 px-12 pb-6 text-center text-lg font-medium text-text-secondary duration-500"
       }
     >
-      <i className="i-mgc-folo-bot-original size-16 text-text-tertiary" />
+      <i className="i-mgc-ai-cute-re size-16 text-text-tertiary" />
       <div>{t("entry_content.placeholder.title")}</div>
       <div className="mt-4 flex flex-col gap-2">
         {buttons.map((button) => (

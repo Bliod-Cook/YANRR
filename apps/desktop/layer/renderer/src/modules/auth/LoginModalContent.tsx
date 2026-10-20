@@ -1,7 +1,7 @@
 import { Spring } from "@follow/components/constants/spring.js"
 import { useMobile } from "@follow/components/hooks/useMobile.js"
-import { Folo } from "@follow/components/icons/folo.js"
 import { Logo } from "@follow/components/icons/logo.js"
+import { Wordmark } from "@follow/components/icons/wordmark.jsx"
 import { IN_ELECTRON } from "@follow/shared"
 import { stopPropagation } from "@follow/utils/dom"
 import { m } from "motion/react"
@@ -68,7 +68,7 @@ export const LoginModalContent = (props: LoginModalContentProps) => {
             transition={Spring.presets.smooth}
           >
             <span className="text-2xl font-semibold">{t("signin.sign_in_to")}</span>
-            <Folo className="size-12" />
+            <Wordmark className="text-2xl" />
           </m.div>
         )}
       </div>

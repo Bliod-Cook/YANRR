@@ -53,7 +53,7 @@ export const AIIndicator: FC = () => {
             )}
             title={t("ai.open_chat")}
           >
-            <i className="i-mgc-folo-bot-original size-16 text-folo" aria-hidden />
+            <i className="i-mgc-ai-cute-re size-16 text-folo" aria-hidden />
           </m.button>
         )}
       </AnimatePresence>

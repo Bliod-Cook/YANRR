@@ -124,12 +124,12 @@ describe("AIIndicator", () => {
     vi.clearAllMocks()
   })
 
-  test("renders the bot icon and opens the AI panel", async () => {
+  test("renders the AI icon and opens the AI panel", async () => {
     ;({ container, root } = await renderComponent())
 
     const button = container.querySelector<HTMLButtonElement>("button[title='Open AI Chat']")
     expect(button).not.toBeNull()
-    expect(button?.querySelector("i")?.className).toContain("i-mgc-folo-bot-original")
+    expect(button?.querySelector("i")?.className).toContain("i-mgc-ai-cute-re")
     expect(button?.querySelector("i")?.className).toContain("size-16")
 
     await act(async () => {

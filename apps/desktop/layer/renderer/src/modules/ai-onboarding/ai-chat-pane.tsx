@@ -1,4 +1,4 @@
-import { Folo } from "@follow/components/icons/folo.js"
+import { Wordmark } from "@follow/components/icons/wordmark.jsx"
 import { Button } from "@follow/components/ui/button/index.js"
 import type { LexicalRichEditorRef } from "@follow/components/ui/lexical-rich-editor/index.js"
 import {
@@ -152,7 +152,7 @@ function AIChatPaneImpl() {
     <div className="relative flex h-full flex-col">
       <header className="flex w-full items-start justify-between px-4 pb-4 pt-2">
         <div className="flex items-center gap-2">
-          <Folo className="size-9" />{" "}
+          <Wordmark className="text-xl" />
           <span className="text-xl font-semibold">{t.app("user_button.ai")}</span>
         </div>
         <GlassButton onClick={handleSkip} variant="flat">
