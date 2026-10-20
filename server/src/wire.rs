@@ -1,9 +1,10 @@
 //! Feeds, entries and subscriptions as API responses and change log data show them.
 
 use serde::Serialize;
+use serde_json::Value;
 
 use crate::{
-    entity::{feed, subscription},
+    entity::{entry, feed, subscription},
     time::iso,
 };
 
@@ -58,6 +59,55 @@ impl From<&feed::Model> for Feed {
             rsshub_route: (),
             rsshub_namespace: (),
             nsfw: (),
+        }
+    }
+}
+
+/// `EntryWithoutContent`, with the content when asked for.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Entry {
+    id: String,
+    guid: String,
+    title: Option<String>,
+    url: Option<String>,
+    description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    content: Option<Option<String>>,
+    /// AI summaries are not stored.
+    summary: (),
+    author: Option<String>,
+    author_url: Option<String>,
+    author_avatar: Option<String>,
+    categories: Option<Vec<String>>,
+    media: Option<Value>,
+    attachments: Option<Value>,
+    extra: Option<Value>,
+    language: Option<String>,
+    published_at: String,
+    inserted_at: String,
+}
+
+impl Entry {
+    pub fn new(entry: entry::Model, with_content: bool) -> Self {
+        Self {
+            id: entry.id.to_string(),
+            guid: entry.guid,
+            title: entry.title,
+            url: entry.url,
+            description: entry.description,
+            content: with_content.then_some(entry.content),
+            summary: (),
+            author: entry.author,
+            author_url: entry.author_url,
+            author_avatar: entry.author_avatar,
+            categories: entry.categories,
+            media: entry.media,
+            attachments: entry.attachments,
+            extra: entry.extra,
+            language: entry.language,
+            published_at: iso(entry.published_at),
+            inserted_at: iso(entry.inserted_at),
         }
     }
 }

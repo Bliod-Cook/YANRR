@@ -62,3 +62,24 @@ fn embedded(element: ElementRef, base: Option<&Url>) -> Option<Media> {
         height: size("height"),
     })
 }
+
+static FEED_LINKS: LazyLock<Selector> =
+    LazyLock::new(|| Selector::parse(r#"link[rel~="alternate"][href][type]"#).unwrap());
+const FEED_TYPES: [&str; 4] = [
+    "application/rss+xml",
+    "application/atom+xml",
+    "application/feed+json",
+    "application/json",
+];
+
+/// Feeds a web page announces with `<link rel="alternate">`, resolved against `base`.
+pub fn feed_links(html: &str, base: &Url) -> Vec<String> {
+    Html::parse_document(html)
+        .select(&FEED_LINKS)
+        .filter(|link| {
+            let kind = link.value().attr("type").unwrap_or_default();
+            FEED_TYPES.contains(&kind.trim().to_ascii_lowercase().as_str())
+        })
+        .filter_map(|link| super::parse::resolve(Some(base), link.value().attr("href")?))
+        .collect()
+}
