@@ -1,5 +1,4 @@
 import { ActionButton } from "@follow/components/ui/button/index.js"
-import { RSSHubLogo } from "@follow/components/ui/platform-icon/icons.js"
 import { RootPortal } from "@follow/components/ui/portal/index.js"
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/EllipsisWithTooltip.js"
 import { useMeasure } from "@follow/hooks"
@@ -127,15 +126,6 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
           icon={<i className="i-mgc-magic-2-cute-re" />}
         >
           {t("words.actions")}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="pl-3"
-          onClick={() => {
-            navigate("/rsshub")
-          }}
-          icon={<RSSHubLogo className="size-3 grayscale" />}
-        >
-          {t("words.rsshub")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

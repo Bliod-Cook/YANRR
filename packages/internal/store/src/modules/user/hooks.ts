@@ -32,16 +32,6 @@ export const usePrefetchSessionUser = () =>
     queryFn: () => userSyncService.whoami(),
   })
 
-export const usePrefetchUser = (userId: string | undefined) => {
-  const query = useQuery({
-    queryKey: ["user", userId],
-    queryFn: () => userSyncService.fetchUser(userId),
-    enabled: !!userId,
-    staleTime: 1000 * 60 * 5,
-  })
-  return query
-}
-
 const whoamiSelector = (state: UserStore) => state.whoami
 export const useWhoami = () => {
   return useUserStore(whoamiSelector)
@@ -51,16 +41,6 @@ const loggedInSelector = (state: UserStore) => !!state.whoami
 export const useIsLoggedIn = () => {
   return useUserStore(loggedInSelector)
 }
-export const useUserById = (userId: string | undefined) => {
-  return useUserStore((state) => (userId ? state.users[userId] : undefined))
-}
-
-export const useUserList = (userIds: string[]) => {
-  return useUserStore((state) => {
-    return userIds.map((id) => state.users[id]).filter((i) => !!i)
-  })
-}
-
 export function useIsNewUser(options?: GeneralQueryOptions) {
   const { data } = useQuery({
     enabled: options?.enabled,
