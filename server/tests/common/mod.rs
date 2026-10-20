@@ -169,6 +169,14 @@ pub async fn assert_error(response: Response, status: u16, code: i32) {
 }
 
 pub const RSS2: &str = include_str!("../fixtures/rss2.xml");
+pub const SINGLE_ITEM_RSS: &str = r#"<rss version="2.0"><channel><title>Live</title>
+    <item><guid>post-0</guid><title>Earlier post</title><link>https://example.com/posts/0</link></item>
+</channel></rss>"#;
+/// [`SINGLE_ITEM_RSS`] after a new post.
+pub const TWO_ITEM_RSS: &str = r#"<rss version="2.0"><channel><title>Live</title>
+    <item><guid>post-new</guid><title>New post</title><pubDate>Fri, 02 Oct 2026 09:00:00 GMT</pubDate></item>
+    <item><guid>post-0</guid><title>Earlier post</title><link>https://example.com/posts/0</link></item>
+</channel></rss>"#;
 const JSON_FEED: &str = include_str!("../fixtures/feed.json");
 
 /// What a configurable path answers; tests switch it to simulate a feed changing over time.

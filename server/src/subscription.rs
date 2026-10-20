@@ -4,7 +4,7 @@ use chrono::Utc;
 use sea_orm::{
     ActiveValue::Set,
     ColumnTrait, Condition, ConnectionTrait, DatabaseTransaction, DbBackend, DbErr, EntityTrait,
-    PaginatorTrait, QueryFilter, QuerySelect, Statement,
+    FromQueryResult, PaginatorTrait, QueryFilter, QuerySelect, Statement,
     sea_query::{Expr, OnConflict},
 };
 use serde::{Deserialize, Deserializer};
@@ -230,4 +230,60 @@ pub async fn unsubscribe(
         .into_iter()
         .map(|subscription| deleted(subscription.user_id, subscription.feed_id))
         .collect())
+}
+
+/// Moves the subscriptions of `old`, which just migrated, to `target`.
+///
+/// Moved users get `target`'s entries unread, except those whose guid they already read on `old`. Users who
+/// already followed `target` only lose the old subscription.
+pub async fn migrate(
+    txn: &DatabaseTransaction,
+    old: i64,
+    target: &feed::Model,
+) -> Result<Vec<Action>, DbErr> {
+    let moved_sql = "WITH moved AS (
+            INSERT INTO subscriptions
+                (user_id, feed_id, view, category, title, hide_from_timeline, created_at)
+            SELECT user_id, $2, view, category, title, hide_from_timeline, created_at
+            FROM subscriptions WHERE feed_id = $1
+            ON CONFLICT DO NOTHING
+            RETURNING *
+        ), unread AS (
+            INSERT INTO unreads (user_id, entry_id, feed_id)
+            SELECT moved.user_id, entry.id, entry.feed_id
+            FROM moved JOIN entries entry ON entry.feed_id = moved.feed_id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM entries old_entry
+                WHERE old_entry.feed_id = $1 AND old_entry.guid = entry.guid
+                  AND NOT EXISTS (
+                      SELECT 1 FROM unreads WHERE user_id = moved.user_id AND entry_id = old_entry.id
+                  )
+            )
+        )
+        SELECT * FROM moved";
+    let moved = subscription::Model::find_by_statement(Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        moved_sql,
+        [old.into(), target.id.into()],
+    ))
+    .all(txn)
+    .await?;
+    let removed = subscription::Entity::delete_many()
+        .filter(subscription::Column::FeedId.eq(old))
+        .exec_with_returning(txn)
+        .await?;
+    unread::Entity::delete_many()
+        .filter(unread::Column::FeedId.eq(old))
+        .exec(txn)
+        .await?;
+    let mut actions: Vec<_> = removed
+        .into_iter()
+        .map(|subscription| deleted(subscription.user_id, old))
+        .collect();
+    actions.extend(
+        moved
+            .into_iter()
+            .map(|subscription| inserted(subscription, target)),
+    );
+    Ok(actions)
 }
