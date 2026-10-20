@@ -86,15 +86,6 @@ export const hasAuthSessionChanged = (
   return Array.from(sessionCookieNames).some((name) => previous[name]?.value !== next[name]?.value)
 }
 
-const getCookieHeaderFromStoredCookie = (cookie: string) =>
-  Object.entries(parseStoredCookie(cookie)).reduce((acc, [key, value]) => {
-    if (value.expires && new Date(value.expires) < new Date()) {
-      return acc
-    }
-
-    return acc ? `${acc}; ${key}=${value.value}` : `${key}=${value.value}`
-  }, "")
-
 const mergeSetCookieHeader = (header: string, previousCookie?: string | null) => {
   const parsed = parseSetCookieHeader(header)
   const nextCookie = parseStoredCookie(previousCookie)
@@ -248,18 +239,11 @@ export const createSessionAwareAuthCookieStorage = ({
 }
 
 const managedAuthCookieNames = new Set([
-  "two_factor",
   "dont_remember",
-  "trust_device",
-  "better-auth.two_factor",
   "better-auth.dont_remember",
-  "better-auth.trust_device",
   "better-auth.session_token",
   "better-auth.session_data",
-  "better-auth.last_used_login_method",
-  "__Secure-better-auth.two_factor",
   "__Secure-better-auth.dont_remember",
-  "__Secure-better-auth.trust_device",
   "__Secure-better-auth.session_token",
   "__Secure-better-auth.session_data",
 ])
@@ -370,9 +354,6 @@ export const createMobileAuthCookieSyncPlugin = ({
   storage: AuthCookieStorage
   cookieStorage?: AuthCookieStorage
 }): BetterAuthClientPlugin => {
-  const getStoredCookieHeader = () =>
-    getCookieHeaderFromStoredCookie(cookieStorage.getItem(cookieKey) || "{}")
-
   const syncResponseCookies = async (response: Response) => {
     const setCookieHeaders = extractSetCookieHeaderValues(response.headers)
     if (setCookieHeaders.length === 0) {
@@ -396,27 +377,6 @@ export const createMobileAuthCookieSyncPlugin = ({
           async onResponse(context) {
             await syncResponseCookies(context.response)
           },
-        },
-        async init(url, options) {
-          if (!url.includes("/two-factor/verify-totp")) {
-            return { url, options }
-          }
-
-          const cookie = getStoredCookieHeader()
-          if (!cookie) {
-            return { url, options }
-          }
-
-          return {
-            url,
-            options: {
-              ...options,
-              headers: {
-                ...options?.headers,
-                cookie,
-              },
-            },
-          }
         },
       },
     ],

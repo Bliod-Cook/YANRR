@@ -26,7 +26,6 @@ vi.mock("@better-auth/expo/client", () => ({
     mocks.expoStorage = options.storage
     return { id: "expo" }
   },
-  getSetCookie: vi.fn(),
   storageAdapter: () => ({ getItem: vi.fn(), getItemAsync: vi.fn(), setItemAsync: vi.fn() }),
 }))
 vi.mock("better-auth/react", () => ({
@@ -43,10 +42,7 @@ vi.mock("@follow/store/user/store", () => ({
   userActions: { removeCurrentUser: vi.fn(async () => {}) },
 }))
 vi.mock("@follow/utils/headers", () => ({ createMobileAPIHeaders: () => ({}) }))
-vi.mock("@tanstack/react-query", () => ({ useQuery: vi.fn() }))
 vi.mock("expo-application", () => ({ nativeApplicationVersion: "1.0.0" }))
-vi.mock("expo-sqlite/kv-store", () => ({ default: { getItemSync: () => null } }))
-vi.mock("expo-web-browser", () => ({}))
 vi.mock("react-native", () => ({ Platform: { OS: "ios" } }))
 vi.mock("react-native-device-info", () => ({
   default: { getInstallerPackageName: async () => "" },
@@ -73,10 +69,6 @@ vi.mock("./secure-store", () => ({
     removeItem: (key: string) => void mocks.secureStore.delete(key),
     removeItemAsync: async (key: string) => void mocks.secureStore.delete(key),
   },
-}))
-vi.mock("./social-auth", () => ({
-  buildAuthorizationProxyURL: vi.fn(),
-  parseSocialAuthCallbackURL: vi.fn(),
 }))
 
 const { cookieKey, signOut } = await import("./auth")

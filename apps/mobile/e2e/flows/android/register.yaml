@@ -4,7 +4,7 @@ appId: is.follow
     file: ./dismiss-system-dialogs.yaml
 - extendedWaitUntil:
     visible:
-      id: login-provider-credential
+      id: login-screen
     timeout: 60000
 - runFlow: ../shared/open-auth.yaml
 # A device someone signed in on before opens the screen on signing in
@@ -15,8 +15,6 @@ appId: is.follow
       - tapOn:
           id: auth-toggle-mode
       - waitForAnimationToEnd
-- tapOn:
-    id: login-provider-credential
 - extendedWaitUntil:
     visible:
       id: register-email-input

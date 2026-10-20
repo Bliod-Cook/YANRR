@@ -162,11 +162,6 @@ export const toastFetchError = (error: Error, { title: _title }: { title?: strin
     }
   }
 
-  // 2fa errors are handled by the form
-  if (code === 4007 || code === 4008) {
-    return
-  }
-
   // Every request validation failure has this code; only the server's message names the field
   const detail =
     code === ExceptionCodeMap.UnprocessableContent && serverMessage && serverMessage !== message

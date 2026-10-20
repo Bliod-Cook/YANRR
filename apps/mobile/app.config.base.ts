@@ -115,7 +115,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ios: {
       supportsTablet: true,
       bundleIdentifier: "is.follow",
-      usesAppleSignIn: true,
       infoPlist: {
         LSApplicationCategoryType: "public.app-category.news",
         ITSAppUsesNonExemptEncryption: false,
@@ -195,7 +194,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           granularPermissions: [],
         },
       ],
-      "expo-apple-authentication",
       "expo-status-bar",
       "expo-web-browser",
       "expo-image",

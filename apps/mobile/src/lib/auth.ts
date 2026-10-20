@@ -1,4 +1,4 @@
-import { expoClient, getSetCookie, storageAdapter } from "@better-auth/expo/client"
+import { expoClient, storageAdapter } from "@better-auth/expo/client"
 import type { BaseAuthPlugins } from "@follow/shared/auth"
 import { baseAuthPlugins } from "@follow/shared/auth"
 import { invalidateSessionUser, onLocalDataOfAnotherAccount } from "@follow/store/sync/account"
@@ -6,12 +6,9 @@ import { isNewUserQueryKey } from "@follow/store/user/constants"
 import { whoamiQueryKey } from "@follow/store/user/hooks"
 import { userActions } from "@follow/store/user/store"
 import { createMobileAPIHeaders } from "@follow/utils/headers"
-import { useQuery } from "@tanstack/react-query"
 import type { BetterAuthClientOptions } from "better-auth/client"
 import { createAuthClient } from "better-auth/react"
 import { nativeApplicationVersion } from "expo-application"
-import Storage from "expo-sqlite/kv-store"
-import * as WebBrowser from "expo-web-browser"
 import { Platform } from "react-native"
 import DeviceInfo from "react-native-device-info"
 
@@ -28,8 +25,6 @@ import { unregisterPushToken } from "./push-token"
 import { queryClient } from "./query-client"
 import { reloadApp } from "./reload-app"
 import { safeSecureStore } from "./secure-store"
-import type { SocialSignInResult } from "./social-auth"
-import { buildAuthorizationProxyURL, parseSocialAuthCallbackURL } from "./social-auth"
 
 const storagePrefix = "follow_auth"
 export const cookieKey = `${storagePrefix}_cookie`
@@ -135,7 +130,7 @@ const authCookieStorage = createSessionAwareAuthCookieStorage({
 })
 
 // Share Better Auth's write queue and recoverable UTF-8 chunk storage with its
-// Expo plugin so a two-factor cookie update cannot race a session refresh.
+// Expo plugin so a cookie update from a response cannot race a session refresh.
 const expoCookieStorage = storageAdapter(authCookieStorage)
 
 const plugins = [
@@ -181,14 +176,6 @@ export const authClient = createAuthClient<MobileAuthClientOptions>({
       })
       ctx.headers.set("User-Agent", await getUserAgent())
 
-      const value = Storage.getItemSync("referral-code")
-      if (value) {
-        const referralCode = JSON.parse(value)
-        if (referralCode) {
-          ctx.headers.set("folo-referral-code", referralCode)
-        }
-      }
-
       return ctx
     },
     headers: {
@@ -200,107 +187,11 @@ export const authClient = createAuthClient<MobileAuthClientOptions>({
 })
 
 // @keep-sorted
-export const {
-  changeEmail,
-  changePassword,
-  getAccountInfo,
-  getCookie,
-  getProviders,
-  linkSocial,
-  oneTimeToken,
-  sendVerificationEmail,
-  signIn,
-  signUp,
-  twoFactor,
-  unlinkAccount,
-  updateUser,
-  useSession,
-} = authClient
+export const { changePassword, getCookie, signIn, signUp, useSession } = authClient
 
 // Mount Better Auth's session atom so the Expo plugin can persist refreshed Set-Cookie metadata.
 export const useAuthSessionCookieRefresh = () => {
   useSession()
-}
-
-export const forgetPassword = authClient.requestPasswordReset
-
-/**
- * Runs the same auth session as the Expo plugin's automatic redirect, but reports how it ended,
- * so a failed callback can be shown instead of leaving the user on the login screen.
- */
-export const signInWithSocialProvider = async (
-  provider: string,
-  callbackURL: string,
-): Promise<SocialSignInResult> => {
-  const { data, error } = await signIn.social({
-    provider,
-    callbackURL,
-    // Without it a failed callback ends on the website instead of returning to the app.
-    errorCallbackURL: callbackURL,
-    disableRedirect: true,
-  })
-  if (error || !data?.url) {
-    return { type: "error", error: error?.code || error?.message || "sign_in_request_failed" }
-  }
-
-  if (Platform.OS === "android") {
-    try {
-      WebBrowser.dismissAuthSession()
-    } catch {
-      // No Custom Tab left over from an earlier attempt.
-    }
-  }
-
-  const session = await WebBrowser.openAuthSessionAsync(
-    buildAuthorizationProxyURL({
-      authBaseURL: getAuthBaseURL(),
-      authorizationURL: data.url,
-      storedCookie: expoCookieStorage.getItem(cookieKey),
-    }),
-    callbackURL,
-  )
-  if (session.type !== "success") {
-    return { type: "cancel" }
-  }
-
-  const { result, cookie } = parseSocialAuthCallbackURL(session.url)
-  if (cookie) {
-    const previousCookie = await expoCookieStorage.getItemAsync(cookieKey)
-    await expoCookieStorage.setItemAsync(
-      cookieKey,
-      getSetCookie(cookie, previousCookie ?? undefined),
-    )
-    authClient.$store.notify("$sessionSignal")
-  }
-  return result
-}
-
-export interface AuthProvider {
-  name: string
-  id: string
-  color: string
-  icon: string
-  icon64: string
-  iconDark64?: string
-}
-
-export const useAuthProviders = () => {
-  return useQuery({
-    queryKey: ["providers"],
-    queryFn: async () => {
-      const data = (await getProviders()).data as Record<string, AuthProvider>
-      if (Platform.OS !== "ios") {
-        delete data.apple
-      }
-      return data
-    },
-  })
-}
-
-export function isAuthCodeValid(authCode: string) {
-  return (
-    authCode.length === 6 && !Array.from(authCode).some((c) => Number.isNaN(Number.parseInt(c)))
-  )
 }
 
 const clearAuthStorage = async () => {
@@ -354,16 +245,3 @@ onLocalDataOfAnotherAccount(() => {
   Navigation.rootNavigation.popToRoot()
   void resetLocalData("Signed in to another account")
 })
-
-/**
- * @param TOTPCode - required by the server only when two-factor authentication is enabled
- */
-export const deleteUser = async ({ TOTPCode }: { TOTPCode?: string } = {}) => {
-  const res = await authClient.deleteUserCustom(TOTPCode ? { TOTPCode } : {})
-  // The auth client resolves with the error instead of throwing; keep the session when the
-  // account was not deleted
-  if (res.error) {
-    throw new Error(res.error.message || res.error.statusText)
-  }
-  await signOut()
-}

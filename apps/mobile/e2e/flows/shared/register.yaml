@@ -9,8 +9,6 @@ appId: is.follow
       - tapOn:
           id: auth-toggle-mode
       - waitForAnimationToEnd
-- tapOn:
-    id: login-provider-credential
 - extendedWaitUntil:
     visible:
       id: register-email-input

@@ -9,7 +9,7 @@ name: Android cold-start queued follow route
     timeout: 30000
 - assertVisible: Welcome to Folo
 - assertNotVisible:
-    id: login-provider-credential
+    id: login-screen
 - pressKey: Back
 - tapOn:
     id: tab-SettingsTabScreen

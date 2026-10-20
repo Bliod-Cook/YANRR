@@ -18,7 +18,7 @@ appId: is.follow
     text: Sign Out
 - extendedWaitUntil:
     visible:
-      id: login-provider-credential
+      id: login-screen
     timeout: 30000
 - assertVisible:
-    id: login-provider-credential
+    id: login-screen
