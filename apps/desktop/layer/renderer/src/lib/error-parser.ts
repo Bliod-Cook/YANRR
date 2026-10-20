@@ -9,7 +9,6 @@ import type { ExternalToast } from "sonner"
 import { toast } from "sonner"
 
 import { getApiUnreachable } from "~/atoms/api-connection"
-import { getIsPaymentEnabled } from "~/atoms/server-configs"
 import { CopyButton } from "~/components/ui/button/CopyButton"
 import { Markdown } from "~/components/ui/markdown/Markdown"
 import { DebugRegistry } from "~/modules/debug/registry"
@@ -110,10 +109,8 @@ export const toastFetchError = (
   let _reason = ""
   let code: number | undefined
 
-  let status: number | undefined
   if (error instanceof FetchError) {
     try {
-      status = error.statusCode ? Number(error.statusCode) : undefined
       const json =
         typeof error.response?._data === "string"
           ? JSON.parse(error.response?._data)
@@ -139,7 +136,6 @@ export const toastFetchError = (
 
   if (error instanceof FollowAPIError) {
     code = getServerCode(error)
-    status = error.status ? Number(error.status) : undefined
     serverMessage = error.message
     try {
       message = translateErrorCode(code, error.message)
@@ -190,22 +186,7 @@ export const toastFetchError = (
   if (!_reason) {
     const title = _title || message || t("common:error_screen.unknown")
     toastOptions.description = _title ? detail || message : detail
-    const isPaymentEnabled = getIsPaymentEnabled()
-    const needUpgradeError = status && isPaymentEnabled ? status === 402 : false
-    if (needUpgradeError) {
-      toastOptions.description = t("request_error.upgrade_required")
-    }
-    return toast.error(title, {
-      ...toastOptions,
-      action: needUpgradeError
-        ? {
-            label: t("settings:subscription.actions.upgrade"),
-            onClick: () => {
-              window.router.showSettings({ tab: "plan" })
-            },
-          }
-        : undefined,
-    })
+    return toast.error(title, toastOptions)
   } else {
     return toast.error(message || _title, {
       duration: 5000,
@@ -242,15 +223,4 @@ DebugRegistry.add("Simulate request error", () => {
       }),
     },
   } as any)
-})
-
-DebugRegistry.add("Simulate payment need upgrade error", () => {
-  createErrorToaster(
-    "Simulated payment need upgrade error",
-    {},
-  )(
-    new FollowAPIError("Simulated payment need upgrade error", 402, "1111", {
-      reason: "Simulated reason",
-    }),
-  )
 })

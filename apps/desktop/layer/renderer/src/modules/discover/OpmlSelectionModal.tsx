@@ -2,7 +2,6 @@ import { Button } from "@follow/components/ui/button/index.js"
 import { Checkbox } from "@follow/components/ui/checkbox/index.jsx"
 import { Input } from "@follow/components/ui/input/index.js"
 import { ScrollArea } from "@follow/components/ui/scroll-area/index.js"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@follow/components/ui/tooltip/index.jsx"
 import { getFeedById } from "@follow/store/feed/getter"
 import { getAllFeedSubscription } from "@follow/store/subscription/getter"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
@@ -136,10 +135,6 @@ export const OpmlSelectionModal = ({
     }))
   }, [fuse, searchQuery, parsedData.subscriptions])
 
-  const selectedCount = selectedItems.size
-  const isQuotaExceeded = selectedCount > parsedData.remaining
-  const quotaWarningThreshold = Math.max(1, Math.floor(parsedData.remaining * 0.8)) // 80% of quota
-
   const toggleItem = useCallback((index: string) => {
     setSelectedItems((prev) => {
       const newSet = new Set(prev)
@@ -154,38 +149,17 @@ export const OpmlSelectionModal = ({
 
   const toggleAll = useCallback(
     (checked: boolean) => {
-      if (checked) {
-        // Select all filtered items, but respect quota
-        const filteredIndices = filteredSubscriptions.map(({ refIndex }) => refIndex.toString())
-        setSelectedItems((prev) => {
-          const newSet = new Set(prev)
-
-          // If we would exceed quota, only select up to the remaining limit
-          let addedCount = 0
-          for (const index of filteredIndices) {
-            if (newSet.size + addedCount >= parsedData.remaining) {
-              break
-            }
-            if (!newSet.has(index)) {
-              addedCount++
-            }
-            newSet.add(index)
-          }
-          return newSet
-        })
-      } else {
-        // Deselect all filtered items - no quota restrictions for deselection
-        const filteredIndices = new Set(
-          filteredSubscriptions.map(({ refIndex }) => refIndex.toString()),
-        )
-        setSelectedItems((prev) => {
-          const newSet = new Set(prev)
-          filteredIndices.forEach((index) => newSet.delete(index))
-          return newSet
-        })
-      }
+      const filteredIndices = filteredSubscriptions.map(({ refIndex }) => refIndex.toString())
+      setSelectedItems((prev) => {
+        const newSet = new Set(prev)
+        for (const index of filteredIndices) {
+          if (checked) newSet.add(index)
+          else newSet.delete(index)
+        }
+        return newSet
+      })
     },
-    [filteredSubscriptions, parsedData.remaining],
+    [filteredSubscriptions],
   )
 
   const handleImport = useCallback(() => {
@@ -214,65 +188,6 @@ export const OpmlSelectionModal = ({
         <p className="text-sm text-text-secondary">
           {t("discover.import.select_feeds_description")}
         </p>
-      </div>
-
-      {/* Quota Status */}
-      <div
-        className={cn(
-          "mb-4 flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2",
-          isQuotaExceeded
-            ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950"
-            : selectedCount >= quotaWarningThreshold
-              ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950"
-              : "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950",
-        )}
-      >
-        <div className="flex items-center gap-2">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div
-                className={cn(
-                  "flex size-4 items-center justify-center rounded-full",
-                  isQuotaExceeded
-                    ? "text-red"
-                    : selectedCount >= quotaWarningThreshold
-                      ? "text-yellow"
-                      : "text-green",
-                )}
-              >
-                <i
-                  className={cn(
-                    isQuotaExceeded
-                      ? "i-mgc-close-cute-re"
-                      : selectedCount >= quotaWarningThreshold
-                        ? "i-mgc-warning-cute-re"
-                        : "i-mgc-check-circle-cute-re",
-                  )}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {isQuotaExceeded ? (
-                <p>{t("discover.import.quota_exceeded_warning")}</p>
-              ) : selectedCount >= quotaWarningThreshold ? (
-                <p>
-                  {t("discover.import.quota_warning", {
-                    remaining: parsedData.remaining - selectedCount,
-                  })}
-                </p>
-              ) : (
-                <p>
-                  {t("discover.import.remaining_quota", {
-                    remaining: parsedData.remaining - selectedCount,
-                  })}
-                </p>
-              )}
-            </TooltipContent>
-          </Tooltip>
-          <span className="text-sm font-medium">
-            {t("discover.import.quota_status")} {selectedCount}/{parsedData.remaining}
-          </span>
-        </div>
       </div>
 
       {/* Search Input */}
@@ -325,19 +240,16 @@ export const OpmlSelectionModal = ({
             filteredSubscriptions.map(({ item, refIndex }) => {
               const isSelected = selectedItems.has(refIndex.toString())
 
-              const wouldExceedQuota = !isSelected && selectedCount >= parsedData.remaining
-
               return (
                 <div
                   key={`${item.url}-${refIndex}`}
                   className={cn(
                     "flex cursor-button items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-material-medium",
                     isSelected ? "border-material-thick bg-material-thick" : "border-background",
-                    wouldExceedQuota && "cursor-not-allowed opacity-50",
                   )}
-                  onClick={() => !wouldExceedQuota && toggleItem(refIndex.toString())}
+                  onClick={() => toggleItem(refIndex.toString())}
                 >
-                  <Checkbox checked={isSelected} disabled={wouldExceedQuota} />
+                  <Checkbox checked={isSelected} />
                   <div className="min-w-0 flex-1 shrink">
                     <div className="truncate font-medium">
                       {item.title || t("discover.import.untitled_feed")}
@@ -362,13 +274,10 @@ export const OpmlSelectionModal = ({
         </Button>
         <Button
           onClick={handleImport}
-          disabled={selectedItems.size === 0 || isQuotaExceeded || importMutation.isPending}
+          disabled={selectedItems.size === 0 || importMutation.isPending}
           isLoading={importMutation.isPending}
         >
           {t("words.import")} ({selectedItems.size})
-          {isQuotaExceeded && (
-            <span className="ml-1 text-xs">- {t("discover.import.quota_exceeded")}</span>
-          )}
         </Button>
       </div>
     </div>

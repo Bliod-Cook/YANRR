@@ -4,12 +4,9 @@ import {
   convertLexicalToMarkdown,
   getEditorStateJSONString,
 } from "@follow/components/ui/lexical-rich-editor/utils.js"
-import { isFreeRole } from "@follow/constants"
 import { getCategoryFeedIds } from "@follow/store/subscription/getter"
 import { usePrefetchSummary } from "@follow/store/summary/hooks"
-import { useUserRole } from "@follow/store/user/hooks"
 import { detectIsEditableElement, nextFrame } from "@follow/utils"
-import type { ConfigResponse } from "@follow-app/client-sdk"
 import type { EditorState } from "lexical"
 import { createEditor } from "lexical"
 import { nanoid } from "nanoid"
@@ -37,11 +34,9 @@ import {
 } from "~/modules/ai-chat/store/hooks"
 
 import { LexicalAIEditorNodes } from "../../editor"
-import { useAIConfiguration } from "../../hooks/useAIConfiguration"
 import { useAttachScrollBeyond } from "../../hooks/useAttachScrollBeyond"
 import { AIPanelRefsContext } from "../../store/AIChatContext"
 import type { AIChatContextBlock, BizUIMessage, SendingUIMessage } from "../../store/types"
-import { computeIsRateLimited, computeRateLimitMessage } from "../../utils/rate-limit"
 import {
   extractShortcutIdFromMessageParts,
   extractShortcutIdFromSerializedState,
@@ -61,7 +56,6 @@ const ChatInterfaceContent = ({ centerInputOnEmpty, visualOffsetY }: ChatInterfa
   // Only the last user message is needed, so streamed chunks don't re-render the whole chat
   const lastUserMessageInChat = useLastUserMessage()
   const { ensureLogin } = useRequireLogin()
-  const userRole = useUserRole()
 
   const isFocusWithin = useFocusable()
 
@@ -259,15 +253,6 @@ const ChatInterfaceContent = ({ centerInputOnEmpty, visualOffsetY }: ChatInterfa
 
   const { handleScroll } = useAttachScrollBeyond()
 
-  const { data: configuration } = useAIConfiguration()
-  const shouldHideResetDetails = userRole ? isFreeRole(userRole) : false
-
-  const { isRateLimited, rateLimitMessage } = useRateLimitInfo(
-    error,
-    configuration,
-    shouldHideResetDetails,
-  )
-
   return (
     <div className="flex size-full flex-col @container">
       <GlobalFileDropZone className="flex size-full flex-col @container">
@@ -293,8 +278,6 @@ const ChatInterfaceContent = ({ centerInputOnEmpty, visualOffsetY }: ChatInterfa
           centerInputOnEmpty={centerInputOnEmpty}
           visualOffsetY={visualOffsetY}
           shouldShowInterruptionNotice={shouldShowInterruptionNotice}
-          rateLimitMessage={rateLimitMessage}
-          isRateLimited={isRateLimited}
           onRetryLastMessage={handleRetryLastMessage}
           onSendMessage={handleSendMessage}
           initialDraftState={initialDraft}
@@ -386,30 +369,6 @@ const useChatDraft = (currentChatId?: string | null) => {
     handleDraftChange,
     initialDraft,
     clearDraft,
-  }
-}
-
-const useRateLimitInfo = (
-  error: Error | string | undefined,
-  configuration: ConfigResponse | undefined,
-  shouldHideResetDetails: boolean,
-) => {
-  const isRateLimited = useMemo(
-    () => computeIsRateLimited(error, configuration),
-    [error, configuration],
-  )
-
-  const rateLimitMessage = useMemo(
-    () =>
-      computeRateLimitMessage(error, configuration, {
-        hideResetDetails: shouldHideResetDetails,
-      }),
-    [error, configuration, shouldHideResetDetails],
-  )
-
-  return {
-    isRateLimited,
-    rateLimitMessage,
   }
 }
 

@@ -3,7 +3,6 @@ import { nextFrame } from "@follow/utils"
 import type { ReactElement } from "react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { toast } from "sonner"
 
 import {
   DropdownMenu,
@@ -14,7 +13,7 @@ import {
 } from "~/components/ui/dropdown-menu/dropdown-menu"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { useAIChatSessionListQuery } from "~/modules/ai-chat-session/query"
-import { AITaskModal, useAITaskListQuery, useCanCreateNewAITask } from "~/modules/ai-task"
+import { AITaskModal, useAITaskListQuery } from "~/modules/ai-task"
 import { useSettingModal } from "~/modules/settings/modal/use-setting-modal-hack"
 import { AI_SETTING_SECTION_IDS } from "~/modules/settings/tabs/ai"
 
@@ -50,7 +49,6 @@ export const TaskReportDropdown = ({ triggerElement, asChild = true }: TaskRepor
 
   // Call all hooks at the top level, never conditionally
   const { present } = useModalStack()
-  const canCreateNewTask = useCanCreateNewAITask()
   const { handleSessionSelect, handleDeleteSession } = useChatSessionHandlers({
     sessions: taskSessions,
   })
@@ -61,10 +59,6 @@ export const TaskReportDropdown = ({ triggerElement, asChild = true }: TaskRepor
   }
 
   const handleScheduleActionClick = () => {
-    if (!canCreateNewTask) {
-      toast.error(t("tasks.toast.limit_reached"))
-      return
-    }
     showSettings({ tab: "ai", section: AI_SETTING_SECTION_IDS.tasks })
     nextFrame(() => {
       present({
@@ -133,15 +127,11 @@ export const TaskReportDropdown = ({ triggerElement, asChild = true }: TaskRepor
           />
         )}
 
-        {canCreateNewTask && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleScheduleActionClick}>
-              <i className="i-mgc-add-cute-re mr-2 size-4" />
-              {t("tasks.actions.new_task")}
-            </DropdownMenuItem>
-          </>
-        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleScheduleActionClick}>
+          <i className="i-mgc-add-cute-re mr-2 size-4" />
+          {t("tasks.actions.new_task")}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -43,12 +43,11 @@ export function AISummary({ entryId }: { entryId: string }) {
     <AISummaryCardBase
       content={summary.data}
       isLoading={summary.isLoading}
-      // Only a finished summary belongs in an exported PDF, not its loading, upgrade or empty state
+      // Only a finished summary belongs in an exported PDF, not its loading or empty state
       className={cn("my-8", !summary.data && "print:hidden")}
       title={t("entry_content.ai_summary")}
       showAskAIButton={shouldShowAskAI}
       onAskAI={handleAskAI}
-      error={summary.error}
     />
   )
 }

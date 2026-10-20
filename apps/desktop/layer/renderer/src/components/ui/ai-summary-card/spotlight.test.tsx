@@ -13,10 +13,6 @@ const { markdownMock } = vi.hoisted(() => ({
   markdownMock: vi.fn(() => null),
 }))
 
-vi.mock("~/atoms/server-configs", () => ({
-  useIsPaymentEnabled: vi.fn(() => false),
-}))
-
 vi.mock("~/atoms/settings/spotlight", () => ({
   useSpotlightSettingKey: vi.fn(() => [
     {
@@ -36,10 +32,6 @@ vi.mock("~/components/ui/markdown/Markdown", () => ({
 
 vi.mock("~/hooks/biz/useFeature", () => ({
   useFeature: vi.fn(() => false),
-}))
-
-vi.mock("~/modules/settings/modal/useSettingModal", () => ({
-  useSettingModal: vi.fn(() => vi.fn()),
 }))
 
 vi.mock("react-i18next", async (importOriginal) => {

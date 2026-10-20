@@ -37,11 +37,9 @@ import {
 import type { AIChatContextBlock, BizUIMessage } from "~/modules/ai-chat/store/types"
 
 import { Messages } from "../ai-chat/components/layouts/Messages"
-import { RateLimitNotice } from "../ai-chat/components/layouts/RateLimitNotice"
 import { AIChatWaitingIndicator } from "../ai-chat/components/message/AIChatMessage"
 import { AIShortcutButton } from "../ai-chat/components/ui/AIShortcutButton"
 import { LexicalAIEditorNodes } from "../ai-chat/editor"
-import { computeRateLimitMessage } from "../ai-chat/utils/rate-limit"
 import {
   extractShortcutIdFromSerializedState,
   prefixMessageIdWithShortcut,
@@ -466,10 +464,6 @@ function AIChatInterface({ inputRef }: AIChatInterfaceProps) {
   }, [status, resetScrollState, messageContainerMinHeight, scrollAreaRef])
 
   const shouldShowScrollToBottom = hasMessages && !isAtBottom
-  const rateLimitMessage = useMemo(() => computeRateLimitMessage(error, null), [error])
-
-  // Additional height for rate limit notice (~40px)
-  const rateLimitExtraHeight = rateLimitMessage ? 40 : 0
 
   const messages = useMessages()
   const setStep = useSetAtom(stepAtom)
@@ -514,14 +508,14 @@ function AIChatInterface({ inputRef }: AIChatInterfaceProps) {
         scrollbarClassName="mt-12"
         scrollbarProps={{
           style: {
-            marginBottom: Math.max(160, bottomPanelHeight) + rateLimitExtraHeight,
+            marginBottom: Math.max(160, bottomPanelHeight),
           },
         }}
         ref={setScrollAreaRef}
         rootClassName="flex-1"
         viewportProps={{
           style: {
-            paddingBottom: Math.max(128, bottomPanelHeight) + rateLimitExtraHeight,
+            paddingBottom: Math.max(128, bottomPanelHeight),
           },
         }}
         viewportClassName={"pt-12"}
@@ -567,7 +561,6 @@ function AIChatInterface({ inputRef }: AIChatInterfaceProps) {
       )}
 
       <div ref={bottomPanelRef} className={"px-6"}>
-        {rateLimitMessage && <RateLimitNotice message={rateLimitMessage} />}
         <ChatInput
           ref={inputRef}
           onSend={handleSendMessage}

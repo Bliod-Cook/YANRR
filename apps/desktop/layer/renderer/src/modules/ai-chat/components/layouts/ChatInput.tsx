@@ -54,7 +54,6 @@ interface ChatInputProps extends VariantProps<typeof chatInputVariants> {
   ref?: Ref<LexicalRichEditorRef | null>
   initialDraftState?: EditorState
   onEditorStateChange?: (editorState: EditorState) => void
-  submitDisabled?: boolean
 }
 
 export const ChatInput = memo(
@@ -64,7 +63,6 @@ export const ChatInput = memo(
     ref: forwardedRef,
     initialDraftState,
     onEditorStateChange,
-    submitDisabled,
   }: ChatInputProps) => {
     const { t } = useTranslation("ai")
     const status = useChatStatus()
@@ -103,7 +101,7 @@ export const ChatInput = memo(
     )
 
     const isProcessing = status === "submitted" || status === "streaming"
-    const isSubmitDisabled = submitDisabled || (!isProcessing && (isEmpty || hasPendingUploads))
+    const isSubmitDisabled = !isProcessing && (isEmpty || hasPendingUploads)
 
     const handleEditorChange = useCallback(
       (editorState: EditorState, editor: LexicalEditor) => {
@@ -122,7 +120,6 @@ export const ChatInput = memo(
     const scene = useChatScene()
 
     const handleSend = useCallback(async () => {
-      if (submitDisabled) return
       if (currentEditor && editorRef.current && !editorRef.current.isEmpty()) {
         const editorState = currentEditor?.getEditorState()
         nextFrame(() => {
@@ -130,7 +127,7 @@ export const ChatInput = memo(
         })
         editorRef.current.clear()
       }
-    }, [currentEditor, onSend, submitDisabled])
+    }, [currentEditor, onSend])
 
     const handleSendClick = useCallback(() => {
       void handleSend()
