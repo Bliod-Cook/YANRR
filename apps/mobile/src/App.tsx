@@ -17,7 +17,6 @@ import { useSyncAppColorScheme } from "./lib/color-scheme"
 import { destination } from "./lib/navigation/biz/Destination"
 import { DebugButton, EnvProfileIndicator } from "./modules/debug"
 import { rememberSignedIn } from "./modules/login/returning-user"
-import { ReviewPromptProvider } from "./modules/review-prompt/provider"
 
 export function App({ children }: { children: React.ReactNode }) {
   return (
@@ -84,5 +83,5 @@ const SideEffect = () => {
   usePrefetchActions()
   useUpdateMessagingToken()
   useMessaging()
-  return <ReviewPromptProvider />
+  return null
 }
