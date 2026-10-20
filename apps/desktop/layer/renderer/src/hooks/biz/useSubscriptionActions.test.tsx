@@ -50,7 +50,6 @@ const subscription: SubscriptionModel = {
   inboxId: null,
   userId: "user-1",
   view: 0,
-  isPrivate: false,
   hideFromTimeline: null,
   title: "My SSPAI",
   category: "Tech",

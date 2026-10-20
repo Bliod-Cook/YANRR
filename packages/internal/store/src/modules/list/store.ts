@@ -112,7 +112,6 @@ class ListSyncServices {
     await listActions.upsertMany([apiMorph.toList(res.data)])
     await subscriptionActions.upsertMany([
       {
-        isPrivate: false,
         listId: res.data.id,
         type: "list",
         userId: res.data.ownerUserId || "",

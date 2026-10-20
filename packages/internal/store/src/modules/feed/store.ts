@@ -6,7 +6,6 @@ import { getDateISOString, isBizId } from "@follow/utils"
 import { api } from "../../context"
 import type { Hydratable, Resetable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
-import { whoami } from "../user/getters"
 import type { FeedModel } from "./types"
 
 export interface FeedState {
@@ -244,38 +243,6 @@ class FeedSyncServices {
       responseData: res.data,
       feed: finalData,
     }
-  }
-
-  async claimFeed(feedId: string) {
-    const curFeed = get().feeds[feedId]
-    if (!curFeed) return
-
-    const tx = createTransaction()
-    tx.store(() => {
-      feedActions.patchInSession(feedId, {
-        ownerUserId: whoami()?.id || null,
-      })
-    })
-
-    tx.request(async () => {
-      await api().feeds.claim.challenge({
-        feedId,
-      })
-    })
-
-    tx.persist(() => {
-      const newFeed = get().feeds[feedId]
-      if (!newFeed) return
-      return FeedService.upsertMany([newFeed])
-    })
-
-    tx.rollback(() => {
-      feedActions.patchInSession(feedId, {
-        ownerUserId: curFeed.ownerUserId,
-      })
-    })
-
-    await tx.run()
   }
 
   async fetchAnalytics(feedId: string | string[]) {

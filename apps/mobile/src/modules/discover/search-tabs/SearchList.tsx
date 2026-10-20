@@ -11,11 +11,9 @@ import { Image } from "@/src/components/ui/image/Image"
 import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
 import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { Text } from "@/src/components/ui/typography/Text"
-import { RightCuteReIcon } from "@/src/icons/right_cute_re"
 import { User3CuteReIcon } from "@/src/icons/user_3_cute_re"
 import { followClient } from "@/src/lib/api-client"
 import { useNavigation } from "@/src/lib/navigation/hooks"
-import { UrlBuilder } from "@/src/lib/url-builder"
 import { FollowScreen } from "@/src/screens/(modal)/FollowScreen"
 import { useColor } from "@/src/theme/colors"
 
@@ -127,11 +125,6 @@ const SearchListCard = memo(({ item }: { item: SearchResultItem }) => {
             </View>
           </View>
         )}
-      </View>
-
-      <View className="mt-3 flex-row items-center gap-1 pl-4 opacity-60">
-        <RightCuteReIcon width={16} height={16} />
-        <Text className="text-sm text-text">{UrlBuilder.shareList(item.list?.id ?? "")}</Text>
       </View>
 
       <View className="mt-4 flex-row items-center gap-6 pl-4 opacity-60">

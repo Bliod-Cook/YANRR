@@ -100,7 +100,6 @@ class APIMorph {
 
         userId: item.userId,
         view: item.view,
-        isPrivate: item.isPrivate,
         hideFromTimeline: item.hideFromTimeline,
         title: item.title,
         createdAt: item.createdAt,

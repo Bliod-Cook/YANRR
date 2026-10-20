@@ -21,19 +21,3 @@ export const fetchRsshubPopular = (category: DiscoverCategories, lang: Language)
 export const fetchRsshubAnalysis = () => {
   return followClient.api.discover.rsshubAnalytics({})
 }
-
-export const fetchFeedTrending = ({
-  lang,
-  view,
-  limit,
-}: {
-  lang?: "eng" | "cmn"
-  view?: number
-  limit: number
-}) => {
-  return followClient.api.trending.getFeeds({
-    language: lang,
-    view,
-    limit,
-  })
-}

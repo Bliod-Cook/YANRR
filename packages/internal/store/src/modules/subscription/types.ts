@@ -7,11 +7,11 @@ export interface SubscriptionForm {
   url: string | undefined
   view: FeedViewType
   category: Nullable<string>
-  isPrivate: boolean
   hideFromTimeline: Nullable<boolean>
   title: Nullable<string>
   feedId: Nullable<string>
   listId: string | undefined
 }
 
-export type SubscriptionModel = Omit<SubscriptionSchema, "id">
+/** `isPrivate` is a column the server no longer has; the database is written `false` */
+export type SubscriptionModel = Omit<SubscriptionSchema, "id" | "isPrivate">

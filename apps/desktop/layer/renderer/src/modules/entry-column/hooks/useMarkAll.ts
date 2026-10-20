@@ -2,8 +2,6 @@ import type { FeedViewType } from "@follow/constants"
 import { getCategoryFeedIds } from "@follow/store/subscription/getter"
 import { unreadSyncService } from "@follow/store/unread/store"
 
-import { getGeneralSettings } from "~/atoms/settings/general"
-
 export type MarkAllFilter =
   | {
       startTime: number
@@ -29,12 +27,10 @@ export const markAllByRoute = async (
 
   if (!feedId) return
 
-  const { hidePrivateSubscriptionsInTimeline: excludePrivate } = getGeneralSettings()
   if (typeof feedId === "number" || isAllFeeds) {
     unreadSyncService.markBatchAsRead({
       view,
       time,
-      excludePrivate,
     })
   } else if (inboxId) {
     unreadSyncService.markBatchAsRead({
@@ -43,7 +39,6 @@ export const markAllByRoute = async (
       },
       view,
       time,
-      excludePrivate,
     })
   } else if (listId) {
     unreadSyncService.markBatchAsRead({
@@ -52,7 +47,6 @@ export const markAllByRoute = async (
       },
       view,
       time,
-      excludePrivate,
     })
   } else if (folderIds?.length) {
     unreadSyncService.markBatchAsRead({
@@ -61,7 +55,6 @@ export const markAllByRoute = async (
       },
       view,
       time,
-      excludePrivate,
     })
   } else if (feedId) {
     unreadSyncService.markBatchAsRead({
@@ -70,7 +63,6 @@ export const markAllByRoute = async (
       },
       view,
       time,
-      excludePrivate,
     })
   }
 }

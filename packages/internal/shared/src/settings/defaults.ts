@@ -17,7 +17,6 @@ export const defaultGeneralSettings: GeneralSettings = {
   // subscription
   autoGroup: true,
   hideAllReadSubscriptions: false,
-  hidePrivateSubscriptionsInTimeline: false,
 
   // view
   unreadOnly: false,
@@ -48,7 +47,6 @@ export const defaultUISettings: UISettings = {
   entryColWidth: 450,
   aiColWidth: 384,
   feedColWidth: 256,
-  hideExtraBadge: false,
 
   opaqueSidebar: false,
   sidebarShowUnreadCount: true,
@@ -76,7 +74,6 @@ export const defaultUISettings: UISettings = {
   codeHighlightThemeLight: "github-light",
   codeHighlightThemeDark: "github-dark",
   guessCodeLanguage: true,
-  hideRecentReader: false,
   customCSS: "",
 
   // View

@@ -23,7 +23,6 @@ import type {
   InsertedBeforeTimeRangeFilter,
   PublishAtTimeRangeFilter,
 } from "../unread/types"
-import { userActions } from "../user/store"
 import { getEntry } from "./getter"
 import type { EntryModel, FetchEntriesProps, FetchEntriesPropsSettings } from "./types"
 import { getEffectiveEntrySortOrder, getEntriesParams, isTimelineEntriesSource } from "./utils"
@@ -83,22 +82,16 @@ class EntryActions implements Hydratable, Resetable {
     feedId,
     entryId,
     sources,
-    hidePrivateSubscriptionsInTimeline,
   }: {
     draft: EntryState
     feedId?: FeedId | null
     entryId: EntryId
     sources?: string[] | null
-    hidePrivateSubscriptionsInTimeline?: boolean
   }) {
     if (!feedId) return
 
     const subscription = getSubscriptionById(feedId)
-    const ignore =
-      (hidePrivateSubscriptionsInTimeline && subscription?.isPrivate) ||
-      subscription?.hideFromTimeline
-
-    if (!ignore) {
+    if (!subscription?.hideFromTimeline) {
       if (typeof subscription?.view === "number") {
         draft.entryIdByView[subscription.view]?.add(entryId)
       }
@@ -108,11 +101,7 @@ class EntryActions implements Hydratable, Resetable {
     // lists
     for (const s of sources ?? []) {
       const subscription = getSubscriptionById(s)
-      const ignore =
-        (hidePrivateSubscriptionsInTimeline && subscription?.isPrivate) ||
-        subscription?.hideFromTimeline
-
-      if (!ignore) {
+      if (!subscription?.hideFromTimeline) {
         if (typeof subscription?.view === "number") {
           draft.entryIdByView[subscription.view]?.add(entryId)
         }
@@ -198,7 +187,7 @@ class EntryActions implements Hydratable, Resetable {
 
   upsertManyInSession(entries: EntryModel[], options?: FetchEntriesPropsSettings) {
     if (entries.length === 0) return
-    const { unreadOnly, hidePrivateSubscriptionsInTimeline } = options || {}
+    const { unreadOnly } = options || {}
 
     // Pending or just-acknowledged read marks win over the snapshot we received.
     const overlays = transactionQueue.getOverlays()
@@ -236,7 +225,6 @@ class EntryActions implements Hydratable, Resetable {
           feedId,
           entryId: nextEntry.id,
           sources,
-          hidePrivateSubscriptionsInTimeline,
         })
 
         this.addEntryIdToCategory({
@@ -503,7 +491,6 @@ class EntrySyncServices {
       pageParam,
       isCollection,
       feedIdList,
-      excludePrivate,
       aiSort,
       sortOrder,
     } = props
@@ -542,7 +529,6 @@ class EntrySyncServices {
             read,
             limit,
             isCollection,
-            excludePrivate,
             ...(aiSort && { aiSort }),
             ...(effectiveSortOrder && { sortOrder: effectiveSortOrder }),
             ...params,
@@ -720,17 +706,6 @@ class EntrySyncServices {
     readStream().catch((error) => {
       console.error("Failed to fetch entry contents:", error)
     })
-  }
-
-  async fetchEntryReadHistory(entryId: EntryId, size: number) {
-    const res = await api().entries.readHistories({
-      id: entryId,
-      size,
-    })
-
-    await userActions.upsertMany(Object.values(res.data.users))
-
-    return res.data
   }
 
   async deleteInboxEntry(entryId: string) {

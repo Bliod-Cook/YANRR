@@ -14,6 +14,7 @@ class StoreDbMorph {
   toSubscriptionSchema(subscription: SubscriptionModel): SubscriptionSchema {
     return {
       ...subscription,
+      isPrivate: false,
       id: buildSubscriptionDbId(subscription),
     }
   }

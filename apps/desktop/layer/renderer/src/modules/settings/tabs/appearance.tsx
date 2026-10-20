@@ -85,11 +85,6 @@ export const SettingAppearance = () => {
             label: t("appearance.unread_count.sidebar.title"),
             description: t("appearance.unread_count.sidebar.description"),
           }),
-          defineItem("hideExtraBadge", {
-            label: t("appearance.hide_extra_badge.label"),
-            description: t("appearance.hide_extra_badge.description"),
-            hide: isMobile,
-          }),
           {
             type: "title",
             value: t("appearance.reading_view.title"),
@@ -149,10 +144,6 @@ export const SettingAppearance = () => {
           ThumbnailRatio,
           enhancedSettings && DateFormat,
 
-          defineItem("hideRecentReader", {
-            label: t("appearance.hide_recent_reader.label"),
-            description: t("appearance.hide_recent_reader.description"),
-          }),
           defineItem("readerRenderInlineStyle", {
             label: t("appearance.reader_render_inline_style.label"),
             description: t("appearance.reader_render_inline_style.description"),

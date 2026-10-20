@@ -1,9 +1,5 @@
 import { feedSyncServices } from "@follow/store/feed/store"
-import { formatXml } from "@follow/utils/utils"
 import { useMutation } from "@tanstack/react-query"
-import { useRef } from "react"
-import { useTranslation } from "react-i18next"
-import { toast } from "sonner"
 
 import { ROUTE_FEED_IN_FOLDER, ROUTE_FEED_PENDING } from "~/constants"
 import { useAuthQuery } from "~/hooks/common"
@@ -26,20 +22,6 @@ export const feed = {
         rootKey: ["feed"],
       },
     ),
-  claimMessage: ({ feedId }: { feedId: string }) =>
-    defineQuery(["feed", "claimMessage", feedId], async () =>
-      followClient.api.feeds.claim.message({ feedId }).then((res) => {
-        res.data.json = JSON.stringify(JSON.parse(res.data.json), null, 2)
-        const $document = new DOMParser().parseFromString(res.data.xml, "text/xml")
-        res.data.xml = formatXml(new XMLSerializer().serializeToString($document))
-        return res
-      }),
-    ),
-  claimedList: () =>
-    defineQuery(["feed", "claimedList"], async () => {
-      const res = await followClient.api.feeds.claim.list()
-      return res.data
-    }),
 }
 
 export const useFeedQuery = ({ id, url }: FeedQueryParams) =>
@@ -54,20 +36,6 @@ export const useFeedQuery = ({ id, url }: FeedQueryParams) =>
     },
   )
 
-export const useClaimFeedMutation = (feedId: string) =>
-  useMutation({
-    mutationKey: ["claimFeed", feedId],
-    mutationFn: () => feedSyncServices.claimFeed(feedId),
-
-    async onError(err) {
-      toastFetchError(err)
-    },
-    onSuccess() {
-      // Settings > Feeds lists the claimed feeds
-      feed.claimedList().invalidate()
-    },
-  })
-
 export const useRefreshFeedMutation = (feedId?: string) =>
   useMutation({
     mutationKey: ["refreshFeed", feedId],
@@ -76,27 +44,3 @@ export const useRefreshFeedMutation = (feedId?: string) =>
       toastFetchError(err)
     },
   })
-
-export const useResetFeed = () => {
-  const { t } = useTranslation()
-  const toastIDRef = useRef<string | number | null>(null)
-
-  return useMutation({
-    mutationFn: async (feedId: string) => {
-      toastIDRef.current = toast.loading(t("sidebar.feed_actions.resetting_feed"))
-      await followClient.api.feeds.reset({ id: feedId })
-    },
-    onSuccess: () => {
-      toast.success(
-        t("sidebar.feed_actions.reset_feed_success"),
-        toastIDRef.current ? { id: toastIDRef.current } : undefined,
-      )
-    },
-    onError: () => {
-      toast.error(
-        t("sidebar.feed_actions.reset_feed_error"),
-        toastIDRef.current ? { id: toastIDRef.current } : undefined,
-      )
-    },
-  })
-}

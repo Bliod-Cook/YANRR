@@ -40,8 +40,6 @@ import { Autocomplete } from "~/components/ui/auto-completion"
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
 import { useAddFeedToFeedList, useRemoveFeedFromFeedList } from "~/hooks/biz/useFeedActions"
 import { createErrorToaster } from "~/lib/error-parser"
-import { UrlBuilder } from "~/lib/url-builder"
-import { FeedCertification } from "~/modules/feed/feed-certification"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { ViewSelectorRadioGroup } from "~/modules/shared/ViewSelectorRadioGroup"
 
@@ -257,9 +255,6 @@ export const ListFeedsModalContent = ({ id }: { id: string }) => {
                 {t("lists.feeds.title")}
               </TableHead>
               <TableHead className="w-20 text-center" size="sm">
-                {t("lists.feeds.owner")}
-              </TableHead>
-              <TableHead className="w-20 text-center" size="sm">
                 {t("lists.feeds.actions")}
               </TableHead>
             </TableRow>
@@ -284,18 +279,9 @@ const RowRender = ({ feedId, listId }: { feedId: string; listId: string }) => {
   return (
     <TableRow key={feed.title} className="h-8">
       <TableCell size="sm">
-        <a
-          target="_blank"
-          href={UrlBuilder.shareFeed(feed.id)}
-          className="flex items-center gap-2 font-semibold"
-        >
+        <div className="flex items-center gap-2 font-semibold">
           {feed.siteUrl && <FeedIcon noMargin siteUrl={feed.siteUrl} />}
           <span className="inline-block max-w-[200px] truncate">{feed.title}</span>
-        </a>
-      </TableCell>
-      <TableCell align="center" size="sm">
-        <div className="center">
-          <FeedCertification className="ml-0" feed={feed} />
         </div>
       </TableCell>
       <TableCell align="center" size="sm">

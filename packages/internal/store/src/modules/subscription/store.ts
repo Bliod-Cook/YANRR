@@ -214,7 +214,7 @@ const restoreInSession = (subscriptions: SubscriptionModel[]) => {
   })
 }
 
-type EditableSubscriptionField = "view" | "category" | "isPrivate" | "hideFromTimeline" | "title"
+type EditableSubscriptionField = "view" | "category" | "hideFromTimeline" | "title"
 
 /**
  * How each editable field is compared. Forms write "no value" in their own ways: an empty
@@ -227,7 +227,6 @@ const editableSubscriptionFields: Record<
   view: (value) => value,
   category: (value) => value || null,
   title: (value) => value || null,
-  isPrivate: (value) => !!value,
   hideFromTimeline: (value) => !!value,
 }
 

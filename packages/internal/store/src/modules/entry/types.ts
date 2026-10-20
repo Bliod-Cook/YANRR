@@ -13,13 +13,11 @@ export type FetchEntriesProps = {
   limit?: number
   pageParam?: string
   isCollection?: boolean
-  excludePrivate?: boolean
   aiSort?: boolean
   sortOrder?: EntrySortOrder
 }
 
 export type FetchEntriesPropsSettings = {
-  hidePrivateSubscriptionsInTimeline?: boolean
   unreadOnly?: boolean
   sortOrder?: EntrySortOrder
 }

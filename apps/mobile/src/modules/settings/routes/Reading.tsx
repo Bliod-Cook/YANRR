@@ -38,7 +38,6 @@ export const ReadingScreen: NavigationControllerView = () => {
   const readerTextColor = useUISettingKey("readerTextColor")
   const autoHideReaderHeader = useUISettingKey("autoHideReaderHeader")
   const readerRenderInlineStyle = useUISettingKey("readerRenderInlineStyle")
-  const hideRecentReader = useUISettingKey("hideRecentReader")
   const codeThemeLight = useUISettingKey("codeHighlightThemeLight")
   const codeThemeDark = useUISettingKey("codeHighlightThemeDark")
 
@@ -170,22 +169,6 @@ export const ReadingScreen: NavigationControllerView = () => {
             value={colorScheme === "dark" ? codeThemeDark : codeThemeLight}
             onValueChange={(val) => {
               setUISetting(`codeHighlightTheme${colorScheme === "dark" ? "Dark" : "Light"}`, val)
-            }}
-          />
-        </GroupedInsetListCell>
-      </GroupedInsetListCard>
-
-      <GroupedInsetListSectionHeader label={t("appearance.misc")} />
-      <GroupedInsetListCard>
-        <GroupedInsetListCell
-          label={t("appearance.hide_recent_reader.label")}
-          description={t("appearance.hide_recent_reader.description")}
-        >
-          <Switch
-            size="sm"
-            value={hideRecentReader}
-            onValueChange={(val) => {
-              setUISetting("hideRecentReader", val)
             }}
           />
         </GroupedInsetListCell>

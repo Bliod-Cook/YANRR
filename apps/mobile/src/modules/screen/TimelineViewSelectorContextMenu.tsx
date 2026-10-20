@@ -3,7 +3,6 @@ import { unreadSyncService } from "@follow/store/unread/store"
 import type { FC, PropsWithChildren } from "react"
 import { useTranslation } from "react-i18next"
 
-import { getHidePrivateSubscriptionsInTimeline } from "@/src/atoms/settings/general"
 import { ContextMenu } from "@/src/components/ui/context-menu"
 
 export const TimelineViewSelectorContextMenu: FC<
@@ -19,7 +18,7 @@ export const TimelineViewSelectorContextMenu: FC<
         <ContextMenu.Item
           key="MarkAsRead"
           onSelect={() => {
-            unreadSyncService.markViewAsRead(viewId, getHidePrivateSubscriptionsInTimeline())
+            unreadSyncService.markViewAsRead(viewId)
           }}
         >
           <ContextMenu.ItemTitle>{t("operation.mark_as_read")}</ContextMenu.ItemTitle>

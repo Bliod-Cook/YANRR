@@ -280,9 +280,9 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
   })
 
   const { feedId, feedIdList, listId, inboxId, isCollection } = payload || {}
-  const { hidePrivateSubscriptionsInTimeline, sortOrder, unreadOnly } = options
+  const { sortOrder, unreadOnly } = options
 
-  const entryIdsByView = useEntryIdsByView(view, hidePrivateSubscriptionsInTimeline)
+  const entryIdsByView = useEntryIdsByView(view)
   const entryIdsByCollections = useCollectionEntryList(view)
   const entryIdsByFeedId = useEntryIdsByFeedId(feedId)
   const entryIdsByCategory = useEntryIdsByFeedIds(feedIdList)

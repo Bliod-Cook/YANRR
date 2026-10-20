@@ -8,16 +8,13 @@ import {
   TooltipTrigger,
 } from "@follow/components/ui/tooltip/index.jsx"
 import { useCorrectZIndex } from "@follow/components/ui/z-index/ctx.js"
-import { env } from "@follow/shared/env.desktop"
-import { feedSyncServices } from "@follow/store/feed/store"
-import { cn, parseSafeUrl, stopPropagation } from "@follow/utils"
+import { cn, stopPropagation } from "@follow/utils"
 import { springScrollToElement } from "@follow/utils/scroller"
 import type { MouseEvent } from "react"
 import { use, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
-import { navigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { ClipboardError, copyToClipboard } from "~/lib/clipboard"
 
 import { MarkdownRenderActionContext, MarkdownRenderContainerRefContext } from "../context"
@@ -37,7 +34,6 @@ export const MarkdownLink: Component<
   const { t } = useTranslation()
 
   const populatedFullHref = transformUrl(props.href)
-  const shareFeedInfo = parseShareFeedInfo(populatedFullHref)
   // Links within the entry, like footnotes or a table of contents
   const fragmentHref = isFragmentLink(props.href) ? props.href : null
   const targetId = props.id ?? props.name
@@ -57,7 +53,7 @@ export const MarkdownLink: Component<
   }, [populatedFullHref, t])
 
   const handleClickLink = useCallback(
-    async (event: MouseEvent<HTMLAnchorElement>) => {
+    (event: MouseEvent<HTMLAnchorElement>) => {
       stopPropagation(event)
 
       if (fragmentHref) {
@@ -65,22 +61,9 @@ export const MarkdownLink: Component<
         event.preventDefault()
         const target = renderContainer && findFragmentTarget(renderContainer, fragmentHref)
         if (target) springScrollToElement(target, -100, scroller ?? undefined)
-        return
       }
-
-      if (!shareFeedInfo) {
-        return
-      }
-      event.preventDefault()
-
-      const view = await resolveShareFeedView(shareFeedInfo)
-      navigateEntry({
-        feedId: shareFeedInfo.id,
-        entryId: null,
-        view,
-      })
     },
-    [fragmentHref, renderContainer, scroller, shareFeedInfo],
+    [fragmentHref, renderContainer, scroller],
   )
 
   const parseTimeStamp = isAudio(populatedFullHref)
@@ -160,47 +143,4 @@ export const MarkdownLink: Component<
       )}
     </Tooltip>
   )
-}
-
-const parseShareFeedInfo = (href?: string) => {
-  if (!href) return null
-
-  const baseUrl = parseSafeUrl(env.VITE_WEB_URL)
-  if (!baseUrl) return null
-
-  let parsedUrl: URL
-  try {
-    parsedUrl = new URL(href, baseUrl)
-  } catch {
-    return null
-  }
-
-  if (parsedUrl.host !== baseUrl.host) return null
-
-  const pathParts = parsedUrl.pathname.split("/").filter(Boolean)
-  if (pathParts.length !== 3 || pathParts[0] !== "share" || pathParts[1] !== "feeds") {
-    return null
-  }
-
-  const viewParam = parsedUrl.searchParams.get("view")
-  const view = viewParam ? Number.parseInt(viewParam, 10) : undefined
-
-  return {
-    id: pathParts[2]!,
-    view: Number.isNaN(view) ? undefined : view,
-  }
-}
-
-const resolveShareFeedView = async (info: { id: string; view?: number }) => {
-  if (typeof info.view === "number") {
-    return info.view
-  }
-
-  const data = await feedSyncServices.fetchFeedById({ id: info.id }).catch(() => {})
-  const analyticsView = data?.analytics?.view
-  if (typeof analyticsView === "number") {
-    return analyticsView
-  }
-
-  return 0
 }

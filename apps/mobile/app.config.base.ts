@@ -151,14 +151,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "expo-secure-store",
       ...(withFirebase ? [["@react-native-firebase/app", { ios: { disableSPM: true } }]] : []),
       [
-        "expo-image-picker",
-        {
-          photosPermission: "Allow $(PRODUCT_NAME) to access your photos.",
-          cameraPermission: false,
-          microphonePermission: false,
-        },
-      ],
-      [
         "expo-notifications",
         {
           enableBackgroundRemoteNotifications: true,

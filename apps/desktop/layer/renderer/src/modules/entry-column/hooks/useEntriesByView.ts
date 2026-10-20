@@ -37,9 +37,6 @@ const useRemoteEntries = (): RemoteEntriesReturn => {
   const isPreview = useIsPreviewFeed()
 
   const unreadOnly = useGeneralSettingKey("unreadOnly")
-  const hidePrivateSubscriptionsInTimeline = useGeneralSettingKey(
-    "hidePrivateSubscriptionsInTimeline",
-  )
   const savedSortOrder = useGeneralSettingKey("timelineSortOrder")
   const aiTimelineEnabled = useAtomValue(aiTimelineEnabledAtom)
   const aiEnabled = useFeature("ai")
@@ -65,9 +62,6 @@ const useRemoteEntries = (): RemoteEntriesReturn => {
       listId,
       view,
       ...(effectiveUnreadOnly && { unreadOnly: true }),
-      ...(hidePrivateSubscriptionsInTimeline === true && {
-        hidePrivateSubscriptionsInTimeline: true,
-      }),
       ...(view === FeedViewType.All && { limit: 40 }),
       ...(aiTimelineEnabled && aiEnabled && effectiveSortOrder === "desc" && { aiSort: true }),
       sortOrder: effectiveSortOrder,
@@ -85,7 +79,6 @@ const useRemoteEntries = (): RemoteEntriesReturn => {
     listId,
     effectiveUnreadOnly,
     view,
-    hidePrivateSubscriptionsInTimeline,
     aiTimelineEnabled,
     aiEnabled,
     effectiveSortOrder,
@@ -135,9 +128,6 @@ const useLocalEntries = (): UseEntriesReturn => {
   const { feedId, view, inboxId, listId, isCollection } = useRouteParams()
   const isPreview = useIsPreviewFeed()
   const unreadOnly = useGeneralSettingKey("unreadOnly")
-  const hidePrivateSubscriptionsInTimeline = useGeneralSettingKey(
-    "hidePrivateSubscriptionsInTimeline",
-  )
   const savedSortOrder = useGeneralSettingKey("timelineSortOrder")
   const effectiveUnreadOnly = unreadOnly && !isPreview
   const effectiveSortOrder = getEffectiveRouteEntrySortOrder({
@@ -153,7 +143,7 @@ const useLocalEntries = (): UseEntriesReturn => {
     feedId,
     view,
   })
-  const entryIdsByView = useEntryIdsByView(view, hidePrivateSubscriptionsInTimeline)
+  const entryIdsByView = useEntryIdsByView(view)
   const entryIdsByCollections = useCollectionEntryList(view)
   const entryIdsByFeedId = useEntryIdsByFeedId(feedId)
   const entryIdsByCategory = useEntryIdsByFeedIds(folderIds)

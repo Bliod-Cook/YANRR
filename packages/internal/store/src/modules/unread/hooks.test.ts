@@ -54,12 +54,11 @@ describe("hasUnreadCounterAboveList", () => {
       data: {
         feed1: subscription("feed1"),
         feed2: subscription("feed2"),
-        feed3: subscription("feed3", { isPrivate: true }),
         feed4: subscription("feed4", { hideFromTimeline: true }),
       } as never,
       feedIdByView: {
         ...state.feedIdByView,
-        [FeedViewType.Articles]: new Set(["feed1", "feed2", "feed3", "feed4"]),
+        [FeedViewType.Articles]: new Set(["feed1", "feed2", "feed4"]),
         [FeedViewType.SocialMedia]: new Set(),
       },
       listIdByView: { ...state.listIdByView, [FeedViewType.Articles]: new Set() },
@@ -72,7 +71,6 @@ describe("hasUnreadCounterAboveList", () => {
       [
         { id: "feed1", count: 1 },
         { id: "feed2", count: 1 },
-        { id: "feed3", count: 5 },
         { id: "feed4", count: 5 },
       ],
       { reset: true },
@@ -95,26 +93,14 @@ describe("hasUnreadCounterAboveList", () => {
     expect(getUnreadScopeIds({ listId: "list1" })).toEqual(["feed1", "feed2"])
     expect(getUnreadScopeIds({ feedIdList: ["feed2"] })).toEqual(["feed2"])
     expect(getUnreadScopeIds({ inboxId: "inbox-a" })).toEqual(["inbox-a"])
-    // Hidden subscriptions never reach the timeline; private ones only when they are not hidden.
-    expect(getUnreadScopeIds({ view: FeedViewType.Articles })).toEqual(["feed1", "feed2", "feed3"])
-    expect(getUnreadScopeIds({ view: FeedViewType.Articles, excludePrivate: true })).toEqual([
-      "feed1",
-      "feed2",
-    ])
-    expect(getUnreadScopeIds({ view: FeedViewType.All, excludePrivate: true })).toEqual([
-      "feed1",
-      "feed2",
-    ])
+    // Hidden subscriptions never reach the timeline
+    expect(getUnreadScopeIds({ view: FeedViewType.Articles })).toEqual(["feed1", "feed2"])
+    expect(getUnreadScopeIds({ view: FeedViewType.All })).toEqual(["feed1", "feed2"])
 
-    expect(
-      hasUnreadCounterAboveList(["entry1", "entry3"], {
-        view: FeedViewType.Articles,
-        excludePrivate: true,
-      }),
-    ).toBe(false)
-    expect(
-      hasUnreadCounterAboveList(["entry1"], { view: FeedViewType.Articles, excludePrivate: true }),
-    ).toBe(true)
+    expect(hasUnreadCounterAboveList(["entry1", "entry3"], { view: FeedViewType.Articles })).toBe(
+      false,
+    )
+    expect(hasUnreadCounterAboveList(["entry1"], { view: FeedViewType.Articles })).toBe(true)
   })
 
   it("has no opinion on lists without a counter", () => {

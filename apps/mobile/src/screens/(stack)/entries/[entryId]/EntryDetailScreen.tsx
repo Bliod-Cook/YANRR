@@ -1,5 +1,5 @@
 import { FeedViewType } from "@follow/constants"
-import { useEntry, useEntryReadHistory, usePrefetchEntryDetail } from "@follow/store/entry/hooks"
+import { useEntry, usePrefetchEntryDetail } from "@follow/store/entry/hooks"
 import { entrySyncServices } from "@follow/store/entry/store"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useColor } from "react-native-uikit-colors"
 
 import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
-import { useUISettingKey } from "@/src/atoms/settings/ui"
 import { BottomTabBarHeightContext } from "@/src/components/layouts/tabbar/contexts/BottomTabBarHeightContext"
 import { SafeNavigationScrollView } from "@/src/components/layouts/views/SafeNavigationScrollView"
 import { EntryContentWebView } from "@/src/components/native/webview/EntryContentWebView"
@@ -25,7 +24,6 @@ import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
 import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { Text } from "@/src/components/ui/typography/Text"
 import { CalendarTimeAddCuteReIcon } from "@/src/icons/calendar_time_add_cute_re"
-import { Eye2CuteReIcon } from "@/src/icons/eye_2_cute_re"
 import { openLink } from "@/src/lib/native"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
@@ -228,12 +226,9 @@ const EntryInfo = ({ entryId }: { entryId: string }) => {
     publishedAt: state.publishedAt,
     feedId: state.feedId,
   }))
-  const isLoggedIn = useIsLoggedIn()
   const feed = useFeedById(entry?.feedId)
   const feedTitle = usePreferredFeedTitle(entry?.feedId)
   const secondaryLabelColor = useColor("secondaryLabel")
-  const readCount = useEntryReadHistory(entryId, 20, isLoggedIn)?.entryReadHistories?.readCount ?? 0
-  const hideRecentReader = useUISettingKey("hideRecentReader")
   if (!entry) return null
   const { publishedAt } = entry
   return (
@@ -253,12 +248,6 @@ const EntryInfo = ({ entryId }: { entryId: string }) => {
           className="text-xs leading-tight text-secondary-label"
         />
       </View>
-      {isLoggedIn && !hideRecentReader && (
-        <View className="flex flex-row items-center gap-1">
-          <Eye2CuteReIcon width={16} height={16} color={secondaryLabelColor} />
-          <Text className="text-xs leading-tight text-secondary-label">{readCount}</Text>
-        </View>
-      )}
     </View>
   )
 }

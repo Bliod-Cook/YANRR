@@ -9,7 +9,6 @@ import { useShallow } from "zustand/shallow"
 
 import { useShowAITranslation } from "~/atoms/ai-translation"
 import { useActionLanguage } from "~/atoms/settings/general"
-import { useUISettingKey } from "~/atoms/settings/ui"
 import { RelativeTime } from "~/components/ui/datetime"
 import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { useFeedSafeUrl } from "~/hooks/common/useFeedSafeUrl"
@@ -19,21 +18,14 @@ import { FeedIcon } from "~/modules/feed/feed-icon"
 import { getPreferredTitle } from "~/store/feed/hooks"
 
 import { EntryTranslation } from "../../entry-column/translation"
-import { EntryReadHistory } from "./entry-read-history"
 
 interface EntryLinkProps {
   entryId: string
   compact?: boolean
   containerClassName?: string
-  noRecentReader?: boolean
 }
 
-export const EntryTitle = ({
-  entryId,
-  compact,
-  containerClassName,
-  noRecentReader,
-}: EntryLinkProps) => {
+export const EntryTitle = ({ entryId, compact, containerClassName }: EntryLinkProps) => {
   const { t } = useTranslation("common")
   const entry = useEntry(
     entryId,
@@ -67,8 +59,6 @@ export const EntryTitle = ({
       }
     }),
   )
-
-  const hideRecentReader = useUISettingKey("hideRecentReader")
 
   const feed = useFeedById(entry?.feedId)
   const inbox = useInboxById(entry?.inboxId)
@@ -190,8 +180,6 @@ export const EntryTitle = ({
             )}
           </div>
         </div>
-        {/* Recent Readers */}
-        {!noRecentReader && !hideRecentReader && <EntryReadHistory entryId={entryId} />}
       </div>
     </div>
   )

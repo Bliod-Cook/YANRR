@@ -142,31 +142,6 @@ export function isBizId(id: string | undefined): id is string {
   return false
 }
 
-export function formatXml(xml: string, indent = 4) {
-  const PADDING = " ".repeat(indent)
-  let formatted = ""
-  const regex = /(>)(<)(\/*)/g
-  const xmlStr = xml.replaceAll(regex, "$1\r\n$2$3")
-  let pad = 0
-  xmlStr.split("\r\n").forEach((node) => {
-    let indent = 0
-    if (/.+<\/\w[^>]*>$/.test(node)) {
-      indent = 0
-    } else if (/^<\/\w/.test(node) && pad !== 0) {
-      pad -= 1
-    } else if (/^<\w(?:[^>]*[^/])?>.*$/.test(node)) {
-      indent = 1
-    } else {
-      indent = 0
-    }
-
-    formatted += `${PADDING.repeat(pad) + node}\r\n`
-    pad += indent
-  })
-
-  return formatted.trim()
-}
-
 export const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 export const capitalizeFirstLetter = (string: string) =>
