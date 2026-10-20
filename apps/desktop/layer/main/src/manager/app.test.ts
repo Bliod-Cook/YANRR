@@ -30,7 +30,7 @@ const credentials = {
     publicKey: "public-key",
   },
   config: {
-    bundleId: "is.follow",
+    bundleId: "io.github.bliodcook.yannr",
     projectId: "project-id",
     vapidKey: "vapid-key",
   },
@@ -92,9 +92,9 @@ vi.mock("@follow/shared/bridge", () => ({
 }))
 
 vi.mock("@follow/shared/constants", () => ({
-  APP_PROTOCOL: "folo",
+  APP_ID: "io.github.bliodcook.yannr",
+  APP_PROTOCOL: "yannr",
   DEV: false,
-  LEGACY_APP_PROTOCOL: "follow",
 }))
 
 vi.stubEnv("VITE_FIREBASE_CONFIG", JSON.stringify(mocks.firebaseConfig))
@@ -278,8 +278,7 @@ describe("AppManager URL schemes", () => {
     registerProtocols()
 
     expect(mocks.app.setAsDefaultProtocolClient.mock.calls.map(([scheme]) => scheme)).toEqual([
-      "follow",
-      "folo",
+      "yannr",
     ])
   })
 

@@ -74,7 +74,7 @@ const credentials = {
     publicKey: "public-key",
   },
   config: {
-    bundleId: "is.follow",
+    bundleId: "io.github.bliodcook.yannr",
     projectId: "project-id",
     vapidKey: "vapid-key",
   },

@@ -9,7 +9,7 @@ export const createBuildSafeHeaders =
     if (headers["User-Agent"]) {
       headers["User-Agent"] = headers["User-Agent"]
         .replace(/\s?Electron\/[\d.]+/, "")
-        .replace(/\s?Folo\/[\d.a-zA-Z-]+/, "")
+        .replace(/\s?Yannr\/[\d.a-zA-Z-]+/, "")
     } else {
       headers["User-Agent"] =
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
@@ -30,8 +30,8 @@ export const createBuildSafeHeaders =
     }
 
     if (
-      (headers.Referer && headers.Referer !== "app://folo.is") ||
-      (headers.Origin && headers.Origin !== "app://folo.is")
+      (headers.Referer && headers.Referer !== "app://yannr") ||
+      (headers.Origin && headers.Origin !== "app://yannr")
     ) {
       return headers
     }
@@ -110,7 +110,7 @@ export const createDesktopAPIHeaders = ({ version }: { version: string }) => {
   return {
     ...commonHeaders,
     ...(platform ? { "X-App-Platform": platform } : {}),
-    "X-App-Name": "Folo Web",
+    "X-App-Name": "Yannr Web",
     "X-App-Version": version,
     ...(DEV ? { "X-App-Dev": "1" } : {}),
   }
@@ -154,7 +154,7 @@ export const createMobileAPIHeaders = ({
   return {
     ...commonHeaders,
     ...(platform ? { "X-App-Platform": platform } : {}),
-    "X-App-Name": "Folo Mobile",
+    "X-App-Name": "Yannr Mobile",
     "X-App-Version": version,
   }
 }

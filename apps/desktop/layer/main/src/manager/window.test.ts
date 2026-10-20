@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock("@electron-toolkit/utils", () => ({ is: { dev: false } }))
-vi.mock("@follow/shared", () => ({ LEGACY_APP_PROTOCOL: "follow" }))
 vi.mock("@follow/shared/bridge", () => ({
   callWindowExpose: () => ({
     dialog: { ask: mocks.ask },
@@ -20,7 +19,7 @@ vi.mock("@follow/shared/bridge", () => ({
   }),
   WindowState: {},
 }))
-vi.mock("@follow/shared/constants", () => ({ APP_PROTOCOL: "folo", DEV: false }))
+vi.mock("@follow/shared/constants", () => ({ APP_PROTOCOL: "yannr", DEV: false }))
 vi.mock("electron", () => ({
   BrowserWindow: class {},
   screen: {},
@@ -28,7 +27,7 @@ vi.mock("electron", () => ({
 }))
 vi.mock("~/env", () => ({ isMacOS: true, isWindows: false }))
 vi.mock("~/helper", () => ({
-  filePathToAppUrl: (filePath: string) => `app://folo.is${filePath}`,
+  filePathToAppUrl: (filePath: string) => `app://yannr${filePath}`,
   getIconPath: vi.fn(),
 }))
 vi.mock("~/lib/deep-link", () => ({ setRendererReady: vi.fn() }))
@@ -91,17 +90,17 @@ describe("main window navigation", () => {
   })
 
   it("keeps the app's own pages, e.g. on a reload", () => {
-    const event = navigate("app://folo.is/Applications/Folo.app/renderer/index.html#/timeline")
+    const event = navigate("app://yannr/Applications/Yannr.app/renderer/index.html#/timeline")
 
     expect(event.preventDefault).not.toHaveBeenCalled()
     expect(mocks.openExternal).not.toHaveBeenCalled()
   })
 
   it("opens web pages in the browser instead of the window", () => {
-    const event = navigate("https://example.com/folo-nav-test")
+    const event = navigate("https://example.com/nav-test")
 
     expect(event.preventDefault).toHaveBeenCalled()
-    expect(mocks.openExternal).toHaveBeenCalledWith("https://example.com/folo-nav-test")
+    expect(mocks.openExternal).toHaveBeenCalledWith("https://example.com/nav-test")
   })
 
   it("blocks other local pages", () => {
@@ -113,7 +112,7 @@ describe("main window navigation", () => {
   })
 
   it("leaves the app's deep links to the system", () => {
-    const event = navigate("folo://feed?id=1")
+    const event = navigate("yannr://feed?id=1")
 
     expect(event.preventDefault).not.toHaveBeenCalled()
   })

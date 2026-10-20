@@ -6,7 +6,7 @@ import { e2eUserDataDir } from "./env"
 if (e2eUserDataDir) {
   app.setPath("userData", e2eUserDataDir)
 } else if (import.meta.env.DEV) {
-  app.setPath("userData", path.join(app.getPath("appData"), "Folo(dev)"))
+  app.setPath("userData", path.join(app.getPath("appData"), "Yannr(dev)"))
 }
 
 protocol.registerSchemesAsPrivileged([

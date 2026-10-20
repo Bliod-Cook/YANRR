@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs"
 
 import { electronApp, optimizer } from "@electron-toolkit/utils"
-import { DEV, LEGACY_APP_PROTOCOL } from "@follow/shared/constants"
+import { APP_ID, DEV } from "@follow/shared/constants"
 import { createBuildSafeHeaders } from "@follow/utils/headers"
 import { getApiUrl } from "@follow/utils/server-url"
 import { app, BrowserWindow, net, protocol, session } from "electron"
@@ -75,7 +75,7 @@ export class BootstrapManager {
         optimizer.watchWindowShortcuts(window)
       })
 
-      electronApp.setAppUserModelId(`re.${LEGACY_APP_PROTOCOL}`)
+      electronApp.setAppUserModelId(APP_ID)
 
       const server = getServerUrl()
       const buildSafeHeaders = createBuildSafeHeaders(server ?? "", [
