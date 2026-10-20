@@ -1,13 +1,26 @@
 import { deleteDB } from "@follow/database/db"
 import { clearStorage } from "@follow/utils/ns"
 
-import { getAuthSessionToken, setAuthSessionToken } from "~/lib/client-session"
+import { QUERY_PERSIST_KEY } from "~/constants"
+import {
+  clearAuthSessionToken,
+  getAuthSessionToken,
+  setAuthSessionToken,
+} from "~/lib/client-session"
 import { reloadAtAppRoot } from "~/lib/reload-at-app-root"
 
 import { clearImageDimensionsDb } from "../image/db"
 
 export const clearLocalPersistStoreData = async () => {
   await Promise.all([deleteDB(), clearImageDimensionsDb()])
+}
+
+/** Everything of the session on this device, as a sign-out leaves it: data, cache and settings */
+export const clearLocalSessionData = async () => {
+  clearAuthSessionToken()
+  localStorage.removeItem(QUERY_PERSIST_KEY)
+  await clearLocalPersistStoreData()
+  clearStorage()
 }
 
 /**

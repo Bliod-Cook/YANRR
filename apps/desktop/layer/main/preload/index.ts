@@ -2,6 +2,8 @@ import os from "node:os"
 import { platform } from "node:process"
 
 import { electronAPI } from "@electron-toolkit/preload"
+import { SERVER_URL_ARG } from "@follow/shared/desktop-launch"
+import { getApiUrl } from "@follow/utils/server-url"
 import { contextBridge } from "electron"
 
 export const isMacOS = platform === "darwin"
@@ -32,6 +34,13 @@ const api = {
   isWindowsStore: Boolean((process as typeof process & { windowsStore?: boolean }).windowsStore),
 }
 
+// The server the main process passed, read by `@follow/shared/env.desktop` before any renderer
+// module runs. Missing until the user has set one.
+const server = process.argv
+  .find((arg) => arg.startsWith(SERVER_URL_ARG))
+  ?.slice(SERVER_URL_ARG.length)
+const followEnv = server ? { VITE_API_URL: getApiUrl(server), VITE_WEB_URL: server } : undefined
+
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
@@ -40,6 +49,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld("electron", electronAPI)
     contextBridge.exposeInMainWorld("api", api)
     contextBridge.exposeInMainWorld("platform", process.platform)
+    if (followEnv) contextBridge.exposeInMainWorld("__followEnv", followEnv)
   } catch (error) {
     console.error(error)
   }
@@ -50,4 +60,6 @@ if (process.contextIsolated) {
   window.api = api
   // @ts-ignore (define in dts)
   window.platform = process.platform
+  // @ts-ignore (define in dts)
+  window.__followEnv = followEnv
 }

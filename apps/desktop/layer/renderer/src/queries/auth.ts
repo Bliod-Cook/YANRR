@@ -1,7 +1,6 @@
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { useWhoami, whoamiQueryKey } from "@follow/store/user/hooks"
 import { userSyncService } from "@follow/store/user/store"
-import { clearStorage } from "@follow/utils/ns"
 import type { FetchError } from "ofetch"
 import { useEffect } from "react"
 
@@ -10,10 +9,10 @@ import { QUERY_PERSIST_KEY } from "~/constants"
 import { useAuthQuery } from "~/hooks/common"
 import { getSession as refreshBetterAuthSession, signOut as signOutFn } from "~/lib/auth"
 import { ipcServices } from "~/lib/client"
-import { clearAuthSessionToken, getAuthSessionToken } from "~/lib/client-session"
+import { getAuthSessionToken } from "~/lib/client-session"
 import { defineQuery } from "~/lib/defineQuery"
 import { reloadAtAppRoot } from "~/lib/reload-at-app-root"
-import { clearLocalPersistStoreData } from "~/store/utils/clear"
+import { clearLocalSessionData } from "~/store/utils/clear"
 
 const sessionCookieRefreshInterval = 1000 * 60 * 60 * 12
 
@@ -173,16 +172,7 @@ export const signOut = async () => {
       await signOutFn()
     }
   } finally {
-    clearAuthSessionToken()
-    // Clear query cache
-    localStorage.removeItem(QUERY_PERSIST_KEY)
-
-    // clear local store data
-    await clearLocalPersistStoreData()
-
-    // Clear local storage
-    clearStorage()
-    // Sign out
+    await clearLocalSessionData()
   }
 
   reloadAtAppRoot()

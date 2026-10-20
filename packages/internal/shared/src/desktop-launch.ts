@@ -7,3 +7,6 @@
  * @see https://github.com/electron/electron/issues/25081
  */
 export const START_IN_TRAY_ARGS = "--start-in-tray"
+
+/** Hands the server's address to a window's preload script, which runs before the renderer */
+export const SERVER_URL_ARG = "--yannr-server="

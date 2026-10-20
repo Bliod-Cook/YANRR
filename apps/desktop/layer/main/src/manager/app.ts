@@ -1,7 +1,6 @@
 import { PushReceiver } from "@eneris/push-receiver"
 import { callWindowExpose } from "@follow/shared/bridge"
 import { APP_PROTOCOL, DEV, LEGACY_APP_PROTOCOL } from "@follow/shared/constants"
-import { env } from "@follow/shared/env.desktop"
 import { app, nativeTheme, Notification, shell } from "electron"
 import contextMenu from "electron-context-menu"
 import path from "pathe"
@@ -90,7 +89,8 @@ class AppManagerStatic {
   }
 
   private async registerPushNotifications() {
-    if (!env.VITE_FIREBASE_CONFIG) {
+    const firebaseConfig = import.meta.env.VITE_FIREBASE_CONFIG
+    if (!firebaseConfig) {
       return
     }
 
@@ -101,7 +101,7 @@ class AppManagerStatic {
 
     const instance = new PushReceiver({
       debug: false,
-      firebase: JSON.parse(env.VITE_FIREBASE_CONFIG),
+      firebase: JSON.parse(firebaseConfig),
       persistentIds: persistentIds || [],
       credentials: credentials || undefined,
       bundleId: "is.follow",

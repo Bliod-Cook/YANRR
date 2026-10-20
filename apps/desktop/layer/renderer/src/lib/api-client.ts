@@ -25,7 +25,7 @@ const isElectronRuntime = () => {
  */
 const NULL_BODY_STATUSES = new Set([101, 204, 205, 304])
 
-const fetchWithElectronAuth = async (request: Request) => {
+export const fetchWithElectronAuth = async (request: Request) => {
   const requestURL = new URL(request.url)
   const apiURL = new URL(env.VITE_API_URL)
   const authService = ipcServices?.auth as

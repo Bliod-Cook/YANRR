@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url"
 import { join } from "pathe"
 
 export interface DesktopE2EEnv {
+  /** The Yannr server: the web dev server forwards `/api` to it, Electron talks to it directly */
+  serverURL: string
   apiURL: string
   webURL: string
   webBaseURL: string
@@ -31,6 +33,7 @@ export const resolveDesktopE2EEnv = (): DesktopE2EEnv => {
   const webBaseURL = process.env.YANNR_E2E_WEB_URL ?? "http://localhost:2233"
 
   return {
+    serverURL: process.env.VITE_DEV_PROXY_TARGET ?? "http://localhost:3000",
     apiURL: `${webBaseURL}/api`,
     webURL: webBaseURL,
     webBaseURL,

@@ -1,7 +1,7 @@
 import { IpcMethod, IpcService } from "electron-ipc-decorator"
 
 import { UNREAD_BACKGROUND_POLLING_INTERVAL } from "../../constants/app"
-import { apiClient } from "../../lib/api-client"
+import { getApiClient } from "../../lib/api-client"
 import { setDockCount } from "../../lib/dock"
 
 class PollingManager {
@@ -85,7 +85,7 @@ export class DockService extends IpcService {
 
   @IpcMethod()
   async updateUnreadCount(): Promise<void> {
-    const res = await apiClient.reads.getTotalCount()
+    const res = await getApiClient().reads.getTotalCount()
 
     setDockCount(res.data.count)
   }

@@ -4,7 +4,7 @@ import { FollowAPIError } from "@follow-app/client-sdk"
 import { isLinux, isMacOS, isWindows } from "~/env"
 import { logger } from "~/logger"
 
-import { apiClient } from "./api-client"
+import { getApiClient } from "./api-client"
 import { getSessionTokenFromCookies } from "./auth-cookies"
 import { store } from "./store"
 
@@ -46,7 +46,7 @@ export const updateNotificationsToken = async (newCredentials?: Credentials) => 
 
   cancelRetry()
   try {
-    await apiClient.messaging.createToken({
+    await getApiClient().messaging.createToken({
       token,
       channel: notificationChannel,
     })
@@ -94,7 +94,7 @@ export const deleteNotificationsToken = async () => {
   cancelRetry()
   retryCount = 0
   store.delete("notifications-token-sent")
-  await apiClient.messaging.deleteToken({
+  await getApiClient().messaging.deleteToken({
     channel: notificationChannel,
   })
 }

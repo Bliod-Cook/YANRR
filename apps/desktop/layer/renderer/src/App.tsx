@@ -1,7 +1,6 @@
 import { isMobile } from "@follow/components/hooks/useMobile.js"
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { nextFrame } from "@follow/utils"
-import { cn, getOS } from "@follow/utils/utils"
 import { useEffect, useLayoutEffect, useRef } from "react"
 import { Outlet } from "react-router"
 
@@ -10,24 +9,13 @@ import { useUISettingKey } from "./atoms/settings/ui"
 import { removeAppSkeleton } from "./lib/app"
 import { ipcServices } from "./lib/client"
 import { appLog } from "./lib/log"
-import { Titlebar } from "./modules/app/Titlebar"
+import { WindowTitlebarRegion } from "./modules/app/Titlebar"
 import { RootProviders } from "./providers/root-providers"
 
 function App() {
-  const windowsElectron = IN_ELECTRON && getOS() === "Windows"
   return (
     <RootProviders>
-      {IN_ELECTRON && (
-        <div
-          className={cn(
-            "drag-region fixed inset-x-0 top-0 h-12 shrink-0",
-            windowsElectron && "pointer-events-none z-[9999]",
-          )}
-          aria-hidden
-        >
-          {windowsElectron && <Titlebar />}
-        </div>
-      )}
+      {IN_ELECTRON && <WindowTitlebarRegion />}
 
       <AppLayer />
     </RootProviders>
