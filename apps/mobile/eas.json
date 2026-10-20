@@ -56,17 +56,5 @@
         "buildType": "apk"
       }
     }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "diygod@rss3.io",
-        "ascAppId": "6739802604",
-        "appleTeamId": "492J8Q67PF"
-      },
-      "android": {
-        "releaseStatus": "draft"
-      }
-    }
   }
 }

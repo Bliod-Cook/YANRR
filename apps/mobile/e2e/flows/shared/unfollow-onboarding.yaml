@@ -1,13 +1,13 @@
-appId: is.follow
+appId: io.github.bliodcook.yannr
 ---
 - tapOn:
     id: tab-SubscriptionsTabScreen
 - extendedWaitUntil:
     visible:
-      id: subscription-feed-url-folo-onboarding
+      id: subscription-feed-url-yannr-onboarding
     timeout: 20000
 - longPressOn:
-    id: subscription-feed-url-folo-onboarding
+    id: subscription-feed-url-yannr-onboarding
 - extendedWaitUntil:
     visible: Unfollow
     timeout: 10000
@@ -16,9 +16,9 @@ appId: is.follow
     text: Unfollow
 - extendedWaitUntil:
     notVisible:
-      id: subscription-feed-url-folo-onboarding
+      id: subscription-feed-url-yannr-onboarding
     timeout: 20000
 - assertNotVisible:
-    id: subscription-feed-url-folo-onboarding
+    id: subscription-feed-url-yannr-onboarding
 - assertVisible:
     id: tab-IndexTabScreen

@@ -20,7 +20,7 @@ const addLaunchLinkGuard = (contents) =>
     // Before the call, as the activity hands the intent on from there
     offset: -1,
     newSrc: GUARD,
-    tag: "folo-launch-link-guard",
+    tag: "yannr-launch-link-guard",
     comment: "    //",
   }).contents
 

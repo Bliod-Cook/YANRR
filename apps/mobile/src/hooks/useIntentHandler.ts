@@ -11,7 +11,7 @@ import { FollowScreen } from "../screens/(modal)/FollowScreen"
 import { LoginScreen } from "../screens/(modal)/LoginScreen"
 
 // The launch link can be reported both by getInitialURL and as a url event. Only that echo is
-// skipped: opening the same link again later, like a second "Add to Folo" tap, must work.
+// skipped: opening the same link again later, like a second "Add to Yannr" tap, must work.
 const DUPLICATE_LINK_WINDOW_MS = 2000
 let lastHandledLink: { url: string; at: number } | null = null
 let initialUrlChecked = false
@@ -32,7 +32,7 @@ type FollowScreenProps = {
 let pendingFollowScreen: FollowScreenProps | null = null
 
 const presentFollowScreen = async (navigation: Navigation, props: FollowScreenProps) => {
-  // A link opened from a page in the in-app browser, such as "Open in Folo", would open its form
+  // A link opened from a page in the in-app browser, such as "Open in Yannr", would open its form
   // under the browser
   await dismissInAppBrowser()
 
@@ -127,7 +127,7 @@ const extractParamsFromDeepLink = (incomingUrl: string | null): DeepLinkParams =
 
   try {
     const url = new URL(incomingUrl)
-    if (url.protocol !== "follow:" && url.protocol !== "folo:") return null
+    if (url.protocol !== "yannr:") return null
 
     switch (url.hostname) {
       case "add":
