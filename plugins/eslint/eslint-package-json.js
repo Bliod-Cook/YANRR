@@ -6,12 +6,10 @@ import fg from "fast-glob"
 import path from "pathe"
 
 const dependencyKeys = ["dependencies", "devDependencies"]
-const ignoredEnsureVersionFiles = new Set(["apps/landing/package.json"])
 const ignoredEnsureVersionDependencies = new Map([
   // electron-vite 5 still peers Vite 5/6/7, so the root desktop toolchain
   // stays on Vite 7 while Vite-native apps can move to Vite 8.
   ["package.json", new Set(["vite"])],
-  ["apps/ssr/package.json", new Set(["@vitejs/plugin-react", "vite"])],
   ["apps/mobile/web-app/html-renderer/package.json", new Set(["@vitejs/plugin-react"])],
   // NativeWind 4 uses react-native-css-interop, whose latest stable release
   // still requires Tailwind CSS 3.
@@ -40,7 +38,6 @@ export default {
 
         const cwd = process.cwd()
         const currentFilePath = path.relative(cwd, context.filename).replaceAll("\\", "/")
-        if (ignoredEnsureVersionFiles.has(currentFilePath)) return {}
 
         const packageJsonFilePaths = fg.globSync(
           ["packages/*/package.json", "apps/*/package.json", "package.json"],
@@ -54,7 +51,6 @@ export default {
         const packageVersionMap = new Map()
 
         packageJsonFilePaths.forEach((filePath) => {
-          if (ignoredEnsureVersionFiles.has(filePath)) return
           if (filePath === path.relative(cwd, context.filename)) return
 
           const packageJson = JSON.parse(fs.readFileSync(filePath, "utf-8"))

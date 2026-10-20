@@ -22,7 +22,6 @@
     "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc --noEmit",
     "update": "tsx scripts/expo-update.ts",
-    "update:bundle": "node ../../.github/scripts/build-ota-release.mjs",
     "update:export": "expo export -p ios -p android --output-dir dist",
     "web": "expo start --web"
   },

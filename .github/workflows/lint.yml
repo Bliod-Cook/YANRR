@@ -1,17 +1,12 @@
 on:
   pull_request:
   push:
-    branches: [main, dev, mobile-main]
-
-# Do not use secrets or variables to allow for public access
-env:
-  VITE_WEB_URL: https://app.folo.is
-  VITE_API_URL: https://api.follow.is
+    branches: [main]
 
 name: ✨ CI Format, Typecheck and Lint
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-lint
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev' && github.ref != 'refs/heads/mobile-main' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 jobs:
   build:
     name: Format, Lint and Typecheck
@@ -45,17 +40,12 @@ jobs:
           cache: "pnpm"
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --child-concurrency=1
-      - name: Build web and SSR server
+      - name: Build web
         run: |
-          npm exec turbo run Folo#build:web @follow/ssr#build
+          npm exec turbo run Folo#build:web
       - name: Format, Lint and Typecheck
         run: |
           export NODE_OPTIONS="--max_old_space_size=16384"
           npm exec turbo run format:check typecheck lint
-      - name: Run release workflow tests
-        run: >-
-          pnpm exec vitest run
-          .github/scripts/extract-release-info.test.ts
-          .github/scripts/release-workflow-guards.test.ts
       - name: Run test
         run: npm exec turbo run test

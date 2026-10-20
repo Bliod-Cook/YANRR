@@ -81,7 +81,7 @@ export const viteRenderBaseConfig = {
     APP_NAME: JSON.stringify(pkg.productName),
     APP_DEV_CWD: JSON.stringify(process.cwd()),
 
-    GIT_COMMIT_SHA: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA || getGitHash()),
+    GIT_COMMIT_SHA: JSON.stringify(getGitHash()),
 
     RELEASE_CHANNEL: JSON.stringify((prerelease(pkg.version)?.[0] as string) || "stable"),
 
