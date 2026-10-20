@@ -569,7 +569,6 @@ class SubscriptionSyncService {
       type: "feed",
       createdAt: new Date().toISOString(),
       feedId: data.feed.id,
-      listId: null,
       inboxId: null,
       userId: whoami()?.id ?? "",
     }

@@ -46,7 +46,6 @@ vi.mock("./useRouteParams", () => ({
 
 const subscription: SubscriptionModel = {
   feedId: "feed-1",
-  listId: null,
   inboxId: null,
   userId: "user-1",
   view: 0,

@@ -25,7 +25,6 @@ export const feedsTable = sqliteTable("feeds", {
 
 export const subscriptionsTable = sqliteTable("subscriptions", {
   feedId: text("feed_id"),
-  listId: text("list_id"),
   inboxId: text("inbox_id"),
   userId: text("user_id").notNull(),
   view: integer("view").notNull().$type<FeedViewType>(),
@@ -34,7 +33,7 @@ export const subscriptionsTable = sqliteTable("subscriptions", {
   title: text("title"),
   category: text("category"),
   createdAt: text("created_at"),
-  type: text("type").notNull().$type<"feed" | "list" | "inbox">(),
+  type: text("type").notNull().$type<"feed" | "inbox">(),
   id: text("id").primaryKey(),
 })
 
@@ -42,20 +41,6 @@ export const inboxesTable = sqliteTable("inboxes", {
   id: text("id").primaryKey(),
   title: text("title"),
   secret: text("secret").notNull(),
-})
-
-export const listsTable = sqliteTable("lists", {
-  id: text("id").primaryKey(),
-  userId: text("user_id"),
-  title: text("title").notNull(),
-  feedIds: text("feed_ids", { mode: "json" }).$type<string>(),
-  description: text("description"),
-  view: integer("view").notNull().$type<FeedViewType>(),
-  image: text("image"),
-  fee: integer("fee"),
-  ownerUserId: text("owner_user_id"),
-  subscriptionCount: integer("subscription_count"),
-  purchaseAmount: text("purchase_amount"),
 })
 
 export const unreadTable = sqliteTable("unread", {
