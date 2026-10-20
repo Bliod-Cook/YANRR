@@ -1,6 +1,7 @@
 import type { SearchFeedCardItem } from "./SearchFeedCard"
 
-const isDirectFeedInput = (value: string) => value.includes("://")
+/** Discovery takes addresses only, such as feed and site URLs and RSSHub routes */
+export const isDirectFeedInput = (value: string) => value.includes("://")
 
 export const resolveSearchFeedItems = <T extends SearchFeedCardItem>(
   discoveredItems: readonly T[],

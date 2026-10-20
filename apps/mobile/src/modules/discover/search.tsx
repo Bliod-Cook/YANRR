@@ -19,8 +19,7 @@ import { queryClient } from "@/src/lib/query-client"
 import { useHeaderWindowControlsInsets } from "@/src/lib/window-controls"
 import { accentColor, useColor } from "@/src/theme/colors"
 
-import { useSearchPageContext, useSearchPageScrollContainerAnimatedX } from "./ctx"
-import { SearchTabBar } from "./SearchTabBar"
+import { useSearchPageContext } from "./ctx"
 
 const SEARCH_ROW_MARGIN = 16
 
@@ -33,9 +32,6 @@ export const DiscoverHeader = () => {
     modalPresentation: sheetModal,
     topInset: insets.top,
   })
-  const scrollContainerAnimatedX = useSearchPageScrollContainerAnimatedX()
-  const { searchFocusedAtom } = useSearchPageContext()
-  const isFocused = useAtomValue(searchFocusedAtom)
   const setHeaderHeight = use(SetNavigationHeaderHeightContext)
   const windowControlsInsets = useHeaderWindowControlsInsets()
   // Clear of the iPadOS window controls, which sit over the start of the field otherwise
@@ -63,7 +59,6 @@ export const DiscoverHeader = () => {
       <View style={searchRowStyle}>
         <SearchInput />
       </View>
-      {isFocused && <SearchTabBar animatedX={scrollContainerAnimatedX} />}
     </View>
   )
 }
@@ -200,7 +195,6 @@ const SearchInput = () => {
             // Submitting the same keyword again searches again, e.g. after a failed request
             if (text === searchValue) {
               void queryClient.refetchQueries({ queryKey: ["searchFeed", searchValue] })
-              void queryClient.refetchQueries({ queryKey: ["searchList", searchValue] })
             }
             setSearchValue(text)
           }}

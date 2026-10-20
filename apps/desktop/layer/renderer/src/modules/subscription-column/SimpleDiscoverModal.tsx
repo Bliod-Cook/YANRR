@@ -26,34 +26,23 @@ import { createErrorToaster } from "~/lib/error-parser"
 
 import { DiscoverFeedCard } from "../discover/DiscoverFeedCard"
 import { FeedForm } from "../discover/FeedForm"
+import { isDiscoveredFeedItself } from "../discover/utils"
 
 const formSchema = z.object({
   keyword: z.string().min(1),
-  type: z.enum(["search", "rss", "rsshub"]),
+  type: z.enum(["rss", "rsshub"]),
 })
 
 const typeConfig = {
-  search: {
-    label: "discover.any_url_or_keyword",
-    // i18n key for a translated placeholder; the other types show a literal example.
-    placeholderKey: "discover.keyword_input_placeholder",
-    placeholder: undefined,
-    prefix: [] as string[],
-    default: undefined,
-  },
   rss: {
     label: "discover.rss_url",
-    placeholderKey: undefined,
     placeholder: "https://example.com/feed.xml",
     prefix: ["https://", "http://"],
-    default: "https://",
   },
   rsshub: {
     label: "discover.rss_hub_route",
-    placeholderKey: undefined,
     placeholder: "rsshub://github/issue/follow/follow",
     prefix: ["rsshub://"],
-    default: "rsshub://",
   },
 } as const
 
@@ -65,8 +54,8 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      keyword: "",
-      type: "search",
+      keyword: typeConfig.rss.prefix[0],
+      type: "rss",
     },
   })
 
@@ -76,32 +65,35 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
   const discoverSearchDataAtom = useState(() => atom<DiscoveryItem[]>())[0]
   const discoverSearchData = useAtomValue(discoverSearchDataAtom)
 
+  const presentFeedForm = (url: string) =>
+    present({
+      title: t("feed_form.add_feed"),
+      content: ({ dismiss: dismissFeedForm }) => (
+        <FeedForm
+          url={url}
+          onSuccess={() => {
+            dismissFeedForm()
+            dismiss()
+          }}
+        />
+      ),
+    })
+
   const mutation = useMutation({
-    mutationFn: async ({ keyword, type }: { keyword: string; type: string }) => {
-      // For RSS/RSSHub, show feed form modal
-      if (type === "rss" || type === "rsshub") {
-        present({
-          title: t("feed_form.add_feed"),
-          content: ({ dismiss: dismissFeedForm }) => (
-            <FeedForm
-              url={keyword}
-              onSuccess={() => {
-                dismissFeedForm()
-                dismiss()
-              }}
-            />
-          ),
-        })
-        return []
+    mutationFn: async ({ keyword, type }: z.infer<typeof formSchema>) => {
+      const url = keyword.trim()
+      if (type === "rsshub") {
+        presentFeedForm(url)
+        return
       }
 
-      const { data } = await followClient.api.discover.discover({
-        keyword: keyword.trim(),
-        target: "feeds",
-      })
-
+      // The address may be a site rather than a feed, so discovery looks for the site's feeds
+      const { data } = await followClient.api.discover.discover({ keyword: url })
+      if (isDiscoveredFeedItself(data, url)) {
+        presentFeedForm(url)
+        return
+      }
       jotaiStore.set(discoverSearchDataAtom, data)
-      return data
     },
     onError: createErrorToaster(t("discover.search_failed")),
   })
@@ -110,12 +102,6 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
     (event: ChangeEvent<HTMLInputElement>) => {
       const trimmedKeyword = event.target.value.trimStart()
       const { prefix } = currentConfig
-
-      if (!prefix || prefix.length === 0) {
-        form.setValue("keyword", trimmedKeyword, { shouldValidate: true })
-        return
-      }
-
       const isValidPrefix = prefix.find((p) => trimmedKeyword.startsWith(p))
       if (!isValidPrefix) {
         form.setValue("keyword", prefix[0]!)
@@ -134,13 +120,9 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
 
   const handleTypeChange = useCallback(
     (value: string) => {
-      form.setValue("type", value as any)
-      const newConfig = typeConfig[value as keyof typeof typeConfig]
-      if (newConfig.default) {
-        form.setValue("keyword", newConfig.default)
-      } else {
-        form.setValue("keyword", "")
-      }
+      const type = value as keyof typeof typeConfig
+      form.setValue("type", type)
+      form.setValue("keyword", typeConfig[type].prefix[0])
     },
     [form],
   )
@@ -165,7 +147,6 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
               <FormItem className="relative">
                 <FormControl>
                   <SegmentGroup value={field.value} onValueChanged={handleTypeChange}>
-                    <SegmentItem value="search" label={t("words.search")} />
                     <SegmentItem value="rss" label={t("words.rss")} />
                     <SegmentItem value="rsshub" label={t("words.rsshub")} />
                   </SegmentGroup>
@@ -195,11 +176,7 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
                 <FormLabel>{t(currentConfig.label)}</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder={
-                      currentConfig.placeholderKey
-                        ? t(currentConfig.placeholderKey)
-                        : currentConfig.placeholder
-                    }
+                    placeholder={currentConfig.placeholder}
                     {...field}
                     onChange={handleKeywordChange}
                   />
@@ -214,8 +191,8 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
             <Button type="button" variant="outline" onClick={dismiss}>
               {t("words.cancel", { ns: "common" })}
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? t("words.searching") : t("words.search")}
+            <Button type="submit" isLoading={mutation.isPending}>
+              {t("discover.preview")}
             </Button>
           </div>
         </form>
@@ -233,16 +210,6 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
             {discoverSearchData.map((item, index) => (
               <DiscoverFeedCard key={index} item={item} />
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {mutation.isSuccess && discoverSearchData && discoverSearchData.length === 0 && (
-        <div className="mt-6 flex flex-1 items-center justify-center">
-          <div className="text-center text-text-secondary">
-            <i className="i-mgc-search-3-cute-re mb-2 text-2xl" />
-            <p>{t("discover.no_results")}</p>
           </div>
         </div>
       )}

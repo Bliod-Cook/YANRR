@@ -25,7 +25,7 @@ import { MingcuteLeftLineIcon } from "@/src/icons/mingcute_left_line"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useColor } from "@/src/theme/colors"
 
-import { fetchRsshubAnalysis, fetchRsshubPopular } from "./api"
+import { fetchRsshubPopular } from "./api"
 import { RecommendationListItem } from "./RecommendationListItem"
 
 export const Recommendations = () => {
@@ -159,15 +159,6 @@ export const RecommendationTab: TabComponent<{
       persist: true,
     },
   })
-  const { data: analysisData, isLoading: isAnalysisLoading } = useQuery({
-    queryKey: ["rsshub-analysis", discoverLanguage],
-    queryFn: () => fetchRsshubAnalysis().then((res) => res.data),
-    staleTime: 1000 * 60 * 60 * 24,
-    // 1 day
-    meta: {
-      persist: true,
-    },
-  })
   const keys = useMemo(() => {
     if (!data) {
       return []
@@ -188,30 +179,10 @@ export const RecommendationTab: TabComponent<{
       }
     })
   }, [data])
-  const alphabetGroups = useMemo(() => {
-    const result = [] as Array<{ key: string; data: RSSHubRouteDeclaration }>
-    for (const item of keys) {
-      if (!data) {
-        continue
-      }
-      const dataWithAnalysis = data[item]! as RSSHubRouteDeclaration
-      for (const route in dataWithAnalysis.routes) {
-        const routeData = dataWithAnalysis.routes[route]!
-        routeData.heat = analysisData?.[`/${item}${route}`]?.subscriptionCount || 0
-        routeData.topFeeds = analysisData?.[`/${item}${route}`]?.topFeeds || []
-      }
-      result.push({
-        key: item,
-        data: dataWithAnalysis,
-      })
-    }
-    result.sort((a, b) => {
-      const aHeat = Object.values(a.data.routes).reduce((acc, route) => acc + (route.heat || 0), 0)
-      const bHeat = Object.values(b.data.routes).reduce((acc, route) => acc + (route.heat || 0), 0)
-      return bHeat - aHeat
-    })
-    return result
-  }, [data, keys, analysisData])
+  const alphabetGroups = useMemo(
+    () => (data ? keys.map((key) => ({ key, data: data[key]! as RSSHubRouteDeclaration })) : []),
+    [data, keys],
+  )
 
   // Add ref for FlashList
   const listRef = useRegisterNavigationScrollView<
@@ -250,7 +221,7 @@ export const RecommendationTab: TabComponent<{
     }
   }, [animatedY, isSelected])
   const insets = useSafeAreaInsets()
-  if (isLoading || isAnalysisLoading) {
+  if (isLoading) {
     return <PlatformActivityIndicator className="flex-1 items-center justify-center" />
   }
   if (keys.length === 0) {
