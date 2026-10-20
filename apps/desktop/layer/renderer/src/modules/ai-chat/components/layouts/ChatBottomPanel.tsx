@@ -6,7 +6,6 @@ import { useCallback, useLayoutEffect, useRef } from "react"
 import { useI18n } from "~/hooks/common/useI18n"
 import { ChatInput } from "~/modules/ai-chat/components/layouts/ChatInput"
 import { ChatShortcutsRow } from "~/modules/ai-chat/components/layouts/ChatShortcutsRow"
-import { RateLimitNotice } from "~/modules/ai-chat/components/layouts/RateLimitNotice"
 
 import type { ShortcutData } from "../../editor"
 import { useSendAIShortcut } from "../../hooks/useSendAIShortcut"
@@ -17,8 +16,6 @@ interface ChatBottomPanelProps {
   centerInputOnEmpty?: boolean
   visualOffsetY?: string | number
   shouldShowInterruptionNotice: boolean
-  rateLimitMessage: string | null
-  isRateLimited: boolean
   onRetryLastMessage: () => void
   onSendMessage: (message: string | EditorState) => void
   initialDraftState?: EditorState
@@ -31,8 +28,6 @@ export const ChatBottomPanel = ({
   centerInputOnEmpty,
   visualOffsetY,
   shouldShowInterruptionNotice,
-  rateLimitMessage,
-  isRateLimited,
   onRetryLastMessage,
   onSendMessage,
   initialDraftState,
@@ -106,26 +101,22 @@ export const ChatBottomPanel = ({
           <i className="i-mingcute-information-fill size-4 flex-shrink-0 text-text" />
           <div className="flex flex-1 items-center justify-between gap-1">
             <span>{t.ai("session.interrupted.message")}</span>
-            {!rateLimitMessage && (
-              <button
-                type="button"
-                onClick={onRetryLastMessage}
-                className="cursor-button self-start text-xs text-accent duration-200 hover:opacity-80"
-              >
-                {t.ai("session.interrupted.retry")}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={onRetryLastMessage}
+              className="cursor-button self-start text-xs text-accent duration-200 hover:opacity-80"
+            >
+              {t.ai("session.interrupted.retry")}
+            </button>
           </div>
         </m.div>
       )}
-      <RateLimitNotice message={rateLimitMessage} />
-      {!isRateLimited && <ChatShortcutsRow onSelect={handleShortcutSelect} />}
+      <ChatShortcutsRow onSelect={handleShortcutSelect} />
       <ChatInput
         onSend={onSendMessage}
         variant={!hasMessages ? "minimal" : "default"}
         initialDraftState={initialDraftState}
         onEditorStateChange={onDraftChange}
-        submitDisabled={isRateLimited}
       />
 
       {(!centerInputOnEmpty || hasMessages) && (

@@ -1,6 +1,5 @@
 import type { WithOptimistic } from "@follow/hooks"
 import { createOptimisticConfig, useOptimisticMutation } from "@follow/hooks"
-import { useUserRole } from "@follow/store/user/hooks"
 import type {
   AITask,
   CreateTaskRequest,
@@ -9,13 +8,12 @@ import type {
 } from "@follow-app/client-sdk"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { useServerConfigs } from "~/atoms/server-configs"
 import { followApi } from "~/lib/api-client"
 
 // Use the generic optimistic wrapper type
 type OptimisticAITask = WithOptimistic<AITask>
 
-// Callers report failures themselves, translated and with an upgrade action for plan limits
+// Callers report failures themselves, translated
 const withoutErrorToast = <T extends { errorConfig?: { showToast?: boolean } }>(config: T): T => ({
   ...config,
   errorConfig: { ...config.errorConfig, showToast: false },
@@ -37,23 +35,6 @@ export const useAITaskListQuery = () => {
     queryFn: () => followApi.aiTask.list().then((res) => res.data),
   })
   return data
-}
-
-/**
- * How many AI tasks the user's plan allows (0 when the plan has none), or undefined while
- * the plan is unknown
- */
-export const useAITaskPlanLimit = () => {
-  const role = useUserRole()
-  const serverConfigs = useServerConfigs()
-  return serverConfigs?.PAYMENT_PLAN_LIST.find((plan) => plan.role === role)?.limit.MAX_AI_TASKS
-}
-
-export const useCanCreateNewAITask = () => {
-  const tasks = useAITaskListQuery()
-  const limit = useAITaskPlanLimit()
-  // Without a known plan the server decides
-  return limit === undefined || (tasks?.length ?? 0) < limit
 }
 
 export const useAITaskQuery = (id: string | undefined, opts?: { enabled?: boolean }) => {

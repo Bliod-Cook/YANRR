@@ -4,8 +4,6 @@ import { getI18n } from "~/i18n"
 
 export interface ParsedErrorData {
   code?: number
-  remainedTokens?: number
-  windowResetTime?: string
   [key: string]: any
 }
 
@@ -14,7 +12,6 @@ export interface ParsedError {
   errorCode: number | null
   errorData: ParsedErrorData | null
   isBusinessError: boolean
-  isRateLimitError: boolean
 }
 
 /**
@@ -29,7 +26,6 @@ export function parseAIError(error: Error | string | undefined): ParsedError {
       errorCode: null,
       errorData: null,
       isBusinessError: false,
-      isRateLimitError: false,
     }
   }
 
@@ -40,7 +36,6 @@ export function parseAIError(error: Error | string | undefined): ParsedError {
     const errorData: ParsedErrorData = parsed || {}
     const { code } = errorData
 
-    const isRateLimitError = code === ExceptionCodeMap.AIRateLimitExceeded
     const isBusinessError = !!(code && ExceptionCodeMap[code])
 
     return {
@@ -48,7 +43,6 @@ export function parseAIError(error: Error | string | undefined): ParsedError {
       errorCode: code || null,
       errorData: isBusinessError ? errorData : null,
       isBusinessError,
-      isRateLimitError,
     }
   } catch {
     // Not a JSON error, return as plain text error
@@ -57,18 +51,8 @@ export function parseAIError(error: Error | string | undefined): ParsedError {
       errorCode: null,
       errorData: null,
       isBusinessError: false,
-      isRateLimitError: false,
     }
   }
-}
-
-/**
- * Check if an error is a rate limit error
- * @param error - Error object or error message string
- * @returns True if the error is a rate limit error
- */
-export function isRateLimitError(error: Error | string | undefined): boolean {
-  return parseAIError(error).isRateLimitError
 }
 
 // The server ends a stalled reply with an error chunk carrying one of these English messages.

@@ -14,15 +14,10 @@ interface ErrorMessageProps {
 /**
  * ErrorMessage component for displaying errors in the message list
  * Uses a subtle, message-like appearance with low-key colors
- * Note: Rate limit errors are handled separately by RateLimitNotice component
  */
 export const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, className }) => {
   const { t } = useTranslation("ai")
   const parsedError = React.useMemo(() => parseAIError(error), [error])
-
-  if (parsedError.isRateLimitError) {
-    return null
-  }
 
   const displayMessage = getErrorMessage(parsedError)
   const { errorCode, errorData } = parsedError

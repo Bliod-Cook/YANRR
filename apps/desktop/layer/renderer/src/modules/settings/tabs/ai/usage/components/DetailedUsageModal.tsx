@@ -15,8 +15,6 @@ import { EfficiencyTab } from "./EfficiencyTab"
 import { HistoryTab } from "./HistoryTab"
 import { OverviewTab } from "./OverviewTab"
 import { PatternsTab } from "./PatternsTab"
-import { UsageProgressRing } from "./UsageProgressRing"
-import { UsageWarningBanner } from "./UsageWarningBanner"
 
 const useAIAnalysisData = () => {
   return useQuery({
@@ -48,9 +46,6 @@ export const DetailedUsageModal = () => {
     )
   }
 
-  const { usage, rateLimit } = config
-  const usagePercentage = usage.total === 0 ? 0 : (usage.used / usage.total) * 100
-
   // Build derived datasets for inline charts
   const daily = analysis?.patterns?.daily ?? []
   const byOperation = analysis?.patterns?.byOperation ?? []
@@ -75,46 +70,19 @@ export const DetailedUsageModal = () => {
   })
   const maxHourCount = Math.max(1, ...hourBuckets)
 
-  const formattedUsageTokens = formatTokenCount(usage.used)
-  const formattedTotalTokens = formatTokenCount(usage.total)
+  const formattedUsageTokens = formatTokenCount(config.usage.used)
 
   return (
     <div className="flex max-h-[80vh] min-h-[640px] w-[500px] max-w-full flex-col space-y-6 overflow-hidden">
       <div className="space-y-6 px-4">
         <p className="text-sm text-text-secondary">{t("usage_analysis.detailed_description")}</p>
 
-        {rateLimit?.warningLevel && rateLimit.warningLevel !== "safe" && (
-          <UsageWarningBanner
-            level={rateLimit.warningLevel}
-            projectedLimitTime={rateLimit.projectedLimitTime ?? null}
-            usageRate={rateLimit.usageRate}
-            detailed={true}
+        <div className="overflow-hidden rounded-xl border border-border bg-fill-secondary/30 p-4 backdrop-blur-sm">
+          <Metric
+            label={t("usage_analysis.tokens_used")}
+            value={formattedUsageTokens.value}
+            unit={formattedUsageTokens.unit}
           />
-        )}
-
-        {/* Unified Usage Overview Card */}
-        <div className="overflow-hidden rounded-xl border border-border bg-fill-secondary/30 backdrop-blur-sm">
-          <div className="flex items-center gap-4 p-4">
-            {/* Progress Ring Section */}
-            <div className="shrink-0">
-              <UsageProgressRing percentage={usagePercentage} size={80} />
-            </div>
-
-            {/* Metrics Section */}
-            <div className="ml-6 flex flex-1 gap-6">
-              <Metric
-                label={t("usage_analysis.tokens_used")}
-                value={formattedUsageTokens.value}
-                unit={formattedUsageTokens.unit}
-              />
-              <div className="h-px bg-border/50" />
-              <Metric
-                label={t("usage_analysis.total_credits")}
-                value={formattedTotalTokens.value}
-                unit={formattedTotalTokens.unit}
-              />
-            </div>
-          </div>
         </div>
       </div>
       <Tabs defaultValue="overview" className="relative flex min-h-0 grow flex-col space-y-4">
