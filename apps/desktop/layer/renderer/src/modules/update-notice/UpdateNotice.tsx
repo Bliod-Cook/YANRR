@@ -1,96 +1,22 @@
 import { Spring } from "@follow/components/constants/spring.js"
 import { cn } from "@follow/utils/utils"
 import { m } from "motion/react"
-import { useMemo, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useAudioPlayerAtomSelector } from "~/atoms/player"
-import { getUpdaterStatus, setUpdaterStatus, useUpdaterStatus } from "~/atoms/updater"
-import { ipcServices } from "~/lib/client"
+import { setPwaUpdate, usePwaUpdate } from "~/atoms/pwa-update"
 
 export const UpdateNotice = () => {
-  const updaterStatus = useUpdaterStatus()
+  const pwaUpdate = usePwaUpdate()
   const { t } = useTranslation()
-
-  const handleClick = useRef(() => {
-    const status = getUpdaterStatus()
-    if (!status) return
-    switch (status.type) {
-      case "app": {
-        ipcServices?.app.quitAndInstall()
-        break
-      }
-      case "renderer": {
-        ipcServices?.app.rendererUpdateReload()
-        break
-      }
-      case "pwa": {
-        status.finishUpdate?.()
-        break
-      }
-      case "distribution": {
-        if (status.targetUrl) {
-          if (ipcServices?.app.openExternal) {
-            void ipcServices.app.openExternal(status.targetUrl)
-          } else {
-            window.open(status.targetUrl, "_blank")
-          }
-        }
-        break
-      }
-    }
-    setUpdaterStatus(null)
-  }).current
-
   const playerIsShow = useAudioPlayerAtomSelector((s) => s.show)
 
-  const storeName = useMemo(() => {
-    if (updaterStatus?.type !== "distribution") {
-      return null
-    }
-    const { distribution } = updaterStatus
+  if (!pwaUpdate) return null
 
-    switch (distribution) {
-      case "direct": {
-        return null
-      }
-      case "mas": {
-        return t("notify.store.mas")
-      }
-      case "mss": {
-        return t("notify.store.mss")
-      }
-      default: {
-        return t("notify.store.default")
-      }
-    }
-  }, [t, updaterStatus])
-
-  const subtitle = useMemo(() => {
-    if (!updaterStatus) return null
-
-    switch (updaterStatus.type) {
-      case "app": {
-        return t("notify.update_info_1")
-      }
-      case "renderer": {
-        return t("notify.update_info_2")
-      }
-      case "pwa": {
-        return t("notify.update_info_3")
-      }
-      case "distribution": {
-        return updaterStatus.distribution === "direct"
-          ? t("notify.update_info_direct")
-          : t("notify.update_info_store", { store: storeName ?? "" })
-      }
-      default: {
-        return null
-      }
-    }
-  }, [storeName, t, updaterStatus])
-
-  if (!updaterStatus) return null
+  const handleClick = () => {
+    pwaUpdate.finishUpdate()
+    setPwaUpdate(null)
+  }
 
   return (
     <m.div
@@ -164,16 +90,14 @@ export const UpdateNotice = () => {
             >
               {t("notify.update_info", { app_name: APP_NAME })}
             </m.div>
-            {subtitle ? (
-              <m.div
-                className="mt-0.5 text-xs text-text-tertiary"
-                initial={{ x: -10, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ ...Spring.presets.smooth, delay: 0.2 }}
-              >
-                {subtitle}
-              </m.div>
-            ) : null}
+            <m.div
+              className="mt-0.5 text-xs text-text-tertiary"
+              initial={{ x: -10, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ ...Spring.presets.smooth, delay: 0.2 }}
+            >
+              {t("notify.update_info_3")}
+            </m.div>
           </div>
         </div>
       </div>

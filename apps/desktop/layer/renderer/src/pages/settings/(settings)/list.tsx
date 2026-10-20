@@ -9,7 +9,6 @@ export const handle = defineSettingPageData({
   icon: iconName,
   name: "titles.lists",
   priority,
-  hideIf: (ctx) => ctx.isInMASReview,
 })
 
 export function Component() {

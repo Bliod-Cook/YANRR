@@ -10,7 +10,6 @@ import { memo, useCallback, useLayoutEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 
-import { useIsInMASReview } from "~/atoms/server-configs"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,8 +43,6 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
   const [dropdown, setDropdown] = useState(false)
 
   const navigate = useNavigate()
-
-  const isInMASReview = useIsInMASReview()
 
   if (status !== "authenticated" && !user) {
     return (
@@ -152,17 +149,15 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
         >
           {t("words.actions")}
         </DropdownMenuItem>
-        {!isInMASReview && (
-          <DropdownMenuItem
-            className="pl-3"
-            onClick={() => {
-              navigate("/rsshub")
-            }}
-            icon={<RSSHubLogo className="size-3 grayscale" />}
-          >
-            {t("words.rsshub")}
-          </DropdownMenuItem>
-        )}
+        <DropdownMenuItem
+          className="pl-3"
+          onClick={() => {
+            navigate("/rsshub")
+          }}
+          icon={<RSSHubLogo className="size-3 grayscale" />}
+        >
+          {t("words.rsshub")}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {!window.electron && (
           <>

@@ -1,12 +1,10 @@
 import { env } from "@follow/shared/env.desktop"
 import { createDesktopAPIHeaders } from "@follow/utils/headers"
 import { FollowClient } from "@follow-app/client-sdk"
-import PKG, { mainHash, version as appVersion } from "@pkg"
+import PKG, { version as appVersion } from "@pkg"
 import { net } from "electron"
-import { gte } from "semver"
 
 import { WindowManager } from "~/manager/window"
-import { getCurrentRendererManifest } from "~/updater/hot-updater"
 
 import { logger } from "../logger"
 import { getPreferredSessionTokenCookie } from "./auth-cookies"
@@ -33,10 +31,6 @@ followClient.addRequestInterceptor(async (ctx) => {
   const header = options.headers || {}
 
   const apiHeader = createDesktopAPIHeaders({ version: PKG.version })
-  const rendererManifest = getCurrentRendererManifest()
-  const rendererVersion = gte(rendererManifest?.version ?? appVersion, appVersion)
-    ? (rendererManifest?.version ?? appVersion)
-    : appVersion
 
   // Get cookies for authentication
   const window = WindowManager.getMainWindow()
@@ -53,8 +47,6 @@ followClient.addRequestInterceptor(async (ctx) => {
     Cookie: headerCookie,
     "User-Agent": userAgent,
 
-    "X-Follow-Main-Hash": mainHash,
-    "X-Follow-Renderer-Version": rendererVersion,
     "X-Follow-App-Version": appVersion,
     "X-Follow-Platform": process.platform,
   }

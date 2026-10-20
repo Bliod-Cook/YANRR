@@ -21,65 +21,7 @@ const googleServiceInfoPlist = process.env.GOOGLE_SERVICE_INFO_PLIST
 const googleServicesJson = process.env.GOOGLE_SERVICES_JSON
 const withFirebase = !!(googleServiceInfoPlist || googleServicesJson)
 
-const semverPattern = /^\d+\.\d+\.\d+$/
-const developmentProfiles = new Set(["development", "ios-simulator"])
-const channelNameMap = {
-  development: "development",
-  "ios-simulator": "development",
-  preview: "preview",
-  "e2e-android": "preview",
-  "e2e-ios-simulator": "preview",
-  production: "production",
-} as Record<string, string>
-
-// Every EAS build profile sets PROFILE. NODE_ENV can't tell builds apart: `expo prebuild`, which
-// generates `android/` in every EAS Android build, sets it to "development" when it is unset.
-export const isDevelopmentRuntime = ({
-  profile,
-  nodeEnv,
-}: {
-  profile: string | undefined
-  nodeEnv: string | undefined
-}) => (profile ? developmentProfiles.has(profile) : nodeEnv === "development")
-
-export const resolveRuntimeVersion = ({
-  isDevelopment,
-  packageVersion,
-  otaRuntimeVersionOverride,
-}: {
-  isDevelopment: boolean
-  packageVersion: string
-  otaRuntimeVersionOverride?: string | null
-}) => {
-  if (isDevelopment) {
-    return "0.0.0-dev"
-  }
-
-  if (otaRuntimeVersionOverride) {
-    if (!semverPattern.test(otaRuntimeVersionOverride)) {
-      throw new Error(
-        `Expected OTA_RUNTIME_VERSION to be a plain x.y.z version, got ${otaRuntimeVersionOverride}`,
-      )
-    }
-
-    return otaRuntimeVersionOverride
-  }
-
-  return packageVersion
-}
-
 export default ({ config }: ConfigContext): ExpoConfig => {
-  const profile = process.env.PROFILE || "production"
-  const channelName = channelNameMap[profile] || channelNameMap.production
-  const runtimeVersion = resolveRuntimeVersion({
-    isDevelopment: isDevelopmentRuntime({
-      profile: process.env.PROFILE,
-      nodeEnv: process.env.NODE_ENV,
-    }),
-    packageVersion: PKG.version,
-    otaRuntimeVersionOverride: process.env.OTA_RUNTIME_VERSION ?? null,
-  })
-
   const result: ExpoConfig = {
     ...config,
 
@@ -91,19 +33,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       e2eLanguage: process.env.EXPO_PUBLIC_E2E_LANGUAGE ?? null,
     },
     owner: "follow",
-    updates: {
-      url: "https://ota.folo.is/manifest",
-      requestHeaders: {
-        "expo-channel-name": channelName,
-      },
-      codeSigningCertificate: "./code-signing/certificate.pem",
-      codeSigningMetadata: {
-        keyid: "main",
-        alg: "rsa-v1_5-sha256",
-      },
-      checkAutomatically: "NEVER",
-    },
-    runtimeVersion,
 
     name: "Folo",
     slug: "follow",

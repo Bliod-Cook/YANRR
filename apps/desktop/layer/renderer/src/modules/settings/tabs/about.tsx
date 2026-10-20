@@ -1,12 +1,12 @@
 import { Folo } from "@follow/components/icons/folo.js"
 import { Logo } from "@follow/components/icons/logo.jsx"
 import { SocialMediaLinks } from "@follow/constants"
-import { IN_ELECTRON, MODE, ModeEnum } from "@follow/shared/constants"
+import { MODE, ModeEnum } from "@follow/shared/constants"
 import { getCurrentEnvironment } from "@follow/utils/environment"
 import { cn } from "@follow/utils/utils"
 import PKG, { repository } from "@pkg"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { Trans, useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
@@ -19,7 +19,6 @@ import { AppTipModalContent } from "~/modules/app-tip"
 
 export const SettingAbout = () => {
   const { t } = useTranslation("settings")
-  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
   const { present } = useModalStack()
   const currentEnvironment = getCurrentEnvironment().join("\n")
   const { data: appVersion } = useQuery({
@@ -41,29 +40,6 @@ export const SettingAbout = () => {
       }
     }
   }, [])
-
-  const handleCheckForUpdates = async () => {
-    if (isCheckingUpdate) return
-
-    setIsCheckingUpdate(true)
-    const toastId = toast.loading(t("about.checkingForUpdates"))
-
-    try {
-      const result = await ipcServices?.app.checkForUpdates()
-
-      if (result?.error) {
-        toast.error(t("about.updateCheckFailed"), { id: toastId })
-      } else if (result?.hasUpdate) {
-        toast.success(t("about.updateAvailable"), { id: toastId })
-      } else {
-        toast.info(t("about.noUpdateAvailable"), { id: toastId })
-      }
-    } catch {
-      toast.error(t("about.updateCheckFailed"), { id: toastId })
-    } finally {
-      setIsCheckingUpdate(false)
-    }
-  }
 
   const handleRendererVersionClick = () => {
     if (!rendererVersion) return
@@ -168,26 +144,6 @@ export const SettingAbout = () => {
 
       {/* Quick Actions */}
       <div className="-mx-3 space-y-1 px-2">
-        {IN_ELECTRON && (
-          <button
-            type="button"
-            onClick={handleCheckForUpdates}
-            disabled={isCheckingUpdate}
-            className="group flex w-full items-center justify-between rounded-lg p-3 text-left transition-all hover:bg-fill-secondary hover:shadow-sm"
-          >
-            <div className="flex items-center gap-3">
-              <div>
-                <div className="text-sm font-medium">{t("about.checkForUpdates")}</div>
-                <div className="text-xs text-text-tertiary">{t("about.updateDescription")}</div>
-              </div>
-            </div>
-            {isCheckingUpdate ? (
-              <i className="i-mgc-loading-3-cute-re animate-spin text-base" />
-            ) : (
-              <i className="i-mgc-arrow-right-up-cute-re text-base text-text-tertiary transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent" />
-            )}
-          </button>
-        )}
         <button
           type="button"
           onClick={() => window.open(`${repository.url}/releases`, "_blank")}

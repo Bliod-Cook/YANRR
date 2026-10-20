@@ -2,19 +2,8 @@
 import { defineConfig } from "nbump"
 
 export default defineConfig({
-  leading: [
-    "git pull --rebase",
-    "tsx plugins/vite/generate-main-hash.ts",
-    "pnpm eslint --fix package.json",
-    "pnpm prettier --ignore-unknown --write package.json",
-    "git add package.json",
-  ],
-  trailing: [
-    "tsx scripts/apply-release-config.ts ${NEW_VERSION}",
-    "git add package.json",
-    "git add release.json release-plan.json",
-    "git checkout -b release/desktop/${NEW_VERSION}",
-  ],
+  leading: ["git pull --rebase"],
+  trailing: ["git checkout -b release/desktop/${NEW_VERSION}"],
   finally: [
     "git push origin release/desktop/${NEW_VERSION}",
     "gh pr create --title 'release(desktop): Release v${NEW_VERSION}' --body 'v${NEW_VERSION}' --base main --head release/desktop/${NEW_VERSION}",

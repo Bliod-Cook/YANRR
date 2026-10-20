@@ -1,4 +1,3 @@
-import crypto from "node:crypto"
 import fs, { readdirSync } from "node:fs"
 import { cp, readdir } from "node:fs/promises"
 
@@ -12,7 +11,6 @@ import { FusesPlugin } from "@electron-forge/plugin-fuses"
 import type { ForgeConfig } from "@electron-forge/shared-types"
 import MakerAppImage from "@pengx17/electron-forge-maker-appimage"
 import setLanguages from "electron-packager-languages"
-import yaml from "js-yaml"
 import path, { resolve } from "pathe"
 import { rimraf, rimrafSync } from "rimraf"
 
@@ -29,11 +27,6 @@ const platformNamesMap = {
   darwin: "macos",
   linux: "linux",
   win32: "windows",
-}
-const ymlMapsMap = {
-  darwin: "latest-mac.yml",
-  linux: "latest-linux.yml",
-  win32: "latest.yml",
 }
 
 // Keep external runtime modules and their production dependency trees in app.asar.
@@ -140,7 +133,6 @@ const config: ForgeConfig = {
     buildVersion: process.env.BUILD_VERSION || undefined,
     appBundleId: "is.follow",
     icon: isStaging ? "resources/icon-staging" : "resources/icon",
-    extraResource: ["./resources/app-update.yml"],
     protocols: [
       {
         name: "Folo",
@@ -315,49 +307,16 @@ const config: ForgeConfig = {
   ],
   hooks: {
     postMake: async (_config, makeResults) => {
-      const yml: {
-        version?: string
-        files: {
-          url: string
-          sha512: string
-          size: number
-        }[]
-        releaseDate?: string
-      } = {
-        version: makeResults[0]?.packageJSON?.version,
-        files: [],
-      }
-      let basePath = ""
-      makeResults = makeResults.map((result) => {
+      return makeResults.map((result) => {
         result.artifacts = result.artifacts
           .map((artifact) => {
             if (artifactRegex.test(artifact)) {
-              if (!basePath) {
-                basePath = path.dirname(artifact)
-              }
               const newArtifact = `${path.dirname(artifact)}/${
                 result.packageJSON.productName
               }-${result.packageJSON.version}-${
                 platformNamesMap[result.platform]
               }-${result.arch}${path.extname(artifact)}`
               fs.renameSync(artifact, newArtifact)
-
-              try {
-                // .deb is a distro package, not an electron-updater feed entry
-                if (path.extname(newArtifact) !== ".deb") {
-                  const fileData = fs.readFileSync(newArtifact)
-                  const hash = crypto.createHash("sha512").update(fileData).digest("base64")
-                  const { size } = fs.statSync(newArtifact)
-
-                  yml.files.push({
-                    url: path.basename(newArtifact),
-                    sha512: hash,
-                    size,
-                  })
-                }
-              } catch {
-                console.error(`Failed to hash ${newArtifact}`)
-              }
               return newArtifact
             } else if (!artifact.endsWith(".tmp")) {
               return artifact
@@ -368,25 +327,6 @@ const config: ForgeConfig = {
           .filter((artifact) => artifact !== null)
         return result
       })
-      yml.releaseDate = new Date().toISOString()
-
-      if (makeResults[0]?.platform && ymlMapsMap[makeResults[0].platform] && basePath) {
-        const ymlPath = path.join(basePath, ymlMapsMap[makeResults[0].platform])
-
-        const ymlStr = yaml.dump(yml, {
-          lineWidth: -1,
-        })
-        fs.writeFileSync(ymlPath, ymlStr)
-
-        makeResults.push({
-          artifacts: [ymlPath],
-          platform: makeResults[0]!.platform,
-          arch: makeResults[0]!.arch,
-          packageJSON: makeResults[0]!.packageJSON,
-        })
-      }
-
-      return makeResults
     },
   },
 }

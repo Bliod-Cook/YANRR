@@ -4,13 +4,12 @@ import { name } from "@pkg"
 import type { BrowserWindow, MenuItem, MenuItemConstructorOptions } from "electron"
 import { Menu } from "electron"
 
-import { isMacOS, isMAS } from "./env"
+import { isMacOS } from "./env"
 import { clearAllDataAndConfirm } from "./lib/cleaner"
 import { t } from "./lib/i18n"
 import { revealLogFile } from "./logger"
 import { FindBarManager } from "./manager/find-bar"
 import { WindowManager } from "./manager/window"
-import { checkForAppUpdatesFromMenu, quitAndInstall } from "./updater"
 
 export const registerAppMenu = () => {
   const menus: Array<MenuItemConstructorOptions | MenuItem> = [
@@ -177,17 +176,6 @@ export const registerAppMenu = () => {
             await revealLogFile()
           },
         },
-        ...(!isMAS
-          ? [
-              {
-                label: t("menu.checkForUpdates"),
-                click: async () => {
-                  WindowManager.showMainWindow()
-                  await checkForAppUpdatesFromMenu()
-                },
-              },
-            ]
-          : []),
       ],
     },
   ]
@@ -206,13 +194,6 @@ export const registerAppMenu = () => {
               width: 800,
               height: 600,
             })
-          },
-        },
-        {
-          type: "normal",
-          label: t("menu.quitAndInstallUpdate"),
-          click() {
-            quitAndInstall()
           },
         },
       ],

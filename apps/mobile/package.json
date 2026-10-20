@@ -13,7 +13,7 @@
     "e2e:doctor": "sh -c 'for f in e2e/flows/shared/*.yaml e2e/flows/android/*.yaml e2e/flows/ios/*.yaml; do maestro check-syntax $f; done'",
     "e2e:ios": "sh ./e2e/run-maestro.sh ios",
     "e2e:ios:bootstrap": "sh ./e2e/run-maestro.sh ios bootstrap-auth",
-    "eas-build-post-install": "rm -rf $TMPDIR/metro-cache && tsx scripts/verify-native-runtime-version.ts",
+    "eas-build-post-install": "rm -rf $TMPDIR/metro-cache",
     "eas-build-pre-install": "command -v pod >/dev/null 2>&1 && pod repo update || echo 'CocoaPods not found, skipping pod repo update'",
     "ios": "expo run:ios",
     "ios:device": "expo run:ios --device",
@@ -21,8 +21,6 @@
     "start:clean": "expo start --dev-client --clear",
     "test": "vitest run --config vitest.config.ts",
     "typecheck": "tsc --noEmit",
-    "update": "tsx scripts/expo-update.ts",
-    "update:export": "expo export -p ios -p android --output-dir dist",
     "web": "expo start --web"
   },
   "dependencies": {
@@ -88,7 +86,6 @@
     "expo-symbols": "57.0.3",
     "expo-system-ui": "57.0.4",
     "expo-task-manager": "57.0.19",
-    "expo-updates": "57.0.23",
     "expo-video": "57.0.4",
     "expo-web-browser": "57.0.3",
     "foxact": "0.3.12",

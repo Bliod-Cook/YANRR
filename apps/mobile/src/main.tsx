@@ -29,7 +29,6 @@ import { TabRoot } from "./lib/navigation/bottom-tab/TabRoot"
 import { TabScreen } from "./lib/navigation/bottom-tab/TabScreen"
 import { RootStackNavigation } from "./lib/navigation/StackNavigation"
 import { queryClient } from "./lib/query-client"
-import { OtaProvider } from "./modules/ota/provider"
 import { RootProviders } from "./providers"
 import { IndexTabScreen } from "./screens/(stack)/(tabs)"
 import { DiscoverTabScreen } from "./screens/(stack)/(tabs)/discover"
@@ -59,62 +58,60 @@ registerRootComponent(RootComponent)
 function RootComponent() {
   const { t } = useTranslation()
   return (
-    <OtaProvider>
-      <RootProviders>
-        <BottomTabProvider>
-          {/* Outside the screen stack, so toasts, dialogs and loaders draw above every screen,
-              not only the root one: pushed and modal screens cover anything inside it on Android */}
-          <RootSiblingParent>
-            <RootStackNavigation
-              headerConfig={{
-                hidden: true,
-              }}
-            >
-              <App>
-                <TabRoot>
-                  <TabScreen
-                    activeIcon={"home5CuteFi"}
-                    icon={"home5CuteRe"}
-                    title={t("tabs.home")}
-                    identifier="IndexTabScreen"
-                  >
-                    <IndexTabScreen />
-                  </TabScreen>
+    <RootProviders>
+      <BottomTabProvider>
+        {/* Outside the screen stack, so toasts, dialogs and loaders draw above every screen,
+            not only the root one: pushed and modal screens cover anything inside it on Android */}
+        <RootSiblingParent>
+          <RootStackNavigation
+            headerConfig={{
+              hidden: true,
+            }}
+          >
+            <App>
+              <TabRoot>
+                <TabScreen
+                  activeIcon={"home5CuteFi"}
+                  icon={"home5CuteRe"}
+                  title={t("tabs.home")}
+                  identifier="IndexTabScreen"
+                >
+                  <IndexTabScreen />
+                </TabScreen>
 
-                  <TabScreen
-                    activeIcon={"blackBoard2CuteFi"}
-                    icon={"blackBoard2CuteRe"}
-                    title={t("tabs.subscriptions")}
-                    identifier="SubscriptionsTabScreen"
-                  >
-                    <SubscriptionsTabScreen />
-                  </TabScreen>
+                <TabScreen
+                  activeIcon={"blackBoard2CuteFi"}
+                  icon={"blackBoard2CuteRe"}
+                  title={t("tabs.subscriptions")}
+                  identifier="SubscriptionsTabScreen"
+                >
+                  <SubscriptionsTabScreen />
+                </TabScreen>
 
-                  <TabScreen
-                    activeIcon={"search3CuteFi"}
-                    icon={"search3CuteRe"}
-                    title={t("tabs.discover")}
-                    identifier="DiscoverTabScreen"
-                  >
-                    <DiscoverTabScreen />
-                  </TabScreen>
-                  <TabScreen
-                    activeIcon={"settings1CuteFi"}
-                    icon={"settings1CuteRe"}
-                    title={t("tabs.settings")}
-                    identifier="SettingsTabScreen"
-                  >
-                    <SettingsTabScreen />
-                  </TabScreen>
+                <TabScreen
+                  activeIcon={"search3CuteFi"}
+                  icon={"search3CuteRe"}
+                  title={t("tabs.discover")}
+                  identifier="DiscoverTabScreen"
+                >
+                  <DiscoverTabScreen />
+                </TabScreen>
+                <TabScreen
+                  activeIcon={"settings1CuteFi"}
+                  icon={"settings1CuteRe"}
+                  title={t("tabs.settings")}
+                  identifier="SettingsTabScreen"
+                >
+                  <SettingsTabScreen />
+                </TabScreen>
 
-                  <ReactNativeTab />
-                </TabRoot>
-              </App>
-            </RootStackNavigation>
-            <Lightbox />
-          </RootSiblingParent>
-        </BottomTabProvider>
-      </RootProviders>
-    </OtaProvider>
+                <ReactNativeTab />
+              </TabRoot>
+            </App>
+          </RootStackNavigation>
+          <Lightbox />
+        </RootSiblingParent>
+      </BottomTabProvider>
+    </RootProviders>
   )
 }

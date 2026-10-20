@@ -36,7 +36,6 @@
   "findBar.previous": "前の一致",
   "menu.about": "{{name}} について",
   "menu.alwaysOnTop": "常に手前に表示",
-  "menu.checkForUpdates": "アップデートを確認",
   "menu.clearAllData": "すべてのデータを消去",
   "menu.close": "閉じる",
   "menu.copy": "コピー",
@@ -59,7 +58,6 @@
   "menu.pasteAndMatchStyle": "ペーストしてスタイルを合わせる",
   "menu.quickAdd": "クイック追加",
   "menu.quit": "{{name}} を終了",
-  "menu.quitAndInstallUpdate": "デバッグ：終了してアップデートをインストール",
   "menu.redo": "やり直す",
   "menu.reload": "再読み込み",
   "menu.search": "検索",
@@ -75,8 +73,5 @@
   "menu.unread": "未読",
   "menu.view": "表示",
   "menu.window": "ウィンドウ",
-  "menu.zoom": "ズーム",
-  "update.available": "アップデートがあります",
-  "update.checkFailed": "アップデートを確認できませんでした",
-  "update.upToDate": "最新バージョンです"
+  "menu.zoom": "ズーム"
 }

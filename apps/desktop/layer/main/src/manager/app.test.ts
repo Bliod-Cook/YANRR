@@ -150,7 +150,6 @@ vi.mock("../logger", () => ({
   },
 }))
 vi.mock("../menu", () => ({ registerAppMenu: vi.fn() }))
-vi.mock("../updater", () => ({ registerUpdater: vi.fn() }))
 vi.mock("./lifecycle", () => ({
   LifecycleManager: {
     onReady: vi.fn(),
