@@ -207,8 +207,10 @@ const ensureCredentialForm = async (page: Page, mode: "register" | "login") => {
     !(await isVisible(loginModal)) &&
     !(await isVisible(activeDialog))
   ) {
-    await expect(loginButton).toBeVisible({ timeout: 30_000 })
-    await loginButton.click({ noWaitAfter: true })
+    await loginButton.click({ noWaitAfter: true, timeout: 10_000 }).catch(async (error) => {
+      // The app opens the login modal by itself after a 401, which can cover the button meanwhile
+      if (!(await isVisible(loginModal)) && !(await isVisible(activeDialog))) throw error
+    })
   }
 
   if (await isVisible(targetInput)) {
@@ -655,14 +657,20 @@ export const followOnboardingFeed = async (
   options?: { electron?: boolean },
 ) => {
   await openOnboardingFeedForm(page, env, options)
-  const subscribeResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith("/subscriptions"),
-    { timeout: 30_000 },
-  )
+  // Electron sends API requests from the main process, out of the renderer's sight
+  const subscribeResponse = isElectronPage(page)
+    ? null
+    : page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname.endsWith("/subscriptions"),
+        { timeout: 30_000 },
+      )
   await visibleByTestId(page, "feed-form-submit").click()
-  expect((await subscribeResponse).ok()).toBe(true)
+  if (subscribeResponse) {
+    expect((await subscribeResponse).ok()).toBe(true)
+  }
+  // Only the subscription list shows feeds with `data-feed-id` here, so this proves the subscription
   await expect(
     page.locator("[data-feed-id]").filter({ hasText: ONBOARDING_FEED_TITLE }).first(),
   ).toBeVisible({ timeout: 15_000 })
