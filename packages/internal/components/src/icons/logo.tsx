@@ -1,24 +1,15 @@
 import * as React from "react"
 
-export const Logo = ({
-  ref,
-  ...props
-}: React.SVGProps<SVGSVGElement> & {
-  ref?: React.Ref<SVGSVGElement | null>
-  accentColor?: string
-}) => {
-  const { accentColor } = props
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" {...props} ref={ref}>
-      <title>Folo</title>
-      <path
-        fill={accentColor || "#ff5c00"}
-        d="M5.382 0h13.236A5.37 5.37 0 0 1 24 5.383v13.235A5.37 5.37 0 0 1 18.618 24H5.382A5.37 5.37 0 0 1 0 18.618V5.383A5.37 5.37 0 0 1 5.382.001Z"
-      />
-      <path
-        fill="#fff"
-        d="M13.269 17.31a1.813 1.813 0 1 0-3.626.002 1.813 1.813 0 0 0 3.626-.002m-.535-6.527H7.213a1.813 1.813 0 1 0 0 3.624h5.521a1.813 1.813 0 1 0 0-3.624m4.417-4.712H8.87a1.813 1.813 0 1 0 0 3.625h8.283a1.813 1.813 0 1 0 0-3.624z"
-      />
-    </svg>
-  )
-}
+// The letter mark of apps/desktop/layer/renderer/public/icon.svg, on a 1024 × 1024 canvas
+export const LOGO_BACKGROUND = "#1F2937"
+export const LOGO_SHAPE_PATH =
+  "M224 0h576a224 224 0 0 1 224 224v576a224 224 0 0 1-224 224H224A224 224 0 0 1 0 800V224A224 224 0 0 1 224 0Z"
+export const LOGO_GLYPH_PATH = "M250 260h170l92 147.6 92-147.6h170L587 560v204H437V560Z"
+
+export const Logo = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" {...props}>
+    <title>Yannr</title>
+    <path fill={LOGO_BACKGROUND} d={LOGO_SHAPE_PATH} />
+    <path fill="#fff" d={LOGO_GLYPH_PATH} />
+  </svg>
+)

@@ -1,4 +1,9 @@
 import { Spring } from "@follow/components/constants/spring.js"
+import {
+  LOGO_BACKGROUND,
+  LOGO_GLYPH_PATH,
+  LOGO_SHAPE_PATH,
+} from "@follow/components/icons/logo.jsx"
 import { useEntry } from "@follow/store/entry/hooks"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { cn } from "@follow/utils"
@@ -74,7 +79,6 @@ export function SharePosterModal({ selectedText, entryId }: SharePosterModalProp
       textSecondary: mode === "dark" ? "#a3a3a3" : "#525252",
       accent: mode === "dark" ? "#737373" : "#737373",
       quoteColor: mode === "dark" ? "#404040" : "#e5e5e5",
-      logoColor: mode === "dark" ? "#ff5c00" : "#ff5c00",
       fontFamilyTitle: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif",
       fontFamilyBody: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif",
       fontFamilyMeta: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif",
@@ -185,7 +189,7 @@ export function SharePosterModal({ selectedText, entryId }: SharePosterModalProp
         })
       : new Date().toLocaleDateString()
 
-    const headerText = `${feed?.title || "Folo"}  •  ${dateStr}`
+    const headerText = `${feed?.title || APP_NAME}  •  ${dateStr}`
     ctx.fillText(headerText, padding, currentY)
 
     currentY += headerHeight
@@ -286,55 +290,28 @@ export function SharePosterModal({ selectedText, entryId }: SharePosterModalProp
       ctx.globalAlpha = 1
     }
 
-    // 5. Footer / Branding - Draw Folo logo and text
+    // 5. Footer / Branding - the logo and the app name, aligned to the right
     const footerY = h - padding - 24
     const logoSize = 36
-    const gap = 16
-    const svgScale = logoSize / 24
-
-    // Calculate positions for [Logo] [Folo] aligned to right
-    // Total width = logoSize + gap + logoSize (assuming folo text is also 24x24 scaled)
-    const totalWidth = logoSize + gap + logoSize
-    const startX = w - padding - totalWidth
-
-    const logoX = startX
-    const foloX = startX + logoSize + gap
-    const drawY = footerY - logoSize / 2
+    const gap = 12
+    ctx.font = `700 22px ${config.fontFamilyTitle}`
+    const logoX = w - padding - ctx.measureText(APP_NAME).width - gap - logoSize
 
     ctx.save()
-
-    // Draw Logo
-    ctx.translate(logoX, drawY)
-    ctx.scale(svgScale, svgScale)
-
-    // Logo Background
-    ctx.fillStyle = config.logoColor
-    const logoBgPath = new Path2D(
-      "M5.382 0h13.236A5.37 5.37 0 0 1 24 5.383v13.235A5.37 5.37 0 0 1 18.618 24H5.382A5.37 5.37 0 0 1 0 18.618V5.383A5.37 5.37 0 0 1 5.382.001Z",
-    )
-    ctx.fill(logoBgPath)
-
-    // Logo F
+    ctx.translate(logoX, footerY - logoSize / 2)
+    ctx.scale(logoSize / 1024, logoSize / 1024)
+    ctx.fillStyle = LOGO_BACKGROUND
+    ctx.fill(new Path2D(LOGO_SHAPE_PATH))
     ctx.fillStyle = "#ffffff"
-    const logoFPath = new Path2D(
-      "M13.269 17.31a1.813 1.813 0 1 0-3.626.002 1.813 1.813 0 0 0 3.626-.002m-.535-6.527H7.213a1.813 1.813 0 1 0 0 3.624h5.521a1.813 1.813 0 1 0 0-3.624m4.417-4.712H8.87a1.813 1.813 0 1 0 0 3.625h8.283a1.813 1.813 0 1 0 0-3.624z",
-    )
-    ctx.fill(logoFPath)
-
+    ctx.fill(new Path2D(LOGO_GLYPH_PATH))
     ctx.restore()
 
-    // Draw Folo Text
     ctx.save()
-    ctx.translate(foloX, drawY)
-    ctx.scale(svgScale, svgScale)
-
     ctx.fillStyle = config.textSecondary
     ctx.globalAlpha = 0.6
-    const foloPath = new Path2D(
-      "M.899 16.997c-.567 0-.899-.358-.899-.994v-7.77c0-.637.36-.996 1.01-.996h4.34c.595 0 .927.29.927.788 0 .497-.332.774-.926.774H1.797v2.336H5.06c.595 0 .927.263.927.76 0 .512-.332.775-.927.775H1.797v3.332c0 .636-.318.996-.898.996m9.035.125c-2.101 0-3.553-1.52-3.553-3.664 0-2.17 1.438-3.705 3.553-3.705 2.13 0 3.567 1.534 3.567 3.705 0 2.143-1.452 3.664-3.567 3.664m0-1.493c1.134 0 1.825-.899 1.825-2.185 0-1.3-.691-2.198-1.825-2.198s-1.797.899-1.797 2.198c0 1.286.663 2.185 1.797 2.185m5.266 1.367c-.553 0-.857-.359-.857-.967V7.845c0-.608.304-.968.857-.968s.857.36.857.968v8.185c0 .608-.29.967-.857.967m5.234.125c-2.102 0-3.553-1.52-3.553-3.664 0-2.17 1.438-3.705 3.553-3.705 2.129 0 3.566 1.534 3.566 3.704 0 2.143-1.452 3.664-3.567 3.664m0-1.493c1.134 0 1.825-.899 1.825-2.185 0-1.3-.691-2.198-1.825-2.198s-1.797.899-1.797 2.198c0 1.286.663 2.185 1.797 2.185",
-    )
-    ctx.fill(foloPath)
-
+    ctx.textAlign = "left"
+    ctx.textBaseline = "middle"
+    ctx.fillText(APP_NAME, logoX + logoSize + gap, footerY)
     ctx.restore()
   }, [entry, feed, mode, selectedText, authorAvatarImg, t])
 

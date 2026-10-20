@@ -28,10 +28,7 @@ export default {
       enableInDev: true,
     }),
     cleanupUnnecessaryFilesPlugin([
-      "icon-512x512.png",
-      "opengraph-image.png",
       "favicon.ico",
-      "icon-192x192.png",
       "favicon-dev.ico",
       "apple-touch-icon-180x180.png",
       "maskable-icon-512x512.png",
