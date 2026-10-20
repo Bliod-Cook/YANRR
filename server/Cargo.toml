@@ -6,13 +6,15 @@ license = "AGPL-3.0-only"
 publish = false
 
 [dependencies]
-axum = { version = "0.8", features = ["macros"] }
+axum = { version = "0.8", features = ["macros", "multipart"] }
 better-auth = { git = "https://github.com/better-auth-rs/better-auth-rs", rev = "9f91cd7fdb8a5f73a9c69d5c56d363468a7dc281", default-features = false, features = ["axum", "seaorm2", "rustls"] }
 chrono = { version = "0.4", features = ["serde"] }
 feed-rs = "3"
+futures = "0.3"
 isolang = { version = "2", default-features = false }
 # Only enables vendored OpenSSL for better-auth-api, which depends on it directly.
 openssl = { version = "0.10", features = ["vendored"] }
+quick-xml = "0.42"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 scraper = "0.24"
 sea-orm = { version = "2.0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-chrono", "with-json", "postgres-array"] }
@@ -29,5 +31,5 @@ whatlang = "0.18"
 
 [dev-dependencies]
 postgresql_embedded = { version = "0.21", default-features = false, features = ["bundled", "tokio", "tls-rustls-ring"] }
-reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "multipart", "rustls-tls"] }
 tempfile = "3"

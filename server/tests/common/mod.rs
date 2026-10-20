@@ -111,6 +111,25 @@ impl TestApp {
             .unwrap()
     }
 
+    pub async fn post_bytes(&self, path: &str, body: impl Into<reqwest::Body>) -> Response {
+        self.client
+            .post(format!("{}{path}", self.url))
+            .header(header::CONTENT_TYPE, "application/octet-stream")
+            .body(body)
+            .send()
+            .await
+            .unwrap()
+    }
+
+    pub async fn post_form(&self, path: &str, form: reqwest::multipart::Form) -> Response {
+        self.client
+            .post(format!("{}{path}", self.url))
+            .multipart(form)
+            .send()
+            .await
+            .unwrap()
+    }
+
     pub async fn delete(&self, path: &str, body: Value) -> Response {
         self.client
             .delete(format!("{}{path}", self.url))
