@@ -1,4 +1,4 @@
-import { Auth } from "@follow/shared/auth"
+import { createFoloAuthClient } from "@follow/shared/auth"
 import { buildBetterAuthSessionTokenCookieHeader } from "@follow/shared/auth-cookie"
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { env } from "@follow/shared/env.desktop"
@@ -9,9 +9,8 @@ import { getAuthSessionToken } from "./client-session"
 
 const headers = createDesktopAPIHeaders({ version: PKG.version })
 
-const auth = new Auth({
+export const authClient = createFoloAuthClient({
   apiURL: env.VITE_API_URL,
-  webURL: env.VITE_WEB_URL,
   fetchOptions: {
     headers,
     onRequest: (context) => {
@@ -26,29 +25,5 @@ const auth = new Auth({
   },
 })
 
-export const { authClient } = auth
-
 // @keep-sorted
-export const {
-  changeEmail,
-  changePassword,
-  deleteUserCustom,
-  getAccountInfo,
-  getProviders,
-  getSession,
-  linkSocial,
-  listAccounts,
-  oneTimeToken,
-  resetPassword,
-  sendVerificationEmail,
-  signIn,
-  signOut,
-  signUp,
-  twoFactor,
-  unlinkAccount,
-  updateUser,
-} = auth.authClient
-
-export const forgetPassword = auth.authClient.requestPasswordReset
-
-export const { loginHandler } = auth
+export const { changePassword, getSession, signIn, signOut, signUp, updateUser } = authClient

@@ -8,19 +8,17 @@ import {
 } from "@follow/components/ui/form/index.jsx"
 import { Input } from "@follow/components/ui/input/index.js"
 import { Label } from "@follow/components/ui/label/index.js"
-import { env } from "@follow/shared/env.desktop"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
 import type { TFunction } from "i18next"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
-import { Trans, useTranslation } from "react-i18next"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { z } from "zod"
 
 import { useCurrentModal, useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { changePassword } from "~/lib/auth"
-import { useHasPassword } from "~/queries/auth"
 
 const passwordSchema = z.string().min(8).max(128)
 
@@ -128,14 +126,7 @@ const UpdateExistingPasswordForm = () => {
             </FormItem>
           )}
         />
-        <div className="flex items-center justify-between pl-2">
-          <a
-            href={`${env.VITE_WEB_URL}/forget-password`}
-            className="text-sm duration-200 hover:text-accent hover:underline"
-            target="_blank"
-          >
-            {tApp("login.forget_password.note")}
-          </a>
+        <div className="flex justify-end">
           <Button type="submit" isLoading={updateMutation.isPending}>
             {t("profile.submit")}
           </Button>
@@ -146,49 +137,23 @@ const UpdateExistingPasswordForm = () => {
 }
 
 export const UpdatePasswordForm = () => {
-  const { data: hasPassword, isLoading } = useHasPassword()
-
   const { t } = useTranslation("settings")
   const { present } = useModalStack()
 
   return (
     <div className="flex items-center justify-between">
       <Label>{t("profile.password.label")}</Label>
-      {isLoading ? null : hasPassword ? (
-        <Button
-          variant="outline"
-          onClick={() =>
-            present({
-              title: t("profile.change_password.label"),
-              content: UpdateExistingPasswordForm,
-            })
-          }
-        >
-          {t("profile.change_password.label")}
-        </Button>
-      ) : (
-        <NoPasswordHint i18nKey="profile.no_password" />
-      )}
+      <Button
+        variant="outline"
+        onClick={() =>
+          present({
+            title: t("profile.change_password.label"),
+            content: UpdateExistingPasswordForm,
+          })
+        }
+      >
+        {t("profile.change_password.label")}
+      </Button>
     </div>
-  )
-}
-
-export const NoPasswordHint = ({ i18nKey }: { i18nKey: string }) => {
-  return (
-    <p className="text-sm text-text-secondary">
-      <Trans
-        ns="settings"
-        i18nKey={i18nKey as any}
-        components={{
-          Link: (
-            <a
-              href={`${env.VITE_WEB_URL}/forget-password`}
-              className="text-accent"
-              target="_blank"
-            />
-          ),
-        }}
-      />
-    </p>
   )
 }

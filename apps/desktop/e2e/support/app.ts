@@ -161,11 +161,6 @@ export const ensureLoginModal = async (page: Page) => {
           .last()
           .isVisible()
           .catch(() => false)
-        const credentialProviderVisible = await page
-          .locator('[data-testid="login-provider-credential"]:visible')
-          .last()
-          .isVisible()
-          .catch(() => false)
         const loginDialogVisible = await page
           .locator('[role="dialog"]:visible')
           .filter({ hasText: /Sign in to Folo|Login/ })
@@ -178,7 +173,6 @@ export const ensureLoginModal = async (page: Page) => {
           loginButtonVisible ||
           loginInputVisible ||
           registerInputVisible ||
-          credentialProviderVisible ||
           loginDialogVisible
         )
       },
@@ -197,7 +191,6 @@ const ensureCredentialForm = async (page: Page, mode: "register" | "login") => {
   const loginButton = visibleByTestId(page, "login-button")
   const loginModal = visibleByTestId(page, "login-modal")
   const activeDialog = page.locator('[role="dialog"]:visible').last()
-  const credentialProvider = visibleByTestId(page, "login-provider-credential")
   const targetForm = visibleByTestId(page, mode === "register" ? "register-form" : "login-form")
   const oppositeForm = visibleByTestId(page, mode === "register" ? "login-form" : "register-form")
   const oppositeFormSwitcher = visibleByTestId(
@@ -220,24 +213,6 @@ const ensureCredentialForm = async (page: Page, mode: "register" | "login") => {
 
   if (await isVisible(targetInput)) {
     return
-  }
-
-  if (!(await isVisible(targetForm)) && !(await isVisible(oppositeForm))) {
-    await expect(credentialProvider).toBeVisible({ timeout: 30_000 })
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await credentialProvider.click({ force: true, timeout: 30_000, noWaitAfter: true })
-      if (
-        await expect
-          .poll(async () => (await isVisible(targetForm)) || (await isVisible(oppositeForm)), {
-            timeout: 5_000,
-          })
-          .toBe(true)
-          .then(() => true)
-          .catch(() => false)
-      ) {
-        break
-      }
-    }
   }
 
   await expect

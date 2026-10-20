@@ -716,9 +716,6 @@ importers:
       cmdk:
         specifier: 1.1.1
         version: 1.1.1(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      cookie-es:
-        specifier: 3.1.1
-        version: 3.1.1
       dayjs:
         specifier: 1.11.23
         version: 1.11.23
@@ -836,9 +833,6 @@ importers:
       react-markdown:
         specifier: 10.1.0
         version: 10.1.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2)
-      react-qr-code:
-        specifier: 2.2.0
-        version: 2.2.0(react@19.2.8)
       react-resizable-layout:
         specifier: npm:@innei/react-resizable-layout@0.7.3-fork.1
         version: '@innei/react-resizable-layout@0.7.3-fork.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)'
@@ -15177,9 +15171,6 @@ packages:
     resolution: {integrity: sha512-+Owyggi9IxT1ePKGafcI87ubSmxol6smwJ+RAHDQlx9+9cPwFWDiKFFCPuWhr9ignlGpZ9vDQLw67N4dcTVFEA==}
     engines: {node: '>=20'}
 
-  qrcode-generator@2.0.4:
-    resolution: {integrity: sha512-mZSiP6RnbHl4xL2Ap5HfkjLnmxfKcPWpWe/c+5XxCuetEenqmNFf1FH/ftXPCtFG5/TDobjsjz6sSNL0Sr8Z9g==}
-
   quansync@0.2.11:
     resolution: {integrity: sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA==}
 
@@ -15519,11 +15510,6 @@ packages:
         optional: true
       '@types/react':
         optional: true
-
-  react-qr-code@2.2.0:
-    resolution: {integrity: sha512-e5nS0UUN22K3Nf8KBRUzemfdJ6OmnN5w+kbnj1lvJaol9RyVRFeGl05bCkxSN2ZegbLxjjYjX1+mmAoX9+fAhw==}
-    peerDependencies:
-      react: 19.2.8
 
   react-refresh@0.14.2:
     resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
@@ -33982,8 +33968,6 @@ snapshots:
     dependencies:
       hookified: 2.2.0
 
-  qrcode-generator@2.0.4: {}
-
   quansync@0.2.11: {}
 
   quansync@1.0.0: {}
@@ -34487,12 +34471,6 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
-
-  react-qr-code@2.2.0(react@19.2.8):
-    dependencies:
-      prop-types: 15.8.1
-      qrcode-generator: 2.0.4
-      react: 19.2.8
 
   react-refresh@0.14.2: {}
 

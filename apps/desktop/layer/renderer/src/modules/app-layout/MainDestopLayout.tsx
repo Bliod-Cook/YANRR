@@ -1,5 +1,5 @@
 import { RootPortal } from "@follow/components/ui/portal/index.jsx"
-import { IN_ELECTRON, PROD } from "@follow/shared/constants"
+import { PROD } from "@follow/shared/constants"
 import { useWhoami } from "@follow/store/user/hooks"
 import { preventDefault } from "@follow/utils/dom"
 import type { PropsWithChildren } from "react"
@@ -198,7 +198,7 @@ export function MainDestopLayout() {
             canClose={true}
             clickOutsideToDismiss={true}
           >
-            <LoginModalContent canClose={true} runtime={IN_ELECTRON ? "app" : "browser"} />
+            <LoginModalContent canClose={true} />
           </DeclarativeModal>
         </RootPortal>
       )}

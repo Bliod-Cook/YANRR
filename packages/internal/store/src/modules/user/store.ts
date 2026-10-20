@@ -1,4 +1,3 @@
-import { TOTP_ISSUER } from "@follow/constants"
 import type { UserSchema } from "@follow/database/schemas/types"
 import { UserService } from "@follow/database/services/user"
 import type { AuthUser } from "@follow-app/client-sdk"
@@ -17,11 +16,14 @@ export type UserModel = UserSchema
 
 export type MeModel = Omit<
   AuthUser,
-  "role" | "roleEndAt" | "stripeCustomerId" | "appleAppAccountToken"
-> & {
-  emailVerified?: boolean
-  twoFactorEnabled?: boolean | null
-}
+  | "role"
+  | "roleEndAt"
+  | "stripeCustomerId"
+  | "appleAppAccountToken"
+  | "emailVerified"
+  | "twoFactorEnabled"
+  | "lastLoginMethod"
+>
 export type UserStore = {
   users: Record<string, UserModel>
   whoami: MeModel | null
@@ -158,7 +160,7 @@ class UserSyncService {
     if (!res.user) return res
     const user = apiMorph.toWhoami(res.user)
     immerSet((state) => {
-      state.whoami = { ...user, emailVerified: res.user?.emailVerified ?? false }
+      state.whoami = user
     })
     userActions.upsertMany([user as unknown as UserModel])
 
@@ -207,57 +209,6 @@ class UserSyncService {
     await tx.run()
   }
 
-  async sendVerificationEmail() {
-    const me = get().whoami
-    if (!me?.email) return
-    const res = await authClient().sendVerificationEmail({ email: me.email! })
-    if (res.error) {
-      throw new UserUpdateError(
-        res.error.message || res.error.statusText,
-        res.error.code,
-        res.error.status,
-      )
-    }
-  }
-
-  async updateTwoFactor(enabled: boolean, password: string) {
-    const me = get().whoami
-
-    if (!me) throw new Error("user not login")
-
-    const res = enabled
-      ? await authClient().twoFactor.enable({ password, issuer: TOTP_ISSUER })
-      : await authClient().twoFactor.disable({ password })
-
-    if (!res.error) {
-      immerSet((state) => {
-        if (!state.whoami) return
-
-        // If set enable 2FA, we can't check the 2FA status immediately, must to bind the 2FA app and verify code first
-        if (!enabled) state.whoami.twoFactorEnabled = false
-      })
-    }
-
-    return res
-  }
-
-  /**
-   * Asks to move the account to `email`. The address changes only once the change is done: a
-   * verified account approves it with a link sent to its current address and then verifies the
-   * new one, an unverified account verifies the new one. Until then the current address stays.
-   */
-  async updateEmail(email: string) {
-    if (!get().whoami?.email) return
-    const res = await authClient().changeEmail({ newEmail: email })
-    if (res.error) {
-      throw new UserUpdateError(
-        res.error.message || res.error.statusText,
-        res.error.code,
-        res.error.status,
-      )
-    }
-  }
-
   async fetchUser(userId: string | undefined) {
     if (!userId) return null
 
@@ -295,7 +246,7 @@ class UserActions implements Hydratable, Resetable {
       for (const user of users) {
         state.users[user.id] = user
         if (user.isMe) {
-          state.whoami = { ...user, emailVerified: user.emailVerified ?? false } as MeModel
+          state.whoami = { ...user } as MeModel
         }
       }
     })

@@ -9,9 +9,7 @@ import {
   FormMessage,
 } from "@follow/components/ui/form/index.js"
 import { Input } from "@follow/components/ui/input/Input.js"
-import type { LoginRuntime } from "@follow/shared/auth"
 import { IN_ELECTRON } from "@follow/shared/constants"
-import { env } from "@follow/shared/env.desktop"
 import { userActions } from "@follow/store/user/store"
 import type { AuthUser } from "@follow-app/client-sdk"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -22,18 +20,17 @@ import { Trans, useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { z } from "zod"
 
-import { useModalStack } from "~/components/ui/modal/stacked/hooks"
-import { loginHandler, signUp, twoFactor } from "~/lib/auth"
+import { signIn, signUp } from "~/lib/auth"
 import { ipcServices } from "~/lib/client"
 import { setAuthSessionToken } from "~/lib/client-session"
 import { getAuthErrorMessage } from "~/lib/error-parser"
 import { handleSessionChanges } from "~/queries/auth"
 
-import { TOTPForm } from "../profile/two-factor"
+const passwordSchema = z.string().min(8).max(128)
 
 const formSchema = z.object({
   email: z.string().email(),
-  password: IN_ELECTRON ? z.string().min(8).max(128) : z.string().min(8).max(128).or(z.literal("")),
+  password: passwordSchema,
 })
 
 const getAuthTokenFromResult = (result: unknown) => {
@@ -163,25 +160,16 @@ const getElectronAuthService = () => {
       email: string
       password: string
       name: string
-      callbackURL: string
-    }) => Promise<unknown>
-    verifyTotp?: (payload: {
-      code: string
-      trustDevice?: boolean
-      headers?: Record<string, string>
     }) => Promise<unknown>
   }
 }
 
 export function LoginWithPassword({
-  runtime,
   onLoginStateChange,
 }: {
-  runtime: LoginRuntime
   onLoginStateChange: (state: "register" | "login") => void
 }) {
   const { t } = useTranslation("app")
-  const { t: tSettings } = useTranslation("settings")
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -191,23 +179,7 @@ export function LoginWithPassword({
     mode: "all",
   })
 
-  const { present } = useModalStack()
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!IN_ELECTRON && (!values.password || values.password.trim() === "")) {
-      const result = await loginHandler("magicLink", runtime, {
-        email: values.email,
-      })
-
-      if (result?.error) {
-        toast.error(getAuthErrorMessage(result.error))
-        return
-      }
-
-      toast.success(t("login.magic_link_sent"))
-      return
-    }
-
-    // Use password authentication
     const res = IN_ELECTRON
       ? normalizeElectronAuthResult(
           await getElectronAuthService()?.signInWithCredential?.({
@@ -215,7 +187,7 @@ export function LoginWithPassword({
             password: values.password,
           }),
         )
-      : await loginHandler("credential", runtime, {
+      : await signIn.email({
           email: values.email,
           password: values.password,
         })
@@ -224,50 +196,14 @@ export function LoginWithPassword({
       return
     }
 
-    if ((res?.data as any)?.twoFactorRedirect) {
-      present({
-        title: tSettings("profile.totp_code.title"),
-        content: () => {
-          return (
-            <TOTPForm
-              onSubmitMutationFn={async (values) => {
-                const result = IN_ELECTRON
-                  ? normalizeElectronAuthResult(
-                      await getElectronAuthService()?.verifyTotp?.({
-                        code: values.code,
-                      }),
-                    )
-                  : await twoFactor.verifyTotp({ code: values.code })
-
-                if (!result?.data || result.error) {
-                  throw new Error(result.error?.message ?? tSettings("profile.totp_code.invalid"))
-                }
-
-                if (IN_ELECTRON) {
-                  const token = getAuthTokenFromResult(result)
-                  if (token) {
-                    setAuthSessionToken(token)
-                  }
-                  await persistElectronAuthUser(result)
-                }
-              }}
-              onSuccess={() => {
-                handleSessionChanges()
-              }}
-            />
-          )
-        },
-      })
-    } else {
-      if (IN_ELECTRON) {
-        const token = getAuthTokenFromResult(res)
-        if (token) {
-          setAuthSessionToken(token)
-        }
-        await persistElectronAuthUser(res)
+    if (IN_ELECTRON) {
+      const token = getAuthTokenFromResult(res)
+      if (token) {
+        setAuthSessionToken(token)
       }
-      handleSessionChanges()
+      await persistElectronAuthUser(res)
     }
+    handleSessionChanges()
   }
 
   return (
@@ -300,28 +236,13 @@ export function LoginWithPassword({
           name="password"
           render={({ field }) => (
             <FormItem className="mt-4">
-              <FormLabel className="flex items-center justify-between">
-                <span>
-                  {IN_ELECTRON
-                    ? t("login.password")
-                    : `${t("login.password")} (${t("login.password_optional")})`}
-                </span>
-                <a
-                  href={`${env.VITE_WEB_URL}/forget-password`}
-                  target="_blank"
-                  rel="noreferrer"
-                  tabIndex={-1}
-                  className="block py-1 text-xs text-accent hover:underline"
-                >
-                  {t("login.forget_password.note")}
-                </a>
-              </FormLabel>
+              <FormLabel>{t("login.password")}</FormLabel>
               <FormControl>
                 <Input
                   data-testid="login-password-input"
                   type="password"
                   autoCapitalize="none"
-                  autoComplete={IN_ELECTRON ? "current-password" : "new-password"}
+                  autoComplete="current-password"
                   autoCorrect="off"
                   spellCheck={false}
                   {...field}
@@ -339,9 +260,7 @@ export function LoginWithPassword({
             disabled={!form.formState.isValid}
             size="lg"
           >
-            {IN_ELECTRON || (form.watch("password") && form.watch("password")?.trim() !== "")
-              ? t("login.continueWith", { provider: t("words.email") })
-              : t("login.send_magic_link")}
+            {t("login.continueWith", { provider: t("words.email") })}
           </Button>
         </div>
       </form>
@@ -372,10 +291,8 @@ const createRegisterFormSchema = (t: TFunction<"app">) =>
   z
     .object({
       email: z.string().email(),
-      password: IN_ELECTRON
-        ? z.string().min(8).max(128)
-        : z.string().min(8).max(128).or(z.literal("")),
-      confirmPassword: IN_ELECTRON ? z.string() : z.string().or(z.literal("")),
+      password: passwordSchema,
+      confirmPassword: z.string(),
     })
     .refine((data) => data.password === data.confirmPassword, {
       message: t("login.passwords_do_not_match"),
@@ -385,10 +302,8 @@ const createRegisterFormSchema = (t: TFunction<"app">) =>
 type RegisterFormValues = z.infer<ReturnType<typeof createRegisterFormSchema>>
 
 export function RegisterForm({
-  runtime,
   onLoginStateChange,
 }: {
-  runtime: LoginRuntime
   onLoginStateChange: (state: "register" | "login") => void
 }) {
   const { t } = useTranslation("app")
@@ -405,27 +320,12 @@ export function RegisterForm({
   })
 
   async function onSubmit(values: RegisterFormValues) {
-    if (!IN_ELECTRON && (!values.password || values.password.trim() === "")) {
-      const result = await loginHandler("magicLink", runtime, {
-        email: values.email,
-      })
-
-      if (result?.error) {
-        toast.error(getAuthErrorMessage(result.error))
-        return
-      }
-
-      toast.success(t("register.magic_link_sent"))
-      return
-    }
-
     const result = IN_ELECTRON
       ? normalizeElectronAuthResult(
           await getElectronAuthService()?.signUpWithCredential?.({
             email: values.email,
             password: values.password,
             name: values.email.split("@")[0]!,
-            callbackURL: "/",
           }),
         )
       : await signUp.email(
@@ -433,7 +333,6 @@ export function RegisterForm({
             email: values.email,
             password: values.password,
             name: values.email.split("@")[0]!,
-            callbackURL: "/",
           },
           {
             onError(context) {
@@ -496,11 +395,7 @@ export function RegisterForm({
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>
-                  {IN_ELECTRON
-                    ? t("register.password")
-                    : `${t("register.password")} (${t("register.password_optional")})`}
-                </FormLabel>
+                <FormLabel>{t("register.password")}</FormLabel>
                 <FormControl>
                   <Input
                     data-testid="register-password-input"
@@ -521,11 +416,7 @@ export function RegisterForm({
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>
-                  {IN_ELECTRON
-                    ? t("register.confirm_password")
-                    : `${t("register.confirm_password")} (${t("register.password_optional")})`}
-                </FormLabel>
+                <FormLabel>{t("register.confirm_password")}</FormLabel>
                 <FormControl>
                   <Input
                     data-testid="register-confirm-password-input"
@@ -549,9 +440,7 @@ export function RegisterForm({
             isLoading={form.formState.isSubmitting}
             disabled={!form.formState.isValid}
           >
-            {IN_ELECTRON || (form.watch("password") && form.watch("password")?.trim() !== "")
-              ? t("register.submit")
-              : t("register.send_magic_link")}
+            {t("register.submit")}
           </Button>
         </form>
       </Form>

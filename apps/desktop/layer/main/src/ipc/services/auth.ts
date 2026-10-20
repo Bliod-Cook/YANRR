@@ -13,7 +13,6 @@ import { WindowManager } from "~/manager/window"
 
 import {
   buildManagedAuthCookieHeader,
-  buildManagedAuthCookieHeaderFromSetCookieHeader,
   dedupeManagedAuthCookies,
   getManagedAuthCookies,
   persistManagedAuthCookiesFromSetCookieHeader,
@@ -23,8 +22,6 @@ import { deleteNotificationsToken, updateNotificationsToken } from "../../lib/us
 
 export class AuthService extends IpcService {
   static override readonly groupName = "auth"
-
-  private pendingTwoFactorCookieHeader: string | null = null
 
   private async getManagedCookieHeader(): Promise<string> {
     const mainWindow = WindowManager.getMainWindow()
@@ -97,7 +94,6 @@ export class AuthService extends IpcService {
   }
 
   private async clearSessionToken(): Promise<void> {
-    this.pendingTwoFactorCookieHeader = null
     const mainWindow = WindowManager.getMainWindow()
     if (!mainWindow) {
       return
@@ -134,12 +130,6 @@ export class AuthService extends IpcService {
         : response.headers.get("set-cookie") || ""
     const mainWindow = WindowManager.getMainWindow()
     await this.persistAuthCookiesFromResponse(response)
-
-    const pendingTwoFactorCookieHeader = buildManagedAuthCookieHeaderFromSetCookieHeader(setCookie)
-    this.pendingTwoFactorCookieHeader =
-      response.ok && typeof data.twoFactorRedirect === "boolean" && data.twoFactorRedirect
-        ? pendingTwoFactorCookieHeader || null
-        : null
 
     const sessionCookieMatch = setCookie.match(/better-auth\.session_token=([^;]+)/)
     const sessionToken = sessionCookieMatch?.[1] ?? null
@@ -248,80 +238,6 @@ export class AuthService extends IpcService {
   }
 
   @IpcMethod()
-  async verifyTotp(payload: {
-    code: string
-    trustDevice?: boolean
-    headers?: Record<string, string>
-  }) {
-    const mainWindow = WindowManager.getMainWindow()
-    const cookieHeader =
-      this.pendingTwoFactorCookieHeader ||
-      (mainWindow
-        ? buildManagedAuthCookieHeader(
-            await getManagedAuthCookies({
-              apiURL: env.VITE_API_URL,
-              session: mainWindow.webContents.session,
-            }),
-          )
-        : "")
-
-    const response = await net.fetch(`${env.VITE_API_URL}/better-auth/two-factor/verify-totp`, {
-      method: "POST",
-      credentials: "omit",
-      headers: this.getAuthRequestHeaders({
-        "content-type": "application/json",
-        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
-        ...payload.headers,
-      }),
-      body: JSON.stringify({
-        code: payload.code,
-        ...(payload.trustDevice !== undefined ? { trustDevice: payload.trustDevice } : {}),
-      }),
-    })
-
-    const data = (await response
-      .json()
-      .catch(async () => ({ message: await response.text() }))) as Record<string, unknown>
-    const setCookie =
-      typeof response.headers.getSetCookie === "function"
-        ? response.headers.getSetCookie().join(", ")
-        : response.headers.get("set-cookie") || ""
-    if (response.ok && setCookie && mainWindow) {
-      await persistManagedAuthCookiesFromSetCookieHeader({
-        apiURL: env.VITE_API_URL,
-        session: mainWindow.webContents.session,
-        setCookieHeader: setCookie,
-      })
-    }
-
-    const sessionCookieMatch = setCookie.match(/better-auth\.session_token=([^;]+)/)
-    const sessionTokenFromCookie = sessionCookieMatch?.[1] ?? null
-    const sessionTokenFromBody =
-      data.session && typeof data.session === "object" && "token" in data.session
-        ? (data.session as { token?: unknown }).token
-        : null
-    const sessionToken =
-      typeof sessionTokenFromBody === "string" ? sessionTokenFromBody : sessionTokenFromCookie
-    if (typeof sessionToken === "string") {
-      data.sessionToken = sessionToken
-    }
-
-    if (response.ok) {
-      this.pendingTwoFactorCookieHeader = null
-    }
-
-    return {
-      data,
-      error: response.ok
-        ? null
-        : {
-            message: typeof data.message === "string" ? data.message : response.statusText,
-            status: response.status,
-          },
-    }
-  }
-
-  @IpcMethod()
   async signInWithCredential(payload: { email: string; password: string }) {
     return this.requestCredentialAuth("/sign-in/email", {
       email: payload.email,
@@ -330,17 +246,11 @@ export class AuthService extends IpcService {
   }
 
   @IpcMethod()
-  async signUpWithCredential(payload: {
-    email: string
-    password: string
-    name: string
-    callbackURL: string
-  }) {
+  async signUpWithCredential(payload: { email: string; password: string; name: string }) {
     return this.requestCredentialAuth("/sign-up/email", {
       email: payload.email,
       password: payload.password,
       name: payload.name,
-      callbackURL: payload.callbackURL,
     })
   }
 

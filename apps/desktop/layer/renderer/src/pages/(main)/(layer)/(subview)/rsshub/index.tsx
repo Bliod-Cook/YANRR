@@ -12,7 +12,6 @@ import { HeaderActionButton, HeaderActionGroup } from "~/components/ui/button/He
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { useAuthQuery } from "~/hooks/common"
 import { useSetSubViewRightView, useSubViewTitle } from "~/modules/app-layout/subview/hooks"
-import { useTOTPModalWrapper } from "~/modules/profile/hooks"
 import { AddModalContent } from "~/modules/rsshub/add-modal-content"
 import { ConfirmDeleteModalContent } from "~/modules/rsshub/delete-modal-content"
 import { SetModalContent } from "~/modules/rsshub/set-modal-content"
@@ -87,7 +86,6 @@ const InstanceCard = memo(({ item }: { item: InstanceItem }) => {
   const me = whoami()
   const status = useAuthQuery(Queries.rsshub.status())
   const setRSSHubMutation = useSetRSSHubMutation()
-  const presetTOTPModal = useTOTPModalWrapper(setRSSHubMutation.mutateAsync)
   const { present } = useModalStack()
 
   const isOfficial = "isOfficial" in item && item.isOfficial
@@ -233,7 +231,7 @@ const InstanceCard = memo(({ item }: { item: InstanceItem }) => {
             <div>
               {chosenInstanceId ? (
                 // Stops using the chosen instance as a fallback
-                <Button size="sm" onClick={() => presetTOTPModal({ id: null })}>
+                <Button size="sm" onClick={() => setRSSHubMutation.mutate({ id: null })}>
                   {t("rsshub.table.use_only")}
                 </Button>
               ) : (
