@@ -15,7 +15,7 @@ import { getClientId, getSessionId } from "./client-session"
 import { getUserAgent } from "./native/user-agent"
 import { destination } from "./navigation/biz/Destination"
 import { trackFetch } from "./network-activity"
-import { proxyEnv } from "./proxy-env"
+import { serverEnv } from "./server-env"
 import { createUnauthorizedSessionCheck } from "./session-check"
 
 // Tracked so a runtime reload can wait for the requests to settle first (see `reload-app.ts`).
@@ -24,8 +24,11 @@ const trackedFetch = trackFetch(fetch)
 export const followClient = new FollowClient({
   credentials: "omit",
   timeout: 60_000,
-  baseURL: proxyEnv.API_URL,
-  fetch: async (input, options = {}) => trackedFetch(input.toString(), options as any) as any,
+  baseURL: serverEnv.API_URL,
+  fetch: async (input, options = {}) => {
+    if (!serverEnv.API_URL) throw new Error("No server address is set")
+    return trackedFetch(input.toString(), options as any) as any
+  },
 })
 
 export const followApi = followClient.api
@@ -146,7 +149,7 @@ followClient.addResponseInterceptor(async (ctx) => {
 
 /** Whether the API answers at all. Any HTTP status counts; the endpoint needs no session. */
 const probeApiReachability = async () => {
-  await trackedFetch(`${proxyEnv.API_URL}/status/configs`, {
+  await trackedFetch(`${serverEnv.API_URL}/status/configs`, {
     signal: AbortSignal.timeout(10_000),
   })
   return true
@@ -162,17 +165,20 @@ export const onApiRecovered = (listener: () => void) => {
   }
 }
 
-trackApiConnection(followClient, {
-  probe: probeApiReachability,
-  onUnreachable: () => setApiUnreachable(true),
-  onRecovered: () => {
-    setApiUnreachable(false)
-    for (const listener of apiRecoveredListeners) {
-      try {
-        listener()
-      } catch (error) {
-        console.error("[api-connection] recovery listener threw", error)
+// Without a server there is nothing to reach
+if (serverEnv.API_URL) {
+  trackApiConnection(followClient, {
+    probe: probeApiReachability,
+    onUnreachable: () => setApiUnreachable(true),
+    onRecovered: () => {
+      setApiUnreachable(false)
+      for (const listener of apiRecoveredListeners) {
+        try {
+          listener()
+        } catch (error) {
+          console.error("[api-connection] recovery listener threw", error)
+        }
       }
-    }
-  },
-})
+    },
+  })
+}

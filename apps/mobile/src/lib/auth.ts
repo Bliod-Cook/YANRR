@@ -4,6 +4,7 @@ import { isNewUserQueryKey } from "@follow/store/user/constants"
 import { whoamiQueryKey } from "@follow/store/user/hooks"
 import { userActions } from "@follow/store/user/store"
 import { createMobileAPIHeaders } from "@follow/utils/headers"
+import { normalizeServerUrl } from "@follow/utils/server-url"
 import type { BetterAuthClientOptions } from "better-auth/client"
 import { createAuthClient } from "better-auth/react"
 import { nativeApplicationVersion } from "expo-application"
@@ -18,11 +19,11 @@ import { getClientId, getSessionId } from "./client-session"
 import { scheduleLocalDataReset } from "./local-data-reset"
 import { getUserAgent } from "./native/user-agent"
 import { Navigation } from "./navigation/Navigation"
-import { getEnvProfile, proxyEnv } from "./proxy-env"
 import { unregisterPushToken } from "./push-token"
 import { queryClient } from "./query-client"
 import { reloadApp } from "./reload-app"
 import { safeSecureStore } from "./secure-store"
+import { answersAsServer, saveServerUrl, serverEnv } from "./server-env"
 
 const storagePrefix = "follow_auth"
 export const cookieKey = `${storagePrefix}_cookie`
@@ -74,18 +75,6 @@ const secureAuthCookieStorage = {
       safeSecureStore.setItem(key, value)
     } catch (e) {
       console.warn("SecureStore.setItem failed:", e)
-      return
-    }
-
-    if (key === cookieKey) {
-      if (__DEV__) {
-        const env = getEnvProfile()
-        try {
-          safeSecureStore.setItem(`${cookieKey}_${env}`, value)
-        } catch {
-          // Keychain may be unavailable in background
-        }
-      }
     }
   },
   getItem(key: string) {
@@ -101,14 +90,6 @@ const secureAuthCookieStorage = {
       safeSecureStore.removeItem(key)
     } catch (e) {
       console.warn("SecureStore.removeItem failed:", e)
-      return
-    }
-
-    if (key === cookieKey) {
-      if (__DEV__) {
-        const env = getEnvProfile()
-        safeSecureStore.removeItem(`${cookieKey}_${env}`)
-      }
     }
   },
 }
@@ -146,10 +127,9 @@ const plugins = [
   }),
 ] as MobileAuthPlugins
 
-const getAuthBaseURL = () => `${proxyEnv.API_URL}/better-auth`
-
 export const authClient = createAuthClient<MobileAuthClientOptions>({
-  baseURL: getAuthBaseURL(),
+  // Until the user has set a server there is no address, and better-auth refuses a relative one
+  baseURL: serverEnv.API_URL ? `${serverEnv.API_URL}/better-auth` : undefined,
   sessionOptions: {
     refetchInterval: sessionCookieRefreshIntervalSeconds,
     refetchOnWindowFocus: true,
@@ -171,6 +151,9 @@ export const authClient = createAuthClient<MobileAuthClientOptions>({
         ctx.headers.set(key, value)
       })
       ctx.headers.set("User-Agent", await getUserAgent())
+      // React Native sends no origin, and the server refuses state-changing requests that carry
+      // the session cookie without its own
+      ctx.headers.set("Origin", new URL(serverEnv.WEB_URL).origin)
 
       return ctx
     },
@@ -192,10 +175,6 @@ export const useAuthSessionCookieRefresh = () => {
 
 const clearAuthStorage = async () => {
   const keys = [cookieKey, sessionTokenKey, sessionDataKey]
-  if (__DEV__) {
-    keys.push(`${cookieKey}_${getEnvProfile()}`)
-  }
-
   await Promise.all(keys.map((key) => safeSecureStore.removeItemAsync(key)))
 }
 
@@ -203,6 +182,21 @@ const clearAuthStorage = async () => {
 const resetLocalData = async (reason: string) => {
   scheduleLocalDataReset()
   await reloadApp(reason)
+}
+
+/**
+ * Switches to the server at the address the user typed, once it answers like one. The session
+ * and the data on this device belong to the server before, so the app starts over.
+ */
+export const setServerUrl = async (input: string): Promise<"invalid" | "unreachable" | null> => {
+  const server = normalizeServerUrl(input)
+  if (!server) return "invalid"
+  if (!(await answersAsServer(server))) return "unreachable"
+
+  await clearAuthStorage()
+  saveServerUrl(server)
+  await resetLocalData("Server changed")
+  return null
 }
 
 export const signOut = async () => {

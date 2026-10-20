@@ -15,7 +15,8 @@ import { useUnreadCountBadge } from "./hooks/useUnreadCountBadge"
 import { useAuthSessionCookieRefresh } from "./lib/auth"
 import { useSyncAppColorScheme } from "./lib/color-scheme"
 import { destination } from "./lib/navigation/biz/Destination"
-import { DebugButton, EnvProfileIndicator } from "./modules/debug"
+import { getServerUrl } from "./lib/server-env"
+import { DebugButton } from "./modules/debug"
 import { rememberSignedIn } from "./modules/login/returning-user"
 
 export function App({ children }: { children: React.ReactNode }) {
@@ -28,8 +29,6 @@ export function App({ children }: { children: React.ReactNode }) {
         <ScaleableWrapper>{children}</ScaleableWrapper>
 
         {__DEV__ && <DebugButton />}
-
-        <EnvProfileIndicator />
       </View>
     </>
   )
@@ -56,6 +55,19 @@ const ScaleableWrapper: FC<PropsWithChildren> = ({ children }) => {
 const SideEffect = () => {
   // Must run inside the jotai Provider so it observes the persisted UI settings store.
   useSyncAppColorScheme()
+  useBackHandler()
+  // Without a server there is no session to load; the login screen asks for the server first
+  return getServerUrl() ? <SessionSideEffect /> : <OpenLoginScreen />
+}
+
+const OpenLoginScreen = () => {
+  useEffect(() => {
+    destination.Login()
+  }, [])
+  return null
+}
+
+const SessionSideEffect = () => {
   useAuthSessionCookieRefresh()
   const sessionQuery = usePrefetchSessionUser()
   const hasHandledInitialSessionRef = useRef(false)
@@ -75,7 +87,6 @@ const SideEffect = () => {
     if (whoamiId) rememberSignedIn()
   }, [whoamiId])
   useUnreadCountBadge()
-  useBackHandler()
   useIntentHandler()
   useOnboarding()
 

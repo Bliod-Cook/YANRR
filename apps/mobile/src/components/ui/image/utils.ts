@@ -9,10 +9,10 @@ import { useCallback } from "react"
 import { Image } from "react-native"
 
 import { isAndroid, isNative } from "@/src/lib/platform"
-import { proxyEnv } from "@/src/lib/proxy-env"
+import { serverEnv } from "@/src/lib/server-env"
 import { toast } from "@/src/lib/toast"
 
-const buildSafeHeaders = createBuildSafeHeaders(proxyEnv.WEB_URL, [proxyEnv.API_URL])
+const buildSafeHeaders = createBuildSafeHeaders(serverEnv.WEB_URL, [serverEnv.API_URL])
 
 // Type guard to check if source is an ImageSource with uri property
 function isImageSourceWithUri(

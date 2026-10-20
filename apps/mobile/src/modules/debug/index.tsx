@@ -1,19 +1,15 @@
-import type { envProfileMap } from "@follow/shared/env.rn"
 import { useAtom } from "jotai"
 import { atomWithStorage } from "jotai/utils"
 import { useMemo } from "react"
-import { Dimensions, View } from "react-native"
+import { Dimensions } from "react-native"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { ReAnimatedPressable } from "@/src/components/common/AnimatedComponents"
-import { DropdownMenu } from "@/src/components/ui/context-menu"
-import { Text } from "@/src/components/ui/typography/Text"
 import { BugCuteReIcon } from "@/src/icons/bug_cute_re"
 import { JotaiPersistSyncStorage } from "@/src/lib/jotai"
 import { Navigation } from "@/src/lib/navigation/Navigation"
-import { setEnvProfile, useEnvProfile } from "@/src/lib/proxy-env"
 import { DebugScreen } from "@/src/screens/(headless)/DebugScreen"
 
 export const DebugButton = () => {
@@ -89,38 +85,5 @@ export const DebugButton = () => {
         <BugCuteReIcon height={24} width={24} color="#fff" />
       </ReAnimatedPressable>
     </GestureDetector>
-  )
-}
-export const EnvProfileIndicator = () => {
-  const envProfile = useEnvProfile()
-  if (!__DEV__ && envProfile === "prod") return null
-
-  return (
-    <View
-      className="absolute bottom-0 left-16 items-center justify-center"
-      pointerEvents="box-none"
-    >
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger>
-          <View className="rounded bg-accent p-1">
-            <Text className="text-xs uppercase text-white">{envProfile}</Text>
-          </View>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content>
-          {["prod", "dev", "staging", "local"].map((env) => {
-            return (
-              <DropdownMenu.Item
-                key={env}
-                onSelect={() => {
-                  setEnvProfile(env as keyof typeof envProfileMap)
-                }}
-              >
-                <DropdownMenu.ItemTitle>{env.toUpperCase()}</DropdownMenu.ItemTitle>
-              </DropdownMenu.Item>
-            )
-          })}
-        </DropdownMenu.Content>
-      </DropdownMenu.Root>
-    </View>
   )
 }

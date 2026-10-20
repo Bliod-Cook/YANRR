@@ -8,9 +8,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Logo } from "@/src/components/ui/logo"
 import { Text } from "@/src/components/ui/typography/Text"
 import { useIsTabletLayout, useReadableContainerStyle, useScaleHeight } from "@/src/lib/responsive"
+import { useServerUrl } from "@/src/lib/server-env"
 
 import { EmailLogin, EmailSignUp } from "./email"
 import { hasSignedInBefore } from "./returning-user"
+import { CurrentServer, ServerForm } from "./server"
 
 export function Login() {
   const insets = useSafeAreaInsets()
@@ -24,6 +26,10 @@ export function Login() {
   const { t } = useTranslation()
   // Whoever signed in on this device before, as before an expired session, comes back to sign in
   const [isRegister, setIsRegister] = useState(() => !hasSignedInBefore())
+  const server = useServerUrl()
+  const [isChangingServer, setIsChangingServer] = useState(false)
+  // The server comes first: the credentials are for an account on it
+  const currentServer = isChangingServer ? null : server
   return (
     <View
       testID="login-screen"
@@ -61,16 +67,23 @@ export function Login() {
               <Text className="text-3xl font-semibold">{`${isRegister ? t("signin.sign_up_to") : t("signin.sign_in_to")} `}</Text>
               <Text className="text-3xl font-bold">Folo</Text>
             </Text>
-            {isRegister ? <EmailSignUp /> : <EmailLogin />}
+            {currentServer ? (
+              <>
+                <CurrentServer server={currentServer} onChange={() => setIsChangingServer(true)} />
+                {isRegister ? <EmailSignUp /> : <EmailLogin />}
+              </>
+            ) : (
+              <ServerForm onCancel={server ? () => setIsChangingServer(false) : undefined} />
+            )}
           </View>
         </TouchableWithoutFeedback>
-        {!isTablet && (
+        {!isTablet && currentServer && (
           <View className="mt-14">
             <AuthModeToggle isRegister={isRegister} onToggle={() => setIsRegister(!isRegister)} />
           </View>
         )}
       </KeyboardAvoidingView>
-      {isTablet && (
+      {isTablet && currentServer && (
         <View style={contentWidthStyle}>
           <View className="mt-8">
             <AuthModeToggle isRegister={isRegister} onToggle={() => setIsRegister(!isRegister)} />
