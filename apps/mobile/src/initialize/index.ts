@@ -8,7 +8,6 @@ import { nativeApplicationVersion } from "expo-application"
 
 import { migrateLegacyApiSession } from "../lib/auth-cookie-migration"
 import { applyStoredAppColorScheme } from "../lib/color-scheme"
-import { pruneUnusedTtsFiles } from "../modules/player/entry-tts"
 import { settingSyncQueue } from "../modules/settings/sync-queue"
 import { initAnalytics } from "./analytics"
 import { initializeAppCheck } from "./app-check"
@@ -61,8 +60,7 @@ export const initializeApp = async () => {
   await apm("hydrateQueryClient", hydrateQueryClient)
   await apm("initializeAppCheck", initializeAppCheck)
   runWhenIdle(() => {
-    // Prune TTS files of earlier sessions once the player can tell which one it still plays
-    void apm("initializePlayer", initializePlayer).then(pruneUnusedTtsFiles)
+    void apm("initializePlayer", initializePlayer)
   })
   await initAnalytics()
 

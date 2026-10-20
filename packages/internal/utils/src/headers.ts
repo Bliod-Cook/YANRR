@@ -1,6 +1,6 @@
 import { DEV, MICROSOFT_STORE_BUILD, WEB_BUILD } from "@follow/shared/constants"
 
-import { imageRefererMatches } from "./img-proxy"
+import { imageRefererMatches } from "./image-referer"
 
 export const createBuildSafeHeaders =
   (webUrl: string, selfRefererMatches: string[]) =>

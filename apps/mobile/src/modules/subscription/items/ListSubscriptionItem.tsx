@@ -61,10 +61,6 @@ export const ListSubscriptionItem = memo(({ id, isFirst, isLast }: ListSubscript
             <View className="ml-1 overflow-hidden rounded">
               {!!list.image && (
                 <Image
-                  proxy={{
-                    width: 20,
-                    height: 20,
-                  }}
                   style={styles.listImage}
                   source={{
                     uri: list.image,

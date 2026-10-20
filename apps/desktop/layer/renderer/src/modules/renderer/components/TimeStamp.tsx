@@ -33,7 +33,6 @@ export const TimeStamp = (props: { time: string }) => {
       className="cursor-pointer tabular-nums text-accent"
       onClick={() => {
         AudioPlayer.mount({
-          type: "audio",
           entryId,
           src,
           currentTime: 0,

@@ -36,7 +36,6 @@ export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = [
   "sendAnonymousData",
   "language",
   "appLaunchOnStartup",
-  "voice",
 ]
 
 export function useActionLanguage() {

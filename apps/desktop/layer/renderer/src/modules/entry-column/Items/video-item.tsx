@@ -109,10 +109,6 @@ export function VideoItem({ entryId, translation }: UniversalItemProps) {
                 isActive && "rounded-b-none",
               )}
               loading="lazy"
-              proxy={{
-                width: 640,
-                height: 360,
-              }}
               showFallback={true}
               fitContainer
             />
@@ -148,10 +144,6 @@ export function VideoItemStateLess({ entry, feed }: EntryItemStatelessProps) {
               className="aspect-video w-full shrink-0 rounded-md object-cover"
               mediaContainerClassName="w-auto h-auto rounded"
               loading="lazy"
-              proxy={{
-                width: 640,
-                height: 360,
-              }}
               height={entry.media[0].height}
               width={entry.media[0].width}
               blurhash={entry.media[0].blurhash}

@@ -155,10 +155,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             className="aspect-video w-full rounded-md object-cover"
             videoClassName="object-contain"
             loading="lazy"
-            proxy={{
-              width: 640,
-              height: 360,
-            }}
             showFallback={true}
           />
         ) : (

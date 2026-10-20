@@ -24,7 +24,6 @@ import { useNavigation } from "@/src/lib/navigation/hooks"
 import { createLinkShareContent } from "@/src/lib/share"
 import { toast } from "@/src/lib/toast"
 import { useEntryExternalUrl } from "@/src/modules/entry-content/external-url"
-import { playEntryTts } from "@/src/modules/player/entry-tts"
 import { EntryDetailScreen } from "@/src/screens/(stack)/entries/[entryId]/EntryDetailScreen"
 
 import {
@@ -207,22 +206,6 @@ export const EntryItemContextMenu = ({
             </ContextMenu.ItemTitle>
           </ContextMenu.Item>
         )}
-
-        <ContextMenu.Item
-          key="PlayTts"
-          onSelect={() => {
-            void playEntryTts(id, {
-              toastTitle: t("entry_content.header.play_tts"),
-            })
-          }}
-        >
-          <ContextMenu.ItemIcon
-            ios={{
-              name: "speaker.wave.2",
-            }}
-          />
-          <ContextMenu.ItemTitle>{t("entry_content.header.play_tts")}</ContextMenu.ItemTitle>
-        </ContextMenu.Item>
 
         {externalUrl && (
           <ContextMenu.Item

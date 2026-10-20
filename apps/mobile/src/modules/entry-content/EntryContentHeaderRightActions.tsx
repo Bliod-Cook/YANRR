@@ -26,13 +26,11 @@ import { ShareForwardCuteReIcon } from "@/src/icons/share_forward_cute_re"
 import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
 import { StarCuteReIcon } from "@/src/icons/star_cute_re"
 import { Translate2CuteReIcon } from "@/src/icons/translate_2_cute_re"
-import { VoiceCuteReIcon } from "@/src/icons/voice_cute_re"
 import { hideIntelligenceGlowEffect, openLink } from "@/src/lib/native"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { createLinkShareContent } from "@/src/lib/share"
 import { toast } from "@/src/lib/toast"
 import { showUpgradeRequiredDialog } from "@/src/modules/dialogs/UpgradeRequiredDialog"
-import { playEntryTts } from "@/src/modules/player/entry-tts"
 import { getSelectedView } from "@/src/modules/screen/atoms"
 import { ReadingScreen } from "@/src/modules/settings/routes/Reading"
 
@@ -200,19 +198,6 @@ const HeaderRightActionsImpl = ({
         isCheckbox: true,
         inMenu: true,
       },
-    {
-      key: "PlayTts",
-      title: t("entry_content.header.play_tts"),
-      icon: <VoiceCuteReIcon />,
-      iconIOS: { name: "speaker.wave.2" },
-      onPress: () => {
-        void playEntryTts(entryId, {
-          preferReadability: showReadability,
-          toastTitle: t("entry_content.header.play_tts"),
-        })
-      },
-      inMenu: true,
-    },
     !!externalUrl && {
       key: "Share",
       title: t("operation.share"),

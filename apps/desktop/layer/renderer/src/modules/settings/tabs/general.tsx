@@ -6,7 +6,6 @@ import { IN_ELECTRON } from "@follow/shared/constants"
 import { START_IN_TRAY_ARGS } from "@follow/shared/desktop-launch"
 import { useUserRole } from "@follow/store/user/hooks"
 import { cn } from "@follow/utils/utils"
-import { useQuery } from "@tanstack/react-query"
 import dayjs from "dayjs"
 import { useAtom } from "jotai"
 import { useEffect, useState } from "react"
@@ -30,7 +29,6 @@ import { useMinimizeToTrayValue, useSetMinimizeToTray } from "~/hooks/biz/useTra
 import { fallbackLanguage } from "~/i18n"
 import { ipcServices } from "~/lib/client"
 import { setTranslationCache } from "~/modules/entry-content/atoms"
-import { fetchTtsVoices } from "~/modules/player/tts-service"
 
 import { PaidBadge, SettingDescription, SettingInput, SettingSwitch } from "../control"
 import { createSetting } from "../helper/builder"
@@ -172,10 +170,6 @@ export const SettingGeneral = () => {
             description: t("general.mark_as_read.render.description"),
           }),
 
-          { type: "title", value: "TTS" },
-
-          VoiceSelector,
-
           { type: "title", value: t("general.network") },
           IN_ELECTRON && NettingSetting,
 
@@ -201,41 +195,6 @@ export const SettingGeneral = () => {
             },
           }),
         ]}
-      />
-    </div>
-  )
-}
-
-const VoiceSelector = () => {
-  const { t } = useTranslation("settings")
-
-  const { data } = useQuery({
-    queryFn: ({ signal }) => fetchTtsVoices(signal),
-    queryKey: ["voices"],
-    meta: {
-      persist: true,
-    },
-  })
-
-  const voice = useGeneralSettingKey("voice")
-
-  return (
-    <div className="-mt-1 mb-3 flex items-center justify-between">
-      <span className="shrink-0 text-sm font-medium">{t("general.voices")}</span>
-      <ResponsiveSelect
-        size="sm"
-        triggerClassName="w-48"
-        defaultValue={voice}
-        value={voice}
-        onValueChange={(value) => {
-          setGeneralSetting("voice", value)
-        }}
-        items={
-          data?.map((item) => ({
-            label: item.FriendlyName,
-            value: item.ShortName,
-          })) ?? []
-        }
       />
     </div>
   )

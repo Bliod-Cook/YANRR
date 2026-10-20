@@ -397,7 +397,6 @@ export const MediaTranscript: React.FC<MediaTranscriptProps> = ({
           entryId,
           src: entry.audioUrl,
           currentTime: timeInSeconds,
-          type: "audio",
         })
         // mount() automatically starts playing, so no need to call play() here
       }

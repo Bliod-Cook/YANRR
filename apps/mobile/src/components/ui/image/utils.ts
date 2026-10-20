@@ -1,5 +1,4 @@
 import { createBuildSafeHeaders } from "@follow/utils/headers"
-import { IMAGE_PROXY_URL } from "@follow/utils/img-proxy"
 import ImageEditor from "@react-native-community/image-editor"
 import * as FileSystem from "expo-file-system/legacy"
 import type { ImageProps, ImageSource } from "expo-image"
@@ -9,15 +8,11 @@ import { t } from "i18next"
 import { useCallback } from "react"
 import { Image } from "react-native"
 
-import { getImageProxyUrl } from "@/src/lib/img-proxy"
 import { isAndroid, isNative } from "@/src/lib/platform"
 import { proxyEnv } from "@/src/lib/proxy-env"
 import { toast } from "@/src/lib/toast"
 
-const buildSafeHeaders = createBuildSafeHeaders(proxyEnv.WEB_URL, [
-  IMAGE_PROXY_URL,
-  proxyEnv.API_URL,
-])
+const buildSafeHeaders = createBuildSafeHeaders(proxyEnv.WEB_URL, [proxyEnv.API_URL])
 
 // Type guard to check if source is an ImageSource with uri property
 function isImageSourceWithUri(
@@ -32,49 +27,22 @@ function isImageSourceWithUri(
   )
 }
 
-export const getAllSources = (
-  source: ImageProps["source"],
-  proxy?: {
-    width?: number
-    height?: number
-  },
-) => {
+export const getSafeSource = (source: ImageProps["source"]) => {
   if (!isImageSourceWithUri(source)) {
     console.warn("Invalid image source", source)
-    return [undefined, undefined] as const
+    return
   }
 
   // Now TypeScript knows source has a uri property
   source.uri = source.uri.replace("http://", "https://")
 
-  const safeSource: ImageProps["source"] = {
-    width: proxy?.width,
-    height: proxy?.height,
+  return {
     ...source,
     headers: {
       ...buildSafeHeaders({ url: source.uri }),
       ...source.headers,
     },
-  }
-
-  const proxiesSafeSource = (() => {
-    if (!proxy?.height && !proxy?.width) {
-      return safeSource
-    }
-
-    return {
-      width: proxy?.width,
-      height: proxy?.height,
-      ...safeSource,
-      uri: getImageProxyUrl({
-        url: source.uri,
-        width: proxy?.width ? proxy?.width * 3 : undefined,
-        height: proxy?.height ? proxy?.height * 3 : undefined,
-      }),
-    } satisfies ImageProps["source"]
-  })()
-
-  return [safeSource, proxiesSafeSource] as const
+  } satisfies ImageProps["source"]
 }
 
 const getImageData = async (imageUrl: string) => {

@@ -60,12 +60,6 @@ export const EntryCommandShortcutRegister = ({
     args: [{ entryId }],
   })
 
-  useCommandBinding({
-    when: baseCondition,
-    commandId: COMMAND_ID.entry.tts,
-    args: [{ entryId }],
-  })
-
   const navigate = useNavigateEntry()
   useHotkeys(
     "Escape",

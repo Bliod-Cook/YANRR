@@ -5,7 +5,6 @@ import { callWindowExpose } from "@follow/shared/bridge"
 import { DEV, LEGACY_APP_PROTOCOL } from "@follow/shared/constants"
 import { env } from "@follow/shared/env.desktop"
 import { createBuildSafeHeaders } from "@follow/utils/headers"
-import { IMAGE_PROXY_URL } from "@follow/utils/img-proxy"
 import { parse } from "cookie-es"
 import { app, BrowserWindow, net, protocol, session } from "electron"
 import { join } from "pathe"
@@ -24,7 +23,6 @@ import { AppManager } from "./app"
 
 const apiURL = process.env["VITE_API_URL"] || import.meta.env.VITE_API_URL
 const buildSafeHeaders = createBuildSafeHeaders(env.VITE_WEB_URL, [
-  IMAGE_PROXY_URL,
   env.VITE_API_URL,
   "https://readwise.io",
 ])

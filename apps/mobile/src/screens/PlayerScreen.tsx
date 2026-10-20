@@ -18,7 +18,7 @@ import { ScreenItemContext } from "@/src/lib/navigation/ScreenItemContext"
 import { gentleSpringPreset } from "../constants/spring"
 import type { NavigationControllerView } from "../lib/navigation/types"
 import type { ActivePlayable } from "../lib/player"
-import { useActivePlayable, useIsPlaying, useTtsStreamPlayback } from "../lib/player"
+import { useActivePlayable, useIsPlaying } from "../lib/player"
 import { PlayerScreenContext, usePlayerScreenContext } from "../modules/player/context"
 import { ControlGroup, ProgressBar, VolumeBar } from "../modules/player/control"
 import { useCoverGradient } from "../modules/player/hooks"
@@ -31,9 +31,7 @@ function CoverArt({ playable }: { playable: ActivePlayable }) {
   const maxCoverSize = Math.round(useWindowDimensions().width * 0.87)
   const slotStyle = useMemo(() => ({ height: maxCoverSize }), [maxCoverSize])
   const scale = useSharedValue(1)
-  const ttsStream = useTtsStreamPlayback()
-  const playing = useIsPlaying()
-  const isPlaying = ttsStream.entryId ? ttsStream.status === "playing" : playing
+  const isPlaying = useIsPlaying()
   useEffect(() => {
     cancelAnimation(scale)
     scale.value = withSpring(isPlaying ? 1 : 0.7, gentleSpringPreset)

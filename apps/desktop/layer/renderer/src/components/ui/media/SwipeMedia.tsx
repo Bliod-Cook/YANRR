@@ -8,27 +8,17 @@ import { useCallback, useRef } from "react"
 
 import { Media } from "~/components/ui/media/Media"
 
-const defaultProxySize = {
-  width: 600,
-  height: 0,
-}
-
 export function SwipeMedia({
   media,
   className,
   imgClassName,
   onPreview,
-  proxySize = defaultProxySize,
   fitContainer,
 }: {
   media?: MediaModel[] | null
   className?: string
   imgClassName?: string
   onPreview?: (media: MediaModel[], index?: number) => void
-  proxySize?: {
-    width: number
-    height: number
-  } | null
   fitContainer?: boolean
 }) {
   const uniqMedia = media ? uniqBy(media, "url") : []
@@ -80,7 +70,6 @@ export function SwipeMedia({
                   type={med.type}
                   previewImageUrl={med.preview_image_url}
                   loading="lazy"
-                  proxy={proxySize || undefined}
                   blurhash={med.blurhash}
                   width={med.width}
                   height={med.height}

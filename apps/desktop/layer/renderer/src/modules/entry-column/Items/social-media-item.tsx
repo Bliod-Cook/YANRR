@@ -195,10 +195,6 @@ export function SocialMediaItemStateLess({ entry, feed }: EntryItemStatelessProp
                 className="size-28 shrink-0 rounded object-cover"
                 mediaContainerClassName="w-auto h-auto rounded"
                 loading="lazy"
-                proxy={{
-                  width: 160,
-                  height: 160,
-                }}
                 height={media.height}
                 width={media.width}
                 blurhash={media.blurhash}

@@ -4,7 +4,6 @@ import { useMemo } from "react"
 
 import { usePreviewMedia } from "~/components/ui/media/hooks"
 import { Media } from "~/components/ui/media/Media"
-import { useGetImageProxyUrl } from "~/lib/img-proxy"
 import { jotaiStore } from "~/lib/jotai"
 
 import { socialMediaContentWidthAtom } from "../atoms/social-media-content-width"
@@ -16,7 +15,6 @@ export const MediaGallery = ({
   entryId: string
   containerWidth?: number
 }) => {
-  const getImageProxyUrl = useGetImageProxyUrl()
   const entry = useEntry(entryId, (state) => ({ media: state.media }))
   const media = useMemo(() => entry?.media || [], [entry?.media])
 
@@ -73,10 +71,6 @@ export const MediaGallery = ({
             }
           }
 
-          const proxySize = {
-            width: Number.parseInt(style.width || "0") * 2 || 0,
-            height: Number.parseInt(style.height || "0") * 2 || 0,
-          }
           return (
             <Media
               style={style}
@@ -87,7 +81,6 @@ export const MediaGallery = ({
               blurhash={media.blurhash}
               className="size-28 shrink-0 cursor-zoom-in data-[state=loading]:!bg-material-ultra-thick"
               loading="lazy"
-              proxy={proxySize}
               onClick={(e) => {
                 e.stopPropagation()
                 previewMedia(
@@ -95,8 +88,7 @@ export const MediaGallery = ({
                     url: m.url,
                     type: m.type,
                     blurhash: m.blurhash,
-                    fallbackUrl:
-                      m.preview_image_url ?? getImageProxyUrl({ url: m.url, ...proxySize }),
+                    fallbackUrl: m.preview_image_url,
                   })),
                   i,
                 )
@@ -121,11 +113,6 @@ export const MediaGallery = ({
         )}
       >
         {media.map((m, i) => {
-          const proxySize = {
-            width: 400,
-            height: 400,
-          }
-
           const style = media.length === 3 && i === 2 ? { gridRow: "span 2" } : {}
 
           return (
@@ -138,7 +125,6 @@ export const MediaGallery = ({
               blurhash={m.blurhash}
               className="aspect-square w-full cursor-zoom-in rounded object-cover"
               loading="lazy"
-              proxy={proxySize}
               onClick={(e) => {
                 e.stopPropagation()
                 previewMedia(
@@ -146,8 +132,7 @@ export const MediaGallery = ({
                     url: m.url,
                     type: m.type,
                     blurhash: m.blurhash,
-                    fallbackUrl:
-                      m.preview_image_url ?? getImageProxyUrl({ url: m.url, ...proxySize }),
+                    fallbackUrl: m.preview_image_url,
                   })),
                   i,
                 )

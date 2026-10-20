@@ -14,8 +14,6 @@ export interface GeneralSettings {
   groupByDate: boolean
   jumpOutLinkWarn: boolean
   dimRead: boolean
-  // TTS
-  voice: string
 
   // subscription
   autoGroup: boolean

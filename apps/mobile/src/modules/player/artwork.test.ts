@@ -35,7 +35,7 @@ describe("getEntryArtwork", () => {
 
   it("falls back to the site icon when the feed has no image either", () => {
     expect(getEntryArtwork(undefined, createFeed({ image: null }))).toBe(
-      "https://icons.folo.is/www.npr.org",
+      "https://www.npr.org/favicon.ico",
     )
   })
 

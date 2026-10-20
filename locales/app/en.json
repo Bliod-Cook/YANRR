@@ -220,8 +220,6 @@
   "entry_content.external_link.warning": "You are about to leave this site for an external page. Do you trust this URL and want to continue?",
   "entry_content.fetching_content": "Fetching original content and processing...",
   "entry_content.fetching_content_failed": "Readability: Failed to fetch original content, try again later or back to the RSS content.",
-  "entry_content.header.play_tts": "Play TTS",
-  "entry_content.header.play_tts_description": "Select a TTS voice in settings and start TTS to convert to audio content",
   "entry_content.header.readability": "Readability",
   "entry_content.header.readability_description": "Using readability's ability to obtain the original website content and parse it may allow for more readable content. Recommended to use it when the RSS content is not available or incomplete.",
   "entry_content.invalid_entry_id": "Invalid entry ID",

@@ -10,8 +10,6 @@
   "entry_content.ai_summary": "AI 要約",
   "entry_content.header.more_actions": "その他の操作",
   "entry_content.header.open_in_browser": "ブラウザで開く",
-  "entry_content.header.play_tts": "TTS を再生",
-  "entry_content.header.play_tts_description": "設定でTTS音声を選択し、TTSを開始して音声コンテンツに変換します",
   "entry_content.header.reading_settings": "読書設定",
   "entry_content.header.show_readability": "リーダーモード",
   "entry_content.header.show_translation": "翻訳を表示",

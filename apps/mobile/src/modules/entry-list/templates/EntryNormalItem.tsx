@@ -340,9 +340,6 @@ const AspectRatioImage = ({
   return (
     <View className="flex max-w-full items-center justify-center overflow-hidden rounded-lg bg-tertiary-system-background">
       <Image
-        proxy={{
-          width: 96,
-        }}
         source={{
           uri: image,
         }}
@@ -371,10 +368,6 @@ const SquareImage = ({
   return (
     <View className="size-24 overflow-hidden rounded-lg">
       <Image
-        proxy={{
-          width: 96,
-          height: 96,
-        }}
         className="size-24"
         transition={100}
         source={{

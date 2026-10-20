@@ -18,7 +18,6 @@ import { m } from "~/components/common/Motion"
 import { GlassButton } from "~/components/ui/button/GlassButton"
 import { COPY_MAP } from "~/constants"
 import { ipcServices } from "~/lib/client"
-import { useReplaceImgUrlIfNeed } from "~/lib/img-proxy"
 
 import { useCurrentModal } from "../modal/stacked/hooks"
 import type { VideoPlayerRef } from "./VideoPlayer"
@@ -428,46 +427,25 @@ const FallbackableImage: FC<
   }
 > = ({ src, fallbackUrl, containerClassName, onZoomChange, loading }) => {
   const { t } = useTranslation()
-  const replaceImgUrlIfNeed = useReplaceImgUrlIfNeed()
-  const [currentSrc, setCurrentSrc] = useState(() => replaceImgUrlIfNeed(src))
+  const [currentSrc, setCurrentSrc] = useState(src)
   const [isAllError, setIsAllError] = useState(false)
 
   const [isLoading, setIsLoading] = useState(true)
 
-  const [currentState, setCurrentState] = useState<"proxy" | "origin" | "fallback">(() =>
-    currentSrc === src ? "origin" : "proxy",
-  )
-
-  // Start over from the first source, so a retry goes through every source again
+  // Start over from the original, so a retry goes through every source again
   const retry = () => {
-    const firstSrc = replaceImgUrlIfNeed(src)
-    setCurrentSrc(firstSrc)
-    setCurrentState(firstSrc === src ? "origin" : "proxy")
+    setCurrentSrc(src)
     setIsLoading(true)
     setIsAllError(false)
   }
 
   const handleError = useCallback(() => {
-    switch (currentState) {
-      case "proxy": {
-        setCurrentSrc(src)
-        setCurrentState("origin")
-        break
-      }
-      case "origin": {
-        if (fallbackUrl) {
-          setCurrentSrc(fallbackUrl)
-          setCurrentState("fallback")
-        } else {
-          setIsAllError(true)
-        }
-        break
-      }
-      case "fallback": {
-        setIsAllError(true)
-      }
+    if (fallbackUrl && currentSrc !== fallbackUrl) {
+      setCurrentSrc(fallbackUrl)
+    } else {
+      setIsAllError(true)
     }
-  }, [currentState, fallbackUrl, src])
+  }, [currentSrc, fallbackUrl])
 
   return (
     <div className={cn("relative size-full", containerClassName)}>
@@ -518,7 +496,7 @@ const FallbackableImage: FC<
         </div>
       )}
 
-      {currentState === "fallback" && (
+      {!!fallbackUrl && currentSrc === fallbackUrl && (
         <div className="absolute bottom-8 left-1/2 mt-4 -translate-x-1/2 rounded-lg bg-material-thick px-3 py-2 text-center text-xs text-text opacity-70 backdrop-blur-background">
           <Trans
             t={t}

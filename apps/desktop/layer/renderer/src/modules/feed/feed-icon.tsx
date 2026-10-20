@@ -1,15 +1,13 @@
 // import { Avatar, AvatarFallback, AvatarImage } from "@follow/components/ui/avatar/index.jsx"
 import { PlatformIcon } from "@follow/components/ui/platform-icon/index.jsx"
+import { getFeedIconSrc } from "@follow/components/utils/icon.js"
 import type { FeedModel } from "@follow/store/feed/types"
 import { getBackgroundGradient } from "@follow/utils/color"
-import { getImageProxyUrl } from "@follow/utils/img-proxy"
-import { cn, getUrlIcon } from "@follow/utils/utils"
+import { cn } from "@follow/utils/utils"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 import { m } from "motion/react"
 import type { ReactNode } from "react"
 import { useMemo } from "react"
-
-import { useCanUseImageProxy } from "~/lib/img-proxy"
 
 const { Avatar, AvatarFallback, AvatarImage } = AvatarPrimitive
 
@@ -28,20 +26,9 @@ type GetIconPropsProps = {
   siteUrl?: string
   fallbackUrl?: string
   fallback?: boolean
-  size?: number
-  canUseProxy?: boolean
 }
 function getIconProps(props: GetIconPropsProps) {
-  const {
-    target,
-    entry,
-    useMedia,
-    siteUrl: propSiteUrl,
-    fallbackUrl,
-    fallback,
-    size = 20,
-    canUseProxy,
-  } = props
+  const { target, entry, useMedia, siteUrl: propSiteUrl, fallbackUrl, fallback } = props
   const image =
     (useMedia ? entry?.firstPhotoUrl || entry?.authorAvatar : entry?.authorAvatar) || target?.image
   const siteUrl = (target as FeedModel)?.siteUrl || fallbackUrl
@@ -49,7 +36,6 @@ function getIconProps(props: GetIconPropsProps) {
   if (propSiteUrl && !target) {
     const [src] = getFeedIconSrc({
       siteUrl: propSiteUrl,
-      canUseProxy,
     })
     return {
       type: "image" as const,
@@ -61,12 +47,7 @@ function getIconProps(props: GetIconPropsProps) {
   if (image) {
     return {
       type: "image" as const,
-      src: getImageProxyUrl({
-        url: image,
-        width: size * 2,
-        height: size * 2,
-        canUseProxy,
-      }),
+      src: image,
       platformUrl: image,
       fallbackSrc: "",
     }
@@ -76,11 +57,6 @@ function getIconProps(props: GetIconPropsProps) {
     const [src, fallbackSrc] = getFeedIconSrc({
       siteUrl,
       fallback,
-      proxy: {
-        width: size * 2,
-        height: size * 2,
-      },
-      canUseProxy,
     })
     return {
       type: "image" as const,
@@ -104,40 +80,6 @@ function getIconProps(props: GetIconPropsProps) {
   return {
     type: "default" as const,
   }
-}
-
-const getFeedIconSrc = ({
-  src,
-  siteUrl,
-  fallback,
-  proxy,
-  canUseProxy,
-}: {
-  src?: string
-  siteUrl?: string
-  fallback?: boolean
-  proxy?: { height: number; width: number }
-  canUseProxy?: boolean
-} = {}) => {
-  if (src) {
-    if (proxy) {
-      return [
-        getImageProxyUrl({
-          url: src,
-          width: proxy.width,
-          height: proxy.height,
-          canUseProxy,
-        }),
-        "",
-      ]
-    }
-
-    return [src, ""]
-  }
-  if (!siteUrl) return ["", ""]
-  const ret = getUrlIcon(siteUrl, fallback)
-
-  return [ret.src, ret.fallbackUrl]
 }
 
 const FallbackableImage = function FallbackableImage({
@@ -218,7 +160,6 @@ export function FeedIcon({
   noMargin?: boolean
 }) {
   const marginClassName = cn(noMargin ? "" : "mr-2", className)
-  const canUseProxy = useCanUseImageProxy()
   const iconProps = getIconProps({
     target,
     entry,
@@ -226,8 +167,6 @@ export function FeedIcon({
     siteUrl,
     fallbackUrl,
     fallback,
-    size,
-    canUseProxy,
   })
 
   const colors = useMemo(

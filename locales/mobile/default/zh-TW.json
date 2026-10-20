@@ -10,8 +10,6 @@
   "entry_content.ai_summary": "AI 摘要",
   "entry_content.header.more_actions": "更多操作",
   "entry_content.header.open_in_browser": "在瀏覽器中開啟",
-  "entry_content.header.play_tts": "播放文字轉語音",
-  "entry_content.header.play_tts_description": "在設定中選擇一個 TTS 語音，啟動 TTS 轉換為有聲內容",
   "entry_content.header.reading_settings": "閱讀設定",
   "entry_content.header.show_readability": "可讀模式",
   "entry_content.header.show_translation": "顯示翻譯",

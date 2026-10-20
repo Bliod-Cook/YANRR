@@ -22,7 +22,6 @@ import { LightboxStateProvider } from "../components/ui/lightbox/lightboxState"
 import { getMobileBillingProvider } from "../lib/payment"
 import { queryClient } from "../lib/query-client"
 import { getUIKitAlphaVariables } from "../lib/uikit-colors"
-import { TtsStreamProvider } from "../modules/player/TtsStreamProvider"
 import { TimelineSelectorDragProgressProvider } from "../modules/screen/atoms"
 import { ApiConnectionNotice } from "./ApiConnectionNotice"
 import { AppleIAPProvider } from "./AppleIAPProvider"
@@ -70,7 +69,6 @@ export const RootProviders = ({ children }: { children: ReactNode }) => {
         {children}
         <ServerConfigsLoader />
         <ApiConnectionNotice />
-        <TtsStreamProvider />
       </ComposeContextProvider>
     </View>
   )

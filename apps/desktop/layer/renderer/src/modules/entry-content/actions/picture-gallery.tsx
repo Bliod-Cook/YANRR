@@ -2,7 +2,6 @@ import {
   MasonryItemsAspectRatioContext,
   MasonryItemsAspectRatioSetterContext,
   MasonryItemWidthContext,
-  useMasonryItemWidth,
 } from "@follow/components/ui/masonry/contexts.jsx"
 import { useMasonryColumn } from "@follow/components/ui/masonry/hooks.js"
 import type { MediaModel } from "@follow/database/schemas/types"
@@ -26,8 +25,6 @@ const Render: React.ComponentType<
 > = ({ data }) => {
   const { url, type, height, width, blurhash } = data
 
-  const itemWidth = useMasonryItemWidth()
-
   return (
     <Media
       thumbnail
@@ -37,10 +34,6 @@ const Render: React.ComponentType<
       className="size-full overflow-hidden"
       mediaContainerClassName={"w-auto h-auto rounded"}
       loading="lazy"
-      proxy={{
-        width: itemWidth,
-        height: 0,
-      }}
       height={height}
       width={width}
       blurhash={blurhash}

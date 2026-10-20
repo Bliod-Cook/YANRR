@@ -34,8 +34,6 @@ export const defaultGeneralSettings: GeneralSettings = {
 
   // Secure
   jumpOutLinkWarn: true,
-  // TTS
-  voice: "en-US-AvaMultilingualNeural",
 
   // Pro feature
   enhancedSettings: false,

@@ -22,7 +22,6 @@ import { useEventCallback } from "usehooks-ts"
 import { m } from "~/components/common/Motion"
 import { useFollow } from "~/hooks/biz/useFollow"
 import { useI18n } from "~/hooks/common"
-import { useReplaceImgUrlIfNeed } from "~/lib/img-proxy"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { useUserSubscriptionsQuery } from "~/modules/profile/hooks"
 
@@ -41,7 +40,6 @@ export const SubscriptionItems = ({
   itemStyle: ItemVariant
 }) => {
   const { t } = useTranslation()
-  const replaceImgUrlIfNeed = useReplaceImgUrlIfNeed()
   const profile = usePrefetchUser(userId)
   const userInfo = useUserById(userId)
   const subscriptions = useUserSubscriptionsQuery(userId)
@@ -53,7 +51,7 @@ export const SubscriptionItems = ({
         size="large"
         icon={
           <Avatar className="aspect-square size-4">
-            <AvatarImage src={replaceImgUrlIfNeed(renderUserData?.image || undefined)} />
+            <AvatarImage src={renderUserData?.image || undefined} />
             <AvatarFallback>{renderUserData?.name?.slice(0, 2)}</AvatarFallback>
           </Avatar>
         }
