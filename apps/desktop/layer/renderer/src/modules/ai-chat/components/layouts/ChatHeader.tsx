@@ -23,7 +23,7 @@ import {
 import { useSettingModal } from "~/modules/settings/modal/use-setting-modal-hack"
 
 import { useAIRootState } from "../../store/AIChatContext"
-import { AISpline } from "../3d-models/AISpline"
+import { AIIcon } from "../AIIcon"
 import { ChatHistoryDropdown } from "./ChatHistoryDropdown"
 import { ChatMoreDropdown } from "./ChatMoreDropdown"
 import { AIHeaderTitle } from "./ChatTitle"
@@ -99,7 +99,7 @@ const ChatHeaderLayout = ({
           <div className="mr-2 flex min-w-0 items-center">
             {(hasMessages || currentTitle) && (
               <div onClick={() => settingModalPresent("ai")}>
-                <AISpline className="no-drag-region -mx-1 -mb-1 mr-1 size-9" />
+                <AIIcon className="no-drag-region -mx-1 -mb-1 mr-1 size-9" />
               </div>
             )}
             <ChatHistoryDropdown

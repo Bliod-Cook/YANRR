@@ -7,9 +7,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vi
 
 import { AIIndicator } from "./AISplineButton"
 
-const { setAIPanelVisibilityMock, splineRenderMock, aiState } = vi.hoisted(() => ({
+const { setAIPanelVisibilityMock, aiState } = vi.hoisted(() => ({
   setAIPanelVisibilityMock: vi.fn(),
-  splineRenderMock: vi.fn(),
   aiState: {
     isVisible: false,
     showSplineButton: true,
@@ -37,17 +36,6 @@ vi.mock("~/atoms/settings/ai", () => ({
     return
   },
 }))
-
-vi.mock("~/modules/ai-chat/components/3d-models/AISpline", async () => {
-  const React = await import("react")
-
-  return {
-    AISpline: () => {
-      splineRenderMock()
-      return React.createElement("div", { "data-testid": "ai-spline" })
-    },
-  }
-})
 
 vi.mock("~/modules/ai-chat/components/layouts/AISmartSidebar", () => ({
   AISmartSidebar: () => null,
@@ -136,11 +124,8 @@ describe("AIIndicator", () => {
     vi.clearAllMocks()
   })
 
-  test("renders the Folo bot icon without mounting the Spline scene", async () => {
+  test("renders the bot icon and opens the AI panel", async () => {
     ;({ container, root } = await renderComponent())
-
-    expect(container.querySelector("[data-testid='ai-spline']")).toBeNull()
-    expect(splineRenderMock).not.toHaveBeenCalled()
 
     const button = container.querySelector<HTMLButtonElement>("button[title='Open AI Chat']")
     expect(button).not.toBeNull()
@@ -154,23 +139,6 @@ describe("AIIndicator", () => {
     expect(setAIPanelVisibilityMock).toHaveBeenCalledWith(true)
   })
 
-  test("keeps the Spline scene unmounted when the user interacts with the AI button", async () => {
-    ;({ container, root } = await renderComponent())
-
-    const button = container.querySelector<HTMLButtonElement>("button[title='Open AI Chat']")
-    expect(button).not.toBeNull()
-
-    await act(async () => {
-      button?.focus()
-    })
-    await act(async () => {
-      button?.dispatchEvent(new PointerEvent("pointerenter", { bubbles: true }))
-    })
-
-    expect(container.querySelector("[data-testid='ai-spline']")).toBeNull()
-    expect(splineRenderMock).not.toHaveBeenCalled()
-  })
-
   test("returns to the static idle button after the AI panel closes", async () => {
     ;({ container, root } = await renderComponent())
 
@@ -178,7 +146,6 @@ describe("AIIndicator", () => {
     await act(async () => {
       button?.focus()
     })
-    expect(container.querySelector("[data-testid='ai-spline']")).toBeNull()
 
     aiState.isVisible = true
     await act(async () => {
@@ -191,6 +158,6 @@ describe("AIIndicator", () => {
       root?.render(<AIIndicator />)
     })
 
-    expect(container.querySelector("[data-testid='ai-spline']")).toBeNull()
+    expect(container.querySelector("button[title='Open AI Chat']")).not.toBeNull()
   })
 })

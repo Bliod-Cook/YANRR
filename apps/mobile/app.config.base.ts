@@ -15,6 +15,12 @@ const iconPath = iconPathMap[process.env.PROFILE || "production"] || iconPathMap
 const adaptiveIconPath = resolve(__dirname, "./assets/adaptive-icon.png")
 const splashIconPath = resolve(__dirname, "./assets/splash-icon.png")
 
+// Push notifications go through the Firebase project of the deployment; without its config files
+// the app builds without Firebase
+const googleServiceInfoPlist = process.env.GOOGLE_SERVICE_INFO_PLIST
+const googleServicesJson = process.env.GOOGLE_SERVICES_JSON
+const withFirebase = !!(googleServiceInfoPlist || googleServicesJson)
+
 const semverPattern = /^\d+\.\d+\.\d+$/
 const developmentProfiles = new Set(["development", "ios-simulator"])
 const channelNameMap = {
@@ -120,7 +126,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         CFBundleLocalizations: ["en", "ja", "zh-CN", "zh-TW", "fr-FR"],
         CFBundleDevelopmentRegion: "en",
       },
-      googleServicesFile: "./build/GoogleService-Info.plist",
+      ...(googleServiceInfoPlist && { googleServicesFile: googleServiceInfoPlist }),
     },
     android: {
       package: "is.follow",
@@ -140,7 +146,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         monochromeImage: adaptiveIconPath,
         backgroundColor: "#FF5C00",
       },
-      googleServicesFile: "./build/google-services.json",
+      ...(googleServicesJson && { googleServicesFile: googleServicesJson }),
     },
     // web: {
     //   bundler: "metro",
@@ -216,7 +222,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       require("./plugins/with-android-manifest-plugin.js"),
       require("./plugins/with-android-launch-link-guard.js"),
       "expo-secure-store",
-      ["@react-native-firebase/app", { ios: { disableSPM: true } }],
+      ...(withFirebase ? [["@react-native-firebase/app", { ios: { disableSPM: true } }]] : []),
       [
         "expo-image-picker",
         {

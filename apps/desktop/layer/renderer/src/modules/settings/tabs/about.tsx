@@ -1,6 +1,5 @@
 import { Folo } from "@follow/components/icons/folo.js"
 import { Logo } from "@follow/components/icons/logo.jsx"
-import { Divider } from "@follow/components/ui/divider/Divider.js"
 import { SocialMediaLinks } from "@follow/constants"
 import { IN_ELECTRON, MODE, ModeEnum } from "@follow/shared/constants"
 import { getCurrentEnvironment } from "@follow/utils/environment"
@@ -98,11 +97,6 @@ export const SettingAbout = () => {
         content: EnvironmentDebugModalContent,
       })
     }
-  }
-
-  const handleOpenLegal = (type: "privacy" | "tos") => {
-    const path = type === "privacy" ? "privacy-policy" : "terms-of-service"
-    window.open(`https://folo.is/${path}`, "_blank")
   }
 
   const handleOpenAiOnboarding = () => {
@@ -215,27 +209,6 @@ export const SettingAbout = () => {
             <div className="text-xs text-text-tertiary">{t("about.appTipDescription")}</div>
           </div>
           <i className="i-mingcute-sparkles-2-line text-base text-text-tertiary transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent" />
-        </button>
-      </div>
-
-      {/* Legal Section */}
-      <div className="-mx-3 !mt-4 space-y-1 px-2">
-        <Divider />
-        <button
-          type="button"
-          onClick={() => handleOpenLegal("tos")}
-          className="group flex w-full items-center justify-between rounded-lg p-3 text-left transition-all hover:bg-fill-secondary hover:shadow-sm"
-        >
-          <span className="text-sm">{t("about.termsOfService")}</span>
-          <i className="i-mgc-external-link-cute-re text-text-tertiary transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent" />
-        </button>
-        <button
-          type="button"
-          onClick={() => handleOpenLegal("privacy")}
-          className="group flex w-full items-center justify-between rounded-lg p-3 text-left transition-all hover:bg-fill-secondary hover:shadow-sm"
-        >
-          <span className="text-sm">{t("about.privacyPolicy")}</span>
-          <i className="i-mgc-external-link-cute-re text-text-tertiary transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent" />
         </button>
       </div>
 

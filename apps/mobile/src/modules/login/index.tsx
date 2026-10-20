@@ -1,9 +1,8 @@
 import { cn } from "@follow/utils"
 import { useState } from "react"
 import { Trans, useTranslation } from "react-i18next"
-import { Linking, Pressable, TouchableWithoutFeedback, View } from "react-native"
+import { Pressable, TouchableWithoutFeedback, View } from "react-native"
 import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller"
-import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Logo } from "@/src/components/ui/logo"
@@ -77,7 +76,6 @@ export function Login() {
         </TouchableWithoutFeedback>
         {!isTablet && (
           <>
-            <TermsCheckBox />
             <View className="mt-14">
               {isEmail ? (
                 <Text
@@ -106,7 +104,6 @@ export function Login() {
       </KeyboardAvoidingView>
       {isTablet && (
         <View style={contentWidthStyle}>
-          <TermsCheckBox />
           <View className="mt-8">
             {isEmail ? (
               <Text
@@ -132,47 +129,6 @@ export function Login() {
           </View>
         </View>
       )}
-    </View>
-  )
-}
-const TermsCheckBox = () => {
-  const shakeSharedValue = useSharedValue(0)
-  const shakeStyle = useAnimatedStyle(() => ({
-    transform: [
-      {
-        translateX: shakeSharedValue.value,
-      },
-    ],
-  }))
-  return (
-    <Animated.View
-      className="mt-4 w-full flex-row items-center justify-center gap-2 px-8"
-      style={shakeStyle}
-    >
-      <TermsText />
-    </Animated.View>
-  )
-}
-const TermsText = () => {
-  const { t } = useTranslation()
-  return (
-    <View>
-      <Text className="text-center text-sm text-secondary-label">{t("login.agree_to")} </Text>
-      <View className="flex-row items-center">
-        <Pressable
-          onPress={() => Linking.openURL("https://folo.is/terms-of-service")}
-          className="text-secondary-label"
-        >
-          <Text className="font-semibold">{t("login.terms")}</Text>
-        </Pressable>
-        <Text className="text-secondary-label">&nbsp;&&nbsp;</Text>
-        <Pressable
-          onPress={() => Linking.openURL("https://folo.is/privacy-policy")}
-          className="text-secondary-label"
-        >
-          <Text className="font-semibold">{t("login.privacy")}</Text>
-        </Pressable>
-      </View>
     </View>
   )
 }

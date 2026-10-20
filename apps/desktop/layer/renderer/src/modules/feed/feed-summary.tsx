@@ -6,13 +6,13 @@ import {
   TooltipTrigger,
 } from "@follow/components/ui/tooltip/index.js"
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/EllipsisWithTooltip.js"
-import { env } from "@follow/shared/env.desktop"
 import type { FeedModel } from "@follow/store/feed/types"
 import type { InboxModel } from "@follow/store/inbox/types"
 import type { ListModel } from "@follow/store/list/types"
 import { cn } from "@follow/utils/utils"
 import { useTranslation } from "react-i18next"
 
+import { INBOX_EMAIL_DOMAIN } from "~/lib/inbox"
 import { UrlBuilder } from "~/lib/url-builder"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { FeedTitle } from "~/modules/feed/feed-title"
@@ -37,7 +37,7 @@ export function FollowSummary({
       break
     }
     case "inbox": {
-      feedText = `${feed.id}${env.VITE_INBOXES_EMAIL}`
+      feedText = `${feed.id}${INBOX_EMAIL_DOMAIN}`
       break
     }
     default: {

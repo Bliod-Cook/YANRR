@@ -29,7 +29,6 @@ const { messages } = vi.hoisted(() => ({
 }))
 
 vi.mock("../ai-chat/store/hooks", () => ({ useMessages: () => messages }))
-vi.mock("../ai-chat/components/3d-models/AISplineLoader", () => ({ AISplineLoader: () => null }))
 vi.mock("../discover/DiscoverFeedCard", () => ({ SearchResultContent: () => null }))
 vi.mock("../feed/feed-icon", () => ({ FeedIcon: () => null }))
 vi.mock("~/hooks/common", () => ({

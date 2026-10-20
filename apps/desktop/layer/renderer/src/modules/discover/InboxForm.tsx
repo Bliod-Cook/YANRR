@@ -10,7 +10,6 @@ import {
   FormMessage,
 } from "@follow/components/ui/form/index.jsx"
 import { Input } from "@follow/components/ui/input/index.js"
-import { env } from "@follow/shared/env.desktop"
 import { useInboxById } from "@follow/store/inbox/hooks"
 import { inboxSyncService } from "@follow/store/inbox/store"
 import type { InboxModel } from "@follow/store/inbox/types"
@@ -26,6 +25,7 @@ import { z } from "zod"
 import { useCurrentModal, useModalUnsavedChanges } from "~/components/ui/modal/stacked/hooks"
 import { useFormHasChanges } from "~/hooks/common/useFormHasChanges"
 import { createErrorToaster } from "~/lib/error-parser"
+import { INBOX_EMAIL_DOMAIN } from "~/lib/inbox"
 import { FollowSummary } from "~/modules/feed/feed-summary"
 
 export const InboxForm: Component<{
@@ -146,7 +146,7 @@ const InboxInnerForm = ({ inbox }: { inbox?: Nullable<InboxModel> }) => {
                   <FormControl>
                     <div className={cn("flex w-64 items-center gap-2")}>
                       <Input autoFocus {...field} />
-                      <span className="text-zinc-500">{env.VITE_INBOXES_EMAIL}</span>
+                      <span className="text-zinc-500">{INBOX_EMAIL_DOMAIN}</span>
                     </div>
                   </FormControl>
                   <FormMessage />

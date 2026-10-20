@@ -23,7 +23,6 @@ import { NotificationCuteReIcon } from "@/src/icons/notification_cute_re"
 import { PaletteCuteFiIcon } from "@/src/icons/palette_cute_fi"
 import { PowerOutlineIcon } from "@/src/icons/power_outline"
 import { RadaCuteFiIcon } from "@/src/icons/rada_cute_fi"
-import { SafeLockFilledIcon } from "@/src/icons/safe_lock_filled"
 import { Settings1CuteFiIcon } from "@/src/icons/settings_1_cute_fi"
 import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
 import { UserSettingCuteFiIcon } from "@/src/icons/user_setting_cute_fi"
@@ -44,7 +43,6 @@ import { GeneralScreen } from "./routes/General"
 import { ListsScreen } from "./routes/Lists"
 import { NotificationsScreen } from "./routes/Notifications"
 import { PlanScreen } from "./routes/Plan"
-import { PrivacyScreen } from "./routes/Privacy"
 import { SpotlightScreen } from "./routes/Spotlight"
 
 type SettingsNavigationTranslationKey =
@@ -58,7 +56,6 @@ type SettingsNavigationTranslationKey =
   | "titles.actions"
   | "titles.feeds"
   | "titles.lists"
-  | "titles.privacy"
   | "titles.about"
   | "titles.sign_out"
 
@@ -189,15 +186,7 @@ const DataGroupNavigationLinks: GroupNavigationLink[] = [
   },
 ]
 
-const PrivacyGroupNavigationLinks: GroupNavigationLink[] = [
-  {
-    translationKey: "titles.privacy",
-    icon: SafeLockFilledIcon,
-    onPress: ({ navigation }) => {
-      navigation.pushControllerView(PrivacyScreen)
-    },
-    iconBackgroundColor: "#6366F1",
-  },
+const AboutGroupNavigationLinks: GroupNavigationLink[] = [
   {
     translationKey: "titles.about",
     icon: StarCuteFiIcon,
@@ -282,7 +271,7 @@ const navigationGroups = [
   SettingGroupNavigationLinks,
   DataGroupNavigationLinks,
   SubscriptionGroupNavigationLinks,
-  PrivacyGroupNavigationLinks,
+  AboutGroupNavigationLinks,
   ActionGroupNavigationLinks,
 ] as const
 

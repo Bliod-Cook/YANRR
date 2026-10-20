@@ -1,7 +1,7 @@
 import { useHasNotificationActions } from "@follow/store/action/hooks"
 import { ROUTE_FEED_IN_INBOX } from "@follow/store/constants/app"
 import { useWhoami } from "@follow/store/user/hooks"
-import { getApp } from "@react-native-firebase/app"
+import { getApp, getApps } from "@react-native-firebase/app"
 import type { RemoteMessage } from "@react-native-firebase/messaging"
 import {
   getAPNSToken,
@@ -26,6 +26,9 @@ import { useNavigation } from "@/src/lib/navigation/hooks"
 import { requestNotificationPermission } from "@/src/lib/permission"
 import { PUSH_TOKEN_STORAGE_KEY } from "@/src/lib/push-token"
 import { EntryDetailScreen } from "@/src/screens/(stack)/entries/[entryId]/EntryDetailScreen"
+
+// Push needs the Firebase project of the deployment, which the build may not provide
+const hasFirebase = () => getApps().length > 0
 
 async function saveMessagingToken(token: string) {
   await followClient.api.messaging.createToken({ token, channel: Platform.OS })
@@ -61,7 +64,7 @@ export function useUpdateMessagingToken() {
   })
 
   useEffect(() => {
-    if (!whoami?.id || !hasNotificationActions) return
+    if (!whoami?.id || !hasNotificationActions || !hasFirebase()) return
 
     const messaging = getMessaging(getApp())
     const unsubscribe = onTokenRefresh(messaging, (token) => {
@@ -76,6 +79,8 @@ export function useUpdateMessagingToken() {
 export function useMessaging() {
   const navigation = useNavigation()
   useEffect(() => {
+    if (!hasFirebase()) return
+
     function navigateToEntry(message: RemoteMessage) {
       if (
         !message.data ||

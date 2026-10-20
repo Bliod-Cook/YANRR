@@ -13,7 +13,6 @@
 		31F8750620E5432290142586 /* rn-web in Resources */ = {isa = PBXBuildFile; fileRef = 0C4357DCFE674ADA9B15936F /* rn-web */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
 		6C357ADA29DBB2EAA608BF25 /* Pods_Folo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EF7A06C0FCC7DF7CB24E902 /* Pods_Folo.framework */; };
-		7A2C2E31F6C04C7AB9942EA8 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = FE3D7E00653A46D4AB2B7B36 /* GoogleService-Info.plist */; };
 		A8CE8EBDC92590644433C0C5 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B579FB446525AAAA44BACA /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
@@ -37,7 +36,6 @@
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Folo/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* Folo-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Folo-Bridging-Header.h"; path = "Folo/Folo-Bridging-Header.h"; sourceTree = "<group>"; };
-		FE3D7E00653A46D4AB2B7B36 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Folo/GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,7 +59,6 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				FE3D7E00653A46D4AB2B7B36 /* GoogleService-Info.plist */,
 				4715D9509C1A44E88E5665A8 /* Assets.xcassets */,
 				3F2251E654BF491FBAD32B83 /* Folo - Follow everything.storekit */,
 				1D4520ACE29B7516C4656671 /* PrivacyInfo.xcprivacy */,
@@ -221,7 +218,6 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				7A2C2E31F6C04C7AB9942EA8 /* GoogleService-Info.plist in Resources */,
 				038E5829162E48D4B3663A1F /* Assets.xcassets in Resources */,
 				203021DA277C4486BE4C1F09 /* Folo - Follow everything.storekit in Resources */,
 				31F8750620E5432290142586 /* rn-web in Resources */,

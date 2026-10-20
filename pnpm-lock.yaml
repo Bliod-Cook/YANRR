@@ -668,9 +668,6 @@ importers:
       '@shikijs/transformers':
         specifier: 4.4.3
         version: 4.4.3
-      '@splinetool/react-spline':
-        specifier: 4.1.0
-        version: 4.1.0(@splinetool/runtime@1.12.58)(next@16.0.11(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@tanstack/query-sync-storage-persister':
         specifier: 5.103.2
         version: 5.103.2
@@ -8273,20 +8270,6 @@ packages:
     peerDependencies:
       solid-js: ^1.6.12
 
-  '@splinetool/react-spline@4.1.0':
-    resolution: {integrity: sha512-Y379gm17gw+1nxT/YXTCJnVIWuu7tsUH1tp/YxsYb0pZnc9Gljk7Om4Kpq7WPq0bZ4zidVCxf6xn6jgDcbHifQ==}
-    peerDependencies:
-      '@splinetool/runtime': '*'
-      next: '>=14.2.0'
-      react: 19.2.8
-      react-dom: 19.2.8
-    peerDependenciesMeta:
-      next:
-        optional: true
-
-  '@splinetool/runtime@1.12.58':
-    resolution: {integrity: sha512-skwkUXFjYExH2kjnVK/1c4/g2FhcZdsrVdbocAth8lqCFk6PyhsO5g7aH4ejv0aag1YiGhESHSttyFbxnNt0YA==}
-
   '@sqlite.org/sqlite-wasm@3.50.0-build1':
     resolution: {integrity: sha512-h1ilVgUR3h1rGxglOyolwMYRf6Pj71iXadNGvSHhsYcmbRjIH5JXcFk729UyJ6Z3x82lFOYmy0wqW+iGefNVtQ==}
     hasBin: true
@@ -14486,10 +14469,6 @@ packages:
   omggif@1.0.10:
     resolution: {integrity: sha512-LMJTtvgc/nugXj0Vcrrs68Mn2D1r0zf630VNtqtpI1FEO7e+O9FP4gqs9AcnBaSEeoHIPm28u6qgPR0oyEpGSw==}
 
-  on-change@4.0.0:
-    resolution: {integrity: sha512-PTu7C9Jsz4b+sNMDpH0eZFTr7uxdOtoDWRnhaVNK50bgrrnW5nvbWI0jm5DG9qOoTnIhBzE9xoKVFPD9xgtbdg==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-
   on-finished@2.3.0:
     resolution: {integrity: sha512-ikqdkGAAyf/X/gPhXGvfgAytDZtDbr+bkNUJ0N9h5MI/dmdgCs3l6hoHrcUv41sRKew3jIwrp4qQDXiK99Utww==}
     engines: {node: '>= 0.8'}
@@ -15474,9 +15453,6 @@ packages:
     peerDependencies:
       '@types/react': 19.2.18
       react: 19.2.8
-
-  react-merge-refs@2.1.1:
-    resolution: {integrity: sha512-jLQXJ/URln51zskhgppGJ2ub7b2WFKGq3cl3NYKtlHoTG+dN2q7EzWrn3hN3EgPsTMvpR9tpq5ijdp7YwFZkag==}
 
   react-native-awesome-slider@2.9.0:
     resolution: {integrity: sha512-sc5qgX4YtM6IxjtosjgQLdsal120MvU+YWs0F2MdgQWijps22AXLDCUoBnZZ8vxVhVyJ2WnnIPrmtVBvVJjSuQ==}
@@ -16737,9 +16713,6 @@ packages:
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
-
-  thumbhash@0.1.1:
-    resolution: {integrity: sha512-kH5pKeIIBPQXAOni2AiY/Cu/NKdkFREdpH+TLdM0g6WA7RriCv0kPLgP731ady67MhTAqrVG/4mnEeibVuCJcg==}
 
   timm@1.7.1:
     resolution: {integrity: sha512-IjZc9KIotudix8bMaBW6QvMuq64BrJWFs1+4V0lXwWGQZwH+LnX87doAYhem4caOEusRP9/g6jVDQmZ8XOk1nw==}
@@ -25688,23 +25661,6 @@ snapshots:
     dependencies:
       solid-js: 1.9.15
 
-  '@splinetool/react-spline@4.1.0(@splinetool/runtime@1.12.58)(next@16.0.11(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
-    dependencies:
-      '@splinetool/runtime': 1.12.58
-      blurhash: 2.0.5
-      lodash.debounce: 4.0.8
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-      react-merge-refs: 2.1.1
-      thumbhash: 0.1.1
-    optionalDependencies:
-      next: 16.0.11(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@playwright/test@1.63.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-
-  '@splinetool/runtime@1.12.58':
-    dependencies:
-      on-change: 4.0.0
-      semver-compare: 1.0.0
-
   '@sqlite.org/sqlite-wasm@3.50.0-build1': {}
 
   '@standard-schema/spec@1.1.0': {}
@@ -33422,8 +33378,6 @@ snapshots:
 
   omggif@1.0.10: {}
 
-  on-change@4.0.0: {}
-
   on-finished@2.3.0:
     dependencies:
       ee-first: 1.1.1
@@ -34426,8 +34380,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  react-merge-refs@2.1.1: {}
-
   react-native-awesome-slider@2.9.0(4c5c27c89c0f3f32309c786f50a86137):
     dependencies:
       react: 19.2.8
@@ -35328,7 +35280,8 @@ snapshots:
 
   semifies@1.0.0: {}
 
-  semver-compare@1.0.0: {}
+  semver-compare@1.0.0:
+    optional: true
 
   semver@5.7.2: {}
 
@@ -36046,8 +35999,6 @@ snapshots:
 
   through@2.3.8:
     optional: true
-
-  thumbhash@0.1.1: {}
 
   timm@1.7.1: {}
 

@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef } from "react"
 
 import { useI18n } from "~/hooks/common"
 
-import { AISplineLoader } from "../ai-chat/components/3d-models/AISplineLoader"
+import { AIIcon } from "../ai-chat/components/AIIcon"
 import { useMessages } from "../ai-chat/store/hooks"
 import { SearchResultContent } from "../discover/DiscoverFeedCard"
 import { FeedIcon } from "../feed/feed-icon"
@@ -237,7 +237,7 @@ function FeedSelectionFirstScreen() {
           className="mb-6"
         >
           <div className="mx-auto mb-4 flex items-center justify-center">
-            <AISplineLoader />
+            <AIIcon />
           </div>
         </m.div>
 
