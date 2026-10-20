@@ -1,4 +1,4 @@
-appId: is.follow
+appId: io.github.bliodcook.yannr
 name: Android subscription and reading journey
 ---
 - runFlow: ../shared/ensure-onboarding-unfollowed.yaml

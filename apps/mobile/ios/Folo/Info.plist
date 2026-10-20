@@ -13,7 +13,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Folo</string>
+	<string>Yannr</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -41,15 +41,14 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>follow</string>
-				<string>folo</string>
-				<string>is.follow</string>
+				<string>yannr</string>
+				<string>io.github.bliodcook.yannr</string>
 			</array>
 		</dict>
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>exp+follow</string>
+				<string>exp+yannr</string>
 			</array>
 		</dict>
 	</array>

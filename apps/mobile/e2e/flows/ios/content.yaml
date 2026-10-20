@@ -1,4 +1,4 @@
-appId: is.follow
+appId: io.github.bliodcook.yannr
 name: iOS content journey
 ---
 - runFlow:

@@ -144,7 +144,6 @@
     "sf-symbols-typescript": "2.2.0",
     "typescript": "catalog:"
   },
-  "appName": "Folo",
   "expo": {
     "install": {
       "exclude": [

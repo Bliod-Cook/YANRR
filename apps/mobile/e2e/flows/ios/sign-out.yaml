@@ -1,4 +1,4 @@
-appId: is.follow
+appId: io.github.bliodcook.yannr
 ---
 - waitForAnimationToEnd:
     timeout: 15000

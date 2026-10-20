@@ -26,23 +26,19 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
 
     extra: {
-      eas: {
-        projectId: "a6335b14-fb84-45aa-ba80-6f6ab8926920",
-      },
       e2eLanguage: process.env.EXPO_PUBLIC_E2E_LANGUAGE ?? null,
     },
-    owner: "follow",
 
-    name: "Folo",
-    slug: "follow",
+    name: "Yannr",
+    slug: "yannr",
     version: PKG.version,
     orientation: "portrait" as const,
     icon: iconPath,
-    scheme: ["follow", "folo"],
+    scheme: ["yannr"],
     userInterfaceStyle: "automatic" as const,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "is.follow",
+      bundleIdentifier: "io.github.bliodcook.yannr",
       infoPlist: {
         LSApplicationCategoryType: "public.app-category.news",
         ITSAppUsesNonExemptEncryption: false,
@@ -56,7 +52,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...(googleServiceInfoPlist && { googleServicesFile: googleServiceInfoPlist }),
     },
     android: {
-      package: "is.follow",
+      package: "io.github.bliodcook.yannr",
       // Media selection uses system pickers; saving only needs write access on older Android versions.
       blockedPermissions: [
         "android.permission.ACCESS_MEDIA_LOCATION",

@@ -1,3 +1,4 @@
+import { EXPORTED_DB_FILE_NAME } from "@follow/database/constant"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
 import * as DocumentPicker from "expo-document-picker"
 import { File } from "expo-file-system"
@@ -53,8 +54,8 @@ export const importOpml = async () => {
 export const exportLocalDatabase = async () => {
   const dbPath = getDbPath()
   try {
-    // The export carries the Folo name; the local database keeps follow.db so existing data stays
-    const destinationUri = `${FileSystem.documentDirectory}folo.db`
+    // The export carries the app name; the local database keeps follow.db so existing data stays
+    const destinationUri = `${FileSystem.documentDirectory}${EXPORTED_DB_FILE_NAME}`
     await FileSystem.copyAsync({
       from: dbPath,
       to: destinationUri,

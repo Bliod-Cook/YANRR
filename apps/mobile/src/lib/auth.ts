@@ -121,7 +121,7 @@ const plugins = [
     },
   }),
   expoClient({
-    scheme: "folo",
+    scheme: "yannr",
     storagePrefix,
     storage: authCookieStorage,
   }),

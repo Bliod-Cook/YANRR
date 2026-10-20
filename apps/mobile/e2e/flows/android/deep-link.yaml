@@ -1,13 +1,13 @@
-appId: is.follow
+appId: io.github.bliodcook.yannr
 name: Android cold-start queued follow route
 ---
 - stopApp
-- openLink: "folo://add?url=folo%3A%2F%2Fonboarding&type=url"
+- openLink: "yannr://add?url=yannr%3A%2F%2Fonboarding&type=url"
 - extendedWaitUntil:
     visible:
       id: follow-submit
     timeout: 30000
-- assertVisible: Welcome to Folo
+- assertVisible: Welcome to Yannr
 - assertNotVisible:
     id: login-screen
 - pressKey: Back
