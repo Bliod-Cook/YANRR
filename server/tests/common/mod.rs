@@ -18,6 +18,7 @@ use axum::{
 };
 use postgresql_embedded::{PostgreSQL, SettingsBuilder};
 use reqwest::{Client, Response, header};
+use sea_orm::ConnectionTrait;
 use serde_json::{Value, json};
 use tokio::net::TcpListener;
 use yannr::{AppState, config::Config};
@@ -116,6 +117,22 @@ impl TestApp {
             .json()
             .await
             .unwrap()
+    }
+
+    pub async fn user_id(&self) -> String {
+        self.session().await["user"]["id"]
+            .as_str()
+            .unwrap()
+            .to_string()
+    }
+
+    /// Adds a user straight to the database, for data that belongs to someone other than the client.
+    pub async fn insert_user(&self, id: &str) {
+        let sql = format!(
+            "INSERT INTO users (id, email, email_verified, created_at, updated_at)
+             VALUES ('{id}', '{id}@example.com', false, now(), now())"
+        );
+        self.state.db.execute_unprepared(&sql).await.unwrap();
     }
 
     /// Registers an account, which also signs the client in.
