@@ -117,14 +117,13 @@ export class AuthService extends IpcService {
   private async requestCredentialAuth(
     path: "/sign-in/email" | "/sign-up/email",
     payload: Record<string, unknown>,
-    headers?: Record<string, string>,
   ) {
     const response = await net.fetch(`${env.VITE_API_URL}/better-auth${path}`, {
       method: "POST",
       credentials: "omit",
       headers: {
         "content-type": "application/json",
-        ...this.getAuthRequestHeaders(headers),
+        ...this.getAuthRequestHeaders(),
       },
       body: JSON.stringify(payload),
     })
@@ -346,19 +345,11 @@ export class AuthService extends IpcService {
   }
 
   @IpcMethod()
-  async signInWithCredential(payload: {
-    email: string
-    password: string
-    headers?: Record<string, string>
-  }) {
-    return this.requestCredentialAuth(
-      "/sign-in/email",
-      {
-        email: payload.email,
-        password: payload.password,
-      },
-      payload.headers,
-    )
+  async signInWithCredential(payload: { email: string; password: string }) {
+    return this.requestCredentialAuth("/sign-in/email", {
+      email: payload.email,
+      password: payload.password,
+    })
   }
 
   @IpcMethod()
@@ -367,18 +358,13 @@ export class AuthService extends IpcService {
     password: string
     name: string
     callbackURL: string
-    headers?: Record<string, string>
   }) {
-    return this.requestCredentialAuth(
-      "/sign-up/email",
-      {
-        email: payload.email,
-        password: payload.password,
-        name: payload.name,
-        callbackURL: payload.callbackURL,
-      },
-      payload.headers,
-    )
+    return this.requestCredentialAuth("/sign-up/email", {
+      email: payload.email,
+      password: payload.password,
+      name: payload.name,
+      callbackURL: payload.callbackURL,
+    })
   }
 
   @IpcMethod()

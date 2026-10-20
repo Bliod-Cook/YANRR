@@ -2,7 +2,7 @@ import type { BrowserContext, Page } from "@playwright/test"
 import { nanoid } from "nanoid"
 
 import type { TestAccount } from "./account"
-import { injectRecaptchaToken, waitForAuthenticated } from "./app"
+import { waitForAuthenticated } from "./app"
 import type { DesktopE2EEnv } from "./env"
 import { buildWebAppURL } from "./env"
 
@@ -121,7 +121,7 @@ const requestAuth = async ({
   body: Record<string, unknown>
   path: string
 }) => {
-  const response = await fetch(new URL(path, apiURL), {
+  const response = await fetch(`${apiURL}${path}`, {
     method: "POST",
     headers: {
       "Cache-Control": "no-store",
@@ -131,7 +131,6 @@ const requestAuth = async ({
       "x-app-version": "1.4.0",
       "x-client-id": nanoid(),
       "x-session-id": nanoid(),
-      "x-token": "ac:fallback",
     },
     body: JSON.stringify(body),
   })
@@ -218,7 +217,6 @@ export const bootstrapAuthenticatedWebSession = async (
   }
 
   await applyCookiesToContext(page.context(), env, signInResult.setCookie)
-  await injectRecaptchaToken(page, env)
   await page.goto(buildWebAppURL(env, "/"), { waitUntil: "domcontentloaded" })
   await waitForAuthenticated(page)
 }

@@ -23,7 +23,6 @@ import { toast } from "sonner"
 import { z } from "zod"
 
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
-import { useRecaptchaToken } from "~/hooks/common"
 import { loginHandler, signUp, twoFactor } from "~/lib/auth"
 import { ipcServices } from "~/lib/client"
 import { setAuthSessionToken } from "~/lib/client-session"
@@ -159,17 +158,12 @@ const getElectronAuthService = () => {
   }
 
   return ipcServices.auth as typeof ipcServices.auth & {
-    signInWithCredential?: (payload: {
-      email: string
-      password: string
-      headers?: Record<string, string>
-    }) => Promise<unknown>
+    signInWithCredential?: (payload: { email: string; password: string }) => Promise<unknown>
     signUpWithCredential?: (payload: {
       email: string
       password: string
       name: string
       callbackURL: string
-      headers?: Record<string, string>
     }) => Promise<unknown>
     verifyTotp?: (payload: {
       code: string
@@ -198,20 +192,10 @@ export function LoginWithPassword({
   })
 
   const { present } = useModalStack()
-  const requestRecaptchaToken = useRecaptchaToken()
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const recaptchaToken = await requestRecaptchaToken("desktop_login")
-    const headers = recaptchaToken
-      ? {
-          "x-token": `r3:${recaptchaToken}`,
-        }
-      : undefined
-
     if (!IN_ELECTRON && (!values.password || values.password.trim() === "")) {
       const result = await loginHandler("magicLink", runtime, {
         email: values.email,
-        headers,
       })
 
       if (result?.error) {
@@ -229,13 +213,11 @@ export function LoginWithPassword({
           await getElectronAuthService()?.signInWithCredential?.({
             email: values.email,
             password: values.password,
-            headers,
           }),
         )
       : await loginHandler("credential", runtime, {
           email: values.email,
           password: values.password,
-          headers,
         })
     if (res?.error) {
       toast.error(getAuthErrorMessage(res.error))
@@ -422,20 +404,10 @@ export function RegisterForm({
     mode: "all",
   })
 
-  const requestRecaptchaToken = useRecaptchaToken()
-
   async function onSubmit(values: RegisterFormValues) {
-    const recaptchaToken = await requestRecaptchaToken("desktop_register")
-    const headers = recaptchaToken
-      ? {
-          "x-token": `r3:${recaptchaToken}`,
-        }
-      : undefined
-
     if (!IN_ELECTRON && (!values.password || values.password.trim() === "")) {
       const result = await loginHandler("magicLink", runtime, {
         email: values.email,
-        headers,
       })
 
       if (result?.error) {
@@ -454,7 +426,6 @@ export function RegisterForm({
             password: values.password,
             name: values.email.split("@")[0]!,
             callbackURL: "/",
-            headers,
           }),
         )
       : await signUp.email(
@@ -468,7 +439,6 @@ export function RegisterForm({
             onError(context) {
               toast.error(getAuthErrorMessage(context.error))
             },
-            headers,
           },
         )
 
