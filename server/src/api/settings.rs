@@ -14,6 +14,7 @@ use serde_json::{Map, Value, json};
 
 use super::{
     error::{ApiError, ApiQuery, ApiResult, ExceptionCode},
+    response::synced,
     session::AuthUser,
 };
 use crate::{
@@ -100,12 +101,13 @@ pub async fn update(
         json!({ "payload": row.payload, "updatedAt": updated_at })
     };
     let action = Action {
+        user_id: user.id,
         model: "setting",
         model_id: Some(tab),
         action: "U",
         data,
     };
-    let last_sync_id = sync::record(&txn, &user.id, vec![action]).await?;
+    let last_sync_id = sync::record(&txn, vec![action]).await?;
     txn.commit().await?;
-    Ok(Json(json!({ "code": 0, "lastSyncId": last_sync_id })))
+    Ok(synced(last_sync_id))
 }

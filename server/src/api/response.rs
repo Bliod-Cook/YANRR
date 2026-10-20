@@ -11,3 +11,8 @@ pub fn ok(data: impl Serialize) -> Json<Value> {
 pub fn done() -> Json<Value> {
     Json(json!({ "code": 0 }))
 }
+
+/// `{ code: 0, lastSyncId }`, the answer of a logged mutation.
+pub fn synced(last_sync_id: i64) -> Json<Value> {
+    Json(json!({ "code": 0, "lastSyncId": last_sync_id }))
+}

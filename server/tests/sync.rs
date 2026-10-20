@@ -7,23 +7,16 @@ use sea_orm::{ConnectionTrait, TransactionTrait};
 use serde_json::{Value, json};
 use yannr::sync::{self, Action};
 
-async fn insert_user(app: &TestApp, id: &str) {
-    let sql = format!(
-        "INSERT INTO users (id, email, email_verified, created_at, updated_at)
-         VALUES ('{id}', '{id}@example.com', false, now(), now())"
-    );
-    app.state.db.execute_unprepared(&sql).await.unwrap();
-}
-
 async fn record(app: &TestApp, user_id: &str) -> i64 {
     let txn = app.state.db.begin().await.unwrap();
     let action = Action {
+        user_id: user_id.into(),
         model: "setting",
         model_id: Some("general".into()),
         action: "U",
         data: json!({}),
     };
-    let id = sync::record(&txn, user_id, vec![action]).await.unwrap();
+    let id = sync::record(&txn, vec![action]).await.unwrap();
     txn.commit().await.unwrap();
     id
 }
@@ -36,7 +29,7 @@ async fn get(app: &TestApp, path: &str) -> Value {
 async fn delta_pages_through_own_actions() {
     let app = TestApp::spawn().await;
     app.sign_up("alice@example.com").await;
-    insert_user(&app, "bob").await;
+    app.insert_user("bob").await;
 
     let mut ids = Vec::new();
     for (tab, payload) in [
@@ -60,10 +53,11 @@ async fn delta_pages_through_own_actions() {
             .as_i64()
             .unwrap(),
     );
+    let head = record(&app, "bob").await;
 
     assert_eq!(
         get(&app, "/api/sync/state").await["data"]["lastSyncId"],
-        ids[2]
+        head
     );
 
     let first = &get(&app, "/api/sync/delta?lastSyncId=0&limit=2").await["data"];
@@ -82,7 +76,8 @@ async fn delta_pages_through_own_actions() {
     let path = format!("/api/sync/delta?lastSyncId={}&limit=2", ids[1]);
     let second = &get(&app, &path).await["data"];
     assert_eq!(second["hasMore"], false);
-    assert_eq!(second["lastSyncId"], ids[2]);
+    // The last page ends at the head, so a later answer naming the head is reached even if it is not ours.
+    assert_eq!(second["lastSyncId"], head);
     let ai = &second["actions"][0];
     assert_eq!(second["actions"].as_array().unwrap().len(), 1);
     assert_eq!(ai["modelId"], "ai");
@@ -93,10 +88,7 @@ async fn delta_pages_through_own_actions() {
 async fn delta_resets_outside_retained_log() {
     let app = TestApp::spawn().await;
     app.sign_up("alice@example.com").await;
-    let user_id = app.session().await["user"]["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
+    let user_id = app.user_id().await;
     let old = format!(
         "INSERT INTO sync_actions (user_id, model, model_id, action, data, created_at) VALUES
          ('{user_id}', 'setting', 'general', 'U', '{{}}', now() - interval '31 days'),
@@ -123,20 +115,21 @@ async fn delta_resets_outside_retained_log() {
 #[tokio::test]
 async fn record_commits_in_id_order() {
     let app = TestApp::spawn().await;
-    insert_user(&app, "alice").await;
+    app.insert_user("alice").await;
 
     let first = app.state.db.begin().await.unwrap();
     let action = || Action {
+        user_id: "alice".into(),
         model: "setting",
         model_id: None,
         action: "U",
         data: json!({}),
     };
-    let first_id = sync::record(&first, "alice", vec![action()]).await.unwrap();
+    let first_id = sync::record(&first, vec![action()]).await.unwrap();
     let db = app.state.db.clone();
     let mut second = tokio::spawn(async move {
         let txn = db.begin().await.unwrap();
-        let id = sync::record(&txn, "alice", vec![action()]).await.unwrap();
+        let id = sync::record(&txn, vec![action()]).await.unwrap();
         txn.commit().await.unwrap();
         id
     });
