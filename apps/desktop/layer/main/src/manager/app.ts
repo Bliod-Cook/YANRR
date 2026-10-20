@@ -13,11 +13,6 @@ import { getIconPath } from "../helper"
 import { initializeIpcServices } from "../ipc"
 import { saveMediaToEagle } from "../ipc/services/integration"
 import { checkAndCleanCodeCache, clearCacheCronJob } from "../lib/cleaner"
-import {
-  getSessionTokenFromCookies,
-  isCliSyncEnabled,
-  syncSessionToCliConfig,
-} from "../lib/cli-session-sync"
 import { t } from "../lib/i18n"
 import { updateProxy } from "../lib/proxy"
 import { store } from "../lib/store"
@@ -54,19 +49,6 @@ class AppManagerStatic {
     updateProxy()
     registerUpdater()
     registerAppTray()
-
-    // Sync the desktop session to the npm CLI after cookies are ready.
-    setTimeout(async () => {
-      if (!isCliSyncEnabled()) return
-      try {
-        const token = await getSessionTokenFromCookies()
-        if (token) {
-          await syncSessionToCliConfig(token)
-        }
-      } catch (err) {
-        logger.error("Failed to sync session to CLI on startup:", err)
-      }
-    }, 5000)
   }
 
   private registerProtocols() {

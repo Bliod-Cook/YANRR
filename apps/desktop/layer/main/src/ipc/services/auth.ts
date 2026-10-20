@@ -19,13 +19,7 @@ import {
   persistManagedAuthCookiesFromSetCookieHeader,
   removeManagedAuthCookies,
 } from "../../lib/auth-cookies"
-import {
-  getCliSessionToken,
-  isCliSyncEnabled,
-  syncSessionToCliConfig,
-} from "../../lib/cli-session-sync"
 import { deleteNotificationsToken, updateNotificationsToken } from "../../lib/user"
-import { logger } from "../../logger"
 
 export class AuthService extends IpcService {
   static override readonly groupName = "auth"
@@ -225,30 +219,13 @@ export class AuthService extends IpcService {
   }
 
   @IpcMethod()
-  async sessionChanged(preferredToken?: string): Promise<void> {
+  async sessionChanged(): Promise<void> {
     await updateNotificationsToken()
-
-    // Sync the current desktop session to the npm CLI login, once the user connected the CLI.
-    if (!isCliSyncEnabled()) return
-    const token = await getCliSessionToken({
-      preferredToken,
-    })
-    await syncSessionToCliConfig(token).catch((err) => {
-      logger.error("Failed to sync session to CLI config:", err)
-    })
   }
 
   @IpcMethod()
   async signOut(): Promise<void> {
-    try {
-      await deleteNotificationsToken()
-    } finally {
-      // Clear the synced CLI login on sign out, even when the notification token can't be
-      // removed, for example offline
-      await syncSessionToCliConfig().catch((err) => {
-        logger.error("Failed to clear CLI config token:", err)
-      })
-    }
+    await deleteNotificationsToken()
   }
 
   @IpcMethod()

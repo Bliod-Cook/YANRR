@@ -177,8 +177,7 @@ export const useAuthSessionCookieRefresh = (enabled: boolean) => {
 export const handleSessionChanges = () => {
   setLoginModalShow(false)
   localStorage.removeItem(QUERY_PERSIST_KEY)
-  const authSessionToken = getAuthSessionToken()
-  ipcServices?.auth.sessionChanged(authSessionToken ?? undefined)
+  ipcServices?.auth.sessionChanged()
   window.location.reload()
 }
 

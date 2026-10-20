@@ -9,6 +9,8 @@ import {
   persistManagedAuthCookiesFromSetCookieHeader,
 } from "./auth-cookies"
 
+vi.mock("~/manager/window", () => ({ WindowManager: { getMainWindow: () => null } }))
+
 describe("auth cookies", () => {
   beforeEach(() => {
     vi.useRealTimers()

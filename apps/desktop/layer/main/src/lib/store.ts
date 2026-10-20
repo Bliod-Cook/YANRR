@@ -9,7 +9,6 @@ type StoreData = {
   "notifications-token-sent"?: string | null
   appearance?: "light" | "dark" | "system" | null
   cacheSizeLimit?: number | null
-  cliSyncEnabled?: boolean | null
   eagleContextMenuEnabled?: boolean | null
   minimizeToTray?: boolean | null
   proxy?: string | null
