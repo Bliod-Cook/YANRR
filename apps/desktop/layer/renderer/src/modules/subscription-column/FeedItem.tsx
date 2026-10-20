@@ -31,7 +31,6 @@ import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { useBatchUpdateSubscription } from "~/hooks/biz/useSubscriptionActions"
 import { useContextMenu } from "~/hooks/common/useContextMenu"
-import { getNewIssueUrl } from "~/lib/issues"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { FeedTitle } from "~/modules/feed/feed-title"
 import { getPreferredTitle } from "~/store/feed/hooks"
@@ -161,26 +160,6 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
       const nextItems = items.concat()
 
       if (!feed) return
-
-      const isFeed = feed.type === "feed" || !feed.type
-      if (isFeed && feed.errorAt && feed.errorMessage) {
-        nextItems.push(
-          MenuItemSeparator.default,
-          new MenuItemText({
-            label: t("words.feedback", { ns: "common" }),
-            click: () => {
-              window.open(
-                getNewIssueUrl({
-                  body:
-                    `### Error\n\nError Message: ${feed.errorMessage}\n\n### Info\n\n` +
-                    `\`\`\`json\n${JSON.stringify(feed, null, 2)}\n\`\`\``,
-                  title: `Feed Error: ${feed.title}, ${feed.errorMessage}`,
-                }),
-              )
-            },
-          }),
-        )
-      }
 
       // Add "Switch to Another View" menu item
       if (subscription && typeof subscription.view === "number") {

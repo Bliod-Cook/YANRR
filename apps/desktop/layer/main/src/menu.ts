@@ -1,5 +1,4 @@
 import { callWindowExpose } from "@follow/shared/bridge"
-import { DEV } from "@follow/shared/constants"
 import { name } from "@pkg"
 import type { BrowserWindow, MenuItem, MenuItemConstructorOptions } from "electron"
 import { Menu } from "electron"
@@ -180,24 +179,5 @@ export const registerAppMenu = () => {
     },
   ]
 
-  if (DEV) {
-    menus.push({
-      label: t("menu.debug"),
-      submenu: [
-        {
-          label: t("menu.followReleases"),
-          click: () => {
-            WindowManager.createWindow({
-              extraPath: `#add?url=${encodeURIComponent(
-                "https://github.com/RSSNext/follow/releases.atom",
-              )}`,
-              width: 800,
-              height: 600,
-            })
-          },
-        },
-      ],
-    })
-  }
   Menu.setApplicationMenu(Menu.buildFromTemplate(menus))
 }

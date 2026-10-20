@@ -5,11 +5,6 @@
   "private": true,
   "description": "Self-hosted personal RSS reader",
   "author": "Bliod-Cook",
-  "homepage": "https://github.com/RSSNext",
-  "repository": {
-    "url": "https://github.com/RSSNext/Folo",
-    "type": "git"
-  },
   "main": "./dist/main/index.js",
   "scripts": {
     "analyze:web": "cross-env analyzer=1 WEB_BUILD=1 vite build",

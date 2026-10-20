@@ -10,7 +10,6 @@ import {
 import { Input } from "@follow/components/ui/input/index.js"
 import { cn } from "@follow/utils/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { repository } from "@pkg"
 import { useMutation } from "@tanstack/react-query"
 import i18next from "i18next"
 import type { ChangeEvent, CompositionEvent } from "react"
@@ -227,8 +226,8 @@ export function UnifiedDiscoverForm() {
                     />
                   </FormControl>
                   <FormMessage />
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-text-tertiary">
-                    {isRSSHub ? (
+                  {isRSSHub && (
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-text-tertiary">
                       <a
                         href="https://docs.rsshub.app/"
                         target="_blank"
@@ -238,18 +237,8 @@ export function UnifiedDiscoverForm() {
                         <i className="i-mgc-book-6-cute-re" />
                         <span>{t("discover.rsshub_docs")}</span>
                       </a>
-                    ) : (
-                      <a
-                        href={`${repository.url}/wiki/Folo-Flavored-Feed-Spec`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 rounded-full border border-accent px-2 py-px text-accent hover:bg-accent/10"
-                      >
-                        <i className="i-mgc-book-6-cute-re" />
-                        <span>Folo Flavored Feed Spec</span>
-                      </a>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </FormItem>
               )}
             />

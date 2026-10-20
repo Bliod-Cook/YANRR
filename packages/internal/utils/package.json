@@ -2,13 +2,7 @@
   "name": "@follow/utils",
   "type": "module",
   "private": true,
-  "author": "Folo Team",
   "license": "MIT",
-  "homepage": "https://github.com/RSSNext",
-  "repository": {
-    "url": "https://github.com/RSSNext/follow",
-    "type": "git"
-  },
   "sideEffects": false,
   "exports": {
     ".": {

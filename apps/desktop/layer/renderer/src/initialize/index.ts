@@ -6,7 +6,6 @@ import { onLocalDataOfAnotherAccount } from "@follow/store/sync/account"
 import { ensureSyncedThroughEngine } from "@follow/store/sync/sync-status"
 import { whoami } from "@follow/store/user/getters"
 import { fetchSessionUser } from "@follow/store/user/hooks"
-import { repository } from "@pkg"
 import { enableMapSet } from "immer"
 
 import { initI18n } from "~/i18n"
@@ -30,8 +29,6 @@ declare global {
 let clearingForAnotherAccount = false
 
 export const initializeApp = async () => {
-  appLog(`${APP_NAME}: Follow everything in one place`, repository.url)
-
   // Before any session answer can arrive: the data on this device must not be shown to, or
   // sent with the session of, another account.
   onLocalDataOfAnotherAccount(() => {

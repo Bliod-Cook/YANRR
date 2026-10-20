@@ -1,8 +1,6 @@
-import { Button } from "@follow/components/ui/button/index.js"
 import { useTranslation } from "react-i18next"
 
 import type { FallbackRender } from "~/components/common/ErrorBoundary"
-import { getNewIssueUrl } from "~/lib/issues"
 
 export const EntryRenderError: FallbackRender = ({ error }) => {
   const { t } = useTranslation()
@@ -13,18 +11,6 @@ export const EntryRenderError: FallbackRender = ({ error }) => {
       <span className="font-sans text-sm">
         {t("entry_content.render_error")} {nextError.message}
       </span>
-      <Button
-        variant={"outline"}
-        onClick={() => {
-          window.open(
-            getNewIssueUrl({
-              template: "bug_report.yml",
-            }),
-          )
-        }}
-      >
-        {t("entry_content.report_issue")}
-      </Button>
     </div>
   )
 }

@@ -11,7 +11,6 @@ import { actionActions, useActionStore } from "@follow/store/action/store"
 import { nextFrame } from "@follow/utils"
 import { JsonObfuscatedCodec } from "@follow/utils/json-codec"
 import { cn } from "@follow/utils/utils"
-import { repository } from "@pkg"
 import { useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -68,15 +67,6 @@ const EmptyActionPlaceholder = ({ onCreateRule }: { onCreateRule: () => void }) 
             <i className="i-mgc-add-cute-re mr-2 size-4" />
             {t("actions.action_card.empty.cta")}
           </Button>
-          <a
-            href={`${repository.url}/wiki/Actions`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-fill-secondary hover:text-text"
-          >
-            <i className="i-mgc-book-6-cute-re size-4" />
-            <span>{t("words.documentation", { ns: "common" })}</span>
-          </a>
         </div>
       </div>
     </div>

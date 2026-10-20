@@ -6,7 +6,6 @@ import { toast } from "sonner"
 
 import { removeAppSkeleton } from "~/lib/app"
 import { attachOpenInEditor } from "~/lib/dev"
-import { getNewIssueUrl } from "~/lib/issues"
 import { clearLocalPersistStoreData } from "~/store/utils/clear"
 
 import { PoweredByFooter } from "./PoweredByFooter"
@@ -82,37 +81,9 @@ export function ErrorElement() {
         <Button onClick={reloadAtHome}>{t("errors_page.reload")}</Button>
       </div>
 
-      <FeedbackIssue message={message} stack={stack} error={error as Error} />
       <div className="grow" />
 
       <PoweredByFooter />
     </div>
-  )
-}
-
-export const FeedbackIssue = (_props: {
-  message: string
-  stack: string | null | undefined
-  error?: unknown
-}) => {
-  const { t } = useTranslation()
-  return (
-    <p className="mt-8">
-      {t("errors_page.feedback_hint")}
-      <a
-        className="ml-2 cursor-pointer text-accent duration-200 hover:text-accent/90"
-        href={getNewIssueUrl({
-          // error: error instanceof Error ? error : undefined,
-          // title: `Error: ${message}`,
-          // body: ["### Error", "", message, "", "### Stack", "", "```", stack, "```"].join("\n"),
-          // label: "bug",
-          template: "bug_report.yml",
-        })}
-        target="_blank"
-        rel="noreferrer"
-      >
-        {t("errors_page.submit_issue")}
-      </a>
-    </p>
   )
 }
