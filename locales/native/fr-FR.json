@@ -36,7 +36,6 @@
   "findBar.previous": "Occurrence précédente",
   "menu.about": "À propos de {{name}}",
   "menu.alwaysOnTop": "Toujours au premier plan",
-  "menu.checkForUpdates": "Vérifier les mises à jour",
   "menu.clearAllData": "Effacer toutes les données",
   "menu.close": "Fermer",
   "menu.copy": "Copier",
@@ -59,7 +58,6 @@
   "menu.pasteAndMatchStyle": "Coller et adapter le style",
   "menu.quickAdd": "Ajout rapide",
   "menu.quit": "Quitter {{name}}",
-  "menu.quitAndInstallUpdate": "Debug : Quitter et installer la mise à jour",
   "menu.redo": "Rétablir",
   "menu.reload": "Recharger",
   "menu.search": "Rechercher",
@@ -75,8 +73,5 @@
   "menu.unread": "Non lu",
   "menu.view": "Affichage",
   "menu.window": "Fenêtre",
-  "menu.zoom": "Zoom",
-  "update.available": "Une mise à jour est disponible",
-  "update.checkFailed": "Impossible de vérifier les mises à jour",
-  "update.upToDate": "Vous utilisez la dernière version"
+  "menu.zoom": "Zoom"
 }

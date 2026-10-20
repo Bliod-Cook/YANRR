@@ -1,5 +1,4 @@
 import { Routes } from "@follow/constants"
-import type { DistributionUpdateNotice } from "@follow/shared/bridge"
 import { registerGlobalContext } from "@follow/shared/bridge"
 import { env } from "@follow/shared/env.desktop"
 import { invalidateUserSession } from "@follow/store/user/hooks"
@@ -11,7 +10,6 @@ import { toast } from "sonner"
 import { setWindowState } from "~/atoms/app"
 import { getGeneralSettings } from "~/atoms/settings/general"
 import { getUISettings } from "~/atoms/settings/ui"
-import { setUpdaterStatus, useUpdaterStatus } from "~/atoms/updater"
 import { useDialog, useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { useDiscoverRSSHubRouteModal } from "~/hooks/biz/useDiscoverRSSHubRoute"
 import { useFollow } from "~/hooks/biz/useFollow"
@@ -30,28 +28,6 @@ declare module "@follow/components/providers/stable-router-provider.js" {
 export const ExtensionExposeProvider = () => {
   const { present } = useModalStack()
   const showSettings = useSettingModal()
-  const updaterStatus = useUpdaterStatus()
-  useEffect(() => {
-    registerGlobalContext({
-      updateDownloaded() {
-        setUpdaterStatus({
-          type: "app",
-          status: "ready",
-        })
-      },
-      distributionUpdateAvailable(payload: DistributionUpdateNotice) {
-        setUpdaterStatus({
-          type: "distribution",
-          status: "ready",
-          distribution: payload.distribution,
-          targetUrl: payload.targetUrl,
-          storeVersion: payload.storeVersion,
-          currentVersion: payload.currentVersion,
-        })
-      },
-    })
-  }, [updaterStatus])
-
   const location = useLocation()
 
   useEffect(() => {
@@ -82,12 +58,6 @@ export const ExtensionExposeProvider = () => {
         return env.VITE_WEB_URL
       },
 
-      readyToUpdate() {
-        setUpdaterStatus({
-          type: "renderer",
-          status: "ready",
-        })
-      },
       invalidateQuery(queryKey: string | string[]) {
         queryClient.invalidateQueries({
           queryKey: Array.isArray(queryKey) ? queryKey : [queryKey],

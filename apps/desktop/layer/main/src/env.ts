@@ -1,12 +1,7 @@
 import os from "node:os"
 
-import { DEV } from "@follow/shared/constants"
-
-export const channel: "development" | "beta" | "alpha" | "stable" = DEV ? "development" : "stable"
-
 const { platform } = process
 export const isMacOS = platform === "darwin"
-export const isMAS = process.mas
 
 export const isWindows = platform === "win32"
 

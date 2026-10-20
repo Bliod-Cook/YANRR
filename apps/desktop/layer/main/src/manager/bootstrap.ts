@@ -14,7 +14,6 @@ import { dedupeManagedAuthCookies } from "../lib/auth-cookies"
 import { isDeepLink, openDeepLink, setDeepLinkHandler } from "../lib/deep-link"
 import { handleUrlRouting } from "../lib/router"
 import { logger } from "../logger"
-import { cleanupOldRender } from "../updater/hot-updater"
 import { AppManager } from "./app"
 
 const buildSafeHeaders = createBuildSafeHeaders(env.VITE_WEB_URL, [
@@ -103,12 +102,6 @@ export class BootstrapManager {
 
       WindowManager.getMainWindowOrCreate()
 
-      // Removing old renderer bundles can be slow, or fail on Windows when a file is in use, so it
-      // runs after the window opens
-      cleanupOldRender().catch((error) => {
-        logger.error("Failed to clean up old renderer bundles:", error)
-      })
-
       setDeepLinkHandler(handleUrlRouting)
       // Windows and Linux pass the link that launched the app as an argument
       for (const arg of process.argv) {
@@ -125,7 +118,6 @@ export class BootstrapManager {
       if (!window || window.isDestroyed()) return
       WindowManager.saveMainWindowState(window)
       await session.defaultSession.cookies.flushStore()
-      await cleanupOldRender()
     })
 
     app.on("window-all-closed", () => {

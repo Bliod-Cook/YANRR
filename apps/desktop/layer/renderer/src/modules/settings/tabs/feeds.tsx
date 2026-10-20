@@ -37,7 +37,6 @@ import type { FC } from "react"
 import { memo, useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useIsInMASReview } from "~/atoms/server-configs"
 import { RelativeDay } from "~/components/ui/datetime"
 import {
   DropdownMenu,
@@ -59,11 +58,10 @@ type SortDirection = "asc" | "desc"
 type FeedFilter = "all" | "rsshub"
 
 export const SettingFeeds = () => {
-  const inMas = useIsInMASReview()
   return (
     <div className="space-y-4 pb-8">
       <SubscriptionFeedsSection />
-      {!inMas && <FeedClaimedSection />}
+      <FeedClaimedSection />
     </div>
   )
 }

@@ -2,14 +2,13 @@ import fsp from "node:fs/promises"
 import { fileURLToPath } from "node:url"
 
 import { callWindowExpose } from "@follow/shared/bridge"
-import { DEV } from "@follow/shared/constants"
-import { app, BrowserWindow, clipboard, dialog, session, shell } from "electron"
+import type { BrowserWindow } from "electron"
+import { app, clipboard, dialog, session, shell } from "electron"
 import { getIpcContext, IpcMethod, IpcService } from "electron-ipc-decorator"
 import path from "pathe"
 
 import { START_IN_TRAY_ARGS } from "~/constants/app"
 import { isMacOS } from "~/env"
-import { filePathToAppUrl } from "~/helper"
 import { getCacheDir, getCacheSize } from "~/lib/cleaner"
 import { setRendererReady } from "~/lib/deep-link"
 import { getDownloadFileName } from "~/lib/download-file-name"
@@ -19,10 +18,8 @@ import { getTrayConfig, registerAppTray } from "~/lib/tray"
 import { logger, revealLogFile } from "~/logger"
 import { AppManager } from "~/manager/app"
 import { WindowManager } from "~/manager/window"
-import { cleanupOldRender, loadDynamicRenderEntry } from "~/updater/hot-updater"
 
 import { downloadFile } from "../../lib/download"
-import { checkForAppUpdates, quitAndInstall } from "../../updater"
 
 interface WindowActionInput {
   action: "close" | "minimize" | "maximum"
@@ -61,44 +58,12 @@ export class AppService extends IpcService {
   }
 
   @IpcMethod()
-  async checkForUpdates(): Promise<{ hasUpdate: boolean; error?: string }> {
-    return checkForAppUpdates()
-  }
-
-  @IpcMethod()
   switchAppLocale(input: string): void {
     i18n.changeLanguage(input)
     AppManager.registerMenuAndContextMenu()
     registerAppTray()
 
     app.commandLine.appendSwitch("lang", input)
-  }
-
-  @IpcMethod()
-  rendererUpdateReload(): void {
-    const __dirname = fileURLToPath(new URL(".", import.meta.url))
-    const allWindows = BrowserWindow.getAllWindows()
-    const dynamicRenderEntry = loadDynamicRenderEntry()
-
-    const appLoadEntry = dynamicRenderEntry || path.resolve(__dirname, "../renderer/index.html")
-    logger.info("appLoadEntry", appLoadEntry)
-    const mainWindow = WindowManager.getMainWindow()
-
-    for (const window of allWindows) {
-      if (window === mainWindow) {
-        if (DEV) {
-          logger.verbose("[rendererUpdateReload]: skip reload in dev")
-          break
-        }
-        // The app:// origin the window started with, or a file:// origin would come with an
-        // empty local storage and database
-        window.loadURL(filePathToAppUrl(appLoadEntry))
-      } else window.destroy()
-    }
-
-    setTimeout(() => {
-      cleanupOldRender()
-    }, 1000)
   }
 
   @IpcMethod()
@@ -134,11 +99,6 @@ export class AppService extends IpcService {
         }
       }
     }
-  }
-
-  @IpcMethod()
-  quitAndInstall(): void {
-    quitAndInstall()
   }
 
   @IpcMethod()

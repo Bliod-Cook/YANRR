@@ -1,6 +1,4 @@
 import { nativeApplicationVersion, nativeBuildVersion } from "expo-application"
-import type { Manifest } from "expo-updates"
-import * as Updates from "expo-updates"
 import { Trans, useTranslation } from "react-i18next"
 import { Linking, View } from "react-native"
 
@@ -46,35 +44,11 @@ const links = [
   },
 ]
 
-const normalizeOtaVersion = (version: string | null | undefined) => {
-  const normalizedVersion = version?.trim()
-  return normalizedVersion || null
-}
-
-const resolveOtaReleaseVersion = (manifest: Partial<Manifest> | undefined) => {
-  if (!manifest || !("metadata" in manifest)) {
-    return null
-  }
-
-  const { metadata } = manifest
-  if (!metadata || typeof metadata !== "object") {
-    return null
-  }
-
-  const releaseVersion = Reflect.get(metadata, "releaseVersion")
-  return typeof releaseVersion === "string" ? normalizeOtaVersion(releaseVersion) : null
-}
-
 export const AboutScreen = () => {
   const { t } = useTranslation("settings")
   const buildId = nativeBuildVersion
   const appVersion = nativeApplicationVersion
-  const { currentlyRunning } = Updates.useUpdates()
-  const otaVersion =
-    resolveOtaReleaseVersion(currentlyRunning.manifest) ??
-    normalizeOtaVersion(currentlyRunning.runtimeVersion) ??
-    normalizeOtaVersion(Updates.runtimeVersion)
-  const appVersionLabel = `${appVersion} (${buildId})${otaVersion ? ` · OTA ${otaVersion}` : ""}`
+  const appVersionLabel = `${appVersion} (${buildId})`
 
   return (
     <SafeNavigationScrollView

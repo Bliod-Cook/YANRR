@@ -1,7 +1,7 @@
 import { useEffect } from "react"
 import { useRegisterSW } from "virtual:pwa-register/react"
 
-import { setUpdaterStatus } from "~/atoms/updater"
+import { setPwaUpdate } from "~/atoms/pwa-update"
 
 // check for updates every hour
 const period = 60 * 60 * 1000
@@ -26,9 +26,7 @@ export function ReloadPrompt() {
 
   useEffect(() => {
     if (needRefresh) {
-      setUpdaterStatus({
-        type: "pwa",
-        status: "ready",
+      setPwaUpdate({
         finishUpdate: () => {
           updateServiceWorker(true)
         },

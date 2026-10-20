@@ -433,9 +433,6 @@ importers:
       html-minifier-terser:
         specifier: 7.2.0
         version: 7.2.0
-      js-yaml:
-        specifier: 5.4.2
-        version: 5.4.2
       kolorist:
         specifier: 1.8.0
         version: 1.8.0
@@ -463,9 +460,6 @@ importers:
       tailwindcss-multi:
         specifier: 0.4.6
         version: 0.4.6
-      tar:
-        specifier: 7.5.22
-        version: 7.5.22
       unplugin-ast:
         specifier: 0.19.0
         version: 0.19.0(esbuild@0.28.1)(rolldown@1.2.9)(rollup@4.57.1)(vite@7.3.6(@types/node@26.6.2)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.23.15)(yaml@2.9.0))(webpack@5.105.2(@swc/core@1.16.2(@swc/helpers@0.5.18))(esbuild@0.28.1)(uglify-js@3.19.3))
@@ -514,9 +508,6 @@ importers:
       '@follow/utils':
         specifier: workspace:*
         version: link:../../../../packages/internal/utils
-      builder-util-runtime:
-        specifier: 9.7.0
-        version: 9.7.0(supports-color@10.2.2)
       electron-context-menu:
         specifier: 5.1.0
         version: 5.1.0
@@ -532,9 +523,6 @@ importers:
       electron-store:
         specifier: 11.0.2
         version: 11.0.2
-      electron-updater:
-        specifier: 6.8.9
-        version: 6.8.9(supports-color@10.2.2)
       es-toolkit:
         specifier: 1.52.0
         version: 1.52.0
@@ -544,12 +532,6 @@ importers:
       i18next:
         specifier: 26.4.2
         version: 26.4.2(typescript@6.0.3)
-      js-yaml:
-        specifier: 5.4.2
-        version: 5.4.2
-      ky:
-        specifier: 2.1.0
-        version: 2.1.0
       linkedom:
         specifier: 0.18.13
         version: 0.18.13
@@ -565,12 +547,6 @@ importers:
       pathe:
         specifier: 2.0.3
         version: 2.0.3
-      semver:
-        specifier: 7.8.5
-        version: 7.8.5
-      tar:
-        specifier: 7.5.22
-        version: 7.5.22
       vscode-languagedetection:
         specifier: npm:@vscode/vscode-languagedetection@1.0.23
         version: '@vscode/vscode-languagedetection@1.0.23'
@@ -590,6 +566,9 @@ importers:
       electron-devtools-installer:
         specifier: 4.0.0
         version: 4.0.0
+      js-yaml:
+        specifier: 5.4.2
+        version: 5.4.2
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -1119,9 +1098,6 @@ importers:
       expo-task-manager:
         specifier: 57.0.19
         version: 57.0.19(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2))
-      expo-updates:
-        specifier: 57.0.23
-        version: 57.0.23(expo-dev-client@57.0.19(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2)))(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2))(react@19.2.8)(supports-color@10.2.2)
       expo-video:
         specifier: 57.0.4
         version: 57.0.4(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2))(react@19.2.8)
@@ -9607,9 +9583,6 @@ packages:
     resolution: {integrity: sha512-ixiS0nLNNG5jNQzgZJNoUpBKdo9yTYZMGJ+QgT2jmjR7G7+QHRCc4v6LQ3NgE7EBJq+o0ams3waJwkrlBom8Ig==}
     engines: {node: '>=14'}
 
-  arg@4.1.3:
-    resolution: {integrity: sha512-58S9QDqG0Xx27YwPSt9fJxivjYl432YCwfDMfZ+71RAqUrZef7LrKQZ3LHLOwCS4FLNBplP533Zx895SeOCHvA==}
-
   arg@5.0.2:
     resolution: {integrity: sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==}
 
@@ -10002,10 +9975,6 @@ packages:
 
   builder-util-runtime@9.2.4:
     resolution: {integrity: sha512-upp+biKpN/XZMLim7aguUyW8s0FUpDvOtK6sbanMFDAMBzpHDqdhgVYm6zc9HJ6nWo7u2Lxk60i2M6Jd3aiNrA==}
-    engines: {node: '>=12.0.0'}
-
-  builder-util-runtime@9.7.0:
-    resolution: {integrity: sha512-g/kR520giAFYkSXTzcmF3kqQq7wi8F6N6SzeDgZrqTBN+VHdmgWOyTdD1yD7AATDId/yXLvuP34CxW46/BwCdw==}
     engines: {node: '>=12.0.0'}
 
   builder-util@24.13.1:
@@ -11096,9 +11065,6 @@ packages:
   electron-to-chromium@1.5.434:
     resolution: {integrity: sha512-7EeFW9OLf1NN9NKQP9xdOE/XKqjxv7JDPP6AEAkHli11+Fae1OaLoNuAf13hQv1PPNtuES0pLQSPk2+fS3s8ww==}
 
-  electron-updater@6.8.9:
-    resolution: {integrity: sha512-ZhVxM9iGONUpZGI1FxdMRgJjUFXi7AYGVa5PwKlO1tV1/4zDxQmfKpXOHVztKrd6L9rLcFjERvi1Mf2vxyTkig==}
-
   electron-vite@5.0.0:
     resolution: {integrity: sha512-OHp/vjdlubNlhNkPkL/+3JD34ii5ov7M0GpuXEVdQeqdQ3ulvVR7Dg/rNBLfS5XPIFwgoBLDf9sjjrL+CuDyRQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -11741,9 +11707,6 @@ packages:
       expo: '>=53.0.5'
       expo-sqlite: '>=15.2.9'
 
-  expo-eas-client@57.0.4:
-    resolution: {integrity: sha512-VSPi6Kldu0EpPkC2e3bv3QNAUVDogbz1tTj7KgcdbsuUySt0hu24g4f1fJ/YjYzCw9G1l755x4QQctcX1j7UEA==}
-
   expo-file-system@57.0.7:
     resolution: {integrity: sha512-1vkZRadOsIputFDBcclqBa1pO3iXOO6iIsdqJipQWw4V5TSnWgmRTuOF7ro8IzrVue+PHbum++KCG3Tawem4cg==}
     peerDependencies:
@@ -11901,9 +11864,6 @@ packages:
       react: 19.2.8
       react-native: '*'
 
-  expo-structured-headers@57.0.1:
-    resolution: {integrity: sha512-5VwmitVr2J716pOuHXWmEnHbZhZg63DBOZKH5tj0SR8Sps/3jSAf9wf9+UGTKcKgAxGf1PPwQ0lAQ2bG3RwjAg==}
-
   expo-symbols@57.0.3:
     resolution: {integrity: sha512-uuK5yHLVR7kExUCrO/ItBvp/kp1maQ9Nkb6KvNy5ZUQnN0NMKwuhJ4GvbfS9N3ACmvCjTT4gKvg4yH5UuKIYNA==}
     peerDependencies:
@@ -11932,18 +11892,6 @@ packages:
     resolution: {integrity: sha512-x3SA5toiHZEkW+5oeNdUM1Rvt6M3ExegQsSwS3Z1+S9gn9utGYTGBkb8MBQivhjIZiRlQYDIhauxA8kySQEWtQ==}
     peerDependencies:
       expo: '*'
-
-  expo-updates@57.0.23:
-    resolution: {integrity: sha512-try1ndXkEH1qpMqs2Nf1fXxN/0GShZad9dWp8pbQpXAngyRk8k/MxJ5gJuVabkPJ2vEW3IgNvTkq54aOELkpZA==}
-    hasBin: true
-    peerDependencies:
-      expo: '*'
-      expo-dev-client: '*'
-      react: 19.2.8
-      react-native: '*'
-    peerDependenciesMeta:
-      expo-dev-client:
-        optional: true
 
   expo-video@57.0.4:
     resolution: {integrity: sha512-4YCWG1IJzUNpLX0xoussK0VOG524qgUiMbwJzrgpDuPUzOgR3ZqXSZxKsy3HlYLiuWdzIQzwfpbtSNim9F9D3Q==}
@@ -13148,10 +13096,6 @@ packages:
   kolorist@1.8.0:
     resolution: {integrity: sha512-Y+60/zizpJ3HRH8DCss+q95yr6145JXZo46OTpFvDZWLfRCE4qChOyk1b26nMaNpfHHgxagk9dXT5OP0Tfe+dQ==}
 
-  ky@2.1.0:
-    resolution: {integrity: sha512-nIKwelw+7qVqKOlX4Eht6GXfEXlDHcdIjyLWV3s119kYt5s+70ayTnYS+0fRNmtgGRRAfqdeWQbh8YizqkS0ng==}
-    engines: {node: '>=22'}
-
   kysely@0.29.3:
     resolution: {integrity: sha512-VHtBdW6XB/pgoTSqraM3UAa2rYoYdNXqnNPpX+8XXP+cwYbVEFuAp3HyPt1vpNfU9l7Y2kpUrA9QDPsy8uUqOQ==}
     engines: {node: '>=22.0.0'}
@@ -13465,9 +13409,6 @@ packages:
   lodash.difference@4.5.0:
     resolution: {integrity: sha512-dS2j+W26TQ7taQBGN8Lbbq04ssV3emRw4NY58WErlTO29pIqS0HmoT5aJ9+TUQ1N3G+JOZSji4eugsWwGp9yPA==}
 
-  lodash.escaperegexp@4.1.2:
-    resolution: {integrity: sha512-TM9YBvyC84ZxE3rgfefxUWiQKLilstD6k7PTGt6wfbtXF8ixIJLOL3VYyV/z+ZiPLsVxAsKAFVwWlWeb2Y8Yyw==}
-
   lodash.flatten@4.4.0:
     resolution: {integrity: sha512-C5N2Z3DgnnKr0LOpv/hKCgKdb7ZZwafIrsesve6lmzvZIRZRGaZ/l6Q8+2W7NaT+ZwO3fFlSCzCzrDCFdJfZ4g==}
 
@@ -13480,10 +13421,6 @@ packages:
 
   lodash.isboolean@3.0.3:
     resolution: {integrity: sha512-Bz5mupy2SVbPHURB98VAcw+aHh4vRV5IPNhILUCsOzRmsTmSQ17jIuqopAentWoehktxGd9e/hbIXq980/1QJg==}
-
-  lodash.isequal@4.5.0:
-    resolution: {integrity: sha512-pDo3lu8Jhfjqls6GkMgpahsF9kCyayhgykjyLMNFTKWrpVdAQtYyB4muAMWozBB4ig/dtWAmsMxLEI8wuz+DYQ==}
-    deprecated: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
 
   lodash.isinteger@4.0.4:
     resolution: {integrity: sha512-DBwtEWN2caHQ9/imiNeEA5ys1JoRtRfY3d7V9wkqtbycnAmTvRRmbHKDV4a0EYc678/dia0jrte4tjYwVBaZUA==}
@@ -15958,11 +15895,6 @@ packages:
     resolution: {integrity: sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==}
     hasBin: true
 
-  semver@7.7.4:
-    resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
-    engines: {node: '>=10'}
-    hasBin: true
-
   semver@7.8.5:
     resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
     engines: {node: '>=10'}
@@ -16567,9 +16499,6 @@ packages:
 
   tiny-each-async@2.0.3:
     resolution: {integrity: sha512-5ROII7nElnAirvFn8g7H7MtpfV1daMcyfTGQwsn/x2VtyV+VPiO5CjReCJtWLvoKTDEDmZocf3cNPraiMnBXLA==}
-
-  tiny-typed-emitter@2.1.0:
-    resolution: {integrity: sha512-qVtvMxeXbVej0cQWKqVSSAHmKZEHAvxdF8HEUBFWts8h+xEo5m/lEiPakuyZ3BnCBjOD8i24kzNOiOLLgsSxhA==}
 
   tinybench@6.1.4:
     resolution: {integrity: sha512-9APumHG7r4yOk4X4WlkmE71aZcv1gvin1czO3OQ1U9iJcFA5Ja/ygyb0vPOVHTthFozUYs8CLoLUlM8grb2lTQ==}
@@ -26972,8 +26901,6 @@ snapshots:
 
   are-docs-informative@0.0.2: {}
 
-  arg@4.1.3: {}
-
   arg@5.0.2: {}
 
   argparse@2.0.1: {}
@@ -27576,13 +27503,6 @@ snapshots:
       node-gyp-build: 4.8.4
 
   builder-util-runtime@9.2.4(supports-color@10.2.2):
-    dependencies:
-      debug: 4.4.3(supports-color@10.2.2)
-      sax: 1.6.0
-    transitivePeerDependencies:
-      - supports-color
-
-  builder-util-runtime@9.7.0(supports-color@10.2.2):
     dependencies:
       debug: 4.4.3(supports-color@10.2.2)
       sax: 1.6.0
@@ -28754,19 +28674,6 @@ snapshots:
 
   electron-to-chromium@1.5.434: {}
 
-  electron-updater@6.8.9(supports-color@10.2.2):
-    dependencies:
-      builder-util-runtime: 9.7.0(supports-color@10.2.2)
-      fs-extra: 10.1.0
-      js-yaml: 4.3.0
-      lazy-val: 1.0.5
-      lodash.escaperegexp: 4.1.2
-      lodash.isequal: 4.5.0
-      semver: 7.7.4
-      tiny-typed-emitter: 2.1.0
-    transitivePeerDependencies:
-      - supports-color
-
   electron-vite@5.0.0(@swc/core@1.16.2(@swc/helpers@0.5.18))(supports-color@10.2.2)(vite@7.3.6(@types/node@26.6.2)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.49.0)(tsx@4.23.15)(yaml@2.9.0)):
     dependencies:
       '@babel/core': 7.29.0(supports-color@10.2.2)
@@ -29719,8 +29626,6 @@ snapshots:
       expo: 57.0.24(fc572a648570e6a0d8749be858a41fcb)
       expo-sqlite: 57.0.3(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2))(react@19.2.8)
 
-  expo-eas-client@57.0.4: {}
-
   expo-file-system@57.0.7(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.0(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.0(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2)):
     dependencies:
       expo: 57.0.24(278d514b995e61299e723ad5020e450e)
@@ -29943,8 +29848,6 @@ snapshots:
       react: 19.2.8
       react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2)
 
-  expo-structured-headers@57.0.1: {}
-
   expo-symbols@57.0.3(expo-font@57.0.4(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2))(react@19.2.8))(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2))(react@19.2.8):
     dependencies:
       '@expo-google-fonts/material-symbols': 0.4.29
@@ -29974,31 +29877,6 @@ snapshots:
   expo-updates-interface@57.0.2(expo@57.0.24):
     dependencies:
       expo: 57.0.24(fc572a648570e6a0d8749be858a41fcb)
-
-  expo-updates@57.0.23(expo-dev-client@57.0.19(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2)))(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2))(react@19.2.8)(supports-color@10.2.2):
-    dependencies:
-      '@expo/code-signing-certificates': 0.0.6
-      '@expo/plist': 0.8.1
-      '@expo/spawn-async': 1.8.0
-      arg: 4.1.3
-      chalk: 4.1.2
-      debug: 4.4.3(supports-color@10.2.2)
-      expo: 57.0.24(fc572a648570e6a0d8749be858a41fcb)
-      expo-eas-client: 57.0.4
-      expo-manifests: 57.0.2(expo@57.0.24)
-      expo-structured-headers: 57.0.1
-      expo-updates-interface: 57.0.2(expo@57.0.24)
-      getenv: 2.0.0
-      glob: 13.0.6
-      ignore: 5.3.2
-      nullthrows: 1.1.1
-      react: 19.2.8
-      react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2)
-      resolve-from: 5.0.0
-    optionalDependencies:
-      expo-dev-client: 57.0.19(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2))
-    transitivePeerDependencies:
-      - supports-color
 
   expo-video@57.0.4(expo@57.0.24)(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.86.0(@babel/core@7.29.7(supports-color@10.2.2))(bufferutil@4.1.0)(supports-color@10.2.2))(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.8)(supports-color@10.2.2))(react@19.2.8):
     dependencies:
@@ -31552,8 +31430,6 @@ snapshots:
 
   kolorist@1.8.0: {}
 
-  ky@2.1.0: {}
-
   kysely@0.29.3: {}
 
   lan-network@0.2.1: {}
@@ -31803,8 +31679,6 @@ snapshots:
 
   lodash.difference@4.5.0: {}
 
-  lodash.escaperegexp@4.1.2: {}
-
   lodash.flatten@4.4.0: {}
 
   lodash.get@4.4.2: {}
@@ -31812,8 +31686,6 @@ snapshots:
   lodash.includes@4.3.0: {}
 
   lodash.isboolean@3.0.3: {}
-
-  lodash.isequal@4.5.0: {}
 
   lodash.isinteger@4.0.4: {}
 
@@ -35036,8 +34908,6 @@ snapshots:
 
   semver@6.3.1: {}
 
-  semver@7.7.4: {}
-
   semver@7.8.5: {}
 
   send@0.19.2(supports-color@10.2.2):
@@ -35747,8 +35617,6 @@ snapshots:
 
   tiny-each-async@2.0.3:
     optional: true
-
-  tiny-typed-emitter@2.1.0: {}
 
   tinybench@6.1.4: {}
 

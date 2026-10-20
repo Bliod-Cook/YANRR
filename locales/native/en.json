@@ -36,7 +36,6 @@
   "findBar.previous": "Previous Match",
   "menu.about": "About {{name}}",
   "menu.alwaysOnTop": "Always on top",
-  "menu.checkForUpdates": "Check for Updates",
   "menu.clearAllData": "Clear All Data",
   "menu.close": "Close",
   "menu.copy": "Copy",
@@ -59,7 +58,6 @@
   "menu.pasteAndMatchStyle": "Paste and Match Style",
   "menu.quickAdd": "Quick Add",
   "menu.quit": "Quit {{name}}",
-  "menu.quitAndInstallUpdate": "Debug: Quit and Install Update",
   "menu.redo": "Redo",
   "menu.reload": "Reload",
   "menu.search": "Search",
@@ -75,8 +73,5 @@
   "menu.unread": "Unread",
   "menu.view": "View",
   "menu.window": "Window",
-  "menu.zoom": "Zoom",
-  "update.available": "An update is available",
-  "update.checkFailed": "Couldn't check for updates",
-  "update.upToDate": "You're on the latest version"
+  "menu.zoom": "Zoom"
 }

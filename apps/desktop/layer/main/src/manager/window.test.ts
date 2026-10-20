@@ -37,7 +37,6 @@ vi.mock("~/lib/store", () => ({ store: { get: vi.fn(), set: vi.fn() } }))
 vi.mock("~/lib/tray", () => ({ getTrayConfig: () => false }))
 vi.mock("~/lib/utils", () => ({ refreshBound: vi.fn() }))
 vi.mock("~/logger", () => ({ logger: { info: vi.fn(), log: vi.fn(), warn: vi.fn() } }))
-vi.mock("~/updater/hot-updater", () => ({ loadDynamicRenderEntry: vi.fn() }))
 
 const { WindowManager } = await import("./window")
 

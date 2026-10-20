@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 const mocks = vi.hoisted(() => {
   const env = {
     isMacOS: false,
-    isMAS: false,
     isWindows: false,
     isLinux: false,
   }
@@ -92,10 +91,6 @@ vi.mock("~/manager/window", () => ({
   },
 }))
 
-vi.mock("~/updater", () => ({
-  checkForAppUpdates: vi.fn(),
-}))
-
 vi.mock("./i18n", () => ({
   t: vi.fn((key: string, options?: { name?: string }) =>
     options?.name ? `${key} ${options.name}` : key,
@@ -112,7 +107,6 @@ describe("tray", () => {
     vi.clearAllMocks()
 
     mocks.env.isMacOS = false
-    mocks.env.isMAS = false
     mocks.env.isWindows = false
     mocks.env.isLinux = false
     mocks.getBadgeCount.mockReturnValue(0)
