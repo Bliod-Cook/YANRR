@@ -84,105 +84,11 @@ const isLoggedOutUiReady = async (page: Page) => {
   return loginButtonVisible || loginModalVisible || loginInputVisible || registerInputVisible
 }
 
-export const injectRecaptchaToken = async (page: Page, env?: DesktopE2EEnv) => {
-  await page.addInitScript(
-    (nextEnv) => {
-      window.__FOLO_E2E_RECAPTCHA_TOKEN__ = "e2e-token"
-
-      const originalFetch = globalThis.fetch.bind(globalThis)
-      const authEndpoints = [
-        "/better-auth/sign-in/email",
-        "/better-auth/sign-up/email",
-        "/better-auth/forget-password",
-      ]
-
-      globalThis.fetch = async (input, init) => {
-        const request = input instanceof Request ? input : new Request(input, init)
-        const requestURL = new URL(request.url, globalThis.location.origin)
-        const shouldInjectToken = authEndpoints.some((path) => requestURL.pathname.includes(path))
-
-        if (!shouldInjectToken) {
-          return originalFetch(input, init)
-        }
-
-        const headers = new Headers(request.headers)
-        if (!headers.has("x-token")) {
-          headers.set("x-token", "r3:e2e-token")
-        }
-
-        return originalFetch(
-          new Request(request, {
-            headers,
-            credentials: "include",
-          }),
-        )
-      }
-
-      if (!nextEnv) {
-        return
-      }
-
-      const fixedEnv = {
-        VITE_API_URL: nextEnv.apiURL,
-        VITE_EXTERNAL_API_URL: nextEnv.apiURL,
-        VITE_WEB_URL: nextEnv.webURL,
-      }
-
-      const target =
-        (globalThis as typeof globalThis & { __followEnv?: Record<string, string> }).__followEnv ??
-        {}
-
-      const proxy = new Proxy(target, {
-        get(currentTarget, property, receiver) {
-          if (typeof property === "string" && property in fixedEnv) {
-            return fixedEnv[property as keyof typeof fixedEnv]
-          }
-
-          return Reflect.get(currentTarget, property, receiver)
-        },
-        set(currentTarget, property, value, receiver) {
-          if (typeof property === "string" && property in fixedEnv) {
-            return true
-          }
-
-          return Reflect.set(currentTarget, property, value, receiver)
-        },
-        ownKeys(currentTarget) {
-          return Array.from(new Set([...Reflect.ownKeys(currentTarget), ...Object.keys(fixedEnv)]))
-        },
-        getOwnPropertyDescriptor(currentTarget, property) {
-          if (typeof property === "string" && property in fixedEnv) {
-            return {
-              configurable: true,
-              enumerable: true,
-              writable: false,
-              value: fixedEnv[property as keyof typeof fixedEnv],
-            }
-          }
-
-          return Reflect.getOwnPropertyDescriptor(currentTarget, property)
-        },
-      })
-
-      Object.defineProperty(globalThis, "__followEnv", {
-        configurable: true,
-        enumerable: false,
-        get() {
-          return proxy
-        },
-        set() {},
-      })
-    },
-    env ? { apiURL: env.apiURL, webURL: env.webURL } : undefined,
-  )
-}
-
 export const openWebApp = async (
   page: Page,
   env: DesktopE2EEnv,
   route = "/timeline/articles/all/pending",
 ) => {
-  await injectRecaptchaToken(page, env)
   await page.goto(buildWebAppURL(env, route), { waitUntil: "domcontentloaded" })
 
   if (!(await waitForRenderedAppShell(page))) {

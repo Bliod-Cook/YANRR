@@ -15,7 +15,6 @@ export const DEFAULT_VALUES = {
     WEB_URL: "http://localhost:3000",
     INBOXES_EMAIL: "@follow.re",
     FIREBASE_CONFIG: FIREBASE_CONFIG_DEFAULT,
-    RECAPTCHA_V3_SITE_KEY: "6LeGa3csAAAAALi_WqhlWoaGaqd_kke4HRGvNE0C",
   },
   DEV: {
     API_URL: "https://api.dev.folo.is",

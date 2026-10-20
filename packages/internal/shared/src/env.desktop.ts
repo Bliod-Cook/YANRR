@@ -14,8 +14,6 @@ export const env = createEnv({
     VITE_OTA_URL: z.string().url().default(DEFAULT_VALUES.PROD.OTA_URL),
     VITE_INBOXES_EMAIL: z.string().default(DEFAULT_VALUES.PROD.INBOXES_EMAIL),
     VITE_FIREBASE_CONFIG: z.string().default(DEFAULT_VALUES.PROD.FIREBASE_CONFIG),
-
-    VITE_RECAPTCHA_V3_SITE_KEY: z.string().default(DEFAULT_VALUES.PROD.RECAPTCHA_V3_SITE_KEY),
   },
 
   emptyStringAsUndefined: true,
