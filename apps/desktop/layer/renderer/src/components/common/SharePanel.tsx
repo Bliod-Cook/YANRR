@@ -70,24 +70,7 @@ const getShareUrl = (entryId: string) => {
   const entry = getEntry(entryId)
   if (!entry) return ""
 
-  // Temporarily use the original link
   return entry.url!
-  // const params = getRouteParams()
-
-  // let subscriptionId = "all"
-
-  // if (params.feedId) {
-  //   subscriptionId = params.feedId
-  // } else if (params.inboxId) {
-  //   subscriptionId = params.inboxId
-  // } else if (params.listId) {
-  //   subscriptionId = params.listId
-  // }
-
-  // return UrlBuilder.shareEntry(entryId, {
-  //   view: params.view,
-  //   subscriptionId,
-  // })
 }
 
 export const SharePanel = ({ entryId }: SharePanelProps) => {
