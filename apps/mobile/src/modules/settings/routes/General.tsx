@@ -1,5 +1,4 @@
 import { ACTION_LANGUAGE_KEYS } from "@follow/shared"
-import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -24,7 +23,6 @@ import {
 import { Switch } from "@/src/components/ui/switch/Switch"
 import { changeAppLanguage } from "@/src/lib/i18n"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
-import { fetchTtsVoices } from "@/src/modules/player/tts-service"
 
 import { PaidSettingCell } from "../components/PaidSettingCell"
 
@@ -126,47 +124,6 @@ function TranslationModeSetting() {
   )
 }
 
-function VoiceSetting() {
-  const { t } = useTranslation("settings")
-  const voice = useGeneralSettingKey("voice")
-  const { data } = useQuery({
-    queryFn: ({ signal }) => fetchTtsVoices(signal),
-    queryKey: ["tts-voices"],
-    staleTime: Number.POSITIVE_INFINITY,
-  })
-
-  const options = useMemo(
-    () =>
-      data?.map((item) => ({
-        label: item.ShortName,
-        subLabel: item.FriendlyName,
-        value: item.ShortName,
-      })) ?? [{ label: voice, value: voice }],
-    [data, voice],
-  )
-
-  const selectedVoice = data?.find((item) => item.ShortName === voice)
-
-  return (
-    <GroupedInsetListCell
-      label={t("general.voices")}
-      testID="general-voice-cell"
-      leftClassName={settingLabelClassName}
-      rightClassName={settingSelectWrapperClassName}
-    >
-      <Select
-        triggerTestID="general-voice-select"
-        value={voice}
-        onValueChange={(value) => {
-          setGeneralSetting("voice", value)
-        }}
-        displayValue={selectedVoice?.ShortName ?? voice}
-        options={options}
-      />
-    </GroupedInsetListCell>
-  )
-}
-
 export const GeneralScreen: NavigationControllerView = () => {
   const { t } = useTranslation("settings")
 
@@ -232,11 +189,6 @@ export const GeneralScreen: NavigationControllerView = () => {
         </PaidSettingCell>
         <TranslationModeSetting />
         <LanguageSetting settingKey="actionLanguage" />
-      </GroupedInsetListCard>
-
-      <GroupedInsetListSectionHeader label={t("general.tts")} />
-      <GroupedInsetListCard>
-        <VoiceSetting />
       </GroupedInsetListCard>
 
       {/* Subscriptions */}

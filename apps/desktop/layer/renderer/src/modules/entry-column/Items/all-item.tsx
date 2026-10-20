@@ -274,7 +274,6 @@ function AudioIcon({ entryId, src }: { entryId: string; src: string }) {
     if (!playStatus) {
       // switch this to play
       AudioPlayer.mount({
-        type: "audio",
         entryId,
         src,
         currentTime: 0,

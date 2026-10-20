@@ -84,7 +84,6 @@ export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = [
   "appLaunchOnStartup",
   "sendAnonymousData",
   "language",
-  "voice",
 ]
 
 export const enhancedGeneralSettingKeys = new Set<keyof GeneralSettings>([

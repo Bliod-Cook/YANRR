@@ -63,10 +63,6 @@ vi.mock("../initialize/player", () => ({
   },
 }))
 
-vi.mock("../modules/player/tts-stream-controller", () => ({
-  ttsStreamController: {},
-}))
-
 vi.mock("./toast", () => ({
   toast: { error: mocks.toastError },
 }))

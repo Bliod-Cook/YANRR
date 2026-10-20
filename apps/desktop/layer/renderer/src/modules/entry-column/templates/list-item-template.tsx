@@ -290,10 +290,6 @@ export function ListItem({
           )}
           loading="lazy"
           key={`${rid}-media-${thumbnailRatio}`}
-          proxy={{
-            width: 160,
-            height: thumbnailRatio === "square" ? 160 : 0,
-          }}
           height={entry.firstMedia.height}
           width={entry.firstMedia.width}
           blurhash={entry.firstMedia.blurhash}
@@ -331,7 +327,6 @@ function AudioCover({
     if (!playStatus) {
       // switch this to play
       AudioPlayer.mount({
-        type: "audio",
         entryId,
         src,
         currentTime: 0,

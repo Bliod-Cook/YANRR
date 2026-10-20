@@ -8,7 +8,6 @@ import { Blurhash, BlurhashCanvas } from "react-blurhash"
 import { Trans, useTranslation } from "react-i18next"
 import { useEventCallback } from "usehooks-ts"
 
-import { useGetImageProxyUrl } from "~/lib/img-proxy"
 import { saveImageDimensionsToDb } from "~/store/image/db"
 
 import { ErrorBoundary } from "../../common/ErrorBoundary"
@@ -32,22 +31,12 @@ const isImageLoadedSet = new Set<string>()
 export type MediaProps = BaseProps &
   (
     | (ImgHTMLAttributes<HTMLImageElement> & {
-        proxy?: {
-          width: number
-          height: number
-        }
-        preferOrigin?: boolean
         popper?: boolean
         type: "photo"
         previewImageUrl?: string
         cacheDimensions?: boolean
       })
     | (VideoHTMLAttributes<HTMLVideoElement> & {
-        proxy?: {
-          width: number
-          height: number
-        }
-        preferOrigin?: boolean
         popper?: boolean
         type: "video"
         previewImageUrl?: string
@@ -56,8 +45,6 @@ export type MediaProps = BaseProps &
 
 const MediaImpl: FC<MediaProps> = ({
   className,
-  proxy,
-  preferOrigin,
   popper = false,
   mediaContainerClassName,
   thumbnail,
@@ -78,7 +65,6 @@ const MediaImpl: FC<MediaProps> = ({
     videoClassName,
     ...rest
   } = props
-  const getImageProxyUrl = useGetImageProxyUrl()
 
   const ctxMediaInfo = use(MediaInfoRecordContext)
   const ctxHeight = ctxMediaInfo[src!]?.height
@@ -87,114 +73,24 @@ const MediaImpl: FC<MediaProps> = ({
   const finalHeight = height || ctxHeight
   const finalWidth = width || ctxWidth
 
-  // Define the list of available image sources, sorted by priority
-  const imageSources = useMemo(() => {
-    if (!src) return []
-
-    const sources: Array<{ url: string; type: "proxy" | "origin" }> = []
-
-    // Determine priority based on preferences
-    if (proxy && !preferOrigin) {
-      // Use proxy first
-      sources.push(
-        {
-          url: getImageProxyUrl({
-            url: src,
-            width: proxy.width || 0,
-            height: proxy.height || 0,
-          }),
-          type: "proxy",
-        },
-        { url: src, type: "origin" },
-      )
-    } else {
-      // Use original URL first
-      sources.push({ url: src, type: "origin" })
-      if (proxy) {
-        sources.push({
-          url: getImageProxyUrl({
-            url: src,
-            width: proxy.width || 0,
-            height: proxy.height || 0,
-          }),
-          type: "proxy",
-        })
-      }
-    }
-
-    return sources
-  }, [src, proxy, preferOrigin, getImageProxyUrl])
-
-  const [currentSourceIndex, setCurrentSourceIndex] = useState(0)
   const [isError, setIsError] = useState(false)
   const [mediaLoadState, setMediaLoadState] = useState<"loading" | "loaded">("loading")
 
-  const currentSource = imageSources[currentSourceIndex]
-  const imgSrc = currentSource?.url || src
-
-  const previewImageSrc = useMemo(() => {
-    if (!previewImageUrl) return
-
-    // Use the same proxy strategy for preview images
-    if (proxy && currentSource?.type === "proxy") {
-      return getImageProxyUrl({
-        url: previewImageUrl,
-        width: proxy.width || 0,
-        height: proxy.height || 0,
-      })
-    }
-    return previewImageUrl
-  }, [previewImageUrl, proxy, currentSource?.type, getImageProxyUrl])
-
-  // When image source list changes, reset to the first source
-  const prevImageSources = useRef(imageSources)
+  // When the source changes, start over with its loading state
+  const prevSrc = useRef(src)
   useEffect(() => {
-    if (prevImageSources.current !== imageSources && imageSources.length > 0) {
-      prevImageSources.current = imageSources
-      setCurrentSourceIndex(0)
+    if (prevSrc.current !== src) {
+      prevSrc.current = src
       setIsError(false)
+      setMediaLoadState(src && isImageLoadedSet.has(src) ? "loaded" : "loading")
     }
-  }, [imageSources])
-
-  // When image source changes, reset loading state
-  const prevImgSrc = useRef(imgSrc)
-  useEffect(() => {
-    if (prevImgSrc.current !== imgSrc) {
-      prevImgSrc.current = imgSrc
-      setMediaLoadState(imgSrc && isImageLoadedSet.has(imgSrc) ? "loaded" : "loading")
-    }
-  }, [imgSrc])
+  }, [src])
 
   const errorHandle: React.ReactEventHandler<HTMLImageElement> = useEventCallback((e) => {
-    const nextIndex = currentSourceIndex + 1
+    setIsError(true)
 
     if (import.meta.env.DEV) {
-      console.info(
-        `[Media Error] Failed to load image source ${currentSourceIndex + 1}/${imageSources.length}`,
-        {
-          failedSrc: imgSrc,
-          originalSrc: src,
-          error: e,
-          willRetry: nextIndex < imageSources.length,
-          nextSource: imageSources[nextIndex]?.url,
-        },
-      )
-    }
-
-    if (nextIndex < imageSources.length) {
-      //  Try next available image source
-      setCurrentSourceIndex(nextIndex)
-      setMediaLoadState("loading")
-    } else {
-      // All sources failed, mark as error state
-      setIsError(true)
-
-      if (import.meta.env.DEV) {
-        console.error(`[Media Error] All image sources failed for: ${src}`, {
-          allSources: imageSources,
-          originalSrc: src,
-        })
-      }
+      console.error(`[Media Error] Failed to load image: ${src}`, e)
     }
   })
 
@@ -209,7 +105,6 @@ const MediaImpl: FC<MediaProps> = ({
           {
             url: src,
             type,
-            fallbackUrl: imgSrc,
             blurhash: props.blurhash,
             width: width || undefined,
             height: height || undefined,
@@ -226,11 +121,7 @@ const MediaImpl: FC<MediaProps> = ({
 
     if (import.meta.env.DEV) {
       console.info(`[Media Success] Image loaded successfully`, {
-        src: imgSrc,
-        originalSrc: src,
-        sourceType: currentSource?.type,
-        sourceIndex: currentSourceIndex + 1,
-        totalSources: imageSources.length,
+        src,
         dimensions: {
           width: e.currentTarget.naturalWidth,
           height: e.currentTarget.naturalHeight,
@@ -240,8 +131,8 @@ const MediaImpl: FC<MediaProps> = ({
       })
     }
 
-    if (imgSrc) {
-      isImageLoadedSet.add(imgSrc)
+    if (src) {
+      isImageLoadedSet.add(src)
     }
     if ("cacheDimensions" in props && props.cacheDimensions && src) {
       saveImageDimensionsToDb(src, {
@@ -276,7 +167,7 @@ const MediaImpl: FC<MediaProps> = ({
               "!my-0",
               mediaContainerClassName,
             )}
-            src={imgSrc}
+            src={src}
             onLoad={handleOnLoad}
             onClick={handleClick}
           />
@@ -295,7 +186,7 @@ const MediaImpl: FC<MediaProps> = ({
           >
             <VideoPreview
               src={src!}
-              previewImageUrl={previewImageSrc}
+              previewImageUrl={previewImageUrl}
               thumbnail={thumbnail}
               videoClassName={videoClassName}
             />
@@ -316,11 +207,10 @@ const MediaImpl: FC<MediaProps> = ({
     popper,
     mediaLoadState,
     mediaContainerClassName,
-    imgSrc,
     handleOnLoad,
     handleClick,
     src,
-    previewImageSrc,
+    previewImageUrl,
     thumbnail,
     videoClassName,
   ])
@@ -379,11 +269,7 @@ const MediaImpl: FC<MediaProps> = ({
       data-media-debug={
         import.meta.env.DEV
           ? JSON.stringify({
-              originalSrc: src,
-              currentSrc: imgSrc,
-              sourceType: currentSource?.type,
-              sourceIndex: currentSourceIndex,
-              totalSources: imageSources.length,
+              src,
               isError,
               mediaLoadState,
             })

@@ -54,11 +54,6 @@ export function PictureItem({ entryId, translation }: UniversalItemProps) {
   )
 }
 
-const proxySize = {
-  width: 600,
-  height: 0,
-}
-
 export const PictureWaterFallItem = memo(function PictureWaterFallItem({
   entryId,
   translation,
@@ -111,7 +106,6 @@ export const PictureWaterFallItem = memo(function PictureWaterFallItem({
                 "w-full grow rounded-md after:pointer-events-none after:absolute after:inset-0 after:bg-transparent after:transition-colors after:duration-300 group-hover:after:bg-black/20",
                 isActive && "rounded-b-none",
               )}
-              proxySize={proxySize}
               imgClassName="object-cover"
             />
             {!isImageOnly && (

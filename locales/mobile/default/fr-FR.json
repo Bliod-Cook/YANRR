@@ -10,8 +10,6 @@
   "entry_content.ai_summary": "Résumé IA",
   "entry_content.header.more_actions": "Plus d'actions",
   "entry_content.header.open_in_browser": "Ouvrir dans le navigateur",
-  "entry_content.header.play_tts": "Lire TTS",
-  "entry_content.header.play_tts_description": "Sélectionnez une voix TTS dans les paramètres et démarrez TTS pour convertir en contenu audio",
   "entry_content.header.reading_settings": "Paramètres de lecture",
   "entry_content.header.show_readability": "Mode lecture",
   "entry_content.header.show_translation": "Afficher la traduction",

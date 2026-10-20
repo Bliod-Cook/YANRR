@@ -71,7 +71,6 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
       AudioPlayer.mount({
         entryId,
         src: audioAttachment.url,
-        type: "audio",
         currentTime: 0,
       })
     }

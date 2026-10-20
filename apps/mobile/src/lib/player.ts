@@ -7,10 +7,9 @@ import TrackPlayer, {
 } from "@rntp/player"
 import { t } from "i18next"
 import { atom, useAtomValueRawSync, useSetAtom } from "jotai"
-import { useCallback, useEffect, useSyncExternalStore } from "react"
+import { useCallback, useEffect } from "react"
 
 import { PlayerRegistered } from "../initialize/player"
-import { ttsStreamController } from "../modules/player/tts-stream-controller"
 import { toast } from "./toast"
 
 export type SimpleMediaState = "playing" | "paused" | "loading"
@@ -120,28 +119,11 @@ export { useProgress } from "@rntp/player"
 export interface ActivePlayable {
   artwork?: string | null
   artist?: string | null
-  entryId?: string | null
-  kind: "track-player" | "tts-stream"
   title: string
-}
-
-export function useTtsStreamPlayback() {
-  return useSyncExternalStore(ttsStreamController.subscribe, ttsStreamController.getState)
 }
 
 export function useActivePlayable(): ActivePlayable | null {
   const activeTrack = useActiveMediaItem()
-  const ttsStream = useTtsStreamPlayback()
-
-  if (ttsStream.entryId) {
-    return {
-      artwork: ttsStream.artwork,
-      artist: ttsStream.artist,
-      entryId: ttsStream.entryId,
-      kind: "tts-stream",
-      title: ttsStream.title ?? "TTS",
-    }
-  }
 
   if (!activeTrack) {
     return null
@@ -150,8 +132,6 @@ export function useActivePlayable(): ActivePlayable | null {
   return {
     artwork: typeof activeTrack.artworkUrl === "string" ? activeTrack.artworkUrl : undefined,
     artist: activeTrack.artist,
-    entryId: null,
-    kind: "track-player",
     title: activeTrack.title ?? t("player.unknown_title"),
   }
 }

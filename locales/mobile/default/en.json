@@ -10,8 +10,6 @@
   "entry_content.ai_summary": "AI Summary",
   "entry_content.header.more_actions": "More Actions",
   "entry_content.header.open_in_browser": "Open in Browser",
-  "entry_content.header.play_tts": "Play TTS",
-  "entry_content.header.play_tts_description": "Select a TTS voice in settings and start TTS to convert to audio content",
   "entry_content.header.reading_settings": "Reading Settings",
   "entry_content.header.show_readability": "Show Readability",
   "entry_content.header.show_translation": "Show Translation",

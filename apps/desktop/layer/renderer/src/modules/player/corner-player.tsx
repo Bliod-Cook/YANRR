@@ -11,7 +11,6 @@ import { EventBus } from "@follow/utils/event-bus"
 import { cn } from "@follow/utils/utils"
 import * as Slider from "@radix-ui/react-slider"
 import dayjs from "dayjs"
-import i18next from "i18next"
 import { AnimatePresence, m } from "motion/react"
 import { useEffect, useMemo, useState } from "react"
 import Marquee from "react-fast-marquee"
@@ -30,15 +29,8 @@ import type { FeedIconEntry } from "~/modules/feed/feed-icon"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 
 import { COMMAND_ID } from "../command/commands/id"
-import { toggleEntryTts } from "./entry-tts"
 
 const handleClickPlay = () => {
-  const { entryId, type } = getAudioPlayerAtomValue()
-  // A finished or released TTS has nothing left to resume, so it is requested again
-  if (type === "tts" && entryId) {
-    void toggleEntryTts(entryId, { toastTitle: i18next.t("entry_content.header.play_tts") })
-    return
-  }
   AudioPlayer.togglePlayAndPause()
 }
 
@@ -117,8 +109,6 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
   const status = useAudioPlayerAtomSelector((v) => v.status)
   const isMute = useAudioPlayerAtomSelector((v) => v.isMute)
   const listId = useAudioPlayerAtomSelector((v) => v.listId)
-  // TTS plays from a MediaStream or a temporary blob, which has no file to download
-  const isTts = useAudioPlayerAtomSelector((v) => v.type === "tts")
 
   const playerValue = { entryId, status, isMute }
 
@@ -308,16 +298,14 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
               }}
               label={t("player.open_entry")}
             />
-            {!isTts && (
-              <ActionIcon
-                label={t("player.download")}
-                onClick={() => {
-                  window.open(AudioPlayer.get().src, "_blank")
-                }}
-              >
-                <i className="i-mgc-download-2-cute-re" />
-              </ActionIcon>
-            )}
+            <ActionIcon
+              label={t("player.download")}
+              onClick={() => {
+                window.open(AudioPlayer.get().src, "_blank")
+              }}
+            >
+              <i className="i-mgc-download-2-cute-re" />
+            </ActionIcon>
           </div>
           {/* audio control */}
           <div className="flex items-center">
@@ -365,8 +353,7 @@ export const PlayerProgress = () => {
 
   useEffect(() => {
     if (isDraggingProgress) return
-    const playerState = getAudioPlayerAtomValue()
-    if (duration > 0 && currentTime >= duration && !playerState.isStream) {
+    if (duration > 0 && currentTime >= duration) {
       AudioPlayer?.pause()
       AudioPlayer?.seek(duration)
       return

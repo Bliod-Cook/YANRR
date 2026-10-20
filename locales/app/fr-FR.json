@@ -220,8 +220,6 @@
   "entry_content.external_link.warning": "Vous êtes sur le point de quitter ce site pour une page externe. Faites-vous confiance à cette URL et souhaitez-vous continuer ?",
   "entry_content.fetching_content": "Récupération du contenu original et traitement...",
   "entry_content.fetching_content_failed": "Lisibilité : Échec de la récupération du contenu original, réessayez plus tard ou revenez au contenu RSS.",
-  "entry_content.header.play_tts": "Lire TTS",
-  "entry_content.header.play_tts_description": "Sélectionnez une voix TTS dans les paramètres et démarrez TTS pour convertir en contenu audio",
   "entry_content.header.readability": "Lisibilité",
   "entry_content.header.readability_description": "Utiliser la capacité de lisibilité pour obtenir le contenu original du site web et l'analyser peut permettre un contenu plus lisible. Recommandé lorsque le contenu RSS n'est pas disponible ou incomplet.",
   "entry_content.invalid_entry_id": "ID d'entrée invalide",

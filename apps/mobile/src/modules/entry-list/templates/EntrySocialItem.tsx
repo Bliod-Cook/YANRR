@@ -17,7 +17,7 @@ import { UserAvatar } from "@/src/components/ui/avatar/UserAvatar"
 import { RelativeDateTime } from "@/src/components/ui/datetime/RelativeDateTime"
 import { FeedIcon } from "@/src/components/ui/icon/feed-icon"
 import { Image } from "@/src/components/ui/image/Image"
-import { getAllSources } from "@/src/components/ui/image/utils"
+import { getSafeSource } from "@/src/components/ui/image/utils"
 import type { LightboxImageSource } from "@/src/components/ui/lightbox/ImageViewing/@types"
 import { useLightboxControls } from "@/src/components/ui/lightbox/lightboxState"
 import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
@@ -207,21 +207,12 @@ const EntryMediaItem = memo(
           ? mediaItem.url
           : undefined
     if (!imageUrl) return null
-    const proxy = {
-      width: fullWidth ? 400 : 200,
-    }
     const ImageItem = (
       <Animated.View ref={aviRef} collapsable={false}>
         <NativePressable
           onPress={() => {
-            // The proxied thumbnail is what this tile shows, so the lightbox can show it from the
-            // cache while the original loads
-            const [, thumbnail] = getAllSources(
-              {
-                uri: imageUrl,
-              },
-              proxy,
-            )
+            // The lightbox shows the image this tile already loaded
+            const thumbnail = getSafeSource({ uri: imageUrl })
             runOnUI(() => {
               "worklet"
 
@@ -231,7 +222,6 @@ const EntryMediaItem = memo(
           }}
         >
           <Image
-            proxy={proxy}
             source={{
               uri: imageUrl,
             }}

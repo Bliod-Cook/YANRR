@@ -42,10 +42,6 @@ export function PictureItemStateLess({ entry }: EntryItemStatelessProps) {
                 className="size-full overflow-hidden"
                 mediaContainerClassName={"w-auto h-auto rounded"}
                 loading="lazy"
-                proxy={{
-                  width: 600,
-                  height: 0,
-                }}
                 blurhash={mediaItems[0]?.blurhash}
               />
             </MediaContainerWidthProvider>

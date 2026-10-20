@@ -118,15 +118,10 @@ const useLanguageSync = () => {
     }
   }, [language])
 }
-const useGeneralSettingSync = () => {
-  useGeneralSettingKey("voice")
-}
-
 export const SettingSync = () => {
   useUISettingSync()
   useUXSettingSync()
   useLanguageSync()
-  useGeneralSettingSync()
   useDataAttrSync()
   return null
 }

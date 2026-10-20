@@ -8,7 +8,7 @@
  * native side settle it right away, while the runtime is still alive.
  *
  * Expo installs its fetch as the global `fetch` as well, so `installGlobalFetchTracking` wraps
- * that one too; the API client and the TTS service wrap their explicit `expo/fetch` import.
+ * that one too; the API client wraps its explicit `expo/fetch` import.
  */
 
 type FetchInit = { signal?: AbortSignal | null } | undefined

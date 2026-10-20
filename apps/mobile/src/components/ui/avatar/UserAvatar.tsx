@@ -119,10 +119,6 @@ export const UserAvatar = ({
           width: size,
           height: size,
         }}
-        proxy={{
-          width: size,
-          height: size,
-        }}
       />
       {avatarBadge}
     </View>

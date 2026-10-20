@@ -70,9 +70,6 @@ export const EntryVideoItem = memo(({ id }: { id: string }) => {
                 }}
                 aspectRatio={16 / 9}
                 className="w-full rounded-lg"
-                proxy={{
-                  width: 200,
-                }}
               />
             ) : (
               <FallbackMedia text={t("entry_content.no_content")} />

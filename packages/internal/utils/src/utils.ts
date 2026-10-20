@@ -1,11 +1,8 @@
-import { WEB_BUILD } from "@follow/shared/constants"
 import type { ClassValue } from "clsx"
 import { clsx } from "clsx"
 import dayjs from "dayjs"
 import { extendTailwindMerge } from "tailwind-merge"
 import { parse } from "tldts"
-
-import { replaceImgUrlIfNeed } from "./img-proxy"
 
 type Nullable<T> = T | null | undefined
 
@@ -237,7 +234,7 @@ export const getUrlIcon = (url: string, _fallback?: boolean | undefined) => {
     fallbackUrl = `https://avatar.vercel.sh/${pureDomain}.svg?text=${pureDomain
       ?.slice(0, 2)
       .toUpperCase()}`
-    src = `https://icons.folo.is/${host}`
+    src = `https://${host}/favicon.ico`
   } catch {
     const pureDomain = parse(url).domainWithoutSuffix
     src = `https://avatar.vercel.sh/${pureDomain}.svg?text=${pureDomain?.slice(0, 2).toUpperCase()}`
@@ -258,10 +255,7 @@ export const getAvatarUrl = (user?: {
 }) => {
   if (user) {
     if (user?.image) {
-      return replaceImgUrlIfNeed({
-        url: user.image,
-        inBrowser: WEB_BUILD,
-      })
+      return user.image
     } else {
       const fallbackUrl = `https://avatar.vercel.sh/${user.handle || user.name}.svg?text=${(user.handle || user.name)?.slice(0, 2).toUpperCase()}`
       return `https://unavatar.webp.se/gravatar/${user.email}?fallback=${encodeURIComponent(fallbackUrl)}`

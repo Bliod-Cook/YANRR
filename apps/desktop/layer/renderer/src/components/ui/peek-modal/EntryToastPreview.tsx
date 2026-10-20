@@ -128,10 +128,6 @@ export const EntryToastPreview = ({ entryId }: { entryId: string }) => {
                       previewImageUrl={media.preview_image_url}
                       className="size-28 shrink-0 cursor-zoom-in"
                       loading="lazy"
-                      proxy={{
-                        width: 224,
-                        height: 224,
-                      }}
                       onClick={(e: React.MouseEvent) => {
                         e.stopPropagation()
                         previewMedia(mediaList, i)

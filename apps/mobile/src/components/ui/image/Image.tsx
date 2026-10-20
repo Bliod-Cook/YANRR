@@ -8,13 +8,9 @@ import { Image as ExpoImage } from "expo-image"
 import { useCallback, useMemo } from "react"
 import { useColor } from "react-native-uikit-colors"
 
-import { getAllSources } from "./utils"
+import { getSafeSource } from "./utils"
 
 export type ImageProps = Omit<ExpoImageProps, "source"> & {
-  proxy?: {
-    width?: number
-    height?: number
-  }
   source?: {
     uri: string
     headers?: Record<string, string>
@@ -26,36 +22,22 @@ export type ImageProps = Omit<ExpoImageProps, "source"> & {
 
 export const Image = ({
   ref,
-  proxy,
   source,
   blurhash,
   aspectRatio,
   hideOnError,
   ...rest
 }: ImageProps & { ref?: React.Ref<ExpoImage | null> }) => {
-  const [safeSource, proxiesSafeSource] = useMemo(
-    () => getAllSources(source, proxy),
-    [source, proxy],
-  )
+  const safeSource = useMemo(() => getSafeSource(source), [source])
 
   // Lists recycle rows for other items, so the load state follows the image it belongs to
-  const [isFallback, setIsFallback] = useRecyclingState(false, [source?.uri])
   const [isError, setIsError] = useRecyclingState(false, [source?.uri])
   const onError = useCallback(
     (e: ImageErrorEventData) => {
-      if (
-        isFallback ||
-        e.error === "Downloaded image has 0 pixels" ||
-        safeSource?.uri?.endsWith(".svg")
-      ) {
-        setIsError(true)
-        rest.onError?.(e)
-      } else {
-        // Same size, so the list around it needs no new layout
-        setIsFallback(true, true)
-      }
+      setIsError(true)
+      rest.onError?.(e)
     },
-    [isFallback, rest, safeSource?.uri],
+    [rest],
   )
 
   const [isLoading, setIsLoading] = useRecyclingState(true, [source?.uri])
@@ -81,7 +63,7 @@ export const Image = ({
     <ExpoImage
       recyclingKey={source?.uri}
       {...rest}
-      source={isFallback ? safeSource : proxiesSafeSource}
+      source={safeSource}
       onError={onError}
       onLoad={onLoad}
       placeholder={{

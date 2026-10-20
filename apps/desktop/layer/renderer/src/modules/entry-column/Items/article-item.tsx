@@ -40,10 +40,6 @@ export function ArticleItemStateLess({ entry, feed }: EntryItemStatelessProps) {
           className="ml-2 size-20 shrink-0 overflow-hidden rounded"
           mediaContainerClassName="w-auto h-auto rounded"
           loading="lazy"
-          proxy={{
-            width: 160,
-            height: 160,
-          }}
           height={entry.media[0].height}
           width={entry.media[0].width}
           blurhash={entry.media[0].blurhash}

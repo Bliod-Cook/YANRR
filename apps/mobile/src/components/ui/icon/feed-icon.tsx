@@ -55,10 +55,6 @@ export function FeedIcon({
   }
   return (
     <Image
-      proxy={{
-        width: size,
-        height: size,
-      }}
       className={cn("rounded", className)}
       style={{ height: size, width: size }}
       source={{ uri: src }}

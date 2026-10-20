@@ -220,8 +220,6 @@
   "entry_content.external_link.warning": "このサイトを離れて外部ページに移動しようとしています。この URL を信頼して移動しますか？",
   "entry_content.fetching_content": "元のコンテンツを取得し、処理中です...",
   "entry_content.fetching_content_failed": "Readability: 元のコンテンツの取得に失敗しました。後で再試行するか、RSS コンテンツに戻ってください。",
-  "entry_content.header.play_tts": "TTS を再生",
-  "entry_content.header.play_tts_description": "設定でTTS音声を選択し、TTSを開始して音声コンテンツに変換します",
   "entry_content.header.readability": "読みやすさ",
   "entry_content.header.readability_description": "Readability で元のウェブサイトのコンテンツを取得して解析すると、より読みやすくなる場合があります。RSS のコンテンツが利用できない、または不完全な場合におすすめです。",
   "entry_content.invalid_entry_id": "無効なエントリー ID です",

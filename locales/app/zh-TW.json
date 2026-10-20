@@ -220,8 +220,6 @@
   "entry_content.external_link.warning": "您即將離開本站並前往外部頁面，是否信任此 URL 並繼續前往？",
   "entry_content.fetching_content": "正在獲取原始內容並處理",
   "entry_content.fetching_content_failed": "獲取原始內容失敗",
-  "entry_content.header.play_tts": "播放文字轉語音",
-  "entry_content.header.play_tts_description": "在設定中選擇一個 TTS 語音，啟動 TTS 轉換為有聲內容",
   "entry_content.header.readability": "可讀模式",
   "entry_content.header.readability_description": "利用 Readability 獲取原始網站內容並解析的能力或許可提升內容可讀性。建議於 RSS 內容不可用或不完整時使用。",
   "entry_content.invalid_entry_id": "無效的條目 ID",

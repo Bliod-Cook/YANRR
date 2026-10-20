@@ -27,7 +27,6 @@ export const PicturesLayout: React.FC<EntryLayoutProps> = ({
           className={cn("aspect-square", "w-full shrink-0 rounded-md [&_img]:rounded-md")}
           imgClassName="object-contain"
           onPreview={previewMedia}
-          proxySize={null}
         />
       )}
 

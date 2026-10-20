@@ -16,18 +16,12 @@ import { EntryGridFooter } from "@/src/modules/entry-content/EntryGridFooter"
 
 import { Image } from "../image/Image"
 import { ImageContextMenu } from "../image/ImageContextMenu"
-import { getAllSources } from "../image/utils"
+import { getSafeSource } from "../image/utils"
 import { NativePressable } from "../pressable/NativePressable"
 import { VideoPlayer } from "../video/VideoPlayer"
 
 const getMediaKey = (mediaItem: MediaModel) =>
   mediaItem.url || mediaItem.preview_image_url || `${mediaItem.type}-media`
-
-// Thumbnails are sized to the card, rounded up so that a slightly different layout asks for the
-// same URL and hits the cache
-const THUMBNAIL_SIZE_STEP = 50
-const toThumbnailSize = (size: number) =>
-  Math.ceil(size / THUMBNAIL_SIZE_STEP) * THUMBNAIL_SIZE_STEP
 
 export const MediaCarousel = ({
   ref,
@@ -88,29 +82,20 @@ export const MediaCarousel = ({
         >
           {pages.map(({ media: m, index, imageUrl }, position) => {
             // An entry can carry dozens of images, so only the visible page and its neighbors load,
-            // and only once the card is measured, as their thumbnails are sized to it
+            // and only once the card is measured
             if (!containerWidth || Math.abs(position - activeIndex) > 1) {
               return (
                 <View key={imageUrl} style={{ width: containerWidth, height: containerHeight }} />
               )
             }
-            // The image covers the card, so one relatively wider than the card needs the card's
-            // height and any other its width. Asking for one side keeps the image uncropped
-            const proxy =
-              m.width && m.height && m.width / m.height > aspectRatio
-                ? { height: toThumbnailSize(containerHeight) }
-                : { width: toThumbnailSize(containerWidth) }
             const ImageItem = (
               <NativePressable
                 onPress={() => {
-                  // The proxied thumbnail is what this card shows, so the lightbox can show it from
-                  // the cache while the original loads
-                  const [, thumbnail] = getAllSources({ uri: imageUrl }, proxy)
-                  onPreview?.(index, thumbnail)
+                  // The lightbox shows the image this card already loaded
+                  onPreview?.(index, getSafeSource({ uri: imageUrl }))
                 }}
               >
                 <Image
-                  proxy={proxy}
                   source={{ uri: imageUrl }}
                   blurhash={m.blurhash}
                   className="w-full"
