@@ -2,6 +2,7 @@ mod html;
 mod http;
 mod language;
 pub mod parse;
+pub mod readability;
 pub mod scheduler;
 
 use chrono::{DateTime, SubsecRound, Utc};

@@ -9,6 +9,7 @@ publish = false
 axum = { version = "0.8", features = ["macros", "multipart"] }
 better-auth = { git = "https://github.com/better-auth-rs/better-auth-rs", rev = "9f91cd7fdb8a5f73a9c69d5c56d363468a7dc281", default-features = false, features = ["axum", "seaorm2", "rustls"] }
 chrono = { version = "0.4", features = ["serde"] }
+dom_smoothie = "0.18"
 feed-rs = "3"
 futures = "0.3"
 isolang = { version = "2", default-features = false }
