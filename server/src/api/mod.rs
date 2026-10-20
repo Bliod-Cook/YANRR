@@ -2,6 +2,7 @@ mod categories;
 mod discover;
 mod error;
 mod feeds;
+mod opml;
 mod response;
 mod session;
 mod settings;
@@ -40,6 +41,9 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
                 .delete(subscriptions::delete),
         )
         .route("/subscriptions/batch", patch(subscriptions::update_batch))
+        .route("/subscriptions/parse-opml", post(opml::parse))
+        .route("/subscriptions/import", post(opml::import))
+        .route("/subscriptions/export", get(opml::export))
         .route("/sync/state", get(sync::state))
         .route("/sync/delta", get(sync::delta))
         .nest("/better-auth", auth.axum_router_with_state())

@@ -5,6 +5,7 @@ pub mod entity;
 pub mod fetch;
 mod id;
 mod migration;
+pub mod opml;
 mod subscription;
 pub mod sync;
 mod time;

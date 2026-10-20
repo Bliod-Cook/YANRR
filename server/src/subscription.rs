@@ -81,6 +81,8 @@ pub async fn resolve(
 pub struct Subscribed {
     pub action: Action,
     pub unread: u64,
+    /// False when the user already followed the feed.
+    pub created: bool,
 }
 
 /// Subscribes `user_id` to `feed`, taken from [`resolve`] in the same transaction, and marks its stored entries
@@ -131,6 +133,7 @@ pub async fn subscribe(
     Ok(Subscribed {
         action: inserted(subscription, feed),
         unread,
+        created,
     })
 }
 
