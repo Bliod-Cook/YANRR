@@ -17,7 +17,3 @@ export const fetchRsshubPopular = (category: DiscoverCategories, lang: Language)
     ...(mappedLanguage !== "all" && { lang: mappedLanguage }),
   })
 }
-
-export const fetchRsshubAnalysis = () => {
-  return followClient.api.discover.rsshubAnalytics({})
-}

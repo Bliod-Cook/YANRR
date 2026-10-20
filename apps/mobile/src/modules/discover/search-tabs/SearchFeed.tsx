@@ -9,7 +9,7 @@ import { followClient } from "@/src/lib/api-client"
 import { useSearchPageContext } from "../ctx"
 import { ItemSeparator } from "./__base"
 import { SearchErrorView, useDataSkeleton } from "./hooks"
-import { resolveSearchFeedItems } from "./search-feed-items"
+import { isDirectFeedInput, resolveSearchFeedItems } from "./search-feed-items"
 import { SearchFeedCard } from "./SearchFeedCard"
 
 export const SearchFeed = () => {
@@ -17,12 +17,13 @@ export const SearchFeed = () => {
   const { searchValueAtom } = useSearchPageContext()
   const searchValue = useAtomValue(searchValueAtom)
   const windowWidth = useWindowDimensions().width
+  const isUrl = isDirectFeedInput(searchValue)
   const { data, error, isFetching, refetch } = useQuery({
     queryKey: ["searchFeed", searchValue],
     queryFn: () => {
-      return followClient.api.discover.discover({ keyword: searchValue, target: "feeds" })
+      return followClient.api.discover.discover({ keyword: searchValue })
     },
-    enabled: !!searchValue,
+    enabled: isUrl,
   })
   const discoveredItems = data?.data ?? []
   const items = resolveSearchFeedItems(discoveredItems, searchValue)
@@ -31,6 +32,9 @@ export const SearchFeed = () => {
     isFetching && data === undefined,
     data === undefined ? undefined : items.length,
   )
+  if (searchValue && !isUrl) {
+    return <Text className="px-6 pt-4 text-text/60">{t("validation.invalid_url")}</Text>
+  }
   if (skeleton) return skeleton
   if (data === undefined) {
     return error ? <SearchErrorView error={error} onRetry={() => void refetch()} /> : null

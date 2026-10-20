@@ -5,8 +5,7 @@ import { selectAtom } from "jotai/utils"
 import { useMemo } from "react"
 
 const internalAtom = atom<Record<string, DiscoveryItem[]>>({})
-export const [, , useDiscoverSearchData, , getDiscoverSearchData, setDiscoverSearchData] =
-  createAtomHooks(internalAtom)
+export const [, , useDiscoverSearchData, , , setDiscoverSearchData] = createAtomHooks(internalAtom)
 
 export const useHasDiscoverSearchData = () => {
   return useAtomValue(

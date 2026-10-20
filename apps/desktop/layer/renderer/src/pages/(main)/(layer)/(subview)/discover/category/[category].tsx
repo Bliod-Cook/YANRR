@@ -5,8 +5,8 @@ import { LoadingCircle } from "@follow/components/ui/loading/index.js"
 import { useScrollElementUpdate } from "@follow/components/ui/scroll-area/hooks.js"
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/EllipsisWithTooltip.js"
 import { CategoryMap, RSSHubCategories } from "@follow/constants"
-import { cn, formatNumber } from "@follow/utils/utils"
-import type { RSSHubAnalyticsResponse, RSSHubNamespace } from "@follow-app/client-sdk"
+import { cn, sortByAlphabet } from "@follow/utils/utils"
+import type { RSSHubNamespace } from "@follow-app/client-sdk"
 import { keepPreviousData } from "@tanstack/react-query"
 import { memo, useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -14,13 +14,11 @@ import { Link, useParams } from "react-router"
 
 import { useUISettingKey } from "~/atoms/settings/ui"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
-import { useFollow } from "~/hooks/biz/useFollow"
 import { useAuthQuery } from "~/hooks/common"
 import { useSubViewTitle } from "~/modules/app-layout/subview/hooks"
 import { RecommendationContent } from "~/modules/discover/RecommendationContent"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { Queries } from "~/queries"
-import { getPreferredTitle } from "~/store/feed/hooks"
 
 const LanguageMap = {
   all: "all",
@@ -49,37 +47,14 @@ export const Component = () => {
       },
     },
   )
-  const { data } = rsshubPopular
-
-  const rsshubAnalytics = useAuthQuery(Queries.discover.rsshubAnalytics({ lang }), {
-    staleTime: 1000 * 60 * 60 * 24, // 1 day
-    placeholderData: keepPreviousData as any as RSSHubAnalyticsResponse,
-    meta: {
-      persist: true,
-    },
-  })
-
-  const { data: rsshubAnalyticsData } = rsshubAnalytics
-
-  const isLoading = rsshubPopular.isLoading || rsshubAnalytics.isLoading
+  const { data, isLoading } = rsshubPopular
 
   const keys = useMemo(() => {
-    if (!data || !rsshubAnalyticsData) {
+    if (!data) {
       return []
     }
-    return Object.keys(data).sort((a, b) => {
-      const aRoutes = Object.keys(data[a]?.routes ?? {})
-      const aHeat = aRoutes.reduce((acc, route) => {
-        return acc + (rsshubAnalyticsData?.[`/${a}${route}`]?.subscriptionCount ?? 0)
-      }, 0)
-      const bRoutes = Object.keys(data[b]?.routes ?? {})
-      const bHeat = bRoutes.reduce((acc, route) => {
-        return acc + (rsshubAnalyticsData?.[`/${b}${route}`]?.subscriptionCount ?? 0)
-      }, 0)
-
-      return bHeat - aHeat
-    })
-  }, [data, rsshubAnalyticsData])
+    return Object.keys(data).sort((a, b) => sortByAlphabet(data[a]?.name ?? a, data[b]?.name ?? b))
+  }, [data])
 
   const [search, setSearch] = useState("")
 
@@ -147,11 +122,7 @@ export const Component = () => {
               (item) =>
                 item?.data && (
                   <div key={item.key} className="mb-4 break-inside-avoid">
-                    <RecommendationListItem
-                      data={item.data}
-                      routePrefix={item.routePrefix}
-                      rsshubAnalyticsData={rsshubAnalyticsData}
-                    />
+                    <RecommendationListItem data={item.data} routePrefix={item.routePrefix} />
                   </div>
                 ),
             )}
@@ -180,26 +151,16 @@ export const Component = () => {
 }
 
 const RecommendationListItem = memo(
-  ({
-    data,
-    routePrefix,
-    rsshubAnalyticsData,
-  }: {
-    data: RSSHubNamespace
-    routePrefix: string
-    rsshubAnalyticsData: RSSHubAnalyticsResponse | undefined
-  }) => {
+  ({ data, routePrefix }: { data: RSSHubNamespace; routePrefix: string }) => {
     const { t } = useTranslation()
     const { present } = useModalStack()
 
     const { maintainers, categories, routes } = useMemo(() => {
       const maintainers = new Set<string>()
       const categories = new Set<string>()
-      const routes = Object.keys(data.routes).sort((a, b) => {
-        const aHeat = rsshubAnalyticsData?.[`/${routePrefix}${a}`]?.subscriptionCount ?? 0
-        const bHeat = rsshubAnalyticsData?.[`/${routePrefix}${b}`]?.subscriptionCount ?? 0
-        return bHeat - aHeat
-      })
+      const routes = Object.keys(data.routes).sort((a, b) =>
+        sortByAlphabet(data.routes[a]!.name, data.routes[b]!.name),
+      )
 
       for (const route in data.routes) {
         const routeData = data.routes[route]!
@@ -216,9 +177,7 @@ const RecommendationListItem = memo(
         categories: Array.from(categories) as unknown as typeof RSSHubCategories,
         routes,
       }
-    }, [data, rsshubAnalyticsData, routePrefix])
-
-    const follow = useFollow()
+    }, [data])
 
     const handleRouteClick = useCallback(
       (route: string) => {
@@ -232,16 +191,6 @@ const RecommendationListItem = memo(
         })
       },
       [present, routePrefix, data, data.url, data.name],
-    )
-
-    const handleFeedClick = useCallback(
-      (feedId: string) => {
-        follow({
-          isList: false,
-          id: feedId,
-        })
-      },
-      [follow],
     )
 
     return (
@@ -288,9 +237,7 @@ const RecommendationListItem = memo(
                 route={route}
                 routeData={data.routes[route]!}
                 routePrefix={routePrefix}
-                rsshubAnalyticsData={rsshubAnalyticsData}
                 onRouteClick={handleRouteClick}
-                onFeedClick={handleFeedClick}
               />
             ))}
           </ul>
@@ -326,22 +273,16 @@ const RouteItem = memo(
     route,
     routeData,
     routePrefix,
-    rsshubAnalyticsData,
     onRouteClick,
-    onFeedClick,
   }: {
     route: string
     routeData: any
     routePrefix: string
-    rsshubAnalyticsData: any
     onRouteClick: (route: string) => void
-    onFeedClick: (feedId: string) => void
   }) => {
     if (Array.isArray(routeData.path)) {
       routeData.path = routeData.path.find((p: string) => p === route) ?? routeData.path[0]
     }
-
-    const analytics = rsshubAnalyticsData?.[`/${routePrefix}${routeData.path}`]
 
     return (
       <li
@@ -362,37 +303,7 @@ const RouteItem = memo(
                 </div>
               </div>
             </div>
-            {!!analytics?.subscriptionCount && (
-              <div className="flex items-center gap-0.5 text-xs">
-                <i className="i-mgc-fire-cute-re" />
-                {formatNumber(analytics?.subscriptionCount || 0)}
-              </div>
-            )}
           </div>
-          {analytics?.topFeeds && (
-            <div className="mt-2 flex items-center gap-10 pl-5 text-xs">
-              {analytics.topFeeds.slice(0, 2).map((feed: any) => (
-                <div key={feed.id} className="flex w-2/5 flex-1 items-center text-sm">
-                  <FeedIcon
-                    target={feed}
-                    className="mask-squircle mask shrink-0 rounded-none"
-                    size={16}
-                  />
-                  <div
-                    className="min-w-0 leading-tight"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onFeedClick(feed.id)
-                    }}
-                  >
-                    <EllipsisHorizontalTextWithTooltip className="truncate">
-                      {getPreferredTitle(feed) || feed?.title}
-                    </EllipsisHorizontalTextWithTooltip>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </li>
     )

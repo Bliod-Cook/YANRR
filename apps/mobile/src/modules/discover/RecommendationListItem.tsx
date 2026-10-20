@@ -1,5 +1,6 @@
 import type { RSSHubCategories } from "@follow/constants"
 import type { RSSHubRouteDeclaration } from "@follow/models/rsshub"
+import { sortByAlphabet } from "@follow/utils"
 import type { FC } from "react"
 import { memo, useMemo } from "react"
 import { useTranslation } from "react-i18next"
@@ -8,7 +9,6 @@ import { View } from "react-native"
 import { GroupedInsetListCard, GroupedInsetListCell } from "@/src/components/ui/grouped/GroupedList"
 import { FeedIcon } from "@/src/components/ui/icon/feed-icon"
 import { Text } from "@/src/components/ui/typography/Text"
-import { FireCuteReIcon } from "@/src/icons/fire_cute_re"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { RsshubFormScreen } from "@/src/screens/(modal)/RsshubFormScreen"
 
@@ -60,7 +60,7 @@ export const RecommendationListItem: FC<{
       </View>
       <GroupedInsetListCard className="mt-5">
         {Object.keys(data.routes)
-          .sort((a, b) => (data.routes[b]!.heat || 0) - (data.routes[a]!.heat || 0))
+          .sort((a, b) => sortByAlphabet(data.routes[a]!.name, data.routes[b]!.name))
           .map((route) => (
             <GroupedInsetListCell
               key={route}
@@ -72,22 +72,7 @@ export const RecommendationListItem: FC<{
                   name: data.name,
                 })
               }}
-            >
-              <View className="flex-row items-center gap-1">
-                {!!data.routes[route]!.heat && (
-                  <>
-                    <FireCuteReIcon width={12} height={12} />
-                    <Text
-                      ellipsizeMode="middle"
-                      numberOfLines={1}
-                      className="whitespace-pre text-xs text-text/70"
-                    >
-                      {data.routes[route]!.heat}
-                    </Text>
-                  </>
-                )}
-              </View>
-            </GroupedInsetListCell>
+            />
           ))}
       </GroupedInsetListCard>
     </View>

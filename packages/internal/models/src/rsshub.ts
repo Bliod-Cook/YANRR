@@ -1,5 +1,4 @@
 import type { FeedViewType } from "@follow/constants"
-import type { FeedDiscoveryResult } from "@follow-app/client-sdk"
 
 export type RSSHubRouteType = Record<string, RSSHubRouteDeclaration>
 export interface RSSHubRouteDeclaration {
@@ -28,6 +27,4 @@ export type RSSHubRoute = {
   location: string
   description: string
   view?: FeedViewType
-  heat?: number
-  topFeeds?: FeedDiscoveryResult[]
 }

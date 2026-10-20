@@ -38,7 +38,7 @@ export function Component() {
         <div className="rounded-[28px] border border-fill-secondary bg-material-ultra-thin px-6 py-8 shadow-sm">
           <div className="text-center">
             <h1 className="mb-2 text-3xl font-bold text-text">{t("words.discover")}</h1>
-            <p className="text-sm text-text-secondary">{t("discover.tips.search_keyword")}</p>
+            <p className="text-sm text-text-secondary">{t("discover.subtitle")}</p>
           </div>
           <div className="mt-6 flex flex-col items-center">
             <UnifiedDiscoverForm />

@@ -29,7 +29,6 @@ import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useSetModalScreenOptions } from "@/src/lib/navigation/ScreenOptionsContext"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
 import { toast } from "@/src/lib/toast"
-import { FeedSummary } from "@/src/modules/discover/FeedSummary"
 
 import { FollowScreen } from "./FollowScreen"
 
@@ -65,7 +64,7 @@ export const RsshubFormScreen: NavigationControllerView<RsshubFormParams> = ({
 }
 function FormImpl({ route, routePrefix, name }: RsshubFormParams) {
   const { t } = useTranslation()
-  const { name: routeName, topFeeds } = route
+  const { name: routeName } = route
   const keys = useMemo(() => parseRegexpPathParams(route.path), [route.path])
   const formPlaceholder = useMemo<Record<string, string>>(() => {
     if (!route.example) return {}
@@ -190,13 +189,6 @@ function FormImpl({ route, routePrefix, name }: RsshubFormParams) {
                     </View>
                   )
                 })}
-              </View>
-            )}
-            {!!topFeeds?.length && (
-              <View className="mx-4 mt-4 rounded-[10px] bg-secondary-system-grouped-background py-1">
-                {topFeeds.map((feed) => (
-                  <FeedSummary key={feed.id} feed={feed} simple className="px-4 py-2" />
-                ))}
               </View>
             )}
             <Maintainers maintainers={route.maintainers} />

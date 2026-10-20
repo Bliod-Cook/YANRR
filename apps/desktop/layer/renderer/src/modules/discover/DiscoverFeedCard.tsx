@@ -1,10 +1,11 @@
 import { Button } from "@follow/components/ui/button/index.js"
 import { Card, CardContent, CardHeader } from "@follow/components/ui/card/index.jsx"
 import { RelativeTime } from "@follow/components/ui/datetime/index.js"
+import type { FeedModel } from "@follow/store/feed/types"
 import { useIsSubscribed } from "@follow/store/subscription/hooks"
 import { getBackgroundGradient } from "@follow/utils/color"
 import { cn, formatNumber } from "@follow/utils/utils"
-import type { DiscoveryItem, TrendingFeedItem } from "@follow-app/client-sdk"
+import type { DiscoveryItem } from "@follow-app/client-sdk"
 import type { FC } from "react"
 import { memo } from "react"
 import { useTranslation } from "react-i18next"
@@ -17,47 +18,24 @@ import { useFeedSafeUrl } from "~/hooks/common/useFeedSafeUrl"
 
 import { FollowSummary } from "../feed/feed-summary"
 
-export function FeedCardActions<T extends TrendingFeedItem | DiscoveryItem>({
-  item,
-  onSuccess,
-  isSubscribed,
-  followButtonVariant,
-  followedButtonVariant = "ghost",
-  followButtonClassName,
-  followedButtonClassName,
-}: {
-  item: T
-  onSuccess?: (item: T) => void
-  isSubscribed: boolean
-  followButtonVariant?: "ghost" | "outline"
-  followedButtonVariant?: "ghost" | "outline"
-  followButtonClassName?: string
-  followedButtonClassName?: string
-}) {
+function FeedCardActions({ item, isSubscribed }: { item: DiscoveryItem; isSubscribed: boolean }) {
   const follow = useFollow()
   const { t } = useTranslation()
   const location = useLocation()
-  const list = "list" in item ? item.list : undefined
 
   return (
     <div className="flex items-center justify-between gap-2">
       {!isSubscribed && (
         <Button
           variant="ghost"
-          disabled={!item.feed?.id && !list?.id}
+          disabled={!item.feed?.id}
           buttonClassName="rounded-lg px-3 font-medium text-zinc-500 transition-colors hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-white"
           onClick={() => {
-            const backPath = `${location.pathname}${location.search}`
-            // A list result has no feed; its timeline previews it the same way
-            if (list?.id) {
-              navigateEntry({ listId: list.id, view: list.view, backPath })
-              return
-            }
             if (!item.feed?.id) return
             navigateEntry({
               feedId: item.feed.id,
               view: item.analytics?.view ?? 0,
-              backPath,
+              backPath: `${location.pathname}${location.search}`,
             })
           }}
         >
@@ -65,21 +43,17 @@ export function FeedCardActions<T extends TrendingFeedItem | DiscoveryItem>({
         </Button>
       )}
       <Button
-        variant={isSubscribed ? followedButtonVariant : followButtonVariant}
+        variant={isSubscribed ? "ghost" : undefined}
         onClick={() => {
           follow({
-            isList: "list" in item && !!item.list?.id,
-            id: ("list" in item && item.list?.id) || item.feed?.id,
+            isList: false,
+            id: item.feed?.id,
             url: item.feed?.url,
-            onSuccess() {
-              onSuccess?.(item)
-            },
           })
         }}
         buttonClassName={cn(
           "relative overflow-hidden rounded-lg font-medium transition-all duration-300",
           isSubscribed ? "border-zinc-200/80 px-3 text-zinc-400 dark:border-zinc-700/80" : "",
-          isSubscribed ? followedButtonClassName : followButtonClassName,
         )}
       >
         {isSubscribed ? t("feed.actions.followed") : t("feed.actions.follow")}
@@ -90,88 +64,83 @@ export function FeedCardActions<T extends TrendingFeedItem | DiscoveryItem>({
 
 interface DiscoverFeedCardProps {
   item: DiscoveryItem
-  onSuccess?: (item: DiscoveryItem) => void
-  onUnSubscribed?: (item: DiscoveryItem) => void
-
   className?: string
 }
 
-export const DiscoverFeedCard: FC<DiscoverFeedCardProps> = memo(
-  ({ item, onSuccess, className }) => {
-    const { t } = useTranslation("common")
+export const DiscoverFeedCard: FC<DiscoverFeedCardProps> = memo(({ item, className }) => {
+  const { t } = useTranslation("common")
 
-    const isSubscribed = useIsSubscribed(item.feed?.id || item.list?.id || "")
+  const isSubscribed = useIsSubscribed(item.feed?.id || "")
 
-    return (
-      <Card
-        data-feed-id={item.feed?.id || item.list?.id}
-        className={cn(
-          "select-text overflow-hidden border border-zinc-200/50 bg-white/80 backdrop-blur-xl transition-all duration-300 dark:border-zinc-800/50 dark:bg-neutral-800/50",
-          className,
-        )}
-      >
-        <CardHeader className="p-4 pb-2">
-          <FollowSummary feed={(item.feed || item.list!) as any} docs={item.docs} />
-        </CardHeader>
-        <CardContent className="px-4">
-          {item.docs ? (
-            <a href={item.docs} target="_blank" rel="noreferrer">
-              <Button buttonClassName="rounded-full bg-zinc-900 px-6 text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-zinc-900">
-                {t("discover.view_docs", { ns: "app" })}
-              </Button>
-            </a>
-          ) : (
-            <>
-              {!!item.entries?.length && (
-                <div className="mt-2">
-                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                    {item.entries
-                      .filter((e) => !!e)
-                      .map((entry) => (
-                        <SearchResultContent key={entry.id} entry={entry} />
-                      ))}
-                  </div>
+  return (
+    <Card
+      data-feed-id={item.feed?.id}
+      className={cn(
+        "select-text overflow-hidden border border-zinc-200/50 bg-white/80 backdrop-blur-xl transition-all duration-300 dark:border-zinc-800/50 dark:bg-neutral-800/50",
+        className,
+      )}
+    >
+      <CardHeader className="p-4 pb-2">
+        <FollowSummary feed={item.feed as FeedModel} docs={item.docs} />
+      </CardHeader>
+      <CardContent className="px-4">
+        {item.docs ? (
+          <a href={item.docs} target="_blank" rel="noreferrer">
+            <Button buttonClassName="rounded-full bg-zinc-900 px-6 text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-zinc-900">
+              {t("discover.view_docs", { ns: "app" })}
+            </Button>
+          </a>
+        ) : (
+          <>
+            {!!item.entries?.length && (
+              <div className="mt-2">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {item.entries
+                    .filter((e) => !!e)
+                    .map((entry) => (
+                      <SearchResultContent key={entry.id} entry={entry} />
+                    ))}
                 </div>
-              )}
-              <div className="mt-4 flex justify-between gap-4">
-                <div className="flex items-center gap-3 text-sm text-text-secondary">
-                  {!!item.analytics?.subscriptionCount && (
-                    <div className="flex items-center gap-1.5">
-                      <i className="i-mgc-user-3-cute-re" />
-
-                      <span>
-                        {formatNumber(item.analytics.subscriptionCount)}{" "}
-                        {t("feed.follower", { count: item.analytics.subscriptionCount })}
-                      </span>
-                    </div>
-                  )}
-                  {item.analytics?.updatesPerWeek ? (
-                    <div className="flex items-center gap-1.5">
-                      <i className="i-mgc-safety-certificate-cute-re" />
-                      <span>
-                        {t("feed.entry_week", { count: item.analytics.updatesPerWeek ?? 0 })}
-                      </span>
-                    </div>
-                  ) : item.analytics?.latestEntryPublishedAt ? (
-                    <div className="flex items-center gap-1.5">
-                      <i className="i-mgc-safe-alert-cute-re" />
-                      <span>{t("feed.updated_at")}</span>
-                      <RelativeTime
-                        date={item.analytics.latestEntryPublishedAt}
-                        displayAbsoluteTimeAfterDay={Infinity}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-                <FeedCardActions item={item} onSuccess={onSuccess} isSubscribed={isSubscribed} />
               </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    )
-  },
-)
+            )}
+            <div className="mt-4 flex justify-between gap-4">
+              <div className="flex items-center gap-3 text-sm text-text-secondary">
+                {!!item.analytics?.subscriptionCount && (
+                  <div className="flex items-center gap-1.5">
+                    <i className="i-mgc-user-3-cute-re" />
+
+                    <span>
+                      {formatNumber(item.analytics.subscriptionCount)}{" "}
+                      {t("feed.follower", { count: item.analytics.subscriptionCount })}
+                    </span>
+                  </div>
+                )}
+                {item.analytics?.updatesPerWeek ? (
+                  <div className="flex items-center gap-1.5">
+                    <i className="i-mgc-safety-certificate-cute-re" />
+                    <span>
+                      {t("feed.entry_week", { count: item.analytics.updatesPerWeek ?? 0 })}
+                    </span>
+                  </div>
+                ) : item.analytics?.latestEntryPublishedAt ? (
+                  <div className="flex items-center gap-1.5">
+                    <i className="i-mgc-safe-alert-cute-re" />
+                    <span>{t("feed.updated_at")}</span>
+                    <RelativeTime
+                      date={item.analytics.latestEntryPublishedAt}
+                      displayAbsoluteTimeAfterDay={Infinity}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <FeedCardActions item={item} isSubscribed={isSubscribed} />
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+})
 
 export const SearchResultContent: FC<{
   entry: NonUndefined<DiscoveryItem["entries"]>[number]
