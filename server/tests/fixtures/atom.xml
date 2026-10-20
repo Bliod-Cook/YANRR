@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Journal</title>
+  <id>urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6</id>
+  <link rel="alternate" href="https://journal.example.org/"/>
+  <updated>2026-10-01T18:30:02Z</updated>
+  <entry>
+    <title>Un article</title>
+    <id>urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a</id>
+    <link rel="alternate" href="/articles/un-article"/>
+    <published>2026-10-01T18:30:02Z</published>
+    <updated>2026-10-02T09:00:00Z</updated>
+    <author>
+      <name>Camille</name>
+      <uri>https://journal.example.org/camille</uri>
+    </author>
+    <content type="html" xml:lang="fr">&lt;p&gt;Bonjour tout le monde.&lt;/p&gt;</content>
+  </entry>
+</feed>

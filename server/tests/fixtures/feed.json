@@ -1,0 +1,26 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "Social Timeline",
+  "home_page_url": "https://social.example.net/alice",
+  "description": "Posts by Alice",
+  "icon": "https://social.example.net/alice.png",
+  "language": "zh-cn",
+  "items": [
+    {
+      "id": "status-42",
+      "url": "https://social.example.net/alice/42",
+      "title": "Weekend photos",
+      "content_html": "<p>Went hiking with friends this weekend and took a lot of pictures along the trail near the lake.</p><img src=\"https://social.example.net/media/1.jpg\">",
+      "image": "https://social.example.net/media/cover.jpg",
+      "date_published": "2026-10-03T12:00:00Z",
+      "authors": [{ "name": "Alice", "url": "https://social.example.net/alice", "avatar": "https://social.example.net/alice.png" }],
+      "tags": ["photos", "hiking"],
+      "attachments": [
+        { "url": "https://social.example.net/media/voice.m4a", "mime_type": "audio/mp4", "size_in_bytes": 2048, "duration_in_seconds": 95, "title": "Voice note" }
+      ],
+      "_extra": {
+        "links": [{ "url": "https://social.example.net/bob/7", "type": "quote", "content_html": "<p>Quoted post</p>" }]
+      }
+    }
+  ]
+}

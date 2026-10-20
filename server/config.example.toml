@@ -1,0 +1,18 @@
+[server]
+listen = "0.0.0.0:3000"
+# The URL clients use; an https:// URL makes session cookies Secure.
+public_url = "http://localhost:3000"
+# Web client build served on every non-API path (optional).
+# web_dir = "web"
+
+[database]
+url = "postgres://yannr:yannr@localhost/yannr"
+
+[auth]
+# At least 32 random characters; signs session cookies.
+secret = ""
+# Turn off once your accounts exist.
+registration = true
+
+[rsshub]
+url = "https://rsshub.app"

@@ -1,0 +1,249 @@
+mod html;
+mod http;
+mod language;
+pub mod parse;
+pub mod scheduler;
+
+use chrono::Utc;
+use sea_orm::{
+    ActiveModelTrait,
+    ActiveValue::{Set, Unchanged},
+    ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter, TransactionTrait,
+    prelude::Json,
+    sea_query::OnConflict,
+};
+use serde::Serialize;
+use serde_json::json;
+
+use self::{
+    http::Validators,
+    parse::{ParsedEntry, ParsedFeed},
+};
+use crate::{
+    AppState,
+    entity::{entry, feed},
+    id::next_id,
+};
+
+pub use self::http::client as http_client;
+
+#[derive(Debug)]
+pub enum FetchError {
+    Fetch(String),
+    Parse(String),
+    Db(DbErr),
+}
+
+impl From<DbErr> for FetchError {
+    fn from(err: DbErr) -> Self {
+        Self::Db(err)
+    }
+}
+
+/// Returns the feed at `url`, fetching and storing it first if it is new.
+pub async fn add_feed(state: &AppState, url: &str) -> Result<feed::Model, FetchError> {
+    let existing = feed::Entity::find().filter(feed::Column::Url.eq(url));
+    if let Some(feed) = existing.one(&state.db).await? {
+        return Ok(feed);
+    }
+    let update = fetch(state, url, &Validators::default())
+        .await?
+        .ok_or(FetchError::Fetch("HTTP 304".into()))?;
+    let txn = state.db.begin().await?;
+    let feed = find_or_create(&txn, update.moved_to.as_deref().unwrap_or(url)).await?;
+    let feed = store(&txn, feed.id, update).await?;
+    txn.commit().await?;
+    Ok(feed)
+}
+
+/// Fetches a feed again, recording the error on failure.
+pub async fn refresh_feed(state: &AppState, feed_id: i64) -> Result<(), FetchError> {
+    let feed = feed::Entity::find_by_id(feed_id)
+        .one(&state.db)
+        .await?
+        .ok_or_else(|| DbErr::RecordNotFound(format!("feed {feed_id}")))?;
+    let result = refresh(state, &feed).await;
+    if let Err(FetchError::Fetch(message) | FetchError::Parse(message)) = &result {
+        let now = Utc::now();
+        feed::ActiveModel {
+            id: Unchanged(feed.id),
+            checked_at: Set(now),
+            error_message: Set(Some(message.clone())),
+            error_at: Set(Some(now)),
+            ..Default::default()
+        }
+        .update(&state.db)
+        .await?;
+    }
+    result
+}
+
+async fn refresh(state: &AppState, feed: &feed::Model) -> Result<(), FetchError> {
+    let validators = Validators {
+        etag: feed.etag_header.clone(),
+        last_modified: feed.last_modified_header.clone(),
+    };
+    let Some(update) = fetch(state, &feed.url, &validators).await? else {
+        checked(feed.id).update(&state.db).await?;
+        return Ok(());
+    };
+    let txn = state.db.begin().await?;
+    match update.moved_to.clone() {
+        None => {
+            store(&txn, feed.id, update).await?;
+        }
+        Some(url) => {
+            let target = find_or_create(&txn, &url).await?;
+            store(&txn, target.id, update).await?;
+            let migrated = feed::ActiveModel {
+                migrate_to: Set(Some(target.id)),
+                ..checked(feed.id)
+            };
+            migrated.update(&txn).await?;
+        }
+    }
+    txn.commit().await?;
+    Ok(())
+}
+
+/// A fetched and parsed feed.
+struct Update {
+    feed: ParsedFeed,
+    validators: Validators,
+    /// Where the feed permanently moved to; never set for `rsshub://` feeds, whose instance may change.
+    moved_to: Option<String>,
+}
+
+/// Fetches and parses the feed at `url`; `None` means not modified.
+async fn fetch(
+    state: &AppState,
+    url: &str,
+    validators: &Validators,
+) -> Result<Option<Update>, FetchError> {
+    let source = source_url(&state.config.rsshub.url, url);
+    let fetched = http::get(&state.http, &source, validators)
+        .await
+        .map_err(FetchError::Fetch)?;
+    let Some(fetched) = fetched else {
+        return Ok(None);
+    };
+    let feed = parse::parse(&fetched.body, &source).map_err(FetchError::Parse)?;
+    let moved_to = fetched.moved_to.filter(|_| !url.starts_with("rsshub://"));
+    Ok(Some(Update {
+        feed,
+        validators: fetched.validators,
+        moved_to,
+    }))
+}
+
+/// Points `rsshub://` at the configured instance, asking for JSON Feed: only it carries avatars,
+/// attachment durations and `_extra`.
+fn source_url(instance: &str, url: &str) -> String {
+    let Some(route) = url.strip_prefix("rsshub://") else {
+        return url.into();
+    };
+    let separator = if route.contains('?') { '&' } else { '?' };
+    format!(
+        "{}/{route}{separator}format=json",
+        instance.trim_end_matches('/')
+    )
+}
+
+/// A successful check: clears the last error.
+fn checked(feed_id: i64) -> feed::ActiveModel {
+    feed::ActiveModel {
+        id: Unchanged(feed_id),
+        checked_at: Set(Utc::now()),
+        error_message: Set(None),
+        error_at: Set(None),
+        ..Default::default()
+    }
+}
+
+async fn find_or_create(db: &impl ConnectionTrait, url: &str) -> Result<feed::Model, DbErr> {
+    let feed = feed::ActiveModel {
+        id: Set(next_id()),
+        url: Set(url.into()),
+        checked_at: Set(Utc::now()),
+        ..Default::default()
+    };
+    feed::Entity::insert(feed)
+        .on_conflict(
+            OnConflict::column(feed::Column::Url)
+                .do_nothing()
+                .to_owned(),
+        )
+        .exec_without_returning(db)
+        .await?;
+    feed::Entity::find()
+        .filter(feed::Column::Url.eq(url))
+        .one(db)
+        .await?
+        .ok_or_else(|| DbErr::RecordNotFound(url.into()))
+}
+
+/// Writes new entries and the feed's metadata; run it in the caller's transaction.
+async fn store(
+    db: &impl ConnectionTrait,
+    feed_id: i64,
+    update: Update,
+) -> Result<feed::Model, DbErr> {
+    let Update {
+        feed: parsed,
+        validators,
+        ..
+    } = update;
+    let now = Utc::now();
+    let entries = parsed
+        .entries
+        .into_iter()
+        .map(|entry| entry_model(feed_id, entry, now));
+    // Entries are never updated once stored, so a changing feed does not churn the timeline.
+    entry::Entity::insert_many(entries)
+        .on_conflict(
+            OnConflict::columns([entry::Column::FeedId, entry::Column::Guid])
+                .do_nothing()
+                .to_owned(),
+        )
+        .exec_without_returning(db)
+        .await?;
+    feed::ActiveModel {
+        title: Set(parsed.title),
+        description: Set(parsed.description),
+        image: Set(parsed.image),
+        site_url: Set(parsed.site_url),
+        language: Set(parsed.language),
+        ttl: Set(parsed.ttl),
+        etag_header: Set(validators.etag),
+        last_modified_header: Set(validators.last_modified),
+        ..checked(feed_id)
+    }
+    .update(db)
+    .await
+}
+
+fn entry_model(feed_id: i64, entry: ParsedEntry, now: chrono::DateTime<Utc>) -> entry::ActiveModel {
+    entry::ActiveModel {
+        id: Set(next_id()),
+        feed_id: Set(feed_id),
+        guid: Set(entry.guid),
+        title: Set(entry.title),
+        url: Set(entry.url),
+        description: Set(entry.description),
+        content: Set(entry.content),
+        author: Set(entry.author),
+        author_url: Set(entry.author_url),
+        author_avatar: Set(entry.author_avatar),
+        categories: Set((!entry.categories.is_empty()).then_some(entry.categories)),
+        media: Set(json_list(&entry.media)),
+        attachments: Set(json_list(&entry.attachments)),
+        extra: Set(entry.extra.map(|extra| json!(extra))),
+        language: Set(entry.language),
+        published_at: Set(entry.published_at),
+        inserted_at: Set(now),
+    }
+}
+
+fn json_list<T: Serialize>(items: &[T]) -> Option<Json> {
+    (!items.is_empty()).then(|| json!(items))
+}
