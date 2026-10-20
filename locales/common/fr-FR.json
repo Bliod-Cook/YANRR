@@ -113,9 +113,7 @@
   "words.items_one": "Élément",
   "words.items_other": "Éléments",
   "words.letsGo": "C'est parti",
-  "words.lists": "Listes",
   "words.local": "local",
-  "words.manage": "gérer",
   "words.maximize": "Agrandir",
   "words.minimize": "Réduire",
   "words.next": "Suivant",
@@ -134,7 +132,6 @@
   "words.submit": "Soumettre",
   "words.time": "Heure",
   "words.unsaved_changes": "Modifications non enregistrées",
-  "words.update": "Mettre à jour",
   "words.which.above": "ci-dessus",
   "words.which.all": "tout"
 }

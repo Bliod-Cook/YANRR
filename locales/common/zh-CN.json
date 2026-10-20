@@ -113,9 +113,7 @@
   "words.items_one": "内容",
   "words.items_other": "内容",
   "words.letsGo": "开始使用",
-  "words.lists": "列表",
   "words.local": "本地",
-  "words.manage": "管理",
   "words.maximize": "最大化",
   "words.minimize": "最小化",
   "words.next": "下一步",
@@ -134,7 +132,6 @@
   "words.submit": "提交",
   "words.time": "时间",
   "words.unsaved_changes": "未保存的更改",
-  "words.update": "更新",
   "words.which.above": "以上",
   "words.which.all": "全部"
 }
