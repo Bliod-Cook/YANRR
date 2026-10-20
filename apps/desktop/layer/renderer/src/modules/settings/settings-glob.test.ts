@@ -22,7 +22,7 @@ describe("settings route metadata", () => {
     const pages = getSettingPages() as Record<string, { loader: SettingPageConfig }>
     const routeModule = generalRouteModule as SettingRouteModule
 
-    expect(Object.keys(pages)).toHaveLength(13)
+    expect(Object.keys(pages)).toHaveLength(12)
     expect(routeModule.loader).toBeUndefined()
     expect(routeModule.handle).toBeDefined()
     expect(pages.general?.loader).toBe(routeModule.handle)

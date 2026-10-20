@@ -5,7 +5,7 @@ import { isLinux, isMacOS, isWindows } from "~/env"
 import { logger } from "~/logger"
 
 import { apiClient } from "./api-client"
-import { getSessionTokenFromCookies } from "./cli-session-sync"
+import { getSessionTokenFromCookies } from "./auth-cookies"
 import { store } from "./store"
 
 const notificationChannel = isMacOS

@@ -27,7 +27,7 @@ vi.mock("./api-client", () => ({
   },
 }))
 
-vi.mock("./cli-session-sync", () => ({
+vi.mock("./auth-cookies", () => ({
   getSessionTokenFromCookies: getSessionTokenMock,
 }))
 

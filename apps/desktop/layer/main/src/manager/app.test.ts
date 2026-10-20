@@ -130,10 +130,6 @@ vi.mock("../lib/cleaner", () => ({
   checkAndCleanCodeCache: vi.fn(),
   clearCacheCronJob: vi.fn(),
 }))
-vi.mock("../lib/cli-session-sync", () => ({
-  getSessionTokenFromCookies: vi.fn(),
-  syncSessionToCliConfig: vi.fn(),
-}))
 vi.mock("../lib/i18n", () => ({ t: vi.fn() }))
 vi.mock("../lib/proxy", () => ({ updateProxy: vi.fn() }))
 vi.mock("../lib/store", () => ({

@@ -25,7 +25,6 @@ const SETTING_TABS = [
   "list",
   "profile",
   "data-control",
-  "cli",
   "about",
 ] as const
 
