@@ -467,18 +467,6 @@ export function formatNumber(num: number): string {
   return `${isNegative ? "-" : ""}${absNum}`
 }
 
-export type MobilePlatform = "iOS" | "Android" | null
-
-export const getMobilePlatform = once((): MobilePlatform => {
-  const os = getOS()
-
-  return ["iOS", "Android"].includes(os) ? (os as MobilePlatform) : null
-})
-
-export const isMobileDevice = once((): boolean => {
-  return getMobilePlatform() !== null
-})
-
 export function getDateISOString(dateOrDateString: Date | string | null): string | null {
   if (!dateOrDateString) return null
   if (typeof dateOrDateString === "string") {

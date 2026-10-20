@@ -159,20 +159,6 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
           {t("words.rsshub")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {!window.electron && (
-          <>
-            <DropdownMenuItem
-              className="pl-3"
-              onClick={() => {
-                window.open("https://folo.is/download", "_blank", "noopener,noreferrer")
-              }}
-              icon={<i className="i-mgc-download-2-cute-re" />}
-            >
-              {t("user_button.download_desktop_app")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        )}
         <DropdownMenuItem
           className="pl-3"
           data-testid="profile-menu-logout"

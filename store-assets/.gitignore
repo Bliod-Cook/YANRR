@@ -1,4 +1,0 @@
-# No trailing slash: checkouts may link these to the shared media folder.
-captures
-output
-.tmp/
