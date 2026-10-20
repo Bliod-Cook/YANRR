@@ -5,7 +5,6 @@ packages:
   - "!apps/mobile/native/example"
   - apps/mobile/web-app
   - apps/mobile/web-app/html-renderer
-  - store-assets
   - "!**/example"
   - "!**/example/**"
 

@@ -245,37 +245,21 @@ export default ({ mode }) => {
   })
 }
 
-function checkBrowserSupport() {
-  if (!("findLastIndex" in Array.prototype) || !("structuredClone" in window)) {
-    window.alert(
-      "Folo is not compatible with your browser because your browser version is too old. You can download and use the Folo app or continue using it with the latest browser.",
-    )
-
-    window.location.href = "https://folo.is/download"
-  }
-}
-
 const htmlPlugin = (): PluginOption => {
   return {
     name: "html-transform",
     enforce: "post",
     transformIndexHtml(html) {
-      return htmlMinify(
-        html.replace(
-          "<!-- Check Browser Script Inject -->",
-          `<script>${checkBrowserSupport.toString()}; checkBrowserSupport()</script>`,
-        ),
-        {
-          removeComments: true,
-          html5: true,
-          minifyJS: true,
-          minifyCSS: true,
-          removeTagWhitespace: true,
-          collapseWhitespace: true,
-          collapseBooleanAttributes: true,
-          collapseInlineTagWhitespace: true,
-        },
-      )
+      return htmlMinify(html, {
+        removeComments: true,
+        html5: true,
+        minifyJS: true,
+        minifyCSS: true,
+        removeTagWhitespace: true,
+        collapseWhitespace: true,
+        collapseBooleanAttributes: true,
+        collapseInlineTagWhitespace: true,
+      })
     },
   }
 }
