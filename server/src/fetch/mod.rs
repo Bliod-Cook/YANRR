@@ -4,11 +4,12 @@ mod language;
 pub mod parse;
 pub mod scheduler;
 
-use chrono::Utc;
+use chrono::{DateTime, SubsecRound, Utc};
 use sea_orm::{
     ActiveModelTrait,
     ActiveValue::{Set, Unchanged},
-    ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter, TransactionTrait,
+    ColumnTrait, ConnectionTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
+    TransactionTrait,
     prelude::Json,
     sea_query::OnConflict,
 };
@@ -21,8 +22,11 @@ use self::{
 };
 use crate::{
     AppState,
-    entity::{entry, feed},
+    entity::{entry, feed, subscription, unread},
     id::next_id,
+    subscription as subscriptions,
+    sync::{self, Action},
+    time::iso,
 };
 
 pub use self::http::client as http_client;
@@ -44,14 +48,39 @@ impl From<DbErr> for FetchError {
 pub async fn add_feed(state: &AppState, url: &str) -> Result<feed::Model, FetchError> {
     let existing = feed::Entity::find().filter(feed::Column::Url.eq(url));
     if let Some(feed) = existing.one(&state.db).await? {
-        return Ok(feed);
+        return freshen(state, feed).await;
     }
     let update = fetch(state, url, &Validators::default())
         .await?
         .ok_or(FetchError::Fetch("HTTP 304".into()))?;
+    insert(state, url, update).await
+}
+
+/// Refreshes a feed nobody follows, which the scheduler leaves alone, so whoever looks at it sees recent entries.
+async fn freshen(state: &AppState, feed: feed::Model) -> Result<feed::Model, FetchError> {
+    let followers = subscription::Entity::find()
+        .filter(subscription::Column::FeedId.eq(feed.id))
+        .count(&state.db)
+        .await?;
+    if followers > 0 {
+        return Ok(feed);
+    }
+    // A failure is recorded on the feed; what was stored before is still worth showing.
+    if let Err(err) = refresh_feed(state, feed.id).await {
+        tracing::warn!(feed = feed.id, "refresh failed: {err:?}");
+    }
+    Ok(feed::Entity::find_by_id(feed.id)
+        .one(&state.db)
+        .await?
+        .unwrap_or(feed))
+}
+
+/// Stores a feed fetched from `url` for the first time.
+async fn insert(state: &AppState, url: &str, update: Update) -> Result<feed::Model, FetchError> {
     let txn = state.db.begin().await?;
     let feed = find_or_create(&txn, update.moved_to.as_deref().unwrap_or(url)).await?;
-    let feed = store(&txn, feed.id, update).await?;
+    let (feed, actions) = store(&txn, feed.id, update).await?;
+    sync::record(&txn, actions).await?;
     txn.commit().await?;
     Ok(feed)
 }
@@ -88,20 +117,30 @@ async fn refresh(state: &AppState, feed: &feed::Model) -> Result<(), FetchError>
         return Ok(());
     };
     let txn = state.db.begin().await?;
-    match update.moved_to.clone() {
-        None => {
-            store(&txn, feed.id, update).await?;
-        }
+    let target = match update.moved_to.as_deref() {
         Some(url) => {
-            let target = find_or_create(&txn, &url).await?;
-            store(&txn, target.id, update).await?;
+            let found = find_or_create(&txn, url).await?;
+            // Addresses redirecting to each other lead back here; that is no move.
+            subscriptions::resolve(&txn, found.id)
+                .await?
+                .filter(|target| target.id != feed.id)
+        }
+        None => None,
+    };
+    let actions = match target {
+        None => store(&txn, feed.id, update).await?.1,
+        Some(target) => {
+            let (target, mut actions) = store(&txn, target.id, update).await?;
             let migrated = feed::ActiveModel {
                 migrate_to: Set(Some(target.id)),
                 ..checked(feed.id)
             };
             migrated.update(&txn).await?;
+            actions.extend(subscriptions::migrate(&txn, feed.id, &target).await?);
+            actions
         }
-    }
+    };
+    sync::record(&txn, actions).await?;
     txn.commit().await?;
     Ok(())
 }
@@ -182,32 +221,20 @@ async fn find_or_create(db: &impl ConnectionTrait, url: &str) -> Result<feed::Mo
         .ok_or_else(|| DbErr::RecordNotFound(url.into()))
 }
 
-/// Writes new entries and the feed's metadata; run it in the caller's transaction.
+/// Writes the feed's metadata and new entries, and marks the entries unread for its subscribers; run it in the
+/// caller's transaction, which records the returned actions.
 async fn store(
     db: &impl ConnectionTrait,
     feed_id: i64,
     update: Update,
-) -> Result<feed::Model, DbErr> {
+) -> Result<(feed::Model, Vec<Action>), DbErr> {
     let Update {
         feed: parsed,
         validators,
         ..
     } = update;
-    let now = Utc::now();
-    let entries = parsed
-        .entries
-        .into_iter()
-        .map(|entry| entry_model(feed_id, entry, now));
-    // Entries are never updated once stored, so a changing feed does not churn the timeline.
-    entry::Entity::insert_many(entries)
-        .on_conflict(
-            OnConflict::columns([entry::Column::FeedId, entry::Column::Guid])
-                .do_nothing()
-                .to_owned(),
-        )
-        .exec_without_returning(db)
-        .await?;
-    feed::ActiveModel {
+    // Updating the row first takes the feed's lock, which `subscription::resolve` waits for.
+    let feed = feed::ActiveModel {
         title: Set(parsed.title),
         description: Set(parsed.description),
         image: Set(parsed.image),
@@ -219,10 +246,69 @@ async fn store(
         ..checked(feed_id)
     }
     .update(db)
-    .await
+    .await?;
+    // Clients send timestamps back as cursors with millisecond precision, so that is all that is stored.
+    let now = Utc::now().trunc_subsecs(3);
+    let entries = parsed
+        .entries
+        .into_iter()
+        .map(|entry| entry_model(feed_id, entry, now));
+    // Entries are never updated once stored, so a changing feed does not churn the timeline.
+    let new = entry::Entity::insert_many(entries)
+        .on_conflict(
+            OnConflict::columns([entry::Column::FeedId, entry::Column::Guid])
+                .do_nothing()
+                .to_owned(),
+        )
+        .exec_with_returning(db)
+        .await?;
+    let actions = fan_out(db, feed_id, &new).await?;
+    Ok((feed, actions))
 }
 
-fn entry_model(feed_id: i64, entry: ParsedEntry, now: chrono::DateTime<Utc>) -> entry::ActiveModel {
+/// Marks new entries unread for the feed's subscribers and tells each of them with one `timeline N`.
+async fn fan_out(
+    db: &impl ConnectionTrait,
+    feed_id: i64,
+    entries: &[entry::Model],
+) -> Result<Vec<Action>, DbErr> {
+    let Some(latest) = entries.iter().map(|entry| entry.published_at).max() else {
+        return Ok(Vec::new());
+    };
+    let subscribers = subscription::Entity::find()
+        .filter(subscription::Column::FeedId.eq(feed_id))
+        .all(db)
+        .await?;
+    let unread = subscribers.iter().flat_map(|subscription| {
+        entries.iter().map(|entry| unread::ActiveModel {
+            user_id: Set(subscription.user_id.clone()),
+            entry_id: Set(entry.id),
+            feed_id: Set(feed_id),
+        })
+    });
+    unread::Entity::insert_many(unread)
+        .exec_without_returning(db)
+        .await?;
+    let data = json!({
+        "feedId": feed_id.to_string(),
+        "count": entries.len(),
+        "unread": entries.len(),
+        "latestPublishedAt": iso(latest),
+        "from": ["feed"],
+    });
+    Ok(subscribers
+        .into_iter()
+        .map(|subscription| Action {
+            user_id: subscription.user_id,
+            model: "timeline",
+            model_id: Some(feed_id.to_string()),
+            action: "N",
+            data: data.clone(),
+        })
+        .collect())
+}
+
+fn entry_model(feed_id: i64, entry: ParsedEntry, now: DateTime<Utc>) -> entry::ActiveModel {
     entry::ActiveModel {
         id: Set(next_id()),
         feed_id: Set(feed_id),
@@ -239,7 +325,7 @@ fn entry_model(feed_id: i64, entry: ParsedEntry, now: chrono::DateTime<Utc>) -> 
         attachments: Set(json_list(&entry.attachments)),
         extra: Set(entry.extra.map(|extra| json!(extra))),
         language: Set(entry.language),
-        published_at: Set(entry.published_at),
+        published_at: Set(entry.published_at.trunc_subsecs(3)),
         inserted_at: Set(now),
     }
 }

@@ -1,16 +1,30 @@
 mod common;
 
-use common::{Fixtures, RSS2, Reply, TestApp};
+use common::{Fixtures, RSS2, Reply, SINGLE_ITEM_RSS, TWO_ITEM_RSS, TestApp, json};
 use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder};
 use serde_json::{Value, json};
 use yannr::{
-    entity::{entry, feed},
+    entity::{entry, feed, subscription, unread},
     fetch::{self, FetchError, scheduler},
 };
 
-const SINGLE_ITEM_RSS: &str = r#"<rss version="2.0"><channel><title>Live</title>
-    <item><guid>post-0</guid><title>Earlier post</title><link>https://example.com/posts/0</link></item>
-</channel></rss>"#;
+async fn followed_feeds(app: &TestApp, user_id: &str) -> Vec<i64> {
+    let follows = subscription::Entity::find()
+        .filter(subscription::Column::UserId.eq(user_id))
+        .all(&app.state.db)
+        .await
+        .unwrap();
+    follows.into_iter().map(|row| row.feed_id).collect()
+}
+
+async fn unread_entries(app: &TestApp, user_id: &str) -> Vec<i64> {
+    let unread = unread::Entity::find()
+        .filter(unread::Column::UserId.eq(user_id))
+        .all(&app.state.db)
+        .await
+        .unwrap();
+    unread.into_iter().map(|row| row.entry_id).collect()
+}
 
 async fn entries(app: &TestApp, feed_id: i64) -> Vec<entry::Model> {
     entry::Entity::find()
@@ -90,24 +104,91 @@ async fn fetch_error_is_recorded_then_cleared() {
 }
 
 #[tokio::test]
-async fn permanent_redirect_migrates_feed() {
+async fn refresh_fans_out_new_entries() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
     fixtures.set("/live", Reply::Body(SINGLE_ITEM_RSS.into()));
+    app.sign_up("alice@example.com").await;
+    let body = json!({ "url": fixtures.url("/live") });
+    let feed_id = json(app.post("/api/subscriptions", body).await).await["feed"]["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+
+    fixtures.set("/live", Reply::Body(TWO_ITEM_RSS.into()));
+    fetch::refresh_feed(&app.state, feed_id.parse().unwrap())
+        .await
+        .unwrap();
+
+    assert_eq!(unread_entries(&app, &app.user_id().await).await.len(), 2);
+    let actions = app.actions().await;
+    let new = actions.last().unwrap();
+    assert_eq!(new["model"], "timeline");
+    assert_eq!(new["action"], "N");
+    assert_eq!(new["modelId"], feed_id);
+    let data = &new["data"];
+    assert_eq!(data["feedId"], feed_id);
+    assert_eq!((&data["count"], &data["unread"]), (&json!(1), &json!(1)));
+    assert_eq!(data["latestPublishedAt"], "2026-10-02T09:00:00.000Z");
+    assert_eq!(data["from"], json!(["feed"]));
+}
+
+#[tokio::test]
+async fn permanent_redirect_migrates_feed_and_subscriptions() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    fixtures.set("/live", Reply::Body(SINGLE_ITEM_RSS.into()));
+    fixtures.set("/new", Reply::Body(TWO_ITEM_RSS.into()));
     let feed = fetch::add_feed(&app.state, &fixtures.url("/live"))
         .await
         .unwrap();
+    let target = fetch::add_feed(&app.state, &fixtures.url("/new"))
+        .await
+        .unwrap();
+    app.sign_up("alice@example.com").await;
+    let alice = app.user_id().await;
+    let body = json!({ "feedId": feed.id.to_string() });
+    app.post("/api/subscriptions", body.clone()).await;
+    // Alice read the post both feeds carry.
+    unread::Entity::delete_many()
+        .exec(&app.state.db)
+        .await
+        .unwrap();
+    app.insert_user("bob").await;
+    let follow = format!(
+        "INSERT INTO subscriptions (user_id, feed_id, view, created_at) VALUES
+         ('bob', {}, 0, now()), ('bob', {}, 0, now())",
+        feed.id, target.id
+    );
+    app.state.db.execute_unprepared(&follow).await.unwrap();
 
-    fixtures.set("/live", Reply::MovedTo("/rss"));
+    fixtures.set("/live", Reply::MovedTo("/new"));
     fetch::refresh_feed(&app.state, feed.id).await.unwrap();
 
-    let target = feed::Entity::find()
-        .filter(feed::Column::Url.eq(fixtures.url("/rss")))
-        .one(&app.state.db)
-        .await
-        .unwrap()
-        .unwrap();
     assert_eq!(reload(&app, feed.id).await.migrate_to, Some(target.id));
-    assert_eq!(entries(&app, target.id).await.len(), 2);
+    assert_eq!(followed_feeds(&app, &alice).await, [target.id]);
+    assert_eq!(followed_feeds(&app, "bob").await, [target.id]);
+    let unread = unread_entries(&app, &alice).await;
+    let new_post = entries(&app, target.id).await;
+    let new_post = new_post
+        .iter()
+        .find(|entry| entry.guid == "post-new")
+        .unwrap();
+    assert_eq!(unread, [new_post.id]);
+    let actions = app.actions().await;
+    let moved: Vec<_> = actions[actions.len() - 2..]
+        .iter()
+        .map(|action| (action["action"].clone(), action["modelId"].clone()))
+        .collect();
+    assert_eq!(
+        moved,
+        [
+            (json!("D"), json!(feed.id.to_string())),
+            (json!("I"), json!(target.id.to_string()))
+        ]
+    );
+
+    app.sign_up("carol@example.com").await;
+    let followed = json(app.post("/api/subscriptions", body).await).await;
+    assert_eq!(followed["feed"]["id"], target.id.to_string());
 }
 
 #[tokio::test]
@@ -150,7 +231,7 @@ async fn rsshub_url_uses_configured_instance() {
 }
 
 #[tokio::test]
-async fn claim_due_feeds_respects_ttl_and_inflight() {
+async fn claim_due_feeds_respects_ttl_inflight_and_followers() {
     let app = TestApp::spawn().await;
     let feeds =
         "INSERT INTO feeds (id, url, ttl, checked_at, refresh_enqueued_at, migrate_to) VALUES
@@ -160,8 +241,13 @@ async fn claim_due_feeds_respects_ttl_and_inflight() {
         (4, 'ttl-floor', 1, now() - interval '5 minutes', NULL, NULL),
         (5, 'migrated', NULL, now() - interval '2 hours', NULL, 1),
         (6, 'in-flight', NULL, now() - interval '2 hours', now() - interval '1 minute', NULL),
-        (7, 'stuck', NULL, now() - interval '2 hours', now() - interval '11 minutes', NULL)";
+        (7, 'stuck', NULL, now() - interval '2 hours', now() - interval '11 minutes', NULL),
+        (8, 'unfollowed', NULL, now() - interval '2 hours', NULL, NULL)";
     app.state.db.execute_unprepared(feeds).await.unwrap();
+    app.insert_user("alice").await;
+    let follows = "INSERT INTO subscriptions (user_id, feed_id, view, created_at)
+        SELECT 'alice', id, 0, now() FROM feeds WHERE id <= 7";
+    app.state.db.execute_unprepared(follows).await.unwrap();
 
     let mut claimed = scheduler::claim_due_feeds(&app.state.db).await.unwrap();
     claimed.sort();

@@ -44,11 +44,12 @@ pub fn spawn(state: AppState) {
 /// Marks due feeds as enqueued and returns their ids.
 ///
 /// A feed is due `ttl` minutes after its last check (60 without a TTL, at least 10). Feeds being fetched are
-/// skipped, unless the fetch started over 10 minutes ago and is presumed lost.
+/// skipped, unless the fetch started over 10 minutes ago and is presumed lost, and so are feeds nobody follows.
 pub async fn claim_due_feeds(db: &DatabaseConnection) -> Result<Vec<i64>, DbErr> {
     let sql = "
         UPDATE feeds SET refresh_enqueued_at = now()
         WHERE migrate_to IS NULL
+          AND EXISTS (SELECT 1 FROM subscriptions WHERE feed_id = feeds.id)
           AND checked_at + make_interval(mins => GREATEST(COALESCE(ttl, 60), 10)) <= now()
           AND (refresh_enqueued_at IS NULL
                OR refresh_enqueued_at <= checked_at
