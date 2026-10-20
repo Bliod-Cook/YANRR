@@ -19,7 +19,6 @@ import { useIsTabletLayout } from "@/src/lib/responsive"
 import {
   ActionGroup,
   EntrySortOrderActionButton,
-  FeedShareActionButton,
   HomeLeftAction,
   MarkAllAsReadActionButton,
   UnreadOnlyActionButton,
@@ -34,7 +33,7 @@ import {
   useSelectedFeedTitle,
 } from "./atoms"
 
-export function TimelineHeader({ feedId }: { feedId?: string }) {
+export function TimelineHeader() {
   const viewTitle = useSelectedFeedTitle()
   const entryListContext = useEntryListContext()
   const screenType = entryListContext.type
@@ -72,12 +71,11 @@ export function TimelineHeader({ feedId }: { feedId?: string }) {
                 {shouldShowEntrySort && <EntrySortOrderActionButton />}
                 {isLoggedIn && <UnreadOnlyActionButton />}
                 {isLoggedIn && <MarkAllAsReadActionButton />}
-                <FeedShareActionButton feedId={feedId} />
               </ActionGroup>
             </View>
           </EntryListContext>
         )
-      }, [entryListContext, feedId, isLoggedIn, shouldShowEntrySort])}
+      }, [entryListContext, isLoggedIn, shouldShowEntrySort])}
       headerHideableBottom={isTimeline || isSubscriptions ? TimelineViewSelector : undefined}
       headerHideableBottomHeight={TIMELINE_VIEW_SELECTOR_HEIGHT}
     />

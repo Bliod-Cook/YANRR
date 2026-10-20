@@ -17,7 +17,6 @@ export const defaultCommandShortcuts = {
 
   // Subscription commands
   [COMMAND_ID.subscription.markAllAsRead]: transformShortcut("Shift+$mod+A"),
-  [COMMAND_ID.subscription.openInBrowser]: "O",
   [COMMAND_ID.subscription.openSiteInBrowser]: transformShortcut("$mod+O"),
   [COMMAND_ID.subscription.previousSubscription]: "K, ArrowUp",
   [COMMAND_ID.subscription.nextSubscription]: "J, ArrowDown",
@@ -83,7 +82,6 @@ export const allowCustomizeCommands = new Set([
 
   COMMAND_ID.subscription.markAllAsRead,
 
-  COMMAND_ID.subscription.openInBrowser,
   COMMAND_ID.subscription.openSiteInBrowser,
 
   COMMAND_ID.subscription.switchTabToNext,

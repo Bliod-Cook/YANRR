@@ -48,7 +48,6 @@ import { FeedSummary } from "./FeedSummary"
 const formSchema = z.object({
   view: z.string(),
   category: z.string().nullable().optional(),
-  isPrivate: z.boolean().optional(),
   hideFromTimeline: z.boolean().optional(),
   title: z.string().optional(),
 })
@@ -193,7 +192,6 @@ const FeedInnerForm = ({
   subscriptionData?: {
     view?: number
     category?: string | null
-    isPrivate?: boolean
     title?: string | null
     hideFromTimeline?: boolean | null
   }
@@ -231,9 +229,6 @@ const FeedInnerForm = ({
         ...form.formState.defaultValues,
         view: `${subscription.view}`,
         ...(subscription.category ? { category: subscription.category } : {}),
-        ...(typeof subscription.isPrivate === "boolean"
-          ? { isPrivate: subscription.isPrivate }
-          : {}),
         ...(typeof subscription.hideFromTimeline === "boolean"
           ? { hideFromTimeline: subscription.hideFromTimeline }
           : {}),
@@ -263,7 +258,6 @@ const FeedInnerForm = ({
         view: Number.parseInt(values.view),
         // A name of only spaces would make a folder without a name
         category: values.category?.trim() || null,
-        isPrivate: values.isPrivate || false,
         hideFromTimeline: values.hideFromTimeline,
         title: values.title,
         feedId: feed.id,
@@ -392,28 +386,6 @@ const FeedInnerForm = ({
                   </div>
                 </FormControl>
                 <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="isPrivate"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <FormLabel>{t("feed_form.private_follow")}</FormLabel>
-                    <FormDescription>{t("feed_form.private_follow_description")}</FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      className="shrink-0"
-                      // Off until the form knows the followed setting, so the switch stays controlled
-                      checked={field.value ?? false}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </div>
               </FormItem>
             )}
           />

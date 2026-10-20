@@ -123,10 +123,6 @@ export const SettingGeneral = () => {
             label: t("general.hide_all_read_subscriptions.label"),
             description: t("general.hide_all_read_subscriptions.description"),
           }),
-          defineSettingItem("hidePrivateSubscriptionsInTimeline", {
-            label: t("general.hide_private_subscriptions_in_timeline.label"),
-            description: t("general.hide_private_subscriptions_in_timeline.description"),
-          }),
 
           {
             type: "title",

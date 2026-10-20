@@ -24,7 +24,6 @@ import {
   getListSubscriptionCountSelector,
   getListSubscriptionIdsSelector,
   getListSubscriptionSelector,
-  getNonPrivateSubscriptionIdsSelector,
   getSortedFeedSubscriptionByAlphabetSelector,
   getSortedGroupedSubscriptionSelector,
   getSortedListSubscriptionSelector,
@@ -385,18 +384,4 @@ export const useCategoryOpenStateByView = (view: FeedViewType) => {
   return useSubscriptionStore(
     useCallback((state) => getCategoryOpenStateByViewSelector(state)(view), [view]),
   )
-}
-
-export const useNonPrivateSubscriptionIds = (ids: string[]) => {
-  const idsString = ids.toString()
-  const nonPrivateSubscriptions = useSubscriptionStore(
-    useCallback(
-      (state) => getNonPrivateSubscriptionIdsSelector(state)(ids),
-
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [idsString],
-    ),
-  )
-
-  return nonPrivateSubscriptions
 }

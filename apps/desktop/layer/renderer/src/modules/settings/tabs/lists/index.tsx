@@ -27,7 +27,6 @@ import { toast } from "sonner"
 
 import { useCurrentModal, useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { useI18n } from "~/hooks/common"
-import { UrlBuilder } from "~/lib/url-builder"
 
 import { ListCreationModalContent, ListFeedsModalContent } from "./modals"
 
@@ -133,18 +132,14 @@ export const SettingLists = () => {
                     {ownedLists.map((row) => (
                       <TableRow key={row.id} className="h-8">
                         <TableCell size="sm">
-                          <a
-                            target="_blank"
-                            href={UrlBuilder.shareList(row.id)}
-                            className="inline-flex items-center gap-2 font-semibold"
-                          >
+                          <div className="inline-flex items-center gap-2 font-semibold">
                             {row.image && (
                               <Avatar className="size-6">
                                 <AvatarImage src={row.image} />
                               </Avatar>
                             )}
                             <span className="inline-block max-w-[200px] truncate">{row.title}</span>
-                          </a>
+                          </div>
                         </TableCell>
                         <TableCell size="sm">
                           <Tooltip>

@@ -1,5 +1,4 @@
 import type { envProfileMap } from "@follow/shared/env.rn"
-import { whoami } from "@follow/store/user/getters"
 import { sleep } from "@follow/utils"
 import { requireNativeModule } from "expo"
 import * as Clipboard from "expo-clipboard"
@@ -33,7 +32,6 @@ import { setEnvProfile, useEnvProfile } from "@/src/lib/proxy-env"
 import { reloadApp } from "@/src/lib/reload-app"
 import { toast } from "@/src/lib/toast"
 
-import { ProfileScreen } from "../(modal)/ProfileScreen"
 import { MarkdownScreen } from "./(debug)/markdown"
 import { TextDebugScreen } from "./(debug)/text"
 
@@ -165,14 +163,6 @@ export const DebugScreen: NavigationControllerView = () => {
           title: "TextSizeView",
           onPress: () => {
             navigation.pushControllerView(TextDebugScreen)
-          },
-        },
-        {
-          title: "Present Profile Modal",
-          onPress: () => {
-            navigation.presentControllerView(ProfileScreen, {
-              userId: whoami()!.id,
-            })
           },
         },
       ],

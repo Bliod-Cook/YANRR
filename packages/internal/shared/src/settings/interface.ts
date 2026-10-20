@@ -17,7 +17,6 @@ export interface GeneralSettings {
   // subscription
   autoGroup: boolean
   hideAllReadSubscriptions: boolean
-  hidePrivateSubscriptionsInTimeline: boolean
 
   /**
    * Top timeline for mobile
@@ -49,7 +48,6 @@ export interface UISettings {
   feedColWidth: number
   opaqueSidebar: boolean
   sidebarShowUnreadCount: boolean
-  hideExtraBadge: boolean
   thumbnailRatio: "square" | "original"
   uiTextSize: number
   showDockBadge: boolean
@@ -64,7 +62,6 @@ export interface UISettings {
   codeHighlightThemeLight: string
   codeHighlightThemeDark: string
   guessCodeLanguage: boolean
-  hideRecentReader: boolean
   customCSS: string
 
   // view

@@ -28,6 +28,4 @@ export interface UnreadListScope {
   listId?: string
   inboxId?: string
   isCollection?: boolean
-  /** Private subscriptions are hidden from the timeline, so their counters are left out. */
-  excludePrivate?: boolean
 }

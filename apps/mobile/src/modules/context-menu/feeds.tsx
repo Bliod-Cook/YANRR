@@ -118,24 +118,6 @@ const generateSubscriptionContextMenu = (
         />
       </ContextMenu.Item>
 
-      {/* <ContextMenu.Item key="Claim">
-      <ContextMenu.ItemTitle>Claim</ContextMenu.ItemTitle>
-      <ContextMenu.ItemIcon
-        ios={{
-          name: "checkmark.seal",
-        }}
-      />
-    </ContextMenu.Item> */}
-
-      {/* <ContextMenu.Item key="Boost">
-      <ContextMenu.ItemTitle>Boost</ContextMenu.ItemTitle>
-      <ContextMenu.ItemIcon
-        ios={{
-          name: "bolt",
-        }}
-      />
-    </ContextMenu.Item> */}
-
       <ContextMenu.Sub key="AddToCategory">
         <ContextMenu.SubTrigger key="SubTrigger/AddToCategory">
           <ContextMenu.ItemTitle>{t("operation.add_feeds_to_category")}</ContextMenu.ItemTitle>

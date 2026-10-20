@@ -1,11 +1,10 @@
 import { useImageColors } from "@follow/store/image/hooks"
-import { useUserById } from "@follow/store/user/hooks"
+import { useWhoami } from "@follow/store/user/hooks"
 import { cn } from "@follow/utils"
 import { LinearGradient } from "expo-linear-gradient"
-import type { FC } from "react"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import { Linking, Pressable, StyleSheet, View } from "react-native"
+import { Pressable, StyleSheet, View } from "react-native"
 import type { SharedValue } from "react-native-reanimated"
 import ReAnimated, { FadeIn, FadeOut, interpolate, useAnimatedStyle } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -13,14 +12,6 @@ import { useColor } from "react-native-uikit-colors"
 
 import { UserAvatar } from "@/src/components/ui/avatar/UserAvatar"
 import { Text } from "@/src/components/ui/typography/Text"
-import { DiscordCuteFiIcon } from "@/src/icons/discord_cute_fi"
-import { FacebookCuteFiIcon } from "@/src/icons/facebook_cute_fi"
-import { GithubCuteFiIcon } from "@/src/icons/github_cute_fi"
-import { InstagramCuteFiIcon } from "@/src/icons/instagram_cute_fi"
-import { LinkCuteReIcon } from "@/src/icons/link_cute_re"
-import { TwitterCuteFiIcon } from "@/src/icons/twitter_cute_fi"
-import { WebCuteReIcon } from "@/src/icons/web_cute_re"
-import { YoutubeCuteFiIcon } from "@/src/icons/youtube_cute_fi"
 import { useNavigation, useScreenIsInSheetModal } from "@/src/lib/navigation/hooks"
 import { LoginScreen } from "@/src/screens/(modal)/LoginScreen"
 import { usePrefetchImageColors } from "@/src/store/image/hooks"
@@ -29,88 +20,11 @@ import { isUserHeaderGradientLight, USER_HEADER_BANNER_TOP_SPACING } from "./lay
 
 const defaultGradientColors = ["#000", "#100", "#200"]
 
-const socialLinkBaseUrls: Record<string, string> = {
-  twitter: "https://twitter.com/",
-  github: "https://github.com/",
-  instagram: "https://instagram.com/",
-  facebook: "https://facebook.com/",
-  youtube: "https://youtube.com/",
-  discord: "https://discord.com/",
-}
-const hasUrlScheme = (value: string) => /^[a-z][\d+.a-z-]*:/i.test(value)
-// Profiles store the account name for each platform, as the desktop form asks for it
-const getSocialLinkUrl = (platform: string, value: string) => {
-  if (hasUrlScheme(value)) return value
-  const baseUrl = socialLinkBaseUrls[platform]
-  return baseUrl ? `${baseUrl}${value}` : null
-}
-const openExternalUrl = (url: string) => {
-  Linking.openURL(hasUrlScheme(url) ? url : `https://${url}`).catch(console.error)
-}
-const PlatformInfoMap: Record<
-  string,
-  {
-    component: FC<any>
-    color: {
-      light: string
-      dark: string
-    }
-  }
-> = {
-  github: {
-    component: GithubCuteFiIcon,
-    color: {
-      light: "#181717",
-      dark: "#FFFFFF",
-    },
-  },
-  twitter: {
-    component: TwitterCuteFiIcon,
-    color: {
-      light: "#1DA1F2",
-      dark: "#1DA1F2",
-    },
-  },
-  youtube: {
-    component: YoutubeCuteFiIcon,
-    color: {
-      light: "#FF0000",
-      dark: "#FF0000",
-    },
-  },
-  discord: {
-    component: DiscordCuteFiIcon,
-    color: {
-      light: "#5865F2",
-      dark: "#5865F2",
-    },
-  },
-  instagram: {
-    component: InstagramCuteFiIcon,
-    color: {
-      light: "#C13584",
-      dark: "#C13584",
-    },
-  },
-  facebook: {
-    component: FacebookCuteFiIcon,
-    color: {
-      light: "#1877F2",
-      dark: "#1877F2",
-    },
-  },
-}
-export const UserHeaderBanner = ({
-  scrollY,
-  userId,
-}: {
-  scrollY: SharedValue<number>
-  userId?: string
-}) => {
+export const UserHeaderBanner = ({ scrollY }: { scrollY: SharedValue<number> }) => {
   const { t } = useTranslation()
   const bgColor = useColor("systemGroupedBackground")
   const avatarIconColor = useColor("secondaryLabel")
-  const user = useUserById(userId)
+  const user = useWhoami()
   usePrefetchImageColors(user?.image)
   const insets = useSafeAreaInsets()
   const MAX_PULL = 100
@@ -128,17 +42,6 @@ export const UserHeaderBanner = ({
     }
     return [imageColors.primary, imageColors.secondary, imageColors.background]
   }, [bgColor, imageColors, user])
-  const socialLinks = useMemo(() => {
-    if (!user?.socialLinks) {
-      return []
-    }
-    return Object.entries(user.socialLinks)
-      .filter(([, value]) => !!value)
-      .map(([platform, link]) => ({
-        platform,
-        link: link!,
-      }))
-  }, [user?.socialLinks])
   const gradientLight = isUserHeaderGradientLight(imageColors)
   const styles = useAnimatedStyle(() => {
     const scaleValue = interpolate(scrollY.value, [-MAX_PULL, 0], [SCALE_FACTOR, 1], {
@@ -252,11 +155,7 @@ export const UserHeaderBanner = ({
             <Text className="text-xl font-bold text-text">{t("settings.folo_account")}</Text>
           )}
 
-          {user?.handle ? (
-            <Text className={cn("text-sm", gradientLight ? "text-black/70" : "text-white/70")}>
-              @{user.handle}
-            </Text>
-          ) : !user ? (
+          {!user && (
             <Pressable
               className="mx-auto"
               testID="settings-sign-in"
@@ -264,66 +163,7 @@ export const UserHeaderBanner = ({
             >
               <Text className="m-[6] text-sm text-accent">{t("settings.sign_in_cta")}</Text>
             </Pressable>
-          ) : null}
-        </View>
-        {user?.bio ? (
-          <Text
-            numberOfLines={3}
-            className={cn(
-              "mt-2 px-8 text-center text-sm",
-              gradientLight ? "text-black/80" : "text-white/80",
-            )}
-          >
-            {user.bio}
-          </Text>
-        ) : null}
-        <View className="mt-4 flex-row flex-wrap items-center justify-center gap-x-6 gap-y-2 px-8">
-          {user?.website && (
-            <Pressable
-              className="flex-row items-center gap-1"
-              onPress={() => {
-                if (user.website) {
-                  openExternalUrl(user.website)
-                }
-              }}
-            >
-              <WebCuteReIcon
-                height={16}
-                width={16}
-                color={gradientLight ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.7)"}
-              />
-              <Text
-                className={cn(
-                  "text-sm font-semibold",
-                  gradientLight ? "text-black/70" : "text-white/70",
-                )}
-              >
-                {user.website.replace(/^(https?:\/\/)?(www\.)?/, "")}
-              </Text>
-            </Pressable>
           )}
-          {socialLinks.map(({ platform, link }) => {
-            const platformInfo = PlatformInfoMap[platform as keyof typeof PlatformInfoMap]
-            const IconComponent = platformInfo ? platformInfo.component : LinkCuteReIcon
-            const color = platformInfo
-              ? gradientLight
-                ? platformInfo.color.light
-                : platformInfo.color.dark
-              : gradientLight
-                ? "rgba(0,0,0,0.8)"
-                : "rgba(255,255,255,0.8)"
-            return (
-              <Pressable
-                key={platform}
-                onPress={() => {
-                  const url = getSocialLinkUrl(platform, link)
-                  if (url) openExternalUrl(url)
-                }}
-              >
-                <IconComponent height={22} width={22} color={color} />
-              </Pressable>
-            )
-          })}
         </View>
       </View>
     </View>

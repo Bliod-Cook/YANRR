@@ -75,7 +75,6 @@ export const FollowList = (props: { id: string }) => {
 }
 const formSchema = z.object({
   view: z.number(),
-  isPrivate: z.boolean(),
   hideFromTimeline: z.boolean().optional(),
   title: z.string().optional(),
 })
@@ -89,7 +88,6 @@ const Impl = (props: { id: string }) => {
   const defaultFormValues = useMemo(
     () => ({
       view: list?.view ?? FeedViewType.Articles,
-      isPrivate: subscription?.isPrivate ?? false,
       hideFromTimeline: subscription?.hideFromTimeline ?? undefined,
       title: subscription?.title ?? undefined,
     }),
@@ -122,7 +120,6 @@ const Impl = (props: { id: string }) => {
       const body = {
         listId: list.id,
         view: list.view,
-        isPrivate: payload.isPrivate,
         title: payload.title,
         hideFromTimeline: payload.hideFromTimeline,
         url: undefined,
@@ -215,22 +212,6 @@ const Impl = (props: { id: string }) => {
                   value={value}
                   ref={ref}
                   wrapperClassName="ml-2.5"
-                />
-              )}
-            />
-          </View>
-
-          <View className="-mx-1">
-            <Controller
-              name="isPrivate"
-              control={form.control}
-              render={({ field: { onChange, value } }) => (
-                <FormSwitch
-                  value={value}
-                  label={t("subscription_form.private_follow")}
-                  description={t("subscription_form.private_follow_description")}
-                  onValueChange={onChange}
-                  size="sm"
                 />
               )}
             />

@@ -188,7 +188,6 @@ describe("unreadSyncService", () => {
         startTime: new Date("2026-01-01T00:02:00.000Z").getTime(),
         endTime: new Date("2026-01-01T00:06:00.000Z").getTime(),
       },
-      excludePrivate: false,
     })
 
     expect(useEntryStore.getState().data.entry1?.read).toBe(true)

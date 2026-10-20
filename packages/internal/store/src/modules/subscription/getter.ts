@@ -29,24 +29,21 @@ export const getSubscriptionByEntryId = (entryId: string | undefined) => {
 
 export const getSubscribedFeedIdAndInboxHandlesByView = ({
   view,
-  excludePrivate,
   excludeHidden,
 }: {
   view: FeedViewType | undefined
-  excludePrivate: boolean
   excludeHidden: boolean
 }): string[] => {
   if (typeof view !== "number") return []
   const state = useSubscriptionStore.getState()
 
-  const feedIds = Array.from(state.feedIdByView[view] ?? [])
-    .filter((i) => !excludePrivate || !state.data[i]?.isPrivate)
-    .filter((i) => !excludeHidden || !state.data[i]?.hideFromTimeline)
+  const feedIds = Array.from(state.feedIdByView[view] ?? []).filter(
+    (i) => !excludeHidden || !state.data[i]?.hideFromTimeline,
+  )
 
   const inboxIds = view === FeedViewType.Articles ? getInboxList().map((i) => i.id) : []
 
   const listFeedIds = Array.from(state.listIdByView[view] ?? [])
-    .filter((i) => !excludePrivate || !state.data[i]?.isPrivate)
     .filter((i) => !excludeHidden || !state.data[i]?.hideFromTimeline)
     .flatMap((id) => getListFeedIds(id) ?? [])
 
@@ -382,14 +379,6 @@ export const getIsListSubscriptionSelector = (state: StateType) => (id: string |
   return state.subscriptionIdSet.has(`list/${id}`)
 }
 
-export const getNonPrivateSubscriptionIdsSelector = (state: StateType) => (ids: string[]) => {
-  return ids
-    .map((id) => state.data[id])
-    .filter((s) => !s?.isPrivate)
-    .map((s) => s?.listId || s?.feedId)
-    .filter((id) => typeof id === "string")
-}
-
 export const getCategoryOpenStateByViewSelector = (state: StateType) => (view: FeedViewType) => {
   return state.categoryOpenStateByView[view]
 }
@@ -469,10 +458,6 @@ export const getFeedSubscriptionCount = createStaticGetter(
 )
 export const getIsSubscribed = createSingleArgGetter(getState, getIsSubscribedSelector)
 export const getIsListSubscription = createSingleArgGetter(getState, getIsListSubscriptionSelector)
-export const getNonPrivateSubscriptionIds = createSingleArgGetter(
-  getState,
-  getNonPrivateSubscriptionIdsSelector,
-)
 export const getCategoryOpenStateByView = createSingleArgGetter(
   getState,
   getCategoryOpenStateByViewSelector,

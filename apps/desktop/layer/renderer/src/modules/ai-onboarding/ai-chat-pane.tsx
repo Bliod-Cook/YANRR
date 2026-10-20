@@ -485,7 +485,6 @@ function AIChatInterface({ inputRef }: AIChatInterfaceProps) {
             url: feed.url,
             view: feed.analytics.view ?? FeedViewType.Articles,
             category: null,
-            isPrivate: false,
             hideFromTimeline: null,
             title: feed.title ?? null,
             feedId: feed.id,

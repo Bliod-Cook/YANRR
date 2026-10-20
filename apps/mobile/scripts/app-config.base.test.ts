@@ -20,7 +20,7 @@ describe("Android media permissions", () => {
     ])
   })
 
-  it("configures media APIs for picker and write-only access", () => {
+  it("configures the media library for write-only access", () => {
     expect(config.plugins).toContainEqual([
       "expo-media-library",
       {
@@ -28,14 +28,6 @@ describe("Android media permissions", () => {
         savePhotosPermission: "Allow $(PRODUCT_NAME) to save photos.",
         isAccessMediaLocationEnabled: false,
         granularPermissions: [],
-      },
-    ])
-    expect(config.plugins).toContainEqual([
-      "expo-image-picker",
-      {
-        photosPermission: "Allow $(PRODUCT_NAME) to access your photos.",
-        cameraPermission: false,
-        microphonePermission: false,
       },
     ])
   })

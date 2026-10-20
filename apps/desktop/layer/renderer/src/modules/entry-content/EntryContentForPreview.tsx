@@ -58,7 +58,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
         onContextMenu={stopPropagation}
         className={clsx("relative m-auto min-w-0 select-text", "w-full max-w-full")}
       >
-        <EntryTitle entryId={entryId} compact={compact} noRecentReader />
+        <EntryTitle entryId={entryId} compact={compact} />
 
         <WrappedElementProvider boundingDetection>
           <div className="mx-auto my-8 max-w-full cursor-auto">

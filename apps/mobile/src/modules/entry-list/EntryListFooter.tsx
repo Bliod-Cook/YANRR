@@ -2,7 +2,6 @@ import { unreadSyncService } from "@follow/store/unread/store"
 import { useTranslation } from "react-i18next"
 import { Pressable, View } from "react-native"
 
-import { getHidePrivateSubscriptionsInTimeline } from "@/src/atoms/settings/general"
 import { Text } from "@/src/components/ui/typography/Text"
 import { CheckCircleCuteReIcon } from "@/src/icons/check_circle_cute_re"
 import { useColor } from "@/src/theme/colors"
@@ -31,7 +30,6 @@ export const EntryListFooter = ({ fetchedTime }: { fetchedTime?: number }) => {
                     insertedBefore: fetchedTime,
                   }
                 : undefined,
-              excludePrivate: getHidePrivateSubscriptionsInTimeline(),
             })
           }
         }}
@@ -66,7 +64,6 @@ export const GridEntryListFooter = ({ fetchedTime }: { fetchedTime?: number }) =
                     insertedBefore: fetchedTime,
                   }
                 : undefined,
-              excludePrivate: getHidePrivateSubscriptionsInTimeline(),
             })
           }
         }}

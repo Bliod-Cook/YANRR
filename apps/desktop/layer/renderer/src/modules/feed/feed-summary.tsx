@@ -13,7 +13,6 @@ import { cn } from "@follow/utils/utils"
 import { useTranslation } from "react-i18next"
 
 import { INBOX_EMAIL_DOMAIN } from "~/lib/inbox"
-import { UrlBuilder } from "~/lib/url-builder"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { FeedTitle } from "~/modules/feed/feed-title"
 
@@ -33,7 +32,6 @@ export function FollowSummary({
 
   switch (feed.type) {
     case "list": {
-      feedText = UrlBuilder.shareList(feed.id)
       break
     }
     case "inbox": {

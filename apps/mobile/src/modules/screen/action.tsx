@@ -1,11 +1,10 @@
-import { getFeedById } from "@follow/store/feed/getter"
 import { useWhoami } from "@follow/store/user/hooks"
 import { cn } from "@follow/utils"
 import * as Haptics from "expo-haptics"
 import type { PropsWithChildren } from "react"
 import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import { Platform, Pressable, Share, View } from "react-native"
+import { Pressable, View } from "react-native"
 
 import { setGeneralSetting, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { UserAvatar } from "@/src/components/ui/avatar/UserAvatar"
@@ -13,15 +12,12 @@ import { UIBarButton } from "@/src/components/ui/button/UIBarButton"
 import { CheckCircleCuteReIcon } from "@/src/icons/check_circle_cute_re"
 import { RoundCuteFiIcon } from "@/src/icons/round_cute_fi"
 import { RoundCuteReIcon } from "@/src/icons/round_cute_re"
-import { ShareForwardCuteReIcon } from "@/src/icons/share_forward_cute_re"
 import { SortAscendingCuteReIcon } from "@/src/icons/sort_ascending_cute_re"
 import { SortDescendingCuteReIcon } from "@/src/icons/sort_descending_cute_re"
+import { useSwitchTab } from "@/src/lib/navigation/bottom-tab/hooks"
 import { useNavigation } from "@/src/lib/navigation/hooks"
-import { proxyEnv } from "@/src/lib/proxy-env"
-import { createLinkShareContent } from "@/src/lib/share"
 import { toast } from "@/src/lib/toast"
 import { LoginScreen } from "@/src/screens/(modal)/LoginScreen"
-import { ProfileScreen } from "@/src/screens/(modal)/ProfileScreen"
 import { accentColor, useColor } from "@/src/theme/colors"
 
 import { showMarkAllAsReadDialog } from "../dialogs/MarkAllAsReadDialog"
@@ -36,20 +32,22 @@ export function HomeLeftAction() {
   const user = useWhoami()
 
   const navigation = useNavigation()
+  const switchTab = useSwitchTab()
   const handlePress = useCallback(() => {
     if (user) {
-      navigation.presentControllerView(ProfileScreen, { userId: user.id })
+      // The Settings tab, which shows the account
+      switchTab(3)
     } else {
       navigation.presentControllerView(LoginScreen)
     }
-  }, [navigation, user])
+  }, [navigation, switchTab, user])
 
   return (
     <ActionGroup className="ml-2">
       <Pressable
         testID="home-avatar-trigger"
         accessibilityRole="button"
-        accessibilityLabel={user ? t("profile.my_profile") : t("settings.sign_in_cta")}
+        accessibilityLabel={user ? t("tabs.settings") : t("settings.sign_in_cta")}
         onPress={handlePress}
       >
         <UserAvatar
@@ -149,35 +147,6 @@ export const EntrySortOrderActionButton = ({ variant = "secondary" }: HeaderActi
         )
       }}
       overlay={false}
-    />
-  )
-}
-
-export const FeedShareActionButton = ({
-  feedId,
-  variant = "secondary",
-}: { feedId?: string } & HeaderActionButtonProps) => {
-  const { t } = useTranslation()
-  const { size, color } = useButtonVariant({ variant })
-
-  if (!feedId) return null
-  return (
-    <UIBarButton
-      label={t("operation.share")}
-      normalIcon={<ShareForwardCuteReIcon height={size} width={size} color={color} />}
-      onPress={() => {
-        const feed = getFeedById(feedId)
-        if (!feed) return
-        const url = `${proxyEnv.WEB_URL}/share/feeds/${feedId}`
-        Share.share(
-          createLinkShareContent({
-            platform: Platform.OS,
-            title: feed.title!,
-            url,
-            message: t("operation.share_feed_message", { title: feed.title, url }),
-          }),
-        )
-      }}
     />
   )
 }

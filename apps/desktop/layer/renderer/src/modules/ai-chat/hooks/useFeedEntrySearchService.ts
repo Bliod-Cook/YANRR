@@ -43,7 +43,7 @@ export const useFeedEntrySearchService = (options: SearchServiceOptions = {}) =>
   const view = useRouteParamsSelector((route) => route.view)
   const allSubscriptions = useAllFeedSubscription()
   const categories = useCategories()
-  const recentEntryIds = useEntryIdsByView(view, false)
+  const recentEntryIds = useEntryIdsByView(view)
 
   const categoryItems = useMemo(() => {
     if (!categories?.length) return []

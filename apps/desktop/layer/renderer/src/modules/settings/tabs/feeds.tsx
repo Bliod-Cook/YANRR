@@ -1,20 +1,9 @@
 import { Spring } from "@follow/components/constants/spring.js"
 import { MotionButtonBase } from "@follow/components/ui/button/index.js"
 import { Checkbox } from "@follow/components/ui/checkbox/index.js"
-import { Divider } from "@follow/components/ui/divider/index.js"
-import { LoadingCircle } from "@follow/components/ui/loading/index.jsx"
 import { RSSHubLogo } from "@follow/components/ui/platform-icon/icons.js"
 import { useScrollViewElement } from "@follow/components/ui/scroll-area/hooks.js"
-import { ScrollArea } from "@follow/components/ui/scroll-area/index.js"
 import { ResponsiveSelect } from "@follow/components/ui/select/responsive.js"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@follow/components/ui/table/index.jsx"
 import {
   Tooltip,
   TooltipContent,
@@ -46,12 +35,9 @@ import {
 } from "~/components/ui/dropdown-menu/dropdown-menu"
 import { useDialog } from "~/components/ui/modal/stacked/hooks"
 import { useBatchUpdateSubscription } from "~/hooks/biz/useSubscriptionActions"
-import { useAuthQuery } from "~/hooks/common"
-import { UrlBuilder } from "~/lib/url-builder"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { useConfirmUnsubscribeSubscriptionModal } from "~/modules/modal/hooks/useConfirmUnsubscribeSubscriptionModal"
 import { SettingModalContentPortal } from "~/modules/settings/modal/layout"
-import { Queries } from "~/queries"
 
 type SortField = "name" | "view" | "date" | "subscriptionCount" | "updatesPerWeek"
 type SortDirection = "asc" | "desc"
@@ -61,7 +47,6 @@ export const SettingFeeds = () => {
   return (
     <div className="space-y-4 pb-8">
       <SubscriptionFeedsSection />
-      <FeedClaimedSection />
     </div>
   )
 }
@@ -666,68 +651,3 @@ const FeedListItem = memo(
     )
   },
 )
-
-const FeedClaimedSection = () => {
-  const { t } = useTranslation("settings")
-  const claimedList = useAuthQuery(Queries.feed.claimedList())
-
-  const numberFormatter = useMemo(() => new Intl.NumberFormat("en-US", {}), [])
-
-  return (
-    <section className="mt-4">
-      <div>
-        <h2 className="mb-2 text-lg font-semibold">{t("feeds.claim")}</h2>
-      </div>
-      <div className="mb-4 space-y-2 text-sm">
-        <p>{t("feeds.claimTips")}</p>
-      </div>
-      <Divider className="mb-6 mt-8" />
-      <div className="flex flex-1 flex-col">
-        {claimedList.isLoading ? (
-          <LoadingCircle size="large" className="center h-36" />
-        ) : !claimedList.data?.length ? (
-          <div className="mt-36 w-full text-center text-sm text-text-secondary">
-            <p>{t("feeds.noFeeds")}</p>
-          </div>
-        ) : null}
-        {claimedList.data?.length ? (
-          <ScrollArea.ScrollArea viewportClassName="max-h-[380px]">
-            <Table className="mt-4">
-              <TableHeader className="border-b">
-                <TableRow className="[&_*]:!font-semibold">
-                  <TableHead className="w-16 text-center" size="sm">
-                    {t("feeds.tableHeaders.name")}
-                  </TableHead>
-                  <TableHead className="text-center" size="sm">
-                    {t("feeds.tableHeaders.subscriptionCount")}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className="border-t-[12px] border-transparent">
-                {claimedList.data?.map((row) => (
-                  <TableRow key={row.feed.id} className="h-8">
-                    <TableCell size="sm" width={200}>
-                      <a
-                        target="_blank"
-                        href={UrlBuilder.shareFeed(row.feed.id)}
-                        className="flex items-center"
-                      >
-                        <FeedIcon fallback target={row.feed} size={16} />
-                        <EllipsisHorizontalTextWithTooltip className="inline-block max-w-[200px] truncate">
-                          {row.feed.title}
-                        </EllipsisHorizontalTextWithTooltip>
-                      </a>
-                    </TableCell>
-                    <TableCell align="center" className="tabular-nums" size="sm">
-                      {numberFormatter.format(row.subscriptionCount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea.ScrollArea>
-        ) : null}
-      </div>
-    </section>
-  )
-}

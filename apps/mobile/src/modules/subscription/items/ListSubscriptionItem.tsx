@@ -5,9 +5,7 @@ import { cn } from "@follow/utils"
 import { memo } from "react"
 import { StyleSheet, View } from "react-native"
 import Animated, { FadeOutUp } from "react-native-reanimated"
-import { useColor } from "react-native-uikit-colors"
 
-import { OouiUserAnonymous } from "@/src/components/icons/OouiUserAnonymous"
 import { GROUPED_ICON_TEXT_GAP, GROUPED_LIST_MARGIN } from "@/src/components/ui/grouped/constants"
 import { FallbackIcon } from "@/src/components/ui/icon/fallback-icon"
 import { Image } from "@/src/components/ui/image/Image"
@@ -26,7 +24,6 @@ import { UnreadCount } from "./UnreadCount"
 
 interface ListSubscriptionItemProps extends SubscriptionItemBaseProps {}
 export const ListSubscriptionItem = memo(({ id, isFirst, isLast }: ListSubscriptionItemProps) => {
-  const colorLabel = useColor("label")
   const list = useListById(id)
   const subscription = useSubscriptionById(id)
   const unreadCount = useUnreadByListId(id)
@@ -78,10 +75,6 @@ export const ListSubscriptionItem = memo(({ id, isFirst, isLast }: ListSubscript
               >
                 {subscription?.title || list.title}
               </Text>
-
-              {!!subscription?.isPrivate && (
-                <OouiUserAnonymous color={colorLabel} height={18} width={18} />
-              )}
             </View>
 
             <UnreadCount unread={unreadCount} className="ml-auto" />

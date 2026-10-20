@@ -1,4 +1,3 @@
-import type { FeedViewType } from "@follow/constants"
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { getFeedById } from "@follow/store/feed/getter"
 import { useFeedById } from "@follow/store/feed/hooks"
@@ -12,7 +11,6 @@ import {
 } from "@follow/store/subscription/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { whoami } from "@follow/store/user/getters"
-import { isBizId } from "@follow/utils/utils"
 import { useMutation } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
@@ -23,8 +21,6 @@ import { MenuItemSeparator, MenuItemText } from "~/atoms/context-menu"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { copyToClipboardWithFeedback } from "~/lib/clipboard"
 import { INBOX_EMAIL_DOMAIN } from "~/lib/inbox"
-import { UrlBuilder } from "~/lib/url-builder"
-import { useFeedClaimModal } from "~/modules/claim"
 import { COMMAND_ID } from "~/modules/command/commands/id"
 import { useCommandShortcuts } from "~/modules/command/hooks/use-command-binding"
 import { FeedForm } from "~/modules/discover/FeedForm"
@@ -33,7 +29,6 @@ import { ListForm } from "~/modules/discover/ListForm"
 import { useConfirmUnsubscribeSubscriptionModal } from "~/modules/modal/hooks/useConfirmUnsubscribeSubscriptionModal"
 import { useCategoryCreationModal } from "~/modules/settings/tabs/lists/hooks"
 import { ListCreationModalContent } from "~/modules/settings/tabs/lists/modals"
-import { useResetFeed } from "~/queries/feed"
 
 import { useBatchUpdateSubscription, useDeleteSubscription } from "./useSubscriptionActions"
 
@@ -52,7 +47,6 @@ export const useFeedActions = ({
   const feed = useFeedById(feedId, (feed) => {
     return {
       type: feed.type,
-      ownerUserId: feed.ownerUserId,
       id: feed.id,
       url: feed.url,
       siteUrl: feed.siteUrl,
@@ -69,13 +63,11 @@ export const useFeedActions = ({
   const { present } = useModalStack()
   const presentDeleteSubscription = useConfirmUnsubscribeSubscriptionModal()
   const deleteSubscription = useDeleteSubscription({})
-  const claimFeed = useFeedClaimModal()
 
   const isEntryList = type === "entryList"
 
   const { mutateAsync: addFeedToListMutation } = useAddFeedToFeedList()
   const { mutateAsync: removeFeedFromListMutation } = useRemoveFeedFromFeedList()
-  const { mutateAsync: resetFeed } = useResetFeed()
   const { mutate: addFeedsToCategoryMutation } = useBatchUpdateSubscription()
   const presentCategoryCreationModal = useCategoryCreationModal()
 
@@ -89,8 +81,6 @@ export const useFeedActions = ({
   const items = useMemo(() => {
     const related = feed || inbox
     if (!related) return []
-
-    const isFeedOwner = related.ownerUserId === whoami()?.id
 
     const items: MenuItemInput[] = [
       new MenuItemText({
@@ -217,46 +207,7 @@ export const useFeedActions = ({
           }),
         ],
       }),
-      !related.ownerUserId &&
-        !!isBizId(related.id) &&
-        related.type === "feed" &&
-        new MenuItemText({
-          label: isEntryList
-            ? t("sidebar.feed_actions.claim_feed")
-            : t("sidebar.feed_actions.claim"),
-          shortcut: "C",
-          click: () => {
-            claimFeed({ feedId })
-          },
-          disabled: isEntryList,
-          requiresLogin: true,
-        }),
-      ...(isFeedOwner
-        ? [
-            MenuItemSeparator.default,
-            new MenuItemText({
-              label: t("sidebar.feed_actions.feed_owned_by_you"),
-              disabled: true,
-            }),
-            new MenuItemText({
-              label: t("sidebar.feed_actions.reset_feed"),
-              click: () => {
-                resetFeed(feedId)
-              },
-              requiresLogin: true,
-            }),
-            MenuItemSeparator.default,
-          ]
-        : []),
       new MenuItemSeparator(isEntryList),
-      new MenuItemText({
-        label: t("sidebar.feed_actions.open_feed_in_browser", {
-          which: t(IN_ELECTRON ? "words.browser" : "words.newTab"),
-        }),
-        disabled: isEntryList,
-        shortcut: shortcuts[COMMAND_ID.subscription.openInBrowser],
-        click: () => window.open(UrlBuilder.shareFeed(feedId, view), "_blank"),
-      }),
       new MenuItemText({
         label: t("sidebar.feed_actions.open_site_in_browser", {
           which: t(IN_ELECTRON ? "words.browser" : "words.newTab"),
@@ -292,7 +243,6 @@ export const useFeedActions = ({
     addFeedToListMutation,
     addFeedsToCategoryMutation,
     categories,
-    claimFeed,
     deleteSubscription,
     feed,
     feedId,
@@ -306,7 +256,6 @@ export const useFeedActions = ({
     presentCategoryCreationModal,
     presentDeleteSubscription,
     removeFeedFromListMutation,
-    resetFeed,
     shortcuts,
     subscription,
     subscriptions,
@@ -317,7 +266,7 @@ export const useFeedActions = ({
   return items
 }
 
-export const useListActions = ({ listId, view }: { listId: string; view?: FeedViewType }) => {
+export const useListActions = ({ listId }: { listId: string }) => {
   const { t } = useTranslation()
   const list = useListById(listId)
   const subscription = useSubscriptionByFeedId(listId)!
@@ -367,21 +316,6 @@ export const useListActions = ({ listId, view }: { listId: string; view?: FeedVi
             MenuItemSeparator.default,
           ]
         : []),
-
-      new MenuItemText({
-        label: t("sidebar.feed_actions.open_list_in_browser", {
-          which: t(IN_ELECTRON ? "words.browser" : "words.newTab"),
-        }),
-        shortcut: shortcuts[COMMAND_ID.subscription.openInBrowser],
-        click: () => window.open(UrlBuilder.shareList(listId, view), "_blank"),
-      }),
-      new MenuItemText({
-        label: t("sidebar.feed_actions.copy_list_url"),
-        shortcut: "$mod+C",
-        click: () => {
-          void copyToClipboardWithFeedback(UrlBuilder.shareList(listId, view))
-        },
-      }),
       new MenuItemText({
         label: t("sidebar.feed_actions.copy_list_id"),
         shortcut: "$mod+Shift+C",
@@ -392,7 +326,7 @@ export const useListActions = ({ listId, view }: { listId: string; view?: FeedVi
     ]
 
     return items
-  }, [list, t, shortcuts, listId, present, deleteSubscription, subscription, view])
+  }, [list, t, shortcuts, listId, present, deleteSubscription, subscription])
 
   return items
 }

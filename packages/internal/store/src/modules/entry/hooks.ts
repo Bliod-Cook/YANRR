@@ -70,7 +70,6 @@ const readEntriesQueryKey = (queryKey: QueryKey) => {
     feedIdList,
     isCollection,
     unreadOnly,
-    hidePrivateSubscriptionsInTimeline,
     aiSort,
     sortOrder,
   ] = queryKey as [
@@ -84,7 +83,6 @@ const readEntriesQueryKey = (queryKey: QueryKey) => {
     FetchEntriesProps["isCollection"],
     boolean | undefined,
     boolean | undefined,
-    boolean | undefined,
     FetchEntriesProps["sortOrder"],
   ]
   return {
@@ -96,7 +94,6 @@ const readEntriesQueryKey = (queryKey: QueryKey) => {
     feedIdList,
     isCollection,
     unreadOnly,
-    hidePrivateSubscriptionsInTimeline,
     aiSort,
     sortOrder,
   }
@@ -184,7 +181,6 @@ export const refreshEntriesHead = async ({
         feedIdList: params.feedIdList,
         isCollection: params.isCollection,
         read: params.unreadOnly ? false : undefined,
-        excludePrivate: params.hidePrivateSubscriptionsInTimeline,
         sortOrder: params.sortOrder,
         pageParam: undefined,
       })
@@ -202,8 +198,7 @@ const toPageParam = (value: Date | string | null | undefined) => {
 }
 
 export const useEntriesQuery = (
-  props?: Omit<FetchEntriesProps, "pageParam" | "read" | "excludePrivate"> &
-    FetchEntriesPropsSettings,
+  props?: Omit<FetchEntriesProps, "pageParam" | "read"> & FetchEntriesPropsSettings,
   options?: {
     subscribed?: boolean
   },
@@ -217,7 +212,6 @@ export const useEntriesQuery = (
     feedIdList,
     isCollection,
     unreadOnly,
-    hidePrivateSubscriptionsInTimeline,
     aiSort,
     sortOrder,
   } = props || {}
@@ -244,7 +238,6 @@ export const useEntriesQuery = (
       feedIdList,
       isCollection,
       unreadOnly,
-      hidePrivateSubscriptionsInTimeline,
       aiSort,
       effectiveSortOrder,
     ],
@@ -257,7 +250,6 @@ export const useEntriesQuery = (
       feedIdList,
       isCollection,
       unreadOnly,
-      hidePrivateSubscriptionsInTimeline,
       aiSort,
       effectiveSortOrder,
     ],
@@ -271,7 +263,6 @@ export const useEntriesQuery = (
         limit: aiSort ? 100 : limit,
         pageParam,
         read: unreadOnly ? false : undefined,
-        excludePrivate: hidePrivateSubscriptionsInTimeline,
         sortOrder: effectiveSortOrder,
       }),
 
@@ -342,17 +333,8 @@ export const useEntriesQuery = (
       listId: listId === undefined ? undefined : String(listId),
       inboxId: inboxId === undefined ? undefined : String(inboxId),
       isCollection,
-      excludePrivate: hidePrivateSubscriptionsInTimeline === true,
     }),
-    [
-      view,
-      feedId,
-      feedIdList?.toString(),
-      listId,
-      inboxId,
-      isCollection,
-      hidePrivateSubscriptionsInTimeline,
-    ],
+    [view, feedId, feedIdList?.toString(), listId, inboxId, isCollection],
   )
   // Once every unread entry is on screen, a counter above the list can only be wrong.
   const unreadListComplete =
@@ -417,13 +399,8 @@ export function useEntryList(
   })
 }
 
-export const useEntryIdsByView = (view: FeedViewType, excludePrivate: boolean | undefined) => {
-  return useEntryStore(
-    useCallback(
-      (state) => getEntryIdsByViewSelector(state)(view, excludePrivate),
-      [excludePrivate, view],
-    ),
-  )
+export const useEntryIdsByView = (view: FeedViewType) => {
+  return useEntryStore(useCallback((state) => getEntryIdsByViewSelector(state)(view), [view]))
 }
 
 export const useEntryIdsByFeedId = (feedId: string | undefined | null) => {
@@ -454,18 +431,4 @@ export const useEntryIdsByListId = (listId: string | undefined) => {
 
 export const useEntryIsInbox = (entryId: string) => {
   return useEntryStore(useCallback((state) => getEntryIsInboxSelector(state)(entryId), [entryId]))
-}
-
-export const useEntryReadHistory = (entryId: string, size = 20, enabled = true) => {
-  const isInboxEntry = useEntryIsInbox(entryId)
-  const { data } = useQuery({
-    queryKey: ["entry-read-history", entryId],
-    queryFn: () => {
-      return entrySyncServices.fetchEntryReadHistory(entryId, size)
-    },
-    staleTime: 1000 * 60 * 5,
-    enabled: enabled && !isInboxEntry,
-  })
-
-  return data
 }

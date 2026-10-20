@@ -40,58 +40,9 @@ const get = useUserStore.getState
 const set = useUserStore.setState
 const immerSet = createImmerSetter(useUserStore)
 
-type ProfileChanges = Omit<Partial<UserProfileEditable>, "handle"> & {
-  handle?: string | null
-}
-
-/** A profile change the auth server refused. `code` names the check that refused it, if any. */
-export class UserUpdateError extends Error {
-  readonly code: string | undefined
-  readonly status: number | undefined
-
-  constructor(message: string, code?: string, status?: number) {
-    super(message)
-    this.name = "UserUpdateError"
-    this.code = code
-    this.status = status
-  }
-}
-
-/**
- * The fields a profile save sends and keeps, trimmed as the server saves them. The server
- * replaces the social links with whatever a save sends, so they are sent only when the caller
- * sets them: an avatar or name change must not clear them.
- */
-const toProfileChanges = (
-  data: Partial<UserProfileEditable>,
-  currentHandle: string | null | undefined,
-): ProfileChanges => {
-  const { name, handle, socialLinks, ...rest } = data
-  const changes: ProfileChanges = rest
-
-  if (name !== undefined) {
-    changes.name = name.trim()
-  }
-  if (handle !== undefined) {
-    const trimmedHandle = handle.trim()
-    if (!trimmedHandle) {
-      // A blank handle means no handle. Saved as "", it would hit the unique index on handles
-      // once another user has one.
-      changes.handle = null
-    } else {
-      // The server keeps a handle stored with spaces around it when a save sends it back
-      changes.handle =
-        typeof currentHandle === "string" && trimmedHandle === currentHandle.trim()
-          ? currentHandle
-          : trimmedHandle
-    }
-  }
-  if (socialLinks !== undefined) {
-    changes.socialLinks = socialLinks
-  }
-
-  return changes
-}
+/** The fields a profile save sends and keeps, with the name trimmed */
+const toProfileChanges = ({ name, ...rest }: Partial<UserProfileEditable>) =>
+  name === undefined ? rest : { ...rest, name: name.trim() }
 
 /** The most profiles one request asks for */
 const USER_BATCH_SIZE = 100
@@ -170,7 +121,7 @@ class UserSyncService {
   async updateProfile(data: Partial<UserProfileEditable>) {
     const me = get().whoami
     if (!me) return
-    const changes = toProfileChanges(data, me.handle)
+    const changes = toProfileChanges(data)
     const tx = createTransaction(me)
 
     tx.store(() => {
@@ -184,11 +135,7 @@ class UserSyncService {
       const res = await authClient().updateUser(changes)
       // The auth client resolves with the error instead of throwing; throw so the change rolls back
       if (res.error) {
-        throw new UserUpdateError(
-          res.error.message || res.error.statusText,
-          res.error.code,
-          res.error.status,
-        )
+        throw new Error(res.error.message || res.error.statusText)
       }
     })
     tx.persist(async () => {

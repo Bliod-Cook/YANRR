@@ -361,7 +361,6 @@ class UnreadSyncService {
     view,
     filter,
     time,
-    excludePrivate,
   }: {
     view: FeedViewType | undefined
     filter?: {
@@ -372,11 +371,9 @@ class UnreadSyncService {
       insertedBefore?: number
     } | null
     time?: TimeRangeFilter
-    excludePrivate: boolean
   }) {
     const args: MarkAllAsReadRequest = {
       view: view === FeedViewType.All ? undefined : view,
-      excludePrivate,
       ...filter,
       ...time,
     }
@@ -398,17 +395,15 @@ class UnreadSyncService {
     } else {
       const feedIdAndInboxHandles = getSubscribedFeedIdAndInboxHandlesByView({
         view,
-        excludePrivate,
         excludeHidden: true,
       })
       await this.markAllAsRead({ ids: feedIdAndInboxHandles, time, args })
     }
   }
 
-  async markViewAsRead(view: FeedViewType, excludePrivate: boolean) {
+  async markViewAsRead(view: FeedViewType) {
     await this.markBatchAsRead({
       view: view === FeedViewType.All ? undefined : view,
-      excludePrivate,
     })
   }
 
@@ -417,7 +412,6 @@ class UnreadSyncService {
 
     await this.markBatchAsRead({
       view: undefined,
-      excludePrivate: false,
       filter: {
         feedIdList: feedIds,
       },
@@ -428,7 +422,6 @@ class UnreadSyncService {
   async markListAsRead(listId: string, time?: PublishAtTimeRangeFilter) {
     await this.markBatchAsRead({
       view: undefined,
-      excludePrivate: false,
       filter: {
         listId,
       },

@@ -4,7 +4,6 @@ import { useAtomValue } from "jotai"
 import type { FC } from "react"
 import { use, useEffect, useState } from "react"
 import { StyleSheet, useWindowDimensions, View } from "react-native"
-import type { SharedValue } from "react-native-reanimated"
 import Animated, {
   interpolate,
   runOnJS,
@@ -25,7 +24,6 @@ import { ScreenItemContext } from "@/src/lib/navigation/ScreenItemContext"
 import { useHeaderHeight } from "../screen/hooks/useHeaderHeight"
 import { EntryContentContext } from "./ctx"
 import { EntryContentHeaderRightActions } from "./EntryContentHeaderRightActions"
-import { EntryReadHistory } from "./EntryReadHistory"
 
 // Minimum scroll distance in one direction before the header reacts.
 const AUTO_HIDE_SCROLL_THRESHOLD = 24
@@ -156,14 +154,9 @@ export const EntryNavigationHeader: FC<{
         containerStyle={headerContainerStyle}
         headerLeft={useTypeScriptHappyCallback(
           ({ canGoBack }) => (
-            <EntryLeftGroup
-              canGoBack={canGoBack ?? false}
-              entryId={entryId}
-              titleOpacityShareValue={opacityAnimatedValue}
-              isHeaderTitleVisible={isHeaderTitleVisible}
-            />
+            <DefaultHeaderBackButton canGoBack={canGoBack ?? false} canDismiss={false} />
           ),
-          [entryId, isHeaderTitleVisible],
+          [],
         )}
         headerRight={
           <EntryContentContext value={ctxValue}>
@@ -191,43 +184,5 @@ export const EntryNavigationHeader: FC<{
         }
       />
     </>
-  )
-}
-interface EntryLeftGroupProps {
-  canGoBack: boolean
-  entryId: string
-  titleOpacityShareValue: SharedValue<number>
-  isHeaderTitleVisible: boolean
-}
-
-const EntryLeftGroup = ({
-  canGoBack,
-  entryId,
-  titleOpacityShareValue,
-  isHeaderTitleVisible,
-}: EntryLeftGroupProps) => {
-  const hideRecentReader = useUISettingKey("hideRecentReader")
-  const animatedOpacity = useAnimatedStyle(() => {
-    return {
-      opacity: interpolate(titleOpacityShareValue.value, [0, 1], [1, 0]),
-    }
-  })
-  return (
-    <View className="flex-row items-center justify-center">
-      <DefaultHeaderBackButton canGoBack={canGoBack} canDismiss={false} />
-
-      {!hideRecentReader && (
-        <Animated.View
-          style={animatedOpacity}
-          className="absolute left-[32px] z-10 flex-row gap-2"
-          // Faded out once the title shows in the header, and no longer tappable or announced
-          pointerEvents={isHeaderTitleVisible ? "none" : "box-none"}
-          accessibilityElementsHidden={isHeaderTitleVisible}
-          importantForAccessibility={isHeaderTitleVisible ? "no-hide-descendants" : "auto"}
-        >
-          <EntryReadHistory entryId={entryId} />
-        </Animated.View>
-      )}
-    </View>
   )
 }

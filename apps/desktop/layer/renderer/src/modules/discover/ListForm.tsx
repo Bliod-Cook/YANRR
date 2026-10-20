@@ -39,7 +39,6 @@ import { FeedSummary } from "./FeedSummary"
 const formSchema = z.object({
   view: z.string(),
   category: z.string().nullable().optional(),
-  isPrivate: z.boolean().optional(),
   hideFromTimeline: z.boolean().optional(),
   title: z.string().optional(),
 })
@@ -159,7 +158,6 @@ const ListInnerForm = ({
   subscriptionData?: {
     view?: number
     category?: string | null
-    isPrivate?: boolean
     title?: string | null
     hideFromTimeline?: boolean | null
   }
@@ -195,9 +193,6 @@ const ListInnerForm = ({
       {
         ...form.formState.defaultValues,
         view: `${subscription.view}`,
-        ...(typeof subscription.isPrivate === "boolean"
-          ? { isPrivate: subscription.isPrivate }
-          : {}),
         ...(subscription.title ? { title: subscription.title } : {}),
         ...(typeof subscription.hideFromTimeline === "boolean"
           ? { hideFromTimeline: subscription.hideFromTimeline }
@@ -216,7 +211,6 @@ const ListInnerForm = ({
         listId: list.id,
         view: Number.parseInt(values.view),
         category: values.category,
-        isPrivate: values.isPrivate || false,
         hideFromTimeline: values.hideFromTimeline,
         title: values.title,
         userId,
@@ -289,28 +283,6 @@ const ListInnerForm = ({
                   <Input {...field} />
                 </FormControl>
                 <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="isPrivate"
-            render={({ field }) => (
-              <FormItem>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <FormLabel>{t("feed_form.private_follow")}</FormLabel>
-                    <FormDescription>{t("feed_form.private_follow_description")}</FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      className="shrink-0"
-                      // Off until the form knows the followed setting, so the switch stays controlled
-                      checked={field.value ?? false}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </div>
               </FormItem>
             )}
           />

@@ -72,7 +72,6 @@ const createSubscription = (
   inboxId: null,
   userId: "user",
   view,
-  isPrivate: false,
   hideFromTimeline: null,
   title: null,
   category,
@@ -288,7 +287,6 @@ describe("subscriptionSyncService", () => {
       category: "",
       title: "",
       hideFromTimeline: undefined,
-      isPrivate: false,
     })
 
     expect(mocks.update).not.toHaveBeenCalled()
@@ -570,7 +568,6 @@ describe("subscriptionSyncService", () => {
       listId: undefined,
       view: FeedViewType.Articles,
       category: null,
-      isPrivate: false,
       hideFromTimeline: null,
       title: null,
     })
@@ -595,7 +592,6 @@ describe("subscriptionSyncService", () => {
         listId: undefined,
         view: FeedViewType.Articles,
         category: null,
-        isPrivate: false,
         hideFromTimeline: null,
         title: null,
       }),
@@ -631,7 +627,6 @@ describe("subscriptionSyncService", () => {
       listId: undefined,
       view: FeedViewType.Articles,
       category: null,
-      isPrivate: false,
       hideFromTimeline: null,
       title: null,
     })

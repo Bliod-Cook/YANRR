@@ -4,7 +4,6 @@ import { t } from "i18next"
 import { useTranslation } from "react-i18next"
 import { View } from "react-native"
 
-import { getHidePrivateSubscriptionsInTimeline } from "@/src/atoms/settings/general"
 import { Text } from "@/src/components/ui/typography/Text"
 import { CheckCircleCuteReIcon } from "@/src/icons/check_circle_cute_re"
 import type { DialogComponent } from "@/src/lib/dialog"
@@ -41,7 +40,6 @@ export const showMarkAllAsReadDialog = (
         unreadSyncService.markBatchAsRead({
           view,
           filter: getFetchEntryPayload(selectedFeed, view),
-          excludePrivate: getHidePrivateSubscriptionsInTimeline(),
         })
       },
     },

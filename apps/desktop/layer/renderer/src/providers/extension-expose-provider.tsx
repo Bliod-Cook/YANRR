@@ -15,7 +15,6 @@ import { useDiscoverRSSHubRouteModal } from "~/hooks/biz/useDiscoverRSSHubRoute"
 import { useFollow } from "~/hooks/biz/useFollow"
 import { navigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { queryClient } from "~/lib/query-client"
-import { usePresentUserProfileModal } from "~/modules/profile/hooks"
 import type { SettingModalOptions } from "~/modules/settings/modal/useSettingModal"
 import { useSettingModal } from "~/modules/settings/modal/useSettingModal"
 
@@ -75,19 +74,15 @@ export const ExtensionExposeProvider = () => {
   const { t } = useTranslation()
 
   const follow = useFollow()
-  const presentUserProfile = usePresentUserProfileModal("dialog")
   const presentDiscoverRSSHubRoute = useDiscoverRSSHubRouteModal()
   useEffect(() => {
     registerGlobalContext({
       follow,
-      profile(id, variant) {
-        presentUserProfile(id, variant)
-      },
       rsshubRoute(route) {
         presentDiscoverRSSHubRoute(route)
       },
     })
-  }, [follow, present, presentDiscoverRSSHubRoute, presentUserProfile, t])
+  }, [follow, present, presentDiscoverRSSHubRoute, t])
 
   const dialog = useDialog()
   useEffect(() => {

@@ -1,5 +1,4 @@
 import { FeedViewType } from "@follow/constants"
-import { useFeedById } from "@follow/store/feed/hooks"
 import { useIsSubscribed, useSubscriptionById } from "@follow/store/subscription/hooks"
 import { isBizId, withOpacity } from "@follow/utils"
 import { useMemo } from "react"
@@ -24,11 +23,10 @@ export const FeedScreen: NavigationControllerView<{
 }> = ({ feedId: feedIdentifier }) => {
   const insets = useSafeAreaInsets()
   const floatingPlayerBarInset = useFloatingPlayerBarInset()
-  const feed = useFeedById(feedIdentifier)
   const navigation = useNavigation()
   const isSubscribed = useIsSubscribed(feedIdentifier)
   const isPreview = !isSubscribed && isBizId(feedIdentifier)
-  // A feed or list opened outside the Subscriptions tab, e.g. from a profile, keeps its own view
+  // A feed or list opened outside the Subscriptions tab keeps its own view
   // instead of the one selected on Home. Categories, inboxes and previews use the selected view.
   const subscriptionView = useSubscriptionById(feedIdentifier)?.view
   const { t } = useTranslation("common")
@@ -40,7 +38,7 @@ export const FeedScreen: NavigationControllerView<{
   return (
     <EntryListContext value={entryListContextValue}>
       <BottomTabBarHeightContext value={insets.bottom + floatingPlayerBarInset}>
-        <TimelineHeader feedId={feed?.id} />
+        <TimelineHeader />
         <FeedScreenEntryList />
         {isPreview && (
           <Pressable

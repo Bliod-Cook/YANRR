@@ -3,8 +3,6 @@ import { usePrefetchUser, useUserById, useWhoami } from "@follow/store/user/hook
 import { getColorScheme, stringToHue } from "@follow/utils/color"
 import { cn } from "@follow/utils/utils"
 
-import { usePresentUserProfileModal } from "~/modules/profile/hooks"
-
 import type { LoginProps } from "./LoginButton"
 
 export const UserAvatar = ({
@@ -13,20 +11,16 @@ export const UserAvatar = ({
   avatarClassName,
   hideName,
   userId,
-  enableModal,
   style,
-  onClick,
   ...props
 }: {
   className?: string
   avatarClassName?: string
   hideName?: boolean
   userId?: string
-  enableModal?: boolean
 } & LoginProps &
   React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement | null> }) => {
   const whoami = useWhoami()
-  const presentUserProfile = usePresentUserProfileModal("drawer")
 
   usePrefetchUser(userId)
   const profile = useUserById(userId)
@@ -37,12 +31,6 @@ export const UserAvatar = ({
     <div
       style={style}
       ref={ref}
-      onClick={(e) => {
-        if (enableModal) {
-          presentUserProfile(userId)
-        }
-        onClick?.(e)
-      }}
       {...props}
       className={cn(
         "relative flex h-20 items-center justify-center gap-2 px-5 py-2 font-medium text-text-secondary",

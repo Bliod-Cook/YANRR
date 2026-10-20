@@ -81,7 +81,6 @@ export const AppearanceScreen = () => {
     "showUnreadCountViewAndSubscriptionMobile",
   )
   const showUnreadCountBadgeMobile = useUISettingKey("showUnreadCountBadgeMobile")
-  const hideExtraBadge = useUISettingKey("hideExtraBadge")
   const thumbnailRatio = useUISettingKey("thumbnailRatio")
 
   // Font scaling settings
@@ -164,18 +163,6 @@ export const AppearanceScreen = () => {
 
       <GroupedInsetListSectionHeader label={t("appearance.subscriptions")} marginSize="small" />
       <GroupedInsetListCard>
-        <GroupedInsetListCell
-          label={t("appearance.hide_extra_badge.label")}
-          description={t("appearance.hide_extra_badge.description_mobile")}
-        >
-          <Switch
-            size="sm"
-            value={hideExtraBadge}
-            onValueChange={(val) => {
-              setUISetting("hideExtraBadge", val)
-            }}
-          />
-        </GroupedInsetListCell>
         <GroupedInsetListCell
           label={t("appearance.thumbnail_ratio.title")}
           description={t("appearance.thumbnail_ratio.description")}

@@ -19,8 +19,6 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu/dropdown-menu"
 import { useFeature } from "~/hooks/biz/useFeature"
-import { UrlBuilder } from "~/lib/url-builder"
-import { usePresentUserProfileModal } from "~/modules/profile/hooks"
 import { useSettingModal } from "~/modules/settings/modal/use-setting-modal-hack"
 import { signOut, useSession } from "~/queries/auth"
 
@@ -37,7 +35,6 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
   const whoami = useWhoami()
   const user = session?.user ?? whoami
   const settingModalPresent = useSettingModal()
-  const presentUserProfile = usePresentUserProfileModal("dialog")
   const { t } = useTranslation()
   const aiEnabled = useFeature("ai")
   const [dropdown, setDropdown] = useState(false)
@@ -91,13 +88,6 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
             <EllipsisHorizontalTextWithTooltip className="mx-auto max-w-[20ch] truncate text-lg">
               {user?.name}
             </EllipsisHorizontalTextWithTooltip>
-            {!!user?.handle && (
-              <a href={UrlBuilder.profile(user.handle)} target="_blank" className="block">
-                <EllipsisHorizontalTextWithTooltip className="mt-0.5 truncate text-xs font-medium text-zinc-500">
-                  @{user.handle}
-                </EllipsisHorizontalTextWithTooltip>
-              </a>
-            )}
           </div>
         </DropdownMenuLabel>
 
@@ -115,17 +105,6 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
           </DropdownMenuItem>
         )}
 
-        <DropdownMenuItem
-          className="pl-3"
-          onClick={() => {
-            presentUserProfile(user?.id)
-          }}
-          icon={<i className="i-mgc-user-3-cute-re" />}
-        >
-          {t("user_button.profile")}
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator />
         <DropdownMenuItem
           className="pl-3"
           data-testid="profile-menu-preferences"

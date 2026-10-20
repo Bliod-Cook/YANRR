@@ -23,7 +23,6 @@ declare module "@follow/utils/event-bus" {
     "subscription:previous": never
     "subscription:toggle-folder-collapse": never
     "subscription:mark-all-as-read": BizRouteParams
-    "subscription:open-in-browser": never
     "subscription:open-site-in-browser": never
   }
 }
@@ -165,16 +164,6 @@ export const useRegisterSubscriptionCommands = () => {
       },
     },
     {
-      id: COMMAND_ID.subscription.openInBrowser,
-      label: {
-        title: t("command.subscription.open_in_browser.title"),
-      },
-      category,
-      run: () => {
-        EventBus.dispatch(COMMAND_ID.subscription.openInBrowser)
-      },
-    },
-    {
       id: COMMAND_ID.subscription.openSiteInBrowser,
       label: {
         title: t("command.subscription.open_site_in_browser.title"),
@@ -247,11 +236,6 @@ type MarkAllAsReadCommand = Command<{
   fn: () => void
 }>
 
-type OpenInBrowserCommand = Command<{
-  id: typeof COMMAND_ID.subscription.openInBrowser
-  fn: () => void
-}>
-
 type OpenSiteInBrowserCommand = Command<{
   id: typeof COMMAND_ID.subscription.openSiteInBrowser
   fn: () => void
@@ -270,5 +254,4 @@ export type SubscriptionCommand =
   | PreviousSubscriptionCommand
   | ToggleFolderCollapseCommand
   | MarkAllAsReadCommand
-  | OpenInBrowserCommand
   | OpenSiteInBrowserCommand

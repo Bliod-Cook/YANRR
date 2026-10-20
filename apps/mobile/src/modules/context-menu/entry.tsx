@@ -12,10 +12,7 @@ import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { Platform, Share, View } from "react-native"
 
-import {
-  getHidePrivateSubscriptionsInTimeline,
-  useEffectiveEntrySortOrder,
-} from "@/src/atoms/settings/general"
+import { useEffectiveEntrySortOrder } from "@/src/atoms/settings/general"
 import { EntryContentWebView } from "@/src/components/native/webview/EntryContentWebView"
 import { WebViewManager } from "@/src/components/native/webview/webview-manager"
 import { ContextMenu } from "@/src/components/ui/context-menu"
@@ -113,7 +110,6 @@ export const EntryItemContextMenu = ({
                     position: "above",
                     sortOrder,
                   }),
-                  excludePrivate: getHidePrivateSubscriptionsInTimeline(),
                 })
               }}
             >
@@ -160,7 +156,6 @@ export const EntryItemContextMenu = ({
                     position: "below",
                     sortOrder,
                   }),
-                  excludePrivate: getHidePrivateSubscriptionsInTimeline(),
                 })
               }}
             >

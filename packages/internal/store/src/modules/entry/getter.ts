@@ -24,20 +24,13 @@ export const getHasEntrySelector = (state: StateType) => (id: string) => {
   return !!state.data[id]
 }
 
-export const getEntryIdsByViewSelector =
-  (state: StateType) => (view: FeedViewType, excludePrivate: boolean | undefined) => {
-    const ids = state.entryIdByView[view]
-    if (!ids) return null
-    return Array.from(ids)
-      .filter((id) => {
-        const subscription = getSubscriptionByEntryId(id)
-        if ((excludePrivate && subscription?.isPrivate) || subscription?.hideFromTimeline) {
-          return false
-        }
-        return true
-      })
-      .sort((a, b) => sortEntryIdsByPublishDate(a, b))
-  }
+export const getEntryIdsByViewSelector = (state: StateType) => (view: FeedViewType) => {
+  const ids = state.entryIdByView[view]
+  if (!ids) return null
+  return Array.from(ids)
+    .filter((id) => !getSubscriptionByEntryId(id)?.hideFromTimeline)
+    .sort((a, b) => sortEntryIdsByPublishDate(a, b))
+}
 
 export const getEntryIdsByFeedIdSelector =
   (state: StateType) => (feedId: string | undefined | null) => {

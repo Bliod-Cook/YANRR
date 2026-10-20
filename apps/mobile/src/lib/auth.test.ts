@@ -31,7 +31,6 @@ vi.mock("@better-auth/expo/client", () => ({
 vi.mock("better-auth/react", () => ({
   createAuthClient: () => ({ signOut: mocks.authSignOut }),
 }))
-vi.mock("@follow/shared/auth", () => ({ baseAuthPlugins: [] }))
 vi.mock("@follow/store/sync/account", () => ({
   invalidateSessionUser: mocks.invalidateSessionUser,
   onLocalDataOfAnotherAccount: vi.fn(),

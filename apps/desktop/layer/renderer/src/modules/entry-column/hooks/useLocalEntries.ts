@@ -41,9 +41,6 @@ export const useLocalEntries = ({
   pageSize = 30,
 }: UseLocalEntriesOptions = {}): UseEntriesReturn => {
   const unreadOnly = useGeneralSettingKey("unreadOnly")
-  const hidePrivateSubscriptionsInTimeline = useGeneralSettingKey(
-    "hidePrivateSubscriptionsInTimeline",
-  )
   const savedSortOrder = useGeneralSettingKey("timelineSortOrder")
   const effectiveUnreadOnly = unreadOnly && !isPreview
   const effectiveSortOrder = getEffectiveEntrySortOrder({
@@ -56,7 +53,7 @@ export const useLocalEntries = ({
     feedId,
     view,
   })
-  const entryIdsByView = useEntryIdsByView(view, hidePrivateSubscriptionsInTimeline)
+  const entryIdsByView = useEntryIdsByView(view)
   const entryIdsByCollections = useCollectionEntryList(view)
   const entryIdsByFeedId = useEntryIdsByFeedId(feedId)
   const entryIdsByCategory = useEntryIdsByFeedIds(folderIds)

@@ -48,7 +48,6 @@ import { useColor } from "@/src/theme/colors"
 const formSchema = z.object({
   view: z.coerce.number(),
   category: z.string().nullable().optional(),
-  isPrivate: z.boolean().optional(),
   hideFromTimeline: z.boolean().optional(),
   title: z.string().optional(),
 })
@@ -136,7 +135,6 @@ function FollowImpl(props: { feedId: string; defaultView?: FeedViewType }) {
   const defaultFormValues = useMemo(() => {
     return {
       category: subscription?.category ?? undefined,
-      isPrivate: subscription?.isPrivate ?? undefined,
       hideFromTimeline: subscription?.hideFromTimeline ?? undefined,
       title: subscription?.title ?? undefined,
       view: subscription?.view ?? defaultView,
@@ -166,7 +164,6 @@ function FollowImpl(props: { feedId: string; defaultView?: FeedViewType }) {
       url: feed?.url,
       view: values.view,
       category: values.category ?? "",
-      isPrivate: values.isPrivate ?? false,
       hideFromTimeline: values.hideFromTimeline,
       title: values.title ?? "",
       feedId: feed?.id,
@@ -345,22 +342,6 @@ function FollowImpl(props: { feedId: string; defaultView?: FeedViewType }) {
                   onChangeText={onChange}
                   value={value || ""}
                   ref={ref}
-                />
-              )}
-            />
-          </View>
-
-          <View>
-            <Controller
-              name="isPrivate"
-              control={form.control}
-              render={({ field: { onChange, value } }) => (
-                <FormSwitch
-                  size="sm"
-                  value={value}
-                  label={t("subscription_form.private_follow")}
-                  description={t("subscription_form.private_follow_description")}
-                  onValueChange={onChange}
                 />
               )}
             />

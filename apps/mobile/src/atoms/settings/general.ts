@@ -50,11 +50,6 @@ export function useHideAllReadSubscriptions() {
   return hideAllReadSubscriptions && unreadOnly
 }
 
-// Mark-all-read leaves the entries of private subscriptions alone when the timeline hides them
-export function getHidePrivateSubscriptionsInTimeline() {
-  return getGeneralSettings().hidePrivateSubscriptionsInTimeline
-}
-
 export function useEffectiveEntrySortOrder({ isTimelineSource }: { isTimelineSource: boolean }) {
   const unreadOnly = useGeneralSettingKey("unreadOnly")
   const sortOrder = useGeneralSettingKey("timelineSortOrder")
@@ -73,9 +68,6 @@ export function useFetchEntriesSettings({
   isTimelineSource: boolean
   unreadOnlyEnabled?: boolean
 }): FetchEntriesPropsSettings {
-  const hidePrivateSubscriptionsInTimeline = useGeneralSettingKey(
-    "hidePrivateSubscriptionsInTimeline",
-  )
   const savedUnreadOnly = useGeneralSettingKey("unreadOnly")
   const unreadOnly = unreadOnlyEnabled && savedUnreadOnly
   const savedSortOrder = useGeneralSettingKey("timelineSortOrder")
@@ -86,10 +78,9 @@ export function useFetchEntriesSettings({
   })
   return useMemo(
     () => ({
-      hidePrivateSubscriptionsInTimeline,
       unreadOnly,
       sortOrder,
     }),
-    [hidePrivateSubscriptionsInTimeline, sortOrder, unreadOnly],
+    [sortOrder, unreadOnly],
   )
 }

@@ -53,7 +53,6 @@ export const getUnreadScopeIds = (scope: UnreadListScope): string[] | undefined 
       views.flatMap((view) =>
         getSubscribedFeedIdAndInboxHandlesByView({
           view,
-          excludePrivate: scope.excludePrivate === true,
           // Hidden subscriptions are left out of the timeline by the server as well.
           excludeHidden: true,
         }),

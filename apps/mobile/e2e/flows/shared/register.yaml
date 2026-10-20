@@ -36,8 +36,6 @@ appId: is.follow
           id: onboarding-next
       - tapOn:
           id: onboarding-next
-      - tapOn:
-          id: onboarding-next
 - extendedWaitUntil:
     visible:
       id: timeline-view-articles

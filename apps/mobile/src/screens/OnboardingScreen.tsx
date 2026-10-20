@@ -13,11 +13,10 @@ import type { NavigationControllerView } from "../lib/navigation/types"
 import { markOnboardingFinished } from "../lib/onboarding"
 import { queryClient } from "../lib/query-client"
 import { StepFinished } from "../modules/onboarding/step-finished"
-import { StepInterests } from "../modules/onboarding/step-interests"
 import { StepPreferences } from "../modules/onboarding/step-preferences"
 import { StepWelcome } from "../modules/onboarding/step-welcome"
 
-const ONBOARDING_STEPS = [1, 2, 3, 4]
+const ONBOARDING_STEPS = [1, 2, 3]
 
 export const OnboardingScreen: NavigationControllerView = () => {
   const { t } = useTranslation("common")
@@ -65,8 +64,7 @@ export const OnboardingScreen: NavigationControllerView = () => {
         {/* Content */}
         {currentStep === 1 && <StepWelcome />}
         {currentStep === 2 && <StepPreferences />}
-        {currentStep === 3 && <StepInterests />}
-        {currentStep === 4 && <StepFinished />}
+        {currentStep === 3 && <StepFinished />}
       </Animated.View>
 
       {/* Navigation buttons */}

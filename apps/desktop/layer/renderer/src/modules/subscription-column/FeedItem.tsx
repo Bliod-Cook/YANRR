@@ -1,6 +1,5 @@
 import { useGlobalFocusableScopeSelector } from "@follow/components/common/Focusable/hooks.js"
 import { useMobile } from "@follow/components/hooks/useMobile.js"
-import { OouiUserAnonymous } from "@follow/components/icons/OouiUserAnonymous.jsx"
 import { Button } from "@follow/components/ui/button/index.js"
 import {
   Tooltip,
@@ -34,7 +33,6 @@ import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { useBatchUpdateSubscription } from "~/hooks/biz/useSubscriptionActions"
 import { useContextMenu } from "~/hooks/common/useContextMenu"
 import { getNewIssueUrl } from "~/lib/issues"
-import { UrlBuilder } from "~/lib/url-builder"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { FeedTitle } from "~/modules/feed/feed-title"
 import { getPreferredTitle } from "~/store/feed/hooks"
@@ -225,9 +223,6 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
     }),
   })
   const follow = useFollow()
-  const handleDoubleClick = useEventCallback(() => {
-    window.open(UrlBuilder.shareFeed(feedId, view), "_blank")
-  })
 
   if (!feed) return null
 
@@ -255,7 +250,6 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
         className,
       )}
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
       {...contextMenuProps}
     >
       <div className={cn("flex min-w-0 items-center", showFeedErrorIndicator && "text-red")}>
@@ -265,16 +259,6 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
           <ErrorTooltip errorAt={feed.errorAt} errorMessage={feed.errorMessage}>
             <i className="i-mingcute-close-circle-fill ml-1 shrink-0 text-base" />
           </ErrorTooltip>
-        )}
-        {subscription?.isPrivate && !isOnboardingFeed && (
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger aria-label={t("feed_item.not_publicly_visible")}>
-              <OouiUserAnonymous className="ml-1 shrink-0 text-base" />
-            </TooltipTrigger>
-            <TooltipPortal>
-              <TooltipContent>{t("feed_item.not_publicly_visible")}</TooltipContent>
-            </TooltipPortal>
-          </Tooltip>
         )}
       </div>
       {isOnboardingFeed && (
@@ -346,7 +330,7 @@ const ListItemImpl: Component<ListItemProps> = ({
   const list = useListById(listId)
 
   const isActive = useRouteParamsSelector((routerParams) => routerParams.listId === listId)
-  const items = useListActions({ listId, view })
+  const items = useListActions({ listId })
 
   const when = useGlobalFocusableScopeSelector(FocusablePresets.isSubscriptionList)
   useContextMenuActionShortCutTrigger(items, when && isActive)
@@ -354,7 +338,6 @@ const ListItemImpl: Component<ListItemProps> = ({
   const listUnread = useUnreadByListId(listId)
 
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
-  const subscription = useSubscriptionByFeedId(listId)!
   const navigate = useNavigateEntry()
 
   // Use current route view for navigation to stay in current view (e.g., All view)
@@ -384,9 +367,6 @@ const ListItemImpl: Component<ListItemProps> = ({
     }),
   })
   const follow = useFollow()
-  const handleDoubleClick = useEventCallback(() => {
-    window.open(UrlBuilder.shareList(listId, view), "_blank")
-  })
 
   if (!list) return null
   return (
@@ -397,7 +377,6 @@ const ListItemImpl: Component<ListItemProps> = ({
       data-active={isActive || isContextMenuOpen}
       className={cn(feedColumnStyles.item, "py-1 pl-2.5", className)}
       onClick={handleNavigate}
-      onDoubleClick={handleDoubleClick}
       {...contextMenuProps}
     >
       <div className="flex min-w-0 flex-1 items-center">
@@ -405,17 +384,6 @@ const ListItemImpl: Component<ListItemProps> = ({
         <EllipsisHorizontalTextWithTooltip className="truncate">
           {getPreferredTitle(list)}
         </EllipsisHorizontalTextWithTooltip>
-
-        {subscription?.isPrivate && (
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger aria-label={t("feed_item.not_publicly_visible")}>
-              <OouiUserAnonymous className="ml-1 shrink-0 text-base" />
-            </TooltipTrigger>
-            <TooltipPortal>
-              <TooltipContent>{t("feed_item.not_publicly_visible")}</TooltipContent>
-            </TooltipPortal>
-          </Tooltip>
-        )}
       </div>
       {isPreview ? (
         <Button

@@ -9,7 +9,6 @@ import { toast } from "sonner"
 
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
 import { copyImageToClipboard } from "~/lib/clipboard"
-import { UrlBuilder } from "~/lib/url-builder"
 
 import { GlassButton } from "./GlassButton"
 
@@ -362,10 +361,9 @@ export function SharePosterModal({ selectedText, entryId }: SharePosterModalProp
   const handleShareToX = useCallback(() => {
     if (!entry) return
     const text = selectedText.length > 200 ? `${selectedText.slice(0, 200)}...` : selectedText
-    const shareUrl = UrlBuilder.shareEntry(entryId)
-    const intentUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`
-    window.open(intentUrl, "_blank")
-  }, [entry, selectedText, entryId])
+    const url = entry.url ? `&url=${encodeURIComponent(entry.url)}` : ""
+    window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(text)}${url}`, "_blank")
+  }, [entry, selectedText])
 
   return (
     <div className="container center size-full" onClick={(e) => e.stopPropagation()}>

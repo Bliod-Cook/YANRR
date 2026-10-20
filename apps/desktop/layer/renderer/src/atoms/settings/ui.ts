@@ -39,7 +39,6 @@ export const uiLocalOnlyKeys: (keyof UISettings)[] = [
 ]
 
 export const enhancedUISettingKeys = new Set<keyof UISettings>([
-  "hideExtraBadge",
   "codeHighlightThemeLight",
   "codeHighlightThemeDark",
   "dateFormat",

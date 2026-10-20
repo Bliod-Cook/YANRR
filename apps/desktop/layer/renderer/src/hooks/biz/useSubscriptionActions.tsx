@@ -47,7 +47,6 @@ export const useDeleteSubscription = ({ onSuccess }: { onSuccess?: () => void } 
             listId: feed.type === "list" ? feed.id : undefined,
             view: subscription.view,
             category: subscription.category,
-            isPrivate: subscription.isPrivate,
             // The server looks a feed id up before a list id, so a list must not send one
             feedId: feed.type === "feed" ? feed.id : undefined,
             // The custom title, or none so the feed keeps following its own title

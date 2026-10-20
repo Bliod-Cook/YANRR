@@ -1,6 +1,4 @@
 import { expoClient, storageAdapter } from "@better-auth/expo/client"
-import type { BaseAuthPlugins } from "@follow/shared/auth"
-import { baseAuthPlugins } from "@follow/shared/auth"
 import { invalidateSessionUser, onLocalDataOfAnotherAccount } from "@follow/store/sync/account"
 import { isNewUserQueryKey } from "@follow/store/user/constants"
 import { whoamiQueryKey } from "@follow/store/user/hooks"
@@ -63,7 +61,6 @@ const refreshSessionQueries = () =>
   ])
 
 type MobileAuthPlugins = [
-  ...BaseAuthPlugins,
   ReturnType<typeof createMobileAuthCookieSyncPlugin>,
   ReturnType<typeof expoClient>,
 ]
@@ -134,7 +131,6 @@ const authCookieStorage = createSessionAwareAuthCookieStorage({
 const expoCookieStorage = storageAdapter(authCookieStorage)
 
 const plugins = [
-  ...baseAuthPlugins,
   createMobileAuthCookieSyncPlugin({
     cookieKey,
     storage: authCookieStorage,
