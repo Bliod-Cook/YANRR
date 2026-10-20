@@ -33,7 +33,7 @@ describe("auth cookies", () => {
       {
         name: "better-auth.session_token",
         value: "legacy-token",
-        domain: ".api.folo.is",
+        domain: ".api.example.com",
         hostOnly: false,
         path: "/",
         secure: true,
@@ -41,7 +41,7 @@ describe("auth cookies", () => {
       {
         name: "__Secure-better-auth.session_token",
         value: "domain-token",
-        domain: ".api.folo.is",
+        domain: ".api.example.com",
         hostOnly: false,
         path: "/",
         secure: true,
@@ -49,7 +49,7 @@ describe("auth cookies", () => {
       {
         name: "__Secure-better-auth.session_token",
         value: "host-token.signature",
-        domain: "api.folo.is",
+        domain: "api.example.com",
         hostOnly: true,
         path: "/",
         secure: true,
@@ -68,7 +68,7 @@ describe("auth cookies", () => {
     const get = vi.fn().mockResolvedValue([])
 
     await persistManagedAuthCookiesFromSetCookieHeader({
-      apiURL: "https://api.folo.is",
+      apiURL: "https://api.example.com",
       session: {
         cookies: { get, set, remove },
       } as unknown as Session,
@@ -80,7 +80,7 @@ describe("auth cookies", () => {
 
     expect(set).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: "https://api.folo.is",
+        url: "https://api.example.com",
         name: "better-auth.session_data",
         value: "session-data",
         path: "/",
@@ -101,7 +101,7 @@ describe("auth cookies", () => {
     const get = vi.fn().mockResolvedValue([])
 
     await persistManagedAuthCookiesFromSetCookieHeader({
-      apiURL: "https://api.folo.is",
+      apiURL: "https://api.example.com",
       session: {
         cookies: { get, set, remove },
       } as unknown as Session,
@@ -124,7 +124,7 @@ describe("auth cookies", () => {
     const get = vi.fn().mockResolvedValue([])
 
     await persistManagedAuthCookiesFromSetCookieHeader({
-      apiURL: "https://api.folo.is",
+      apiURL: "https://api.example.com",
       session: {
         cookies: { get, set, remove },
       } as unknown as Session,
@@ -145,7 +145,7 @@ describe("auth cookies", () => {
       {
         name: "better-auth.session_token",
         value: "legacy-token",
-        domain: ".api.folo.is",
+        domain: ".api.example.com",
         hostOnly: false,
         path: "/",
         secure: true,
@@ -154,7 +154,7 @@ describe("auth cookies", () => {
       {
         name: "__Secure-better-auth.session_token",
         value: "domain-token",
-        domain: ".api.folo.is",
+        domain: ".api.example.com",
         hostOnly: false,
         path: "/",
         secure: true,
@@ -163,7 +163,7 @@ describe("auth cookies", () => {
       {
         name: "__Secure-better-auth.session_token",
         value: "host-token.signature",
-        domain: "api.folo.is",
+        domain: "api.example.com",
         hostOnly: true,
         path: "/",
         secure: true,
@@ -172,18 +172,18 @@ describe("auth cookies", () => {
     ])
 
     await dedupeManagedAuthCookies({
-      apiURL: "https://api.folo.is",
+      apiURL: "https://api.example.com",
       session: {
         cookies: { get, remove },
       } as unknown as Session,
     })
 
     expect(remove).toHaveBeenCalledWith(
-      "https://__folo_cookie_cleanup__.api.folo.is/",
+      "https://__yannr_cookie_cleanup__.api.example.com/",
       "better-auth.session_token",
     )
     expect(remove).toHaveBeenCalledWith(
-      "https://__folo_cookie_cleanup__.api.folo.is/",
+      "https://__yannr_cookie_cleanup__.api.example.com/",
       "__Secure-better-auth.session_token",
     )
     expect(remove).toHaveBeenCalledTimes(2)

@@ -4,7 +4,6 @@ import { cp, readdir } from "node:fs/promises"
 import { FuseV1Options, FuseVersion } from "@electron/fuses"
 import { MakerDeb } from "@electron-forge/maker-deb"
 import { MakerDMG } from "@electron-forge/maker-dmg"
-import { MakerPKG } from "@electron-forge/maker-pkg"
 import { MakerSquirrel } from "@electron-forge/maker-squirrel"
 import { MakerZIP } from "@electron-forge/maker-zip"
 import { FusesPlugin } from "@electron-forge/plugin-fuses"
@@ -15,10 +14,7 @@ import path, { resolve } from "pathe"
 import { rimraf, rimrafSync } from "rimraf"
 
 const ResolvedMakerAppImage: typeof MakerAppImage = (MakerAppImage as any).default || MakerAppImage
-const platform = process.argv.find((arg) => arg.startsWith("--platform"))?.split("=")[1]
 const mode = process.argv.find((arg) => arg.startsWith("--mode"))?.split("=")[1]
-const isMicrosoftStore =
-  process.argv.find((arg) => arg.startsWith("--ms"))?.split("=")[1] === "true"
 
 const isStaging = mode === "staging"
 
@@ -72,7 +68,7 @@ async function cleanSources(buildPath, _electronVersion, platform, _arch, callba
   // folders & files to be included in the app
   const appItems = new Set(["dist", "node_modules", "package.json", "resources"])
 
-  if (platform === "darwin" || platform === "mas") {
+  if (platform === "darwin") {
     const frameworkResourcePath = resolve(
       buildPath,
       "../../Frameworks/Electron Framework.framework/Versions/A/Resources",
@@ -128,19 +124,15 @@ const ignorePattern = new RegExp(`^/node_modules/(?!(?:${keepModulePattern})(?:/
 
 const config: ForgeConfig = {
   packagerConfig: {
-    name: isStaging ? "Folo Staging" : "Folo",
+    name: isStaging ? "Yannr Staging" : "Yannr",
     appCategoryType: "public.app-category.news",
     buildVersion: process.env.BUILD_VERSION || undefined,
-    appBundleId: "is.follow",
+    appBundleId: "io.github.bliodcook.yannr",
     icon: isStaging ? "resources/icon-staging" : "resources/icon",
     protocols: [
       {
-        name: "Folo",
-        schemes: ["follow"],
-      },
-      {
-        name: "Folo",
-        schemes: ["folo"],
+        name: "Yannr",
+        schemes: ["yannr"],
       },
     ],
 
@@ -156,20 +148,9 @@ const config: ForgeConfig = {
       ITSAppUsesNonExemptEncryption: false,
     },
     osxSign: {
-      optionsForFile:
-        platform === "mas"
-          ? (filePath) => {
-              const entitlements = filePath.includes(".app/")
-                ? "build/entitlements.mas.child.plist"
-                : "build/entitlements.mas.plist"
-              return {
-                hardenedRuntime: false,
-                entitlements,
-              }
-            }
-          : () => ({
-              entitlements: "build/entitlements.mac.plist",
-            }),
+      optionsForFile: () => ({
+        entitlements: "build/entitlements.mac.plist",
+      }),
       keychain: process.env.OSX_SIGN_KEYCHAIN_PATH,
       identity: process.env.OSX_SIGN_IDENTITY,
       provisioningProfile: process.env.OSX_SIGN_PROVISIONING_PROFILE_PATH,
@@ -216,7 +197,7 @@ const config: ForgeConfig = {
           },
         ],
       },
-      ["darwin", "mas"],
+      ["darwin"],
     ),
     new ResolvedMakerAppImage({
       config: {
@@ -231,55 +212,27 @@ const config: ForgeConfig = {
     new MakerDeb(
       {
         options: {
-          name: isStaging ? "folo-staging" : "folo",
-          productName: isStaging ? "Folo Staging" : "Folo",
+          name: isStaging ? "yannr-staging" : "yannr",
+          productName: isStaging ? "Yannr Staging" : "Yannr",
           // must match the executable emitted by electron-packager (packagerConfig.name)
-          bin: isStaging ? "Folo Staging" : "Folo",
+          bin: isStaging ? "Yannr Staging" : "Yannr",
           genericName: "RSS Reader",
-          description: "Follow everything in one place",
-          maintainer: "Folo Team",
-          homepage: "https://github.com/RSSNext/Folo",
+          description: "Self-hosted personal RSS reader",
+          maintainer: "Bliod-Cook",
           categories: ["Network", "News"],
           section: "web",
           icon: isStaging ? "resources/icon-staging.png" : "resources/icon.png",
-          mimeType: ["x-scheme-handler/folo", "x-scheme-handler/follow"],
+          mimeType: ["x-scheme-handler/yannr"],
         },
       },
       ["linux"],
     ),
-    new MakerPKG(
-      {
-        name: "Folo",
-        keychain: process.env.KEYCHAIN_PATH,
-      },
-      ["mas"],
-    ),
-    // Only include AppX maker for Microsoft Store builds
-    ...(isMicrosoftStore
-      ? [
-          {
-            name: "@electron-forge/maker-appx",
-            platforms: ["win32"],
-            config: {
-              publisher: "CN=7CBBEB6A-9B0E-4387-BAE3-576D0ACA279E",
-              packageDisplayName: "Folo - Follow everything in one place",
-              devCert: "build/dev.pfx",
-              assets: "static/appx",
-              manifest: "build/appxmanifest.xml",
-              publisherDisplayName: "Natural Selection Labs",
-              identityName: "NaturalSelectionLabs.Follow-Yourfavoritesinoneinbo",
-              packageBackgroundColor: "#FF5C00",
-              protocol: "folo",
-            },
-          },
-        ]
-      : [
-          new MakerSquirrel({
-            name: "Folo",
-            setupIcon: isStaging ? "resources/icon-staging.ico" : "resources/icon.ico",
-            iconUrl: "https://app.folo.is/favicon.ico",
-          }),
-        ]),
+    // Without an iconUrl, Programs and Features shows the Electron icon: Squirrel downloads it at
+    // install time, and the app has no public URL to serve one from
+    new MakerSquirrel({
+      name: "Yannr",
+      setupIcon: isStaging ? "resources/icon-staging.ico" : "resources/icon.ico",
+    }),
   ],
   plugins: [
     // Fuses are used to enable/disable various Electron functionality
@@ -292,18 +245,6 @@ const config: ForgeConfig = {
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
       [FuseV1Options.OnlyLoadAppFromAsar]: true,
     }),
-  ],
-  publishers: [
-    {
-      name: "@electron-forge/publisher-github",
-      config: {
-        repository: {
-          owner: "RSSNext",
-          name: "follow",
-        },
-        draft: true,
-      },
-    },
   ],
   hooks: {
     postMake: async (_config, makeResults) => {

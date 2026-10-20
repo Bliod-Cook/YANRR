@@ -1,6 +1,6 @@
 import { PushReceiver } from "@eneris/push-receiver"
 import { callWindowExpose } from "@follow/shared/bridge"
-import { APP_PROTOCOL, DEV, LEGACY_APP_PROTOCOL } from "@follow/shared/constants"
+import { APP_ID, APP_PROTOCOL, DEV } from "@follow/shared/constants"
 import { app, nativeTheme, Notification, shell } from "electron"
 import contextMenu from "electron-context-menu"
 import path from "pathe"
@@ -52,18 +52,14 @@ class AppManagerStatic {
     // The links of the installed app, e.g. sign-in callbacks, would open this test build
     if (isTestRun) return
 
-    const protocols = [LEGACY_APP_PROTOCOL, APP_PROTOCOL]
-
-    for (const protocolName of protocols) {
-      if (process.defaultApp) {
-        if (process.argv.length >= 2) {
-          app.setAsDefaultProtocolClient(protocolName, process.execPath, [
-            path.resolve(process.argv[1]!),
-          ])
-        }
-      } else {
-        app.setAsDefaultProtocolClient(protocolName)
+    if (process.defaultApp) {
+      if (process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient(APP_PROTOCOL, process.execPath, [
+          path.resolve(process.argv[1]!),
+        ])
       }
+    } else {
+      app.setAsDefaultProtocolClient(APP_PROTOCOL)
     }
   }
 
@@ -104,8 +100,8 @@ class AppManagerStatic {
       firebase: JSON.parse(firebaseConfig),
       persistentIds: persistentIds || [],
       credentials: credentials || undefined,
-      bundleId: "is.follow",
-      chromeId: "is.follow",
+      bundleId: APP_ID,
+      chromeId: APP_ID,
     })
     logger.info("PushReceiver initialized")
 

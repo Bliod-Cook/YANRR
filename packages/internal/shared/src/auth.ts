@@ -1,9 +1,9 @@
 import type { BetterFetchOption } from "better-auth/client"
 import { createAuthClient } from "better-auth/client"
 
-export type AuthClient = ReturnType<typeof createFoloAuthClient>
+export type AuthClient = ReturnType<typeof createAppAuthClient>
 
-export const createFoloAuthClient = ({
+export const createAppAuthClient = ({
   apiURL,
   fetchOptions,
 }: {

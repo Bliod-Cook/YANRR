@@ -1,4 +1,4 @@
-import { createFoloAuthClient } from "@follow/shared/auth"
+import { createAppAuthClient } from "@follow/shared/auth"
 import { buildBetterAuthSessionTokenCookieHeader } from "@follow/shared/auth-cookie"
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { env } from "@follow/shared/env.desktop"
@@ -10,7 +10,7 @@ import { getAuthSessionToken } from "./client-session"
 
 const headers = createDesktopAPIHeaders({ version: PKG.version })
 
-export const authClient = createFoloAuthClient({
+export const authClient = createAppAuthClient({
   apiURL: env.VITE_API_URL,
   fetchOptions: {
     headers,

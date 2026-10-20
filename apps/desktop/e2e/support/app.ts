@@ -163,7 +163,7 @@ export const ensureLoginModal = async (page: Page) => {
           .catch(() => false)
         const loginDialogVisible = await page
           .locator('[role="dialog"]:visible')
-          .filter({ hasText: /Sign in to Folo|Login/ })
+          .filter({ hasText: /Sign in to|Login/ })
           .last()
           .isVisible()
           .catch(() => false)

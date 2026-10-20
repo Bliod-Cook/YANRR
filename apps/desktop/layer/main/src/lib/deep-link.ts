@@ -1,4 +1,4 @@
-import { APP_PROTOCOL, LEGACY_APP_PROTOCOL } from "@follow/shared/constants"
+import { APP_PROTOCOL } from "@follow/shared/constants"
 
 // Deep links can reach the main process before the renderer can take them: at a cold start, as
 // a launch argument on Windows and Linux or an `open-url` event on macOS, and while the main
@@ -9,10 +9,9 @@ let isRendererReady = false
 let pendingUrls: string[] = []
 let handleUrl: ((url: string) => void) | null = null
 
-const deepLinkPrefixes = [APP_PROTOCOL, LEGACY_APP_PROTOCOL].map((protocol) => `${protocol}://`)
+const deepLinkPrefix = `${APP_PROTOCOL}://`
 
-export const isDeepLink = (value: string) =>
-  deepLinkPrefixes.some((prefix) => value.toLowerCase().startsWith(prefix))
+export const isDeepLink = (value: string) => value.toLowerCase().startsWith(deepLinkPrefix)
 
 const flush = () => {
   if (!isRendererReady || !handleUrl) return

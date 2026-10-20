@@ -1,10 +1,10 @@
 {
-  "name": "Folo",
+  "name": "Yannr",
   "type": "module",
   "version": "1.16.0",
   "private": true,
-  "description": "Follow everything in one place",
-  "author": "Folo Team",
+  "description": "Self-hosted personal RSS reader",
+  "author": "Bliod-Cook",
   "homepage": "https://github.com/RSSNext",
   "repository": {
     "url": "https://github.com/RSSNext/Folo",
@@ -16,8 +16,6 @@
     "build:electron": "pnpm run build:electron-vite && electron-forge make",
     "build:electron-forge": "electron-forge make",
     "build:electron-forge:macos": "electron-forge make --arch=x64 --platform=darwin && electron-forge make --arch=arm64 --platform=darwin",
-    "build:electron-forge:mas": "electron-forge make --arch=universal --platform=mas",
-    "build:electron-forge:ms": "tsx scripts/generate-appx-manifest.ts && electron-forge make --platform=win32 --ms=true",
     "build:electron-vite": "electron-vite build",
     "build:web": "rimraf out/web && cross-env WEB_BUILD=1 vite build",
     "bump": "vv --minor",
@@ -31,19 +29,15 @@
     "e2e:install": "playwright install chromium",
     "e2e:web": "playwright test -c e2e/playwright.config.ts --project=web",
     "hotfix": "vv -c bump.hotfix.config.js --patch",
-    "publish": "electron-vite build && electron-forge publish",
     "start": "electron-vite preview"
   },
   "devDependencies": {
     "@electron-forge/cli": "7.11.2",
-    "@electron-forge/maker-appx": "7.11.2",
     "@electron-forge/maker-deb": "7.11.2",
     "@electron-forge/maker-dmg": "7.11.2",
-    "@electron-forge/maker-pkg": "7.11.2",
     "@electron-forge/maker-squirrel": "7.11.2",
     "@electron-forge/maker-zip": "7.11.2",
     "@electron-forge/plugin-fuses": "7.11.2",
-    "@electron-forge/publisher-github": "7.11.2",
     "@electron-toolkit/tsconfig": "2.0.0",
     "@follow/components": "workspace:*",
     "@follow/configs": "workspace:*",
@@ -91,5 +85,5 @@
     "workbox-build": "7.4.1",
     "workbox-window": "7.4.1"
   },
-  "productName": "Folo"
+  "productName": "Yannr"
 }

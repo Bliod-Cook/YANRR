@@ -52,7 +52,7 @@ describe("IntegrationService", () => {
   })
 
   it("saves Obsidian titles with path separators as one markdown file", async () => {
-    vaultPath = await fsp.mkdtemp(path.join(os.tmpdir(), "folo-obsidian-"))
+    vaultPath = await fsp.mkdtemp(path.join(os.tmpdir(), "yannr-obsidian-"))
     const service = new IntegrationService()
 
     await expect(
@@ -60,7 +60,7 @@ describe("IntegrationService", () => {
         url: "https://example.com",
         title: "KAWA DESIGN 少女前线2：追放 索米·雪兔献礼 1/6比例手办",
         content: "content",
-        author: "Folo",
+        author: "Yannr",
         publishedAt: "2026-05-14T04:20:44.405Z",
         vaultPath,
       }),
@@ -145,7 +145,7 @@ describe("IntegrationService", () => {
 
     it.each([
       ["logseq://x-callback-url/open?title=Test"],
-      ["my-app+folo.v2://open?title=Test"],
+      ["my-app+yannr.v2://open?title=Test"],
       ["MYAPP://open"],
       ["file-helper://open"],
     ])("permits user-defined integration scheme %s", async (customScheme) => {

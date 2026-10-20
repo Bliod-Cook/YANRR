@@ -42,7 +42,7 @@ jobs:
         run: pnpm install --frozen-lockfile --child-concurrency=1
       - name: Build web
         run: |
-          npm exec turbo run Folo#build:web
+          npm exec turbo run Yannr#build:web
       - name: Format, Lint and Typecheck
         run: |
           export NODE_OPTIONS="--max_old_space_size=16384"

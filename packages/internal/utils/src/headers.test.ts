@@ -4,9 +4,9 @@ import { createAuthRequestOriginHeaders } from "./headers"
 
 describe("createAuthRequestOriginHeaders", () => {
   test("uses the web origin for auth requests", () => {
-    expect(createAuthRequestOriginHeaders("https://app.folo.is/login?from=desktop")).toEqual({
-      Origin: "https://app.folo.is",
-      Referer: "https://app.folo.is",
+    expect(createAuthRequestOriginHeaders("https://app.example.com/login?from=desktop")).toEqual({
+      Origin: "https://app.example.com",
+      Referer: "https://app.example.com",
     })
   })
 
