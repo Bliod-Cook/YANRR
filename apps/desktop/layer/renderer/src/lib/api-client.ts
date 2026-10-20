@@ -137,7 +137,7 @@ followClient.addResponseInterceptor(async ({ response }) => {
  * process in Electron). Any HTTP status counts as an answer; the endpoint needs no session.
  */
 const probeApiReachability = async () => {
-  const request = new Request(new URL("/status/configs", env.VITE_API_URL), {
+  const request = new Request(`${env.VITE_API_URL}/status/configs`, {
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
   })

@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test"
+import { test } from "@playwright/test"
 
-import { createTestAccount, tryDeleteCurrentUser } from "../../support/account"
+import { createTestAccount } from "../../support/account"
 import {
   closeSettings,
   dismissFeedForm,
@@ -61,15 +61,6 @@ test.describe("web core flows", () => {
       await test.step("re-subscribes onboarding feed", async () => {
         await followOnboardingFeed(activePage, env)
         await dismissFeedForm(activePage)
-      })
-
-      await test.step("tries to clean up the temporary account", async () => {
-        const cleanup = await tryDeleteCurrentUser(activePage, env)
-        expect(cleanup.status).toBeGreaterThanOrEqual(-1)
-        test.info().annotations.push({
-          type: "cleanup",
-          description: `delete-user-custom status=${cleanup.status}`,
-        })
       })
     } finally {
       await loginContext?.close().catch(() => {})

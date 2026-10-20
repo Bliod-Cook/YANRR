@@ -1,7 +1,7 @@
 import type { BrowserContext } from "@playwright/test"
 import { expect, test } from "@playwright/test"
 
-import { createTestAccount, tryDeleteCurrentUser } from "../../support/account"
+import { createTestAccount } from "../../support/account"
 import {
   getActionLanguageLabel,
   loginWithCredential,
@@ -95,13 +95,6 @@ test.describe("web multi-session sync", () => {
         await expect
           .poll(async () => getActionLanguageLabel(pageA), { timeout: 15_000 })
           .toContain("English")
-      })
-
-      const cleanup = await tryDeleteCurrentUser(pageA, env)
-      expect(cleanup.status).toBeGreaterThanOrEqual(-1)
-      test.info().annotations.push({
-        type: "cleanup",
-        description: `delete-user-custom status=${cleanup.status}`,
       })
     } finally {
       await closeContextSafely(contextA)

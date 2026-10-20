@@ -1,0 +1,40 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index bf5fb898c888a9050c7309b2368bf6286796af15..bb6f9724e742a143602c9e27727229eb584c6514 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -285,7 +285,7 @@ var HttpClient = class {
+ 	* Build URL with query parameters
+ 	*/
+ 	buildURL(path, query) {
+-		const url = new URL(path, this.config.baseURL);
++		const url = new URL(`${this.config.baseURL.replace(/\/+$/, "")}${path}`);
+ 		if (query) Object.entries(query).forEach(([key, value]) => {
+ 			if (value !== void 0 && value !== null) {
+ 				if (Array.isArray(value)) value.forEach((v) => {
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 0e2372b734525abfbc7c6e912550e0953024c58c..bfc22a03359c78dd150d324f1e49bbf08e150aed 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -284,7 +284,7 @@ var HttpClient = class {
+ 	* Build URL with query parameters
+ 	*/
+ 	buildURL(path, query) {
+-		const url = new URL(path, this.config.baseURL);
++		const url = new URL(`${this.config.baseURL.replace(/\/+$/, "")}${path}`);
+ 		if (query) Object.entries(query).forEach(([key, value]) => {
+ 			if (value !== void 0 && value !== null) {
+ 				if (Array.isArray(value)) value.forEach((v) => {
+diff --git a/src/client/base.ts b/src/client/base.ts
+index 229e77843ea2c63338db920b9e74a1826e2a4976..fabd642a4b699186daeef5ca0a31d2a2730b3e80 100644
+--- a/src/client/base.ts
++++ b/src/client/base.ts
+@@ -87,7 +87,8 @@ export class HttpClient {
+     path: string,
+     query?: Record<string, string | number | boolean | string[]>,
+   ): string {
+-    const url = new URL(path, this.config.baseURL)
++    // Keeps a path in the base URL, which `new URL(path, base)` drops for an absolute path
++    const url = new URL(`${this.config.baseURL.replace(/\/+$/, "")}${path}`)
+ 
+     if (query) {
+       Object.entries(query).forEach(([key, value]) => {

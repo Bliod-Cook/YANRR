@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test"
 
-import { resolveDesktopE2EEnv } from "./support/env"
+import { FEED_SERVER_PORT, resolveDesktopE2EEnv } from "./support/env"
 
 const env = resolveDesktopE2EEnv()
 
@@ -21,18 +21,21 @@ export default defineConfig({
     video: "retain-on-failure",
     serviceWorkers: "block",
   },
-  webServer: {
-    command: "pnpm run dev:web",
-    cwd: env.desktopAppDir,
-    env: {
-      ...process.env,
-      VITE_API_URL: process.env.FOLO_E2E_WEB_DEV_API_URL ?? env.apiURL,
-      VITE_WEB_URL: process.env.FOLO_E2E_WEB_DEV_WEB_URL ?? env.webURL,
+  webServer: [
+    {
+      command: "pnpm run dev:web",
+      cwd: env.desktopAppDir,
+      url: env.webBaseURL,
+      timeout: 120_000,
+      reuseExistingServer: !process.env.CI,
     },
-    url: env.webDevServerURL,
-    timeout: 120_000,
-    reuseExistingServer: !process.env.CI,
-  },
+    {
+      command: `node e2e/support/feed-server.mjs ${FEED_SERVER_PORT}`,
+      cwd: env.desktopAppDir,
+      port: FEED_SERVER_PORT,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
   projects: [
     {
       name: "web",
@@ -40,10 +43,6 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         channel: "chromium",
-        ignoreHTTPSErrors: true,
-        launchOptions: {
-          args: ["--disable-web-security"],
-        },
       },
     },
     {

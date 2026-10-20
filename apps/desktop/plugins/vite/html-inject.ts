@@ -9,12 +9,12 @@ export function htmlInjectPlugin(env: typeof EnvType): PluginOption {
       return html.replace(
         "<!-- FOLLOW VITE BUILD INJECT -->",
         `<script id="env_injection" type="module">
-      ${function injectEnv(env: any) {
-        for (const key in env) {
-          if (env[key] === undefined) continue
-          globalThis["__followEnv"] ??= {}
-          globalThis["__followEnv"][key] = env[key]
-        }
+      ${function injectEnv(buildEnv: { VITE_API_URL?: string; VITE_WEB_URL?: string }) {
+        const runtime = globalThis as { __followEnv?: Record<string, string> }
+        const followEnv = (runtime.__followEnv ??= {})
+        // Without a build-time value, the web app talks to the server that hosts it
+        followEnv.VITE_WEB_URL ??= buildEnv.VITE_WEB_URL || window.location.origin
+        followEnv.VITE_API_URL ??= buildEnv.VITE_API_URL || `${window.location.origin}/api`
       }.toString()}
       injectEnv(${JSON.stringify({
         VITE_API_URL: env.VITE_API_URL,

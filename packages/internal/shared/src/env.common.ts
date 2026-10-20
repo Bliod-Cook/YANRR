@@ -10,9 +10,9 @@ const FIREBASE_CONFIG_DEFAULT = JSON.stringify({
 
 export const DEFAULT_VALUES = {
   PROD: {
-    API_URL: "https://api.folo.is",
+    API_URL: "http://localhost:3000/api",
     OTA_URL: "https://ota.folo.is",
-    WEB_URL: "https://app.folo.is",
+    WEB_URL: "http://localhost:3000",
     INBOXES_EMAIL: "@follow.re",
     FIREBASE_CONFIG: FIREBASE_CONFIG_DEFAULT,
     RECAPTCHA_V3_SITE_KEY: "6LeGa3csAAAAALi_WqhlWoaGaqd_kke4HRGvNE0C",
@@ -35,9 +35,9 @@ export const DEFAULT_VALUES = {
     POSTHOG_HOST: "https://us.posthog.com",
   },
   LOCAL: {
-    API_URL: "http://localhost:3000",
+    API_URL: "http://localhost:3000/api",
     OTA_URL: "http://localhost:8787",
-    WEB_URL: "http://localhost:2233",
+    WEB_URL: "http://localhost:3000",
     INBOXES_EMAIL: "@follow.re",
   },
 }
