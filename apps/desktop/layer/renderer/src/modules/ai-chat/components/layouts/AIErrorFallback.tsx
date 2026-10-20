@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 import type { FallbackRender } from "~/components/common/ErrorBoundary"
 import { attachOpenInEditor } from "~/lib/dev"
 
-import { FeedbackIssue } from "../../../../components/common/ErrorElement"
 import { parseError } from "../../../../components/errors/helper"
 
 export const AIErrorFallback: FallbackRender = (props) => {
@@ -53,11 +52,6 @@ export const AIErrorFallback: FallbackRender = (props) => {
           <Button onClick={() => window.location.reload()} variant="outline">
             {t("chat.error.reload_page")}
           </Button>
-        </div>
-
-        {/* Feedback component */}
-        <div className="mt-8 border-t border-border/40 pt-6">
-          <FeedbackIssue message={message || "AI Chat Error"} stack={stack} error={props.error} />
         </div>
       </div>
     </div>

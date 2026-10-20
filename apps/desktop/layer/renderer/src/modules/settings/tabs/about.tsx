@@ -1,10 +1,8 @@
 import { Logo } from "@follow/components/icons/logo.jsx"
 import { Wordmark } from "@follow/components/icons/wordmark.jsx"
-import { SocialMediaLinks } from "@follow/constants"
 import { MODE, ModeEnum } from "@follow/shared/constants"
 import { getCurrentEnvironment } from "@follow/utils/environment"
-import { cn } from "@follow/utils/utils"
-import PKG, { repository } from "@pkg"
+import PKG from "@pkg"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
 import { Trans, useTranslation } from "react-i18next"
@@ -13,7 +11,6 @@ import { toast } from "sonner"
 import { PlainWithAnimationModal } from "~/components/ui/modal/stacked/custom-modal"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { ipcServices } from "~/lib/client"
-import { getNewIssueUrl } from "~/lib/issues"
 import { EnvironmentDebugModalContent } from "~/modules/app/EnvironmentIndicator"
 import { AppTipModalContent } from "~/modules/app-tip"
 
@@ -144,17 +141,6 @@ export const SettingAbout = () => {
       <div className="-mx-3 space-y-1 px-2">
         <button
           type="button"
-          onClick={() => window.open(`${repository.url}/releases`, "_blank")}
-          className="group flex w-full items-center justify-between rounded-lg p-3 text-left transition-all hover:bg-fill-secondary hover:shadow-sm"
-        >
-          <div>
-            <div className="text-sm font-medium">{t("about.changelog")}</div>
-            <div className="text-xs text-text-tertiary">{t("about.changelogDescription")}</div>
-          </div>
-          <i className="i-mgc-external-link-cute-re text-base text-text-tertiary transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent" />
-        </button>
-        <button
-          type="button"
           onClick={handleOpenAiOnboarding}
           className="group flex w-full items-center justify-between rounded-lg p-3 text-left transition-all hover:bg-fill-secondary hover:shadow-sm"
         >
@@ -170,22 +156,6 @@ export const SettingAbout = () => {
       <div className="px-2">
         <h2 className="mb-4 text-sm font-semibold text-text-secondary">{t("about.resources")}</h2>
         <div className="space-y-4">
-          <p className="text-sm leading-relaxed text-text-secondary">
-            <Trans
-              ns="settings"
-              i18nKey="about.feedbackInfo"
-              values={{ appName: APP_NAME, commitSha: GIT_COMMIT_SHA.slice(0, 7).toUpperCase() }}
-              components={{
-                OpenIssueLink: (
-                  <a
-                    className="text-accent hover:underline"
-                    href={getNewIssueUrl({ template: "feature_request.yml" })}
-                    target="_blank"
-                  />
-                ),
-              }}
-            />
-          </p>
           <p className="text-sm leading-relaxed text-text-secondary">
             {t("about.projectLicense", { appName: APP_NAME })}
           </p>
@@ -207,25 +177,6 @@ export const SettingAbout = () => {
               }}
             />
           </p>
-        </div>
-      </div>
-
-      {/* Social Links */}
-      <div className="px-2">
-        <h2 className="mb-4 text-sm font-semibold text-text-secondary">{t("about.socialMedia")}</h2>
-        <div className="flex flex-wrap gap-6">
-          {SocialMediaLinks.map((link) => (
-            <a
-              href={link.url}
-              key={link.url}
-              className="flex items-center gap-2 text-sm transition-colors hover:text-accent"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <i className={cn(link.iconClassName, "text-base")} />
-              <span>{link.label}</span>
-            </a>
-          ))}
         </div>
       </div>
     </div>

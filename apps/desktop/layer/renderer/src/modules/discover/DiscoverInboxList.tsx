@@ -1,5 +1,4 @@
 import { Button } from "@follow/components/ui/button/index.js"
-import { repository } from "@pkg"
 import { useTranslation } from "react-i18next"
 
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
@@ -14,18 +13,7 @@ export function DiscoverInboxList() {
 
   return (
     <div className="mx-auto w-full">
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
-        <span>{t("discover.inbox.description")}</span>
-        <a
-          href={`${repository.url}/wiki/Inbox#webhooks`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex w-auto items-center gap-1 rounded-full border border-accent px-2 py-px text-sm text-accent"
-        >
-          <i className="i-mgc-book-6-cute-re" />
-          <span>{t("discover.inbox.webhooks_docs")}</span>
-        </a>
-      </div>
+      <div className="mb-4 text-sm text-zinc-500">{t("discover.inbox.description")}</div>
       <InboxTable />
       <div className="center mt-4 flex">
         {/* New Inbox */}

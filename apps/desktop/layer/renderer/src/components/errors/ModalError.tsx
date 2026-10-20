@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next"
 import { attachOpenInEditor } from "~/lib/dev"
 
 import type { AppErrorFallbackProps } from "../common/AppErrorBoundary"
-import { FeedbackIssue } from "../common/ErrorElement"
 import { m } from "../common/Motion"
 import { useCurrentModal } from "../ui/modal/stacked/hooks"
 import { parseError } from "./helper"
@@ -43,8 +42,6 @@ const ModalErrorFallback: FC<AppErrorFallbackProps> = (props) => {
             {t("errors_page.reload")}
           </Button>
         </div>
-
-        <FeedbackIssue message={message!} stack={stack} error={props.error} />
       </div>
     </m.div>
   )

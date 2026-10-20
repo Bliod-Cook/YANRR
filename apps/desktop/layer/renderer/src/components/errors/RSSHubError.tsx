@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 import { attachOpenInEditor } from "~/lib/dev"
 
 import type { AppErrorFallbackProps } from "../common/AppErrorBoundary"
-import { FeedbackIssue } from "../common/ErrorElement"
 import { parseError } from "./helper"
 
 const RSSHubErrorFallback: FC<AppErrorFallbackProps> = (props) => {
@@ -24,8 +23,6 @@ const RSSHubErrorFallback: FC<AppErrorFallbackProps> = (props) => {
             {attachOpenInEditor(stack)}
           </pre>
         ) : null}
-
-        <FeedbackIssue message={message!} stack={stack} error={props.error} />
       </div>
     </div>
   )

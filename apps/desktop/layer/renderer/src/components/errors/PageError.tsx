@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next"
 import { attachOpenInEditor } from "~/lib/dev"
 
 import type { AppErrorFallbackProps } from "../common/AppErrorBoundary"
-import { FeedbackIssue } from "../common/ErrorElement"
 import { parseError, useResetErrorWhenRouteChange } from "./helper"
 
 const PageErrorFallback: FC<AppErrorFallbackProps> = (props) => {
@@ -36,8 +35,6 @@ const PageErrorFallback: FC<AppErrorFallbackProps> = (props) => {
             {t("errors_page.reload")}
           </Button>
         </div>
-
-        <FeedbackIssue message={message!} stack={stack} error={props.error} />
       </div>
     </div>
   )

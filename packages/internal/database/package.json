@@ -2,13 +2,7 @@
   "name": "@follow/database",
   "type": "module",
   "private": true,
-  "author": "Folo Team",
   "license": "AGPL-3.0-only",
-  "homepage": "https://github.com/RSSNext",
-  "repository": {
-    "url": "https://github.com/RSSNext/follow",
-    "type": "git"
-  },
   "sideEffects": false,
   "exports": {
     "./*": {
