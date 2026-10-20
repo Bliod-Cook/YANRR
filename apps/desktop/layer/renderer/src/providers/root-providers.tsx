@@ -17,7 +17,6 @@ import { ModalStackProvider } from "~/components/ui/modal"
 import { jotaiStore } from "~/lib/jotai"
 import { persistConfig, queryClient } from "~/lib/query-client"
 import { FollowCommandManager } from "~/modules/command/command-manager"
-import { ReviewPromptProvider } from "~/modules/review-prompt/provider"
 
 import { ApiConnectionProvider } from "./api-connection-provider"
 import { ExtensionExposeProvider } from "./extension-expose-provider"
@@ -54,7 +53,6 @@ export const RootProviders: FC<PropsWithChildren> = ({ children }) => (
                   <StableRouterProvider />
                   <SettingSync />
                   <FollowCommandManager />
-                  <ReviewPromptProvider />
                   <ExtensionExposeProvider />
 
                   {import.meta.env.DEV && <Devtools />}
