@@ -1,5 +1,4 @@
 import { userSyncService } from "@follow/store/user/store"
-import { tracker } from "@follow/tracker"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
 import i18next from "i18next"
@@ -20,7 +19,6 @@ import { getAuthErrorMessage } from "@/src/lib/error-parser"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { Navigation } from "@/src/lib/navigation/Navigation"
 import { toast } from "@/src/lib/toast"
-import { getTokenHeaders } from "@/src/lib/token"
 import { ForgetPasswordScreen } from "@/src/screens/(modal)/ForgetPasswordScreen"
 import { TwoFactorAuthScreen } from "@/src/screens/(modal)/TwoFactorAuthScreen"
 import { accentColor } from "@/src/theme/colors"
@@ -35,13 +33,7 @@ async function onSubmit(values: FormValue) {
   return signInWithEmail(values)
 }
 
-async function signInWithEmail(
-  values: FormValue,
-  options: {
-    trackLogin?: boolean
-  } = {},
-) {
-  const { trackLogin = true } = options
+async function signInWithEmail(values: FormValue) {
   const result = formSchema.safeParse(values)
   if (!result.success) {
     const issue = result.error.issues[0]
@@ -50,15 +42,10 @@ async function signInWithEmail(
   }
 
   try {
-    const res = await signIn.email(
-      {
-        email: result.data.email,
-        password: result.data.password,
-      },
-      {
-        headers: await getTokenHeaders(),
-      },
-    )
+    const res = await signIn.email({
+      email: result.data.email,
+      password: result.data.password,
+    })
 
     if (res.error) {
       throw new Error(getAuthErrorMessage(res.error))
@@ -78,12 +65,6 @@ async function signInWithEmail(
   }
 
   await userSyncService.whoami()
-
-  if (trackLogin) {
-    tracker.userLogin({
-      type: "email",
-    })
-  }
   return true
 }
 
@@ -213,16 +194,11 @@ export function EmailSignUp() {
   })
   const submitMutation = useMutation({
     mutationFn: async (values: SignupFormValue) => {
-      const res = await signUp.email(
-        {
-          email: values.email,
-          password: values.password,
-          name: values.email.split("@")[0] ?? "",
-        },
-        {
-          headers: await getTokenHeaders(),
-        },
-      )
+      const res = await signUp.email({
+        email: values.email,
+        password: values.password,
+        name: values.email.split("@")[0] ?? "",
+      })
 
       if (res.error) {
         toast.error(getAuthErrorMessage(res.error))
@@ -230,15 +206,10 @@ export function EmailSignUp() {
       }
 
       if (!(await getCookie())) {
-        const signedIn = await signInWithEmail(
-          {
-            email: values.email,
-            password: values.password,
-          },
-          {
-            trackLogin: false,
-          },
-        )
+        const signedIn = await signInWithEmail({
+          email: values.email,
+          password: values.password,
+        })
 
         if (!signedIn) {
           return
@@ -246,9 +217,6 @@ export function EmailSignUp() {
       }
 
       toast.success(i18next.t("login.sign_up_successful"))
-      tracker.register({
-        type: "email",
-      })
       Navigation.rootNavigation.back()
     },
   })

@@ -8,7 +8,6 @@ import {
 import { registerSyncModel } from "@follow/store/sync/model-registry"
 import type { SyncAction } from "@follow/store/sync/types"
 import { whoami } from "@follow/store/user/getters"
-import { tracker } from "@follow/tracker"
 import { EventBus } from "@follow/utils/event-bus"
 import { getStorageNS } from "@follow/utils/ns"
 import { isEmptyObject, sleep } from "@follow/utils/utils"
@@ -277,10 +276,7 @@ class SettingSyncQueue {
   }
 
   private reportSyncError(stage: "flush" | "syncLocal", error: unknown) {
-    void tracker.manager.captureException(error, {
-      module: "setting_sync",
-      stage,
-    })
+    console.error(`[setting-sync] ${stage} failed`, error)
   }
 
   private disposers: (() => void)[] = []

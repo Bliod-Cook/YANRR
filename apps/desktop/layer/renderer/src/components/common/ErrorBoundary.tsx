@@ -1,4 +1,3 @@
-import { tracker } from "@follow/tracker"
 import type { PropsWithChildren, ReactNode } from "react"
 import { createElement } from "react"
 import type { FallbackProps } from "react-error-boundary"
@@ -14,35 +13,15 @@ interface ErrorBoundaryProps extends PropsWithChildren {
   fallback?: FallbackRender
   fallbackRender?: FallbackRender
   handled?: boolean
-  beforeCapture?: (scope: unknown, error: unknown) => unknown
 }
 
 const emptyFallback: FallbackRender = () => null
 
-export const ErrorBoundary = ({
-  children,
-  fallback,
-  fallbackRender,
-  beforeCapture,
-}: ErrorBoundaryProps) => {
+export const ErrorBoundary = ({ children, fallback, fallbackRender }: ErrorBoundaryProps) => {
   const renderFallback = fallbackRender ?? fallback ?? emptyFallback
-
-  const handleError = (rawError: unknown, info: { componentStack?: string | null }) => {
-    const error = rawError instanceof Error ? rawError : new Error(String(rawError))
-
-    if (beforeCapture?.(info, error) === false) {
-      return
-    }
-
-    void tracker.manager.captureException(error, {
-      source: "desktop_error_boundary",
-      component_stack: info.componentStack,
-    })
-  }
 
   return (
     <ReactErrorBoundary
-      onError={handleError}
       // Render the fallback as a component so it can use hooks (e.g. useTranslation)
       fallbackRender={(props) =>
         createElement(renderFallback, {

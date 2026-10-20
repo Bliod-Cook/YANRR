@@ -109,33 +109,6 @@ export class BootstrapManager {
         logger.error("Failed to clean up auth cookies:", error)
       }
 
-      // Bypass CORS for PostHog analytics
-      session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-        const url = new URL(details.url)
-
-        if (url.hostname === "us.i.posthog.com") {
-          const responseHeaders = details.responseHeaders || {}
-
-          responseHeaders["access-control-allow-origin"] = ["*"]
-          responseHeaders["access-control-allow-methods"] = [
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "OPTIONS",
-          ]
-          responseHeaders["access-control-allow-headers"] = ["*"]
-          responseHeaders["access-control-allow-credentials"] = ["true"]
-
-          callback({
-            cancel: false,
-            responseHeaders,
-          })
-        } else {
-          callback({ cancel: false })
-        }
-      })
-
       WindowManager.getMainWindowOrCreate()
 
       // Removing old renderer bundles can be slow, or fail on Windows when a file is in use, so it

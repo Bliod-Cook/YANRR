@@ -1,11 +1,11 @@
 import type { useTranslation } from "react-i18next"
-// eslint-disable-next-line react-hooks/rules-of-hooks, unused-imports/no-unused-vars
+// eslint-disable-next-line react-hooks/rules-of-hooks
 const { t } = useTranslation()
-// eslint-disable-next-line react-hooks/rules-of-hooks, unused-imports/no-unused-vars
+// eslint-disable-next-line react-hooks/rules-of-hooks
 const { t: settingsT } = useTranslation("settings")
-// eslint-disable-next-line react-hooks/rules-of-hooks, unused-imports/no-unused-vars
+// eslint-disable-next-line react-hooks/rules-of-hooks
 const { t: shortcutsT } = useTranslation("shortcuts")
-// eslint-disable-next-line react-hooks/rules-of-hooks, unused-imports/no-unused-vars
+// eslint-disable-next-line react-hooks/rules-of-hooks
 const { t: aiT } = useTranslation("ai")
 declare global {
   // BIZ ID
@@ -13,14 +13,11 @@ declare global {
   export type FeedId = Id
   export type EntryId = Id
 
-  export const SENTRY_RELEASE: { id: string }
   export const APP_DEV_CWD: string
   export const GIT_COMMIT_SHA: string
   export const DEBUG: boolean
   export const ELECTRON: boolean
   export interface Window {
-    SENTRY_RELEASE: typeof SENTRY_RELEASE
-
     ReactNativeWebView?: {
       postMessage: (message: string) => void
     }

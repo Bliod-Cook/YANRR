@@ -37,10 +37,6 @@ vi.mock("@follow/store/user/getters", () => ({
   whoami: () => ({ id: "user-1" }),
 }))
 
-vi.mock("@follow/tracker", () => ({
-  tracker: { manager: { captureException: vi.fn() } },
-}))
-
 // Setting changes go through `enqueue` here; the bus listens on the window, which is not here.
 vi.mock("@follow/utils/event-bus", () => ({
   EventBus: { subscribe: () => () => {} },

@@ -48,7 +48,6 @@ vi.mock("@follow/store/user/hooks", () => ({
   useIsLoggedIn: () => true,
   useUserRole: () => "user",
 }))
-vi.mock("@follow/tracker", () => ({ tracker: { subscribeModalOpened: vi.fn() } }))
 vi.mock("sonner", () => ({ toast: mocks.toast }))
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock("~/atoms/server-configs", () => ({ useIsPaymentEnabled: () => false }))

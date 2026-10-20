@@ -12,7 +12,6 @@ export const defaultGeneralSettings: GeneralSettings = {
   summary: true,
   actionLanguage: "default",
 
-  sendAnonymousData: true,
   showQuickTimeline: true,
 
   // subscription

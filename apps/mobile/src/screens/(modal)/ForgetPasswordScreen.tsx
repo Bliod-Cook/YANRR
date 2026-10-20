@@ -16,7 +16,6 @@ import { getAuthErrorMessage } from "@/src/lib/error-parser"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
 import { toast } from "@/src/lib/toast"
-import { getTokenHeaders } from "@/src/lib/token"
 
 export const ForgetPasswordScreen: NavigationControllerView = () => {
   const insets = useSafeAreaInsets()
@@ -36,14 +35,7 @@ export const ForgetPasswordScreen: NavigationControllerView = () => {
   }
   const forgetPasswordMutation = useMutation({
     mutationFn: async (email: string) => {
-      const res = await forgetPassword(
-        {
-          email,
-        },
-        {
-          headers: await getTokenHeaders(),
-        },
-      )
+      const res = await forgetPassword({ email })
       if (res.error) {
         throw new Error(getAuthErrorMessage(res.error))
       }

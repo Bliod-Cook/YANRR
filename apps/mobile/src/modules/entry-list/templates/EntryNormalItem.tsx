@@ -4,7 +4,6 @@ import { useEntry } from "@follow/store/entry/hooks"
 import { getInboxFrom } from "@follow/store/entry/utils"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useEntryTranslation } from "@follow/store/translation/hooks"
-import { tracker } from "@follow/tracker"
 import { cn, formatEstimatedMins, formatTimeToSeconds } from "@follow/utils"
 import { useRecyclingState } from "@shopify/flash-list"
 import { useEvent } from "expo"
@@ -81,10 +80,6 @@ export const EntryNormalItem = memo(
       if (entry) {
         const fullEntry = getEntry(entryId)
         WebViewManager.setEntry(fullEntry)
-        tracker.navigateEntry({
-          feedId: entry.feedId!,
-          entryId: entry.id,
-        })
         navigation.pushControllerView(EntryDetailScreen, {
           entryId,
           entryIds: extraData.entryIds ?? [],

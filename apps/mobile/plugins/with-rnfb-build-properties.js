@@ -4,7 +4,7 @@ const { mergeContents } = require("./merge-contents")
 
 const STATIC_FRAMEWORK_TAG = "follow-rnfb-static-framework"
 const RNFB_IOS_COMPAT_TAG = "follow-rnfb-ios-compat"
-const RNFB_STATIC_PODS = ["RNFBApp", "RNFBAnalytics", "RNFBMessaging", "RNFBAppCheck"]
+const RNFB_STATIC_PODS = ["RNFBApp", "RNFBMessaging"]
 
 // Finds the `end` that closes `post_install do |installer|`: the next line at the same indentation.
 // Anchoring there instead of a fixed line offset keeps the generated block inside the hook, after

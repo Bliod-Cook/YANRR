@@ -5,7 +5,6 @@ export interface GeneralSettings {
   translationMode: "bilingual" | "translation-only"
   summary: boolean
   actionLanguage: string
-  sendAnonymousData: boolean
   unreadOnly: boolean
   timelineSortOrder: "asc" | "desc"
   scrollMarkUnread: boolean

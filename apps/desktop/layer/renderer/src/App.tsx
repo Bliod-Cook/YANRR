@@ -1,6 +1,5 @@
 import { isMobile } from "@follow/components/hooks/useMobile.js"
 import { IN_ELECTRON } from "@follow/shared/constants"
-import { tracker } from "@follow/tracker"
 import { nextFrame } from "@follow/utils"
 import { readAuthRedirectError, withoutAuthRedirectError } from "@follow/utils/auth-error"
 import { cn, getOS } from "@follow/utils/utils"
@@ -55,7 +54,6 @@ const AppLayer = () => {
     // Measured once, when the app first renders its content instead of the skeleton
     if (!appIsReady) return
     const doneTime = Math.trunc(performance.now())
-    tracker.uiRenderInit(doneTime)
     appLog("App is ready", `${doneTime}ms`)
   }, [appIsReady])
 

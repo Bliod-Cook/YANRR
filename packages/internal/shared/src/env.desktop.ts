@@ -12,11 +12,8 @@ export const env = createEnv({
     VITE_WEB_URL: z.string().url().default(DEFAULT_VALUES.PROD.WEB_URL),
     VITE_API_URL: z.string().default(DEFAULT_VALUES.PROD.API_URL),
     VITE_OTA_URL: z.string().url().default(DEFAULT_VALUES.PROD.OTA_URL),
-    VITE_SENTRY_DSN: z.string().optional(),
     VITE_INBOXES_EMAIL: z.string().default(DEFAULT_VALUES.PROD.INBOXES_EMAIL),
     VITE_FIREBASE_CONFIG: z.string().default(DEFAULT_VALUES.PROD.FIREBASE_CONFIG),
-    VITE_POSTHOG_KEY: z.string().optional().default(DEFAULT_VALUES.PROD.POSTHOG_KEY),
-    VITE_POSTHOG_HOST: z.string().url().optional().default(DEFAULT_VALUES.PROD.POSTHOG_HOST),
 
     VITE_RECAPTCHA_V3_SITE_KEY: z.string().default(DEFAULT_VALUES.PROD.RECAPTCHA_V3_SITE_KEY),
   },

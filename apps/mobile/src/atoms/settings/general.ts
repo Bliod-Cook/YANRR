@@ -32,11 +32,7 @@ export const {
 } = createSettingAtom("general", createDefaultGeneralSettings)
 
 /** Device-local general settings: every other general setting syncs to the account. */
-export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = [
-  "sendAnonymousData",
-  "language",
-  "appLaunchOnStartup",
-]
+export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = ["language", "appLaunchOnStartup"]
 
 export function useActionLanguage() {
   const actionLanguage = useGeneralSettingSelector((s) => s.actionLanguage)

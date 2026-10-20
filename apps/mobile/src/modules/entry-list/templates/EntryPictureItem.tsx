@@ -4,7 +4,6 @@ import { useEntry } from "@follow/store/entry/hooks"
 import { getFeedById } from "@follow/store/feed/getter"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { useIsLoggedIn } from "@follow/store/user/hooks"
-import { tracker } from "@follow/tracker"
 import { uniqBy } from "es-toolkit/compat"
 import type { ImageSource } from "expo-image"
 import type { Ref } from "react"
@@ -57,10 +56,6 @@ export function EntryPictureItem({ id }: { id: string }) {
           if (!feed) {
             return
           }
-          tracker.navigateEntry({
-            feedId: item.feedId!,
-            entryId: id,
-          })
           runOnUI(() => {
             "worklet"
 

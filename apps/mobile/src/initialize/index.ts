@@ -3,14 +3,10 @@ import { hydrateDatabaseToStore } from "@follow/store/hydrate"
 import { ensureSyncedThroughEngine } from "@follow/store/sync/sync-status"
 import { whoami } from "@follow/store/user/getters"
 import { fetchSessionUser } from "@follow/store/user/hooks"
-import { tracker } from "@follow/tracker"
-import { nativeApplicationVersion } from "expo-application"
 
 import { migrateLegacyApiSession } from "../lib/auth-cookie-migration"
 import { applyStoredAppColorScheme } from "../lib/color-scheme"
 import { settingSyncQueue } from "../modules/settings/sync-queue"
-import { initAnalytics } from "./analytics"
-import { initializeAppCheck } from "./app-check"
 import { initBackgroundTask } from "./background"
 import { initializeDayjs } from "./dayjs"
 import { initDeviceType } from "./device"
@@ -51,18 +47,13 @@ export const initializeApp = async () => {
   initializeDayjs()
 
   await apm("hydrateSettings", hydrateSettings)
-  let dataHydratedTime = Date.now()
   await apm("hydrateDatabaseToStore", () => {
     return hydrateDatabaseToStore()
   })
-
-  dataHydratedTime = Date.now() - dataHydratedTime
   await apm("hydrateQueryClient", hydrateQueryClient)
-  await apm("initializeAppCheck", initializeAppCheck)
   runWhenIdle(() => {
     void apm("initializePlayer", initializePlayer)
   })
-  await initAnalytics()
 
   void apm("setting sync", async () => {
     await settingSyncQueue.init()
@@ -81,20 +72,8 @@ export const initializeApp = async () => {
     await settingSyncQueue.syncLocal()
   }).catch((error) => {
     console.error("setting sync failed", error)
-    void tracker.manager.captureException(error, {
-      module: "setting_sync",
-      stage: "bootstrap",
-    })
   })
   const loadingTime = Date.now() - now
-  tracker.appInit({
-    rn: true,
-    loading_time: loadingTime,
-    version: nativeApplicationVersion!,
-    data_hydrated_time: dataHydratedTime,
-    electron: false,
-    using_indexed_db: true,
-  })
 
   initBackgroundTask()
   initSyncTriggers()
