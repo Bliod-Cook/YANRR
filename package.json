@@ -3,8 +3,8 @@
   "type": "module",
   "private": true,
   "packageManager": "pnpm@12.5.1",
-  "description": "Follow everything in one place",
-  "author": "Folo Team",
+  "description": "Self-hosted personal RSS reader",
+  "author": "Bliod-Cook",
   "license": "AGPL-3.0-only",
   "scripts": {
     "build:packages": "turbo run build --filter=\"./packages/**/*\"",
@@ -20,7 +20,6 @@
     "lint": "pnpm run lint:tsl && eslint",
     "lint:fix": "eslint --fix",
     "lint:tsl": "tsslint --project apps/*/tsconfig.json",
-    "mitproxy": "bash scripts/run-proxy.sh",
     "polyfill-optimize": "pnpx nolyfill install",
     "postinstall": "pnpm run build:packages",
     "prepare": "simple-git-hooks && corepack prepare",
