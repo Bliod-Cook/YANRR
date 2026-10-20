@@ -4,7 +4,7 @@ import { validateSpotlightPattern } from "./spotlight"
 
 describe("validateSpotlightPattern", () => {
   it("accepts a keyword and a valid regex", () => {
-    expect(validateSpotlightPattern("folo", "keyword")).toEqual({ valid: true })
+    expect(validateSpotlightPattern("yannr", "keyword")).toEqual({ valid: true })
     expect(validateSpotlightPattern("(closed)", "regex")).toEqual({ valid: true })
   })
 

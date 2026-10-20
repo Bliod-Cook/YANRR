@@ -7,7 +7,7 @@ const pad = (value: number) => value.toString().padStart(2, "0")
 export const generateExportFilename = (now = new Date()) => {
   const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
   const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`
-  return `folo-actions-${date}-${time}.json`
+  return `yannr-actions-${date}-${time}.json`
 }
 
 // A bare flag group at the start, such as the (?i) of (?i)news, which sets flags for all of it

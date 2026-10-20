@@ -18,7 +18,7 @@ describe("utils", () => {
 
     // test string
     expect(isBizId("ep 1712546615000")).toBe(false)
-    expect(isBizId("又有人在微博提到 DIYgod 了")).toBe(false)
+    expect(isBizId("又有人在微博提到 RSSHub 了")).toBe(false)
 
     // test short number
     expect(isBizId("123456789")).toBe(false)

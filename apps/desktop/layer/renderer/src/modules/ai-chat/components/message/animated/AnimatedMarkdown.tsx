@@ -82,14 +82,14 @@ const createAiMessageMarkdownElementsRender = (canAnimate: boolean) => {
       return React.createElement(RelatedEntryLink, { ...props } as any)
     },
     "mention-entry": ({ node, children, ...props }: any) => (
-      <InlineFoloReference type="entry" style={ANIMATION_STYLE} {...props}>
+      <InlineEntityReference type="entry" style={ANIMATION_STYLE} {...props}>
         {children}
-      </InlineFoloReference>
+      </InlineEntityReference>
     ),
     "mention-feed": ({ node, children, ...props }: any) => (
-      <InlineFoloReference type="feed" style={ANIMATION_STYLE} {...props}>
+      <InlineEntityReference type="feed" style={ANIMATION_STYLE} {...props}>
         {children}
-      </InlineFoloReference>
+      </InlineEntityReference>
     ),
 
     text: ({ node, ...props }: any) => <span {...props}>{textAnimator(props.children)}</span>,
@@ -182,12 +182,12 @@ export const MarkdownAnimateText: React.FC<MarkdownAnimateTextProps> = ({
   )
 }
 
-type BaseInlineFoloReferenceProps = {
+type BaseInlineEntityReferenceProps = {
   type: "entry" | "feed"
   id?: string
 }
-const InlineFoloReference: React.FC<
-  BaseInlineFoloReferenceProps & {
+const InlineEntityReference: React.FC<
+  BaseInlineEntityReferenceProps & {
     children?: React.ReactNode
     className?: string
     style?: React.CSSProperties

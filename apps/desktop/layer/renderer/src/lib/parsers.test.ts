@@ -16,7 +16,7 @@ describe("parseSocialMedia", () => {
 
   it("ignores x.com routes that are not handles", () => {
     expect(parseSocialMedia("https://x.com/i/web/status/2109361546505966046")).toBeUndefined()
-    expect(parseSocialMedia("https://x.com/search?q=folo")).toBeUndefined()
+    expect(parseSocialMedia("https://x.com/search?q=yannr")).toBeUndefined()
     expect(parseSocialMedia("https://x.com/")).toBeUndefined()
   })
 
@@ -60,7 +60,7 @@ describe("isXFeed", () => {
       isXFeed({ url: "https://nitter.example/karpathy/rss", siteUrl: "https://x.com/karpathy" }),
     ).toBe(true)
     expect(
-      isXFeed({ url: "https://example.com/feed", siteUrl: "https://twitter.com/folo_is" }),
+      isXFeed({ url: "https://example.com/feed", siteUrl: "https://twitter.com/example" }),
     ).toBe(true)
     expect(
       isXFeed({

@@ -88,7 +88,7 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
         return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text
       }
 
-      const shareTitle = `${title || t("share.default_title")} - Folo`
+      const shareTitle = `${title || t("share.default_title")} - ${APP_NAME}`
       const baseText = description || title || t("share.default_description")
       const truncatedText = truncateText(baseText)
       const shareText = `${truncatedText} | ${t("share.discover_more")}`
