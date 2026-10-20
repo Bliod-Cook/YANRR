@@ -1,5 +1,4 @@
 import { Button } from "@follow/components/ui/button/index.js"
-import { tracker } from "@follow/tracker"
 import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 import { isRouteErrorResponse, useNavigate, useRouteError } from "react-router"
@@ -29,9 +28,6 @@ export function ErrorElement() {
 
   useEffect(() => {
     console.error("Error handled by React Router default ErrorBoundary:", error)
-    void tracker.manager.captureException(error, {
-      source: "desktop_router_error_element",
-    })
   }, [error])
 
   // Electron loads the app from its index.html with a hash router, so the route is reset through

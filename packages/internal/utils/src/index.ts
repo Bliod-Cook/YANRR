@@ -1,4 +1,3 @@
-export * from "./attribution"
 export * from "./bind-this"
 export * from "./cjk"
 export * from "./color"

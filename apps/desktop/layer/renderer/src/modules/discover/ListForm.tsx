@@ -18,7 +18,6 @@ import { useSubscriptionByFeedId } from "@follow/store/subscription/hooks"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
 import { whoami } from "@follow/store/user/getters"
 import { useUserRole } from "@follow/store/user/hooks"
-import { tracker } from "@follow/tracker"
 import { cn } from "@follow/utils/utils"
 import type { ListAnalyticsSchema } from "@follow-app/client-sdk"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -65,15 +64,6 @@ export const ListForm: Component<{
   const list = useListById(id)
 
   const { t } = useTranslation()
-
-  useEffect(() => {
-    if (!feedQuery.isLoading) {
-      tracker.subscribeModalOpened({
-        listId: id,
-        isError: feedQuery.isError,
-      })
-    }
-  }, [feedQuery.isLoading])
 
   return (
     <div

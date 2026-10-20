@@ -1,6 +1,5 @@
 import { persistQueryClient } from "@tanstack/react-query-persist-client"
 
-import { initializeDefaultDataSettings } from "../atoms/settings/data"
 import { initializeDefaultGeneralSettings } from "../atoms/settings/general"
 import { initializeDefaultSpotlightSettings } from "../atoms/settings/spotlight"
 import { initializeDefaultUISettings } from "../atoms/settings/ui"
@@ -17,7 +16,6 @@ declare module "@tanstack/react-query" {
 export const hydrateSettings = () => {
   initializeDefaultUISettings()
   initializeDefaultGeneralSettings()
-  initializeDefaultDataSettings()
   initializeDefaultSpotlightSettings()
 }
 export const hydrateQueryClient = () => {

@@ -2,7 +2,6 @@ import { FeedViewType } from "@follow/constants"
 import { useEntry } from "@follow/store/entry/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { useIsLoggedIn } from "@follow/store/user/hooks"
-import { tracker } from "@follow/tracker"
 import { formatDuration } from "@follow/utils"
 import { memo, useMemo } from "react"
 import { useTranslation } from "react-i18next"
@@ -51,10 +50,6 @@ export const EntryVideoItem = memo(({ id }: { id: string }) => {
             if (isLoggedIn) {
               unreadSyncService.markEntryAsRead(id)
             }
-            tracker.navigateEntry({
-              feedId: item.feedId!,
-              entryId: id,
-            })
             if (!item.url) {
               toast.error(t("entry_content.no_video_url"))
               return

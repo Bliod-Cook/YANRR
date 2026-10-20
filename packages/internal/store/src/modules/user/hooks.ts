@@ -1,6 +1,4 @@
-import { tracker } from "@follow/tracker"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect } from "react"
 
 import { api, queryClient } from "../../context"
 import type { GeneralQueryOptions } from "../../types"
@@ -28,20 +26,11 @@ export const fetchSessionUser = () =>
     staleTime: 0,
   })
 
-export const usePrefetchSessionUser = () => {
-  const query = useQuery({
+export const usePrefetchSessionUser = () =>
+  useQuery({
     queryKey: whoamiQueryKey,
     queryFn: () => userSyncService.whoami(),
   })
-
-  useEffect(() => {
-    if (query.data) {
-      const { user } = query.data
-      user && tracker.identify(user)
-    }
-  }, [query.data])
-  return query
-}
 
 export const usePrefetchUser = (userId: string | undefined) => {
   const query = useQuery({

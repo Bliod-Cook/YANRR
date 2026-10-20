@@ -80,11 +80,7 @@ export function useHideAllReadSubscriptions() {
 }
 
 /** Device-local general settings: every other general setting syncs to the account. */
-export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = [
-  "appLaunchOnStartup",
-  "sendAnonymousData",
-  "language",
-]
+export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = ["appLaunchOnStartup", "language"]
 
 export const enhancedGeneralSettingKeys = new Set<keyof GeneralSettings>([
   "groupByDate",

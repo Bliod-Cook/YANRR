@@ -1,6 +1,5 @@
 import { FeedViewType } from "@follow/constants"
 import { SubscriptionService } from "@follow/database/services/subscription"
-import { tracker } from "@follow/tracker"
 import type { WithLastSyncId } from "@follow-app/client-sdk"
 import { omit } from "es-toolkit"
 import { t } from "i18next"
@@ -616,7 +615,6 @@ class SubscriptionSyncService {
 
     if (data.feed) {
       feedActions.upsertMany([data.feed as any])
-      tracker.subscribe({ feedId: data.feed.id, view: subscription.view })
     }
 
     if (data.list) {
@@ -629,7 +627,6 @@ class SubscriptionSyncService {
           purchaseAmount: null,
         },
       ])
-      tracker.subscribe({ listId: data.list.id, view: subscription.view })
     }
 
     if (data.unread) {

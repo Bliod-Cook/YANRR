@@ -1,6 +1,5 @@
 import "@xyflow/react/dist/style.css"
 
-import { alwaysFalse } from "@follow/utils"
 import type { ReasoningUIPart, TextUIPart, ToolUIPart } from "ai"
 import * as React from "react"
 import { useTranslation } from "react-i18next"
@@ -123,7 +122,7 @@ export const AIMessageParts: React.FC<AIMessagePartsProps> = React.memo(
                 </div>
               )
               return (
-                <ErrorBoundary key={partKey} beforeCapture={alwaysFalse}>
+                <ErrorBoundary key={partKey}>
                   <React.Suspense fallback={loadingElement}>
                     <LazyAIDisplayFlowPart part={part as AIDisplayFlowTool} />
                   </React.Suspense>

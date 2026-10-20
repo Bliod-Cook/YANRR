@@ -1,12 +1,11 @@
 import { initializeDayjs } from "@follow/components/dayjs"
 import { registerGlobalContext } from "@follow/shared/bridge"
-import { DEV, ELECTRON_BUILD, IN_ELECTRON } from "@follow/shared/constants"
+import { DEV, ELECTRON_BUILD } from "@follow/shared/constants"
 import { hydrateDatabaseToStore } from "@follow/store/hydrate"
 import { onLocalDataOfAnotherAccount } from "@follow/store/sync/account"
 import { ensureSyncedThroughEngine } from "@follow/store/sync/sync-status"
 import { whoami } from "@follow/store/user/getters"
 import { fetchSessionUser } from "@follow/store/user/hooks"
-import { tracker } from "@follow/tracker"
 import { repository } from "@pkg"
 import { enableMapSet } from "immer"
 
@@ -17,7 +16,6 @@ import { ElectronCloseEvent, ElectronShowEvent } from "~/providers/invalidate-qu
 import { clearLocalDataOfAnotherAccount } from "~/store/utils/clear"
 
 import { appLog } from "../lib/log"
-import { initAnalytics } from "./analytics"
 import { registerHistoryStack } from "./history"
 import { doMigration } from "./migrates"
 import { initializeSettings } from "./settings"
@@ -42,7 +40,7 @@ export const initializeApp = async () => {
     void clearLocalDataOfAnotherAccount()
   })
 
-  const dataHydratedTime = await apm("hydrateDatabaseToStore", () => {
+  await apm("hydrateDatabaseToStore", () => {
     return hydrateDatabaseToStore({
       migrateDatabase: true,
     })
@@ -96,7 +94,6 @@ export const initializeApp = async () => {
   apm("initializeSettings", initializeSettings)
 
   await apm("i18n", initI18n)
-  await apm("initAnalytics", initAnalytics)
 
   void apm("setting sync", async () => {
     await settingSyncQueue.init()
@@ -115,22 +112,10 @@ export const initializeApp = async () => {
     await settingSyncQueue.syncLocal()
   }).catch((error) => {
     appLog("setting sync failed", error)
-    void tracker.manager.captureException(error, {
-      module: "setting_sync",
-      stage: "bootstrap",
-    })
   })
 
   const loadingTime = Date.now() - now
   appLog(`Initialize ${APP_NAME} done,`, `${loadingTime}ms`)
-
-  tracker.appInit({
-    electron: IN_ELECTRON,
-    loading_time: loadingTime,
-    data_hydrated_time: dataHydratedTime,
-    version: APP_VERSION,
-    rn: false,
-  })
 }
 
 const apm = async (label: string, fn: () => Promise<any> | any) => {

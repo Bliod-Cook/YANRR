@@ -172,7 +172,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
             // Expo SDK 55 archive builds regress with use_frameworks + prebuilt RN core.
             buildReactNativeFromSource: true,
             useFrameworks: "static",
-            forceStaticLinking: ["RNFBApp", "RNFBAnalytics", "RNFBMessaging", "RNFBAppCheck"],
+            forceStaticLinking: ["RNFBApp", "RNFBMessaging"],
             // Apps linked against the iOS 27 SDK (Xcode 27) crash at launch on iOS 27 without
             // the UIScene life cycle. Remove after upgrading to Expo SDK 58, which adopts it natively.
             enableSceneSupport: true,

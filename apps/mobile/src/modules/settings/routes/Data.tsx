@@ -2,7 +2,6 @@ import * as FileSystem from "expo-file-system/legacy"
 import { useTranslation } from "react-i18next"
 import { Alert } from "react-native"
 
-import { setDataSetting, useDataSettingKey } from "@/src/atoms/settings/data"
 import {
   NavigationBlurEffectHeaderView,
   SafeNavigationScrollView,
@@ -10,11 +9,8 @@ import {
 import {
   GroupedInsetListActionCell,
   GroupedInsetListCard,
-  GroupedInsetListCell,
   GroupedInsetListSectionHeader,
 } from "@/src/components/ui/grouped/GroupedList"
-import { Switch } from "@/src/components/ui/switch/Switch"
-import { setAnonymousDataEnabled } from "@/src/initialize/analytics"
 import { scheduleLocalDataReset } from "@/src/lib/local-data-reset"
 import { reloadApp } from "@/src/lib/reload-app"
 import { toast } from "@/src/lib/toast"
@@ -23,33 +19,14 @@ import { exportLocalDatabase, importOpml } from "../utils"
 
 export const DataScreen = () => {
   const { t } = useTranslation("settings")
-  const sendAnonymousData = useDataSettingKey("sendAnonymousData")
   return (
     <SafeNavigationScrollView
       className="bg-system-grouped-background"
       Header={<NavigationBlurEffectHeaderView title={t("titles.data_control")} />}
     >
-      <GroupedInsetListSectionHeader label={t("general.privacy")} marginSize="small" />
-
-      <GroupedInsetListCard>
-        <GroupedInsetListCell
-          label={t("general.send_anonymous_data.label")}
-          description={t("general.send_anonymous_data.description")}
-        >
-          <Switch
-            size="sm"
-            value={sendAnonymousData}
-            onValueChange={(val) => {
-              setDataSetting("sendAnonymousData", val)
-              void setAnonymousDataEnabled(val).catch(console.error)
-            }}
-          />
-        </GroupedInsetListCell>
-      </GroupedInsetListCard>
-
       {/* Data Sources */}
 
-      <GroupedInsetListSectionHeader label={t("data_control.data_sources")} />
+      <GroupedInsetListSectionHeader label={t("data_control.data_sources")} marginSize="small" />
       <GroupedInsetListCard>
         <GroupedInsetListActionCell
           onPress={importOpml}
