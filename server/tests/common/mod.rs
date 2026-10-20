@@ -187,6 +187,20 @@ pub async fn assert_error(response: Response, status: u16, code: i32) {
     assert_eq!(json(response).await["code"], code);
 }
 
+/// A JSON Feed holding `items`.
+pub fn json_feed(items: Value) -> String {
+    json!({ "version": "https://jsonfeed.org/version/1.1", "title": "Generated", "items": items })
+        .to_string()
+}
+
+/// Subscribes the signed-in user to the feed at `url` and returns its id.
+pub async fn subscribe(app: &TestApp, url: &str, form: Value) -> String {
+    let mut form = form;
+    form["url"] = url.into();
+    let created = json(app.post("/api/subscriptions", form).await).await;
+    created["feed"]["id"].as_str().unwrap().to_string()
+}
+
 pub const RSS2: &str = include_str!("../fixtures/rss2.xml");
 pub const SINGLE_ITEM_RSS: &str = r#"<rss version="2.0"><channel><title>Live</title>
     <item><guid>post-0</guid><title>Earlier post</title><link>https://example.com/posts/0</link></item>

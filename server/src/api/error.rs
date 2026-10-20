@@ -23,6 +23,7 @@ pub enum ExceptionCode {
     FeedMissingId = 2002,
     FeedFetchError = 2003,
     FeedParseError = 2004,
+    EntryNoFound = 3000,
     SettingInvalidTab = 7001,
     SettingPayloadInvalid = 7002,
 }
@@ -36,7 +37,7 @@ impl ExceptionCode {
             | Self::SettingInvalidTab
             | Self::SettingPayloadInvalid => StatusCode::BAD_REQUEST,
             Self::UnprocessableContent | Self::FeedMissingId => StatusCode::UNPROCESSABLE_ENTITY,
-            Self::NotFound | Self::FeedNoFound => StatusCode::NOT_FOUND,
+            Self::NotFound | Self::FeedNoFound | Self::EntryNoFound => StatusCode::NOT_FOUND,
             Self::AuthError => StatusCode::UNAUTHORIZED,
             Self::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         }
@@ -67,6 +68,10 @@ impl ApiError {
 
     pub fn feed_missing_id() -> Self {
         Self::new(ExceptionCode::FeedMissingId, "feedId or url required")
+    }
+
+    pub fn entry_not_found() -> Self {
+        Self::new(ExceptionCode::EntryNoFound, "Entry not found")
     }
 
     fn validation(message: String) -> Self {
