@@ -15,7 +15,6 @@ import {
   ROUTE_ENTRY_PENDING,
   ROUTE_FEED_IN_FOLDER,
   ROUTE_FEED_IN_INBOX,
-  ROUTE_FEED_IN_LIST,
   ROUTE_FEED_PENDING,
 } from "~/constants"
 
@@ -28,7 +27,6 @@ export type NavigateEntryOptions = Partial<{
   view: FeedViewType
   folderName: string | null
   inboxId: string
-  listId: string
   backPath: string
 }>
 /**
@@ -55,7 +53,7 @@ type ParsedNavigateEntryOptions = {
 }
 
 const parseNavigateEntryOptions = (options: NavigateEntryOptions): ParsedNavigateEntryOptions => {
-  const { entryId, feedId, view, folderName, inboxId, listId, timelineId } = options || {}
+  const { entryId, feedId, view, folderName, inboxId, timelineId } = options || {}
   const route = getReadonlyRoute()
   const { params } = route
   let finalFeedId = feedId || params.feedId || ROUTE_FEED_PENDING
@@ -70,10 +68,6 @@ const parseNavigateEntryOptions = (options: NavigateEntryOptions): ParsedNavigat
 
   if (folderName) {
     finalFeedId = `${ROUTE_FEED_IN_FOLDER}${folderName}`
-  }
-
-  if (listId) {
-    finalFeedId = `${ROUTE_FEED_IN_LIST}${listId}`
   }
 
   if (inboxId) {
@@ -106,7 +100,7 @@ export function getNavigateEntryPath(options: NavigateEntryOptions | ParsedNavig
 /*
  * /timeline/:timelineId/:feedId/:entryId
  * timelineId: articles | social-media | view-1 (legacy) | ...
- * feedId: xxx, folder-xxx, list-xxx, inbox-xxx
+ * feedId: xxx, folder-xxx, inbox-xxx
  * entryId: xxx
  */
 export const navigateEntry = (options: NavigateEntryOptions) => {

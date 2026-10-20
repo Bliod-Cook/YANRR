@@ -14,13 +14,10 @@ export const loader = () => {
   const uiSettings = getUISettings()
   const subscriptionState = useSubscriptionStore.getState()
 
-  const hasAudiosSubscription =
-    (subscriptionState.feedIdByView[FeedViewType.Audios]?.size ?? 0) > 0 ||
-    (subscriptionState.listIdByView[FeedViewType.Audios]?.size ?? 0) > 0
+  const hasAudiosSubscription = (subscriptionState.feedIdByView[FeedViewType.Audios]?.size ?? 0) > 0
 
   const hasNotificationsSubscription =
-    (subscriptionState.feedIdByView[FeedViewType.Notifications]?.size ?? 0) > 0 ||
-    (subscriptionState.listIdByView[FeedViewType.Notifications]?.size ?? 0) > 0
+    (subscriptionState.feedIdByView[FeedViewType.Notifications]?.size ?? 0) > 0
 
   const { visible } = computeTimelineTabLists({
     timelineTabs: uiSettings.timelineTabs,

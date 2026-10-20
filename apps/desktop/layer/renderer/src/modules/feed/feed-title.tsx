@@ -1,7 +1,6 @@
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/EllipsisWithTooltip.js"
 import type { FeedModel } from "@follow/store/feed/types"
 import type { InboxModel } from "@follow/store/inbox/types"
-import type { ListModel } from "@follow/store/list/types"
 import { cn } from "@follow/utils/utils"
 
 import { getPreferredTitle } from "~/store/feed/hooks"
@@ -13,7 +12,7 @@ export const FeedTitle = ({
   title,
   style,
 }: {
-  feed?: FeedModel | ListModel | InboxModel | null
+  feed?: FeedModel | InboxModel | null
   className?: string
   titleClassName?: string
   title?: string | null

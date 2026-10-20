@@ -91,25 +91,21 @@ class EntryServiceStatic implements Resetable {
     const [candidates, subscriptions] = await Promise.all([
       // Only what decides which entries to keep, so the content of the cleared ones isn't read
       db.query.entriesTable.findMany({
-        columns: { id: true, feedId: true, inboxHandle: true, sources: true },
+        columns: { id: true, feedId: true, inboxHandle: true },
         orderBy: (t, { desc }) => desc(t.publishedAt),
       }),
       db.query.subscriptionsTable.findMany(),
     ])
 
     const entryIdCountMap = new Map<string, number>(
-      subscriptions.map((s) => [s.listId || s.inboxId || s.feedId || "", 0] as const),
+      subscriptions.map((s) => [s.inboxId || s.feedId || "", 0] as const),
     )
 
     const idsToKeep: string[] = []
     const idsToClear: string[] = []
 
     for (const entry of candidates) {
-      const possibleIdList = [
-        ...(entry.sources?.filter((s) => s !== "feed") ?? []),
-        entry.inboxHandle,
-        entry.feedId,
-      ].filter(Boolean) as string[]
+      const possibleIdList = [entry.inboxHandle, entry.feedId].filter(Boolean) as string[]
 
       // An entry kept for one of its sources is kept even when another source is full
       let isKept = false

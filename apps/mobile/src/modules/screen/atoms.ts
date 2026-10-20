@@ -6,7 +6,6 @@ import {
   useEntryIdsByFeedId,
   useEntryIdsByFeedIds,
   useEntryIdsByInboxId,
-  useEntryIdsByListId,
   useEntryIdsByView,
 } from "@follow/store/entry/hooks"
 import { useEntryStore } from "@follow/store/entry/store"
@@ -18,7 +17,6 @@ import type {
 import { fallbackReturn, isTimelineEntriesSource } from "@follow/store/entry/utils"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useInboxById } from "@follow/store/inbox/hooks"
-import { useListById } from "@follow/store/list/hooks"
 import { getSubscriptionByCategory } from "@follow/store/subscription/getter"
 import { useSubscriptionByFeedId, useViewWithSubscription } from "@follow/store/subscription/hooks"
 import { jotaiStore } from "@follow/utils"
@@ -61,10 +59,6 @@ export type SelectedFeed =
   | {
       type: "category"
       categoryName: string
-    }
-  | {
-      type: "list"
-      listId: string
     }
   | {
       type: "inbox"
@@ -150,10 +144,6 @@ export const getFetchEntryPayload = (
       payload = {
         feedIdList: getSubscriptionByCategory({ category: selectedFeed.categoryName, view }),
       }
-      break
-    }
-    case "list": {
-      payload = { listId: selectedFeed.listId }
       break
     }
     case "inbox": {
@@ -279,18 +269,17 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
     unreadOnlyEnabled: !entryListContext.isPreview,
   })
 
-  const { feedId, feedIdList, listId, inboxId, isCollection } = payload || {}
+  const { feedId, feedIdList, inboxId, isCollection } = payload || {}
   const { sortOrder, unreadOnly } = options
 
   const entryIdsByView = useEntryIdsByView(view)
   const entryIdsByCollections = useCollectionEntryList(view)
   const entryIdsByFeedId = useEntryIdsByFeedId(feedId)
   const entryIdsByCategory = useEntryIdsByFeedIds(feedIdList)
-  const entryIdsByListId = useEntryIdsByListId(listId)
   const entryIdsByInboxId = useEntryIdsByInboxId(inboxId)
 
   const showEntriesByView =
-    !feedId && (!feedIdList || feedIdList?.length === 0) && !isCollection && !inboxId && !listId
+    !feedId && (!feedIdList || feedIdList?.length === 0) && !isCollection && !inboxId
 
   const allEntries = useEntryStore(
     useCallback(
@@ -302,7 +291,6 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
             : (getEntryIdsFromMultiplePlace(
                 entryIdsByFeedId,
                 entryIdsByCategory,
-                entryIdsByListId,
                 entryIdsByInboxId,
               ) ?? [])
 
@@ -324,7 +312,6 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
         entryIdsByCollections,
         entryIdsByFeedId,
         entryIdsByInboxId,
-        entryIdsByListId,
         entryIdsByView,
         isCollection,
         showEntriesByView,
@@ -413,7 +400,6 @@ export const useSelectedFeedTitle = () => {
   const feedSubscription = useSubscriptionByFeedId(
     selectedFeed && selectedFeed.type === "feed" ? selectedFeed.feedId : "",
   )
-  const list = useListById(selectedFeed && selectedFeed.type === "list" ? selectedFeed.listId : "")
   const inbox = useInboxById(
     selectedFeed && selectedFeed.type === "inbox" ? selectedFeed.inboxId : "",
   )
@@ -434,9 +420,6 @@ export const useSelectedFeedTitle = () => {
     }
     case "category": {
       return selectedFeed.categoryName
-    }
-    case "list": {
-      return list?.title
     }
     case "inbox": {
       return inbox?.title ?? t("words.inbox")

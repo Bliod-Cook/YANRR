@@ -2,7 +2,6 @@ import { getView } from "@follow/constants"
 import type { EntryModel } from "@follow/store/entry/types"
 import { useFeedById, usePrefetchFeed } from "@follow/store/feed/hooks"
 import { feedIconSelector } from "@follow/store/feed/selectors"
-import { useListById, usePrefetchListById } from "@follow/store/list/hooks"
 import { getSubscriptionByFeedId } from "@follow/store/subscription/getter"
 import { useTranslation } from "react-i18next"
 import { useShallow } from "zustand/shallow"
@@ -40,13 +39,11 @@ export const getPreferredTitle = (
 
 export const useFeedHeaderTitle = () => {
   const { t } = useTranslation()
-  const { feedId: currentFeedId, view, listId: currentListId } = useRouteParams()
+  const { feedId: currentFeedId, view } = useRouteParams()
 
   const feedTitle = useFeedById(currentFeedId, getPreferredTitle)
-  const listTitle = useListById(currentListId, getPreferredTitle)
 
   usePrefetchFeed(currentFeedId, { enabled: !feedTitle })
-  usePrefetchListById(currentListId, { enabled: !listTitle })
 
   switch (currentFeedId) {
     case ROUTE_FEED_PENDING: {
@@ -64,26 +61,13 @@ export const useFeedHeaderTitle = () => {
       if (currentFeedId?.startsWith(ROUTE_FEED_IN_INBOX)) {
         return currentFeedId.replace(ROUTE_FEED_IN_INBOX, "")
       }
-      return feedTitle || listTitle
+      return feedTitle
     }
   }
 }
 
 export const useFeedHeaderIcon = () => {
-  const { feedId: currentFeedId, listId: currentListId } = useRouteParams()
+  const { feedId: currentFeedId } = useRouteParams()
 
-  const feedIcon = useFeedById(currentFeedId, useShallow(feedIconSelector))
-  const listIcon = useListById(
-    currentListId,
-    useShallow((feed) => ({
-      type: feed.type,
-      ownerUserId: feed.ownerUserId,
-      id: feed.id,
-      title: feed.title,
-      url: (feed as any).url || "",
-      image: feed.image,
-    })),
-  )
-
-  return feedIcon || listIcon
+  return useFeedById(currentFeedId, useShallow(feedIconSelector))
 }

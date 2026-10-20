@@ -54,13 +54,11 @@ export function getMarkReadTimeRange({
 export function getEntriesParams({
   feedId,
   inboxId,
-  listId,
   view,
   feedIdList,
 }: {
   feedId?: number | string
   inboxId?: number | string
-  listId?: number | string
   view?: number
   feedIdList?: string[]
 }) {
@@ -70,12 +68,9 @@ export function getEntriesParams({
     isCollection?: boolean
     withContent?: boolean
     inboxId?: string
-    listId?: string
   } = {}
   if (inboxId) {
     params.inboxId = `${inboxId}`
-  } else if (listId) {
-    params.listId = `${listId}`
   } else if (feedIdList) {
     params.feedIdList = feedIdList
   } else if (feedId) {

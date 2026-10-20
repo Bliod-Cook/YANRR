@@ -263,7 +263,6 @@ const FeedInnerForm = ({
         feedId: feed.id,
         userId,
         type: "feed",
-        listId: undefined,
       } as const
 
       if (isEdit) {

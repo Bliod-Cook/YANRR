@@ -3,7 +3,6 @@ import { useMobile } from "@follow/components/hooks/useMobile.js"
 import { MotionButtonBase } from "@follow/components/ui/button/index.js"
 import { LoadingCircle } from "@follow/components/ui/loading/index.jsx"
 import { FeedViewType, getViewList } from "@follow/constants"
-import { useOwnedListByView } from "@follow/store/list/hooks"
 import {
   useSubscriptionByFeedId,
   useSubscriptionCategoryExist,
@@ -20,17 +19,14 @@ import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useTranslation } from "react-i18next"
 import { useEventCallback } from "usehooks-ts"
 
-import type { MenuItemInput } from "~/atoms/context-menu"
 import { MenuItemSeparator, MenuItemText, useShowContextMenu } from "~/atoms/context-menu"
 import { useGeneralSettingSelector, useHideAllReadSubscriptions } from "~/atoms/settings/general"
 import { ROUTE_FEED_IN_FOLDER } from "~/constants"
-import { useAddFeedToFeedList } from "~/hooks/biz/useFeedActions"
 import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { getRouteParams, useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { useContextMenu } from "~/hooks/common/useContextMenu"
 
 import { useModalStack } from "../../components/ui/modal/stacked/hooks"
-import { ListCreationModalContent } from "../settings/tabs/lists/modals"
 import { CategoryRemoveDialogContent } from "./CategoryRemoveDialogContent"
 import { CategoryUnsubscribeDialogContent } from "./CategoryUnsubscribeDialogContent"
 import { RenameCategoryForm } from "./RenameCategoryForm"
@@ -162,9 +158,6 @@ function FeedCategoryImpl({
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
   const isCategoryIsWaiting = isChangePending
 
-  const addMutation = useAddFeedToFeedList()
-
-  const listList = useOwnedListByView(view!)
   const showContextMenu = useShowContextMenu()
 
   const subscriptionCategoryExist = useSubscriptionCategoryExist(folderName)
@@ -192,38 +185,6 @@ function FeedCategoryImpl({
             requiresLogin: true,
           }),
           new MenuItemSeparator(),
-          new MenuItemText({
-            label: t("sidebar.feed_column.context_menu.add_feeds_to_list"),
-            requiresLogin: true,
-            submenu: listList
-              ?.map(
-                (list) =>
-                  new MenuItemText({
-                    label: list.title || "",
-                    click() {
-                      return addMutation.mutate({
-                        feedIds: ids,
-                        listId: list.id,
-                      })
-                    },
-                    requiresLogin: true,
-                  }) as MenuItemInput,
-              )
-              .concat(listList?.length > 0 ? [new MenuItemSeparator()] : [])
-              .concat([
-                new MenuItemText({
-                  label: t("sidebar.feed_actions.create_list"),
-                  click: () => {
-                    present({
-                      title: t("sidebar.feed_actions.create_list"),
-                      content: () => <ListCreationModalContent />,
-                    })
-                  },
-                  requiresLogin: true,
-                }),
-              ]),
-          }),
-          MenuItemSeparator.default,
           new MenuItemText({
             label: t("sidebar.feed_column.context_menu.change_to_other_view"),
             submenu: getViewList()

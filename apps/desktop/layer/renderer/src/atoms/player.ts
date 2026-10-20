@@ -5,7 +5,6 @@ import { t } from "i18next"
 import { atomWithStorage, createJSONStorage } from "jotai/utils"
 import { toast } from "sonner"
 
-import { getRouteParams } from "~/hooks/biz/useRouteParams"
 import { createAtomHooks } from "~/lib/jotai"
 
 type PlayerAtomValue = {
@@ -18,8 +17,6 @@ type PlayerAtomValue = {
   isMute?: boolean
   volume?: number
   playbackRate?: number
-  /** the listId from the route to indicate that the audio is triggered from a list */
-  listId?: string
 }
 
 const playerInitialValue: PlayerAtomValue = {
@@ -72,14 +69,11 @@ export const AudioPlayer = {
       return
     }
 
-    const routeParams = getRouteParams()
-
     setAudioPlayerAtomValue({
       ...curV,
       ...v,
       status: "loading",
       show: true,
-      listId: routeParams.listId,
     })
     const currentUrl = parseSafeUrl(this.audio.src)?.toString() ?? this.audio.src
     const newUrl = parseSafeUrl(v.src)?.toString() ?? v.src

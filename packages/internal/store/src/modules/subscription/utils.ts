@@ -8,7 +8,6 @@ export const getInboxStoreId = (inboxId: string) => `inbox/${inboxId}`
 
 export const getSubscriptionStoreId = (subscription: SubscriptionModel) => {
   if (subscription.feedId) return subscription.feedId
-  if (subscription.listId) return subscription.listId
   if (subscription.inboxId) return getInboxStoreId(subscription.inboxId)
   throw new Error("Invalid subscription")
 }
@@ -16,9 +15,6 @@ export const getSubscriptionStoreId = (subscription: SubscriptionModel) => {
 export const getSubscriptionDBId = (subscription: SubscriptionModel) => {
   if (subscription.feedId && subscription.type === "feed") {
     return `${subscription.type}/${subscription.feedId}`
-  }
-  if (subscription.listId && subscription.type === "list") {
-    return `${subscription.type}/${subscription.listId}`
   }
   if (subscription.inboxId && subscription.type === "inbox") {
     return `${subscription.type}/${subscription.inboxId}`

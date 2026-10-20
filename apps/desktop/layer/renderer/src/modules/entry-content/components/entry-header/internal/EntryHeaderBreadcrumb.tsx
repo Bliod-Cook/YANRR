@@ -3,15 +3,8 @@ import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typogra
 import { getView } from "@follow/constants"
 import { getEntry, getEntryIdsByFeedId } from "@follow/store/entry/getter"
 import { useFeedById } from "@follow/store/feed/hooks"
-import { useListById } from "@follow/store/list/hooks"
-import {
-  getFeedSubscriptionByViewSelector,
-  getListSubscriptionByViewSelector,
-} from "@follow/store/subscription/getter"
-import type {
-  useFeedSubscriptionByView,
-  useListSubscriptionByView,
-} from "@follow/store/subscription/hooks"
+import { getFeedSubscriptionByViewSelector } from "@follow/store/subscription/getter"
+import type { useFeedSubscriptionByView } from "@follow/store/subscription/hooks"
 import { useSubscriptionStore } from "@follow/store/subscription/store"
 import { cn } from "@follow/utils/utils"
 import { useForceUpdate } from "motion/react"
@@ -45,7 +38,6 @@ function ViewSubscriptionsDropdown({
 }) {
   const { t } = useTranslation()
   const feedSubsRef = useRef<ReturnType<typeof useFeedSubscriptionByView>>([])
-  const listSubsRef = useRef<ReturnType<typeof useListSubscriptionByView>>([])
   const [forceUpdate] = useForceUpdate()
 
   const handleRefreshDropDownData = useCallback(
@@ -55,10 +47,8 @@ function ViewSubscriptionsDropdown({
       // Get fresh data from store
       const state = useSubscriptionStore.getState()
       const feedSubs = getFeedSubscriptionByViewSelector(state)(view)
-      const listSubs = getListSubscriptionByViewSelector(state)(view)
 
       feedSubsRef.current = feedSubs || []
-      listSubsRef.current = listSubs || []
 
       forceUpdate()
     },
@@ -66,16 +56,14 @@ function ViewSubscriptionsDropdown({
   )
 
   const routeParams = getRouteParams()
-  const { isAllFeeds, listId, feedId } = routeParams
+  const { isAllFeeds, feedId } = routeParams
 
   // Check if there's any subscription data for this view (without causing re-render)
   // This allows initial render to show the dropdown if subscriptions exist
   const state = useSubscriptionStore.getState()
   const initialFeedSubs = getFeedSubscriptionByViewSelector(state)(view)
-  const initialListSubs = getListSubscriptionByViewSelector(state)(view)
-  const hasAnyInitial = (initialFeedSubs?.length ?? 0) + (initialListSubs?.length ?? 0) > 0
 
-  if (!hasAnyInitial) return null
+  if (!initialFeedSubs?.length) return null
 
   return (
     <DropdownMenu onOpenChange={handleRefreshDropDownData}>
@@ -101,22 +89,6 @@ function ViewSubscriptionsDropdown({
             >
               <span className="truncate">{t("words.all", { ns: "common" })}</span>
             </DropdownMenuItem>
-            {listSubsRef.current && listSubsRef.current.length > 0 && (
-              <div className="px-2 py-1 text-xs text-text-tertiary">
-                {t("words.lists", { ns: "common" })}
-              </div>
-            )}
-            {listSubsRef.current?.map((s) =>
-              s.listId ? (
-                <DropdownMenuItem
-                  checked={s.listId === listId}
-                  key={`list-${s.listId}`}
-                  onClick={() => s.listId && onNavigate({ entryId: null, listId: s.listId })}
-                >
-                  <ListNameItem listId={s.listId} />
-                </DropdownMenuItem>
-              ) : null,
-            )}
             {feedSubsRef.current && feedSubsRef.current.length > 0 && (
               <div className="px-2 py-1 text-xs text-text-tertiary">
                 {t("words.feeds", { ns: "common" })}
@@ -138,12 +110,6 @@ function ViewSubscriptionsDropdown({
       </DropdownMenuContent>
     </DropdownMenu>
   )
-}
-
-const ListNameItem = ({ listId }: { listId: string }) => {
-  const name = useListById(listId, (s) => s?.title)
-  if (!name) return null
-  return <span className="truncate">{name}</span>
 }
 
 const FeedNameItem = ({ feedId }: { feedId: string }) => {

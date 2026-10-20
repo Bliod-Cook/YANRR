@@ -16,13 +16,12 @@ export const markAllByRoute = async (
     feedId?: string | undefined
     view: FeedViewType
     inboxId?: string | undefined
-    listId?: string | undefined
 
     isAllFeeds?: boolean
   },
   time?: MarkAllFilter,
 ) => {
-  const { feedId, view, inboxId, listId, isAllFeeds } = data
+  const { feedId, view, inboxId, isAllFeeds } = data
   const folderIds = getCategoryFeedIds(feedId, view)
 
   if (!feedId) return
@@ -36,14 +35,6 @@ export const markAllByRoute = async (
     unreadSyncService.markBatchAsRead({
       filter: {
         inboxId,
-      },
-      view,
-      time,
-    })
-  } else if (listId) {
-    unreadSyncService.markBatchAsRead({
-      filter: {
-        listId,
       },
       view,
       time,

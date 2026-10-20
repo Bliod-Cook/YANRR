@@ -7,7 +7,7 @@ export type FeedListProps = {
 }
 export type SortBy = "count" | "alphabetical"
 
-export type ListListProps = {
+export type InboxListProps = {
   view: FeedViewType
   data: string[]
 }

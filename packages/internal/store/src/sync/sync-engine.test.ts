@@ -7,7 +7,6 @@ import { useCollectionStore } from "../modules/collection/store"
 import { useEntryStore } from "../modules/entry/store"
 import type { EntryModel } from "../modules/entry/types"
 import { useInboxStore } from "../modules/inbox/store"
-import { useListStore } from "../modules/list/store"
 import { useSubscriptionStore } from "../modules/subscription/store"
 import { unreadActions, unreadSyncService, useUnreadStore } from "../modules/unread/store"
 import { useUserStore } from "../modules/user/store"
@@ -28,7 +27,6 @@ const {
   subscriptionDeleteMock,
   collectionUpsertManyMock,
   collectionDeleteManyMock,
-  listDeleteMock,
   inboxDeleteByIdMock,
   entryDeleteManyMock,
   unreadUpsertManyMock,
@@ -48,7 +46,6 @@ const {
     subscriptionDeleteMock: vi.fn(async () => {}),
     collectionUpsertManyMock: vi.fn(async () => {}),
     collectionDeleteManyMock: vi.fn(async () => {}),
-    listDeleteMock: vi.fn(async () => {}),
     inboxDeleteByIdMock: vi.fn(async () => {}),
     entryDeleteManyMock: vi.fn(async () => {}),
     unreadUpsertManyMock: vi.fn(async () => {}),
@@ -97,13 +94,6 @@ vi.mock("@follow/database/services/feed", () => ({
   FEED_EXTRA_DATA_KEYS: [],
   FeedService: {
     upsertMany: vi.fn(async () => {}),
-    reset: vi.fn(async () => {}),
-  },
-}))
-vi.mock("@follow/database/services/list", () => ({
-  ListService: {
-    upsertMany: vi.fn(async () => {}),
-    deleteList: listDeleteMock,
     reset: vi.fn(async () => {}),
   },
 }))
@@ -207,7 +197,6 @@ describe("syncEngine", () => {
       entryIdByCategory: {},
       entryIdByFeed: {},
       entryIdByInbox: {},
-      entryIdByList: {},
       entryIdSet: new Set(),
     })
     useSubscriptionStore.setState((state) => ({
@@ -215,15 +204,6 @@ describe("syncEngine", () => {
       data: {},
       subscriptionIdSet: new Set(),
       feedIdByView: {
-        [FeedViewType.All]: new Set(),
-        [FeedViewType.Articles]: new Set(),
-        [FeedViewType.Audios]: new Set(),
-        [FeedViewType.Notifications]: new Set(),
-        [FeedViewType.Pictures]: new Set(),
-        [FeedViewType.SocialMedia]: new Set(),
-        [FeedViewType.Videos]: new Set(),
-      },
-      listIdByView: {
         [FeedViewType.All]: new Set(),
         [FeedViewType.Articles]: new Set(),
         [FeedViewType.Audios]: new Set(),
@@ -243,7 +223,6 @@ describe("syncEngine", () => {
       },
     }))
     useCollectionStore.setState({ collections: {} })
-    useListStore.setState({ lists: {}, listIds: [] })
     useInboxStore.setState({ inboxes: {} })
     unreadActions.upsertManyInSession([], { reset: true })
 
@@ -294,72 +273,6 @@ describe("syncEngine", () => {
 
     expect(stateMock).toHaveBeenCalledTimes(1)
     expect(syncEngine.getLastSyncId()).toBe(42)
-  })
-
-  it("applies list membership changes and list deletion", async () => {
-    seedCursor(40)
-    const { subscriptionActions } = await import("../modules/subscription/store")
-    const { listActions } = await import("../modules/list/store")
-    listActions.upsertManyInSession([
-      {
-        id: "list-1",
-        title: "Reading",
-        userId: "owner-1",
-        ownerUserId: "owner-1",
-        description: null,
-        image: null,
-        view: FeedViewType.Articles,
-        feedIds: ["feed-1"],
-        fee: 0,
-        subscriptionCount: null,
-        purchaseAmount: null,
-        type: "list",
-      },
-    ])
-    subscriptionActions.upsertManyInSession([
-      {
-        feedId: null,
-        listId: "list-1",
-        inboxId: null,
-        userId: "user-1",
-        view: FeedViewType.Articles,
-        hideFromTimeline: null,
-        title: null,
-        category: null,
-        createdAt: "2026-01-01T00:00:00.000Z",
-        type: "list",
-      },
-    ])
-    deltaMock.mockResolvedValueOnce(
-      deltaResponse([
-        createAction({
-          id: 41,
-          model: "list",
-          modelId: "list-1",
-          action: "U",
-          data: { feedIds: ["feed-1", "feed-2"], title: "Reading list" },
-        }),
-      ]),
-    )
-
-    await syncEngine.pull("interval")
-
-    expect(useListStore.getState().lists["list-1"]?.feedIds).toEqual(["feed-1", "feed-2"])
-    expect(useListStore.getState().lists["list-1"]?.title).toBe("Reading list")
-    expect(readsGetMock).toHaveBeenCalledTimes(1)
-    expect(invalidateEntriesQueryMock).toHaveBeenCalledTimes(1)
-
-    deltaMock.mockResolvedValueOnce(
-      deltaResponse([createAction({ id: 42, model: "list", modelId: "list-1", action: "D" })]),
-    )
-    await syncEngine.pull("interval")
-
-    expect(useListStore.getState().lists["list-1"]).toBeUndefined()
-    expect(useSubscriptionStore.getState().data["list-1"]).toBeUndefined()
-    expect(listDeleteMock).toHaveBeenCalledWith("list-1")
-    expect(subscriptionDeleteMock).toHaveBeenCalledWith(["list/list-1"])
-    // The server took the list's entries out of the timeline, so the counts are fetched again
-    expect(readsGetMock).toHaveBeenCalledTimes(2)
   })
 
   it("applies the inbox lifecycle, new inbox entries and inbox entry deletions", async () => {
@@ -533,24 +446,15 @@ describe("syncEngine", () => {
 
     const { subscriptionActions, subscriptionSyncService } =
       await import("../modules/subscription/store")
-    const { listActions } = await import("../modules/list/store")
-    const list = {
-      id: "list-1",
-      title: "Reading",
-      userId: "owner-1",
-      ownerUserId: "owner-1",
-      description: null,
-      image: null,
-      view: FeedViewType.Articles,
-      feedIds: [],
-      fee: 0,
-      subscriptionCount: null,
-      purchaseAmount: null,
-      type: "list" as const,
+    const feed = {
+      type: "feed" as const,
+      id: "feed-1",
+      url: "https://example.com/feed.xml",
+      title: "Example",
     }
-    const listSubscription = {
-      feedId: null,
-      listId: "list-1",
+    const feedSubscription = {
+      feedId: "feed-1",
+      listId: null,
       inboxId: null,
       userId: "user-1",
       view: FeedViewType.Articles,
@@ -558,24 +462,22 @@ describe("syncEngine", () => {
       title: null,
       category: null,
       createdAt: "2026-01-01T00:00:00.000Z",
-      type: "list" as const,
+      type: "feed" as const,
     }
     // Followed on this device at 11, which the cursor has not reached yet.
-    listActions.upsertManyInSession([list])
-    subscriptionActions.upsertManyInSession([listSubscription])
+    subscriptionActions.upsertManyInSession([feedSubscription])
     const followRow = (id: number) =>
       createAction({
         id,
-        model: "list_subscription",
-        modelId: "list-1",
+        model: "subscription",
+        modelId: "feed-1",
         action: "I",
-        data: { ...listSubscription, lists: { ...list, owner: { id: "owner-1" } } },
+        data: { ...feedSubscription, feeds: feed },
       })
     const deleteMock = vi.fn(async () => ({ code: 0, lastSyncId: 12 }))
     const createMock = vi.fn(async () => ({
       code: 0,
-      feed: null,
-      list: { ...list, feedIds: undefined },
+      feed,
       unread: {},
       lastSyncId: 13,
     }))
@@ -584,18 +486,17 @@ describe("syncEngine", () => {
       reads: { get: readsGetMock },
     } as unknown as FollowAPI)
 
-    await subscriptionSyncService.unsubscribe("list-1")
+    await subscriptionSyncService.unsubscribe("feed-1")
     // The delta lags behind the unfollow and still returns the follow before it.
     deltaMock.mockResolvedValueOnce(deltaResponse([followRow(11)]))
     await syncEngine.pull("manual")
-    expect(useSubscriptionStore.getState().data["list-1"]).toBeUndefined()
+    expect(useSubscriptionStore.getState().data["feed-1"]).toBeUndefined()
     expect(syncEngine.getLastSyncId()).toBe(11)
 
     // Undo: the delta now returns the unfollow, but not the follow that undid it.
     await subscriptionSyncService.subscribe({
-      url: undefined,
-      listId: "list-1",
-      feedId: undefined,
+      url: feed.url,
+      feedId: "feed-1",
       view: FeedViewType.Articles,
       category: null,
       hideFromTimeline: null,
@@ -603,12 +504,12 @@ describe("syncEngine", () => {
     })
     deltaMock.mockResolvedValueOnce(
       deltaResponse([
-        createAction({ id: 12, model: "list_subscription", modelId: "list-1", action: "D" }),
+        createAction({ id: 12, model: "subscription", modelId: "feed-1", action: "D" }),
       ]),
     )
     await syncEngine.pull("manual")
-    expect(useSubscriptionStore.getState().data["list-1"]?.listId).toBe("list-1")
-    expect(useSubscriptionStore.getState().listIdByView[FeedViewType.Articles].has("list-1")).toBe(
+    expect(useSubscriptionStore.getState().data["feed-1"]?.feedId).toBe("feed-1")
+    expect(useSubscriptionStore.getState().feedIdByView[FeedViewType.Articles].has("feed-1")).toBe(
       true,
     )
 
@@ -617,11 +518,11 @@ describe("syncEngine", () => {
     await syncEngine.pull("manual")
     deltaMock.mockResolvedValueOnce(
       deltaResponse([
-        createAction({ id: 14, model: "list_subscription", modelId: "list-1", action: "D" }),
+        createAction({ id: 14, model: "subscription", modelId: "feed-1", action: "D" }),
       ]),
     )
     await syncEngine.pull("manual")
-    expect(useSubscriptionStore.getState().data["list-1"]).toBeUndefined()
+    expect(useSubscriptionStore.getState().data["feed-1"]).toBeUndefined()
     expect(syncEngine.getLastSyncId()).toBe(14)
   })
 

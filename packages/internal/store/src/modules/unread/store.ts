@@ -18,7 +18,6 @@ import { defineTransactionKind, transactionQueue } from "../../sync/transaction-
 import { getEntry } from "../entry/getter"
 import { entryActions } from "../entry/store"
 import { setFeedUnreadDirty } from "../feed/hooks"
-import { getListFeedIds } from "../list/getters"
 import { getSubscribedFeedIdAndInboxHandlesByView } from "../subscription/getter"
 import type {
   FeedIdOrInboxHandle,
@@ -365,7 +364,6 @@ class UnreadSyncService {
     view: FeedViewType | undefined
     filter?: {
       feedId?: string
-      listId?: string
       feedIdList?: string[]
       inboxId?: string
       insertedBefore?: number
@@ -385,11 +383,6 @@ class UnreadSyncService {
       await this.markAllAsRead({ ids: filter.feedIdList, time, args })
     } else if (filter?.feedId) {
       await this.markAllAsRead({ ids: [filter.feedId], time, args })
-    } else if (filter?.listId) {
-      const feedIds = getListFeedIds(filter.listId)
-      if (feedIds && feedIds.length > 0) {
-        await this.markAllAsRead({ ids: feedIds, time, args })
-      }
     } else if (filter?.inboxId) {
       await this.markAllAsRead({ ids: [filter.inboxId], time, args })
     } else {
@@ -414,16 +407,6 @@ class UnreadSyncService {
       view: undefined,
       filter: {
         feedIdList: feedIds,
-      },
-      time,
-    })
-  }
-
-  async markListAsRead(listId: string, time?: PublishAtTimeRangeFilter) {
-    await this.markBatchAsRead({
-      view: undefined,
-      filter: {
-        listId,
       },
       time,
     })

@@ -167,7 +167,6 @@ function FollowImpl(props: { feedId: string; defaultView?: FeedViewType }) {
       hideFromTimeline: values.hideFromTimeline,
       title: values.title ?? "",
       feedId: feed?.id,
-      listId: undefined,
     }
     try {
       if (isSubscribed) {

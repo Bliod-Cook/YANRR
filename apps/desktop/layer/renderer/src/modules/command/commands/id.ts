@@ -28,12 +28,6 @@ export const COMMAND_ID = {
 
     custom: "integration:custom",
   },
-  list: {
-    edit: "list:edit",
-    unfollow: "list:unfollow",
-    navigateTo: "list:navigate-to",
-    copyId: "list:copy-id",
-  },
   settings: {
     changeThemeToAuto: "follow:change-color-mode-to-auto",
     changeThemeToDark: "follow:change-color-mode-to-dark",

@@ -56,11 +56,6 @@
       "require": "./src/modules/inbox/*.ts",
       "import": "./src/modules/inbox/*.ts"
     },
-    "./list/*": {
-      "types": "./src/modules/list/*.ts",
-      "require": "./src/modules/list/*.ts",
-      "import": "./src/modules/list/*.ts"
-    },
     "./morph": {
       "types": "./src/morph/*.ts",
       "require": "./src/morph/*.ts",

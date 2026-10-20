@@ -12,10 +12,9 @@ import { FeedViewType, getViewList } from "@follow/constants"
 import { isOnboardingFeedUrl } from "@follow/store/constants/onboarding"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useInboxById } from "@follow/store/inbox/hooks"
-import { useListById } from "@follow/store/list/hooks"
 import { getSubscriptionByFeedId } from "@follow/store/subscription/getter"
 import { useSubscriptionByFeedId } from "@follow/store/subscription/hooks"
-import { useUnreadById, useUnreadByListId } from "@follow/store/unread/hooks"
+import { useUnreadById } from "@follow/store/unread/hooks"
 import { cn, isKeyForMultiSelectPressed } from "@follow/utils/utils"
 import { createElement, memo, use, useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -26,7 +25,7 @@ import { useHideAllReadSubscriptions } from "~/atoms/settings/general"
 import { ErrorTooltip } from "~/components/common/ErrorTooltip"
 import { FocusablePresets } from "~/components/common/Focusable"
 import { useContextMenuActionShortCutTrigger } from "~/hooks/biz/useContextMenuActionShortCutTrigger"
-import { useFeedActions, useInboxActions, useListActions } from "~/hooks/biz/useFeedActions"
+import { useFeedActions, useInboxActions } from "~/hooks/biz/useFeedActions"
 import { useFollow } from "~/hooks/biz/useFollow"
 import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
@@ -281,7 +280,6 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
               aria-label={t("words.follow", { ns: "common" })}
               onClick={() => {
                 follow({
-                  isList: false,
                   id: feedId,
                   url: feed.url,
                 })
@@ -311,116 +309,6 @@ export const FeedItemAutoHideUnread: Component<FeedItemProps> = memo((props) => 
   const hideAllReadSubscriptions = useHideAllReadSubscriptions()
   if (hideAllReadSubscriptions) return createElement(FilterReadFeedItem, props)
   return createElement(FeedItemImpl, props)
-})
-
-interface ListItemProps {
-  listId: string
-  view: FeedViewType
-  iconSize?: number
-  isPreview?: boolean
-}
-
-const ListItemImpl: Component<ListItemProps> = ({
-  view,
-  listId,
-  className,
-  iconSize = 22,
-  isPreview,
-}) => {
-  const list = useListById(listId)
-
-  const isActive = useRouteParamsSelector((routerParams) => routerParams.listId === listId)
-  const items = useListActions({ listId })
-
-  const when = useGlobalFocusableScopeSelector(FocusablePresets.isSubscriptionList)
-  useContextMenuActionShortCutTrigger(items, when && isActive)
-
-  const listUnread = useUnreadByListId(listId)
-
-  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
-  const navigate = useNavigateEntry()
-
-  // Use current route view for navigation to stay in current view (e.g., All view)
-  const currentRouteView = useRouteParamsSelector((s) => s.view)
-  const navigationView = currentRouteView === FeedViewType.All ? currentRouteView : view
-
-  const handleNavigate = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      e.stopPropagation()
-
-      navigate({
-        listId,
-        entryId: null,
-        view: navigationView,
-      })
-    },
-    [listId, navigate, navigationView],
-  )
-  const showContextMenu = useShowContextMenu()
-  const { t } = useTranslation()
-
-  const contextMenuProps = useContextMenu({
-    onContextMenu: useEventCallback(async (e) => {
-      setIsContextMenuOpen(true)
-      await showContextMenu(items, e)
-      setIsContextMenuOpen(false)
-    }),
-  })
-  const follow = useFollow()
-
-  if (!list) return null
-  return (
-    <div
-      data-list-id={listId}
-      data-sub={`list-${listId}`}
-      aria-current={isActive ? "page" : undefined}
-      data-active={isActive || isContextMenuOpen}
-      className={cn(feedColumnStyles.item, "py-1 pl-2.5", className)}
-      onClick={handleNavigate}
-      {...contextMenuProps}
-    >
-      <div className="flex min-w-0 flex-1 items-center">
-        <FeedIcon fallback target={list} size={iconSize} className="mask-squircle mask" />
-        <EllipsisHorizontalTextWithTooltip className="truncate">
-          {getPreferredTitle(list)}
-        </EllipsisHorizontalTextWithTooltip>
-      </div>
-      {isPreview ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          buttonClassName="!p-1 mr-0.5"
-          aria-label={t("words.follow", { ns: "common" })}
-          onClick={() => {
-            follow({
-              isList: true,
-              id: listId,
-            })
-          }}
-        >
-          <i className="i-mgc-add-cute-re text-base text-accent" />
-        </Button>
-      ) : (
-        <UnreadNumber unread={listUnread} className="ml-2" />
-      )}
-    </div>
-  )
-}
-
-export const ListItem = memo(ListItemImpl)
-
-const FilterReadListItem: Component<ListItemProps> = (props) => {
-  const listUnread = useUnreadByListId(props.listId)
-
-  if (!listUnread) return null
-  return createElement(ListItem, props)
-}
-
-export const ListItemAutoHideUnread: Component<ListItemProps> = memo((props) => {
-  const hideAllReadSubscriptions = useHideAllReadSubscriptions()
-
-  if (hideAllReadSubscriptions) return createElement(FilterReadListItem, props)
-  return createElement(ListItemImpl, props)
 })
 
 interface InboxItemProps {

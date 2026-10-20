@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router"
 import { useFollow } from "~/hooks/biz/useFollow"
 
 export const ExternalJumpInProvider = () => {
-  // ?follow=${id}&follow_type=list
+  // ?follow=${id}&follow_type=feed
   const [searchParams, setSearchParams] = useSearchParams()
 
   const follow = useFollow()
@@ -18,10 +18,7 @@ export const ExternalJumpInProvider = () => {
     const followType = searchParams.get("follow_type")
 
     if (followId && followType) {
-      follow({
-        id: followId,
-        isList: followType === "list",
-      })
+      if (followType === "feed") follow({ id: followId })
       setSearchParams((prev) => {
         prev.delete("follow")
         prev.delete("follow_type")

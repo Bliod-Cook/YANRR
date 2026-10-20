@@ -4,7 +4,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@follow/components/ui/t
 import { FeedViewType } from "@follow/constants"
 import { useEntry } from "@follow/store/entry/hooks"
 import { useFeedById } from "@follow/store/feed/hooks"
-import { useListById } from "@follow/store/list/hooks"
 import { useSubscriptionByFeedId } from "@follow/store/subscription/hooks"
 import { EventBus } from "@follow/utils/event-bus"
 import { cn } from "@follow/utils/utils"
@@ -72,7 +71,6 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
   const entryId = useAudioPlayerAtomSelector((v) => v.entryId)
   const status = useAudioPlayerAtomSelector((v) => v.status)
   const isMute = useAudioPlayerAtomSelector((v) => v.isMute)
-  const listId = useAudioPlayerAtomSelector((v) => v.listId)
 
   const playerValue = { entryId, status, isMute }
 
@@ -103,7 +101,6 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
   const isInbox = !!entry?.inboxId
   const feed = useFeedById(entry?.feedId)
   const subscription = useSubscriptionByFeedId(entry?.feedId)
-  const list = useListById(listId)
 
   useEffect(() => {
     return EventBus.subscribe(COMMAND_ID.global.toggleCornerPlay, () => {
@@ -148,11 +145,6 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
         inboxId: entry?.feedId,
         view: FeedViewType.Articles,
       })
-    } else if (list) {
-      Object.assign(options, {
-        listId: list.id,
-        view: list.view,
-      })
     } else if (feed) {
       Object.assign(options, {
         feedId: feed.id,
@@ -162,7 +154,7 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
       return null
     }
     return options
-  }, [entry, feed, isInbox, list, subscription?.view])
+  }, [entry, feed, isInbox, subscription?.view])
   const [pause, setPause] = useState(true)
   if (!entry || !feed) return null
 

@@ -76,14 +76,10 @@ export const useTimelineList = (options?: {
 }) => {
   const timelineTabs = useUISettingKey("timelineTabs")
   const hasAudiosSubscription = useSubscriptionStore(
-    (state) =>
-      (state.feedIdByView[FeedViewType.Audios]?.size ?? 0) > 0 ||
-      (state.listIdByView[FeedViewType.Audios]?.size ?? 0) > 0,
+    (state) => (state.feedIdByView[FeedViewType.Audios]?.size ?? 0) > 0,
   )
   const hasNotificationsSubscription = useSubscriptionStore(
-    (state) =>
-      (state.feedIdByView[FeedViewType.Notifications]?.size ?? 0) > 0 ||
-      (state.listIdByView[FeedViewType.Notifications]?.size ?? 0) > 0,
+    (state) => (state.feedIdByView[FeedViewType.Notifications]?.size ?? 0) > 0,
   )
 
   const { visible, hidden } = useMemo(

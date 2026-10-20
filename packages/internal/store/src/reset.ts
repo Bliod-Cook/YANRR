@@ -5,7 +5,6 @@ import { entryActions } from "./modules/entry/store"
 import { feedActions } from "./modules/feed/store"
 import { imageActions } from "./modules/image/store"
 import { inboxActions } from "./modules/inbox/store"
-import { listActions } from "./modules/list/store"
 import { subscriptionActions } from "./modules/subscription/store"
 import { summaryActions } from "./modules/summary/store"
 import { translationActions } from "./modules/translation/store"
@@ -19,7 +18,6 @@ const resets: Resetable[] = [
   feedActions,
   subscriptionActions,
   inboxActions,
-  listActions,
   unreadActions,
   userActions,
   entryActions,

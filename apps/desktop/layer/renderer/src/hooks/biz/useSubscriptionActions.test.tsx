@@ -158,21 +158,6 @@ describe("useDeleteSubscription undo", () => {
     expect(options.description.props.title).toBe("My SSPAI")
   })
 
-  test("follows a list again by its list id only", async () => {
-    mocks.unsubscribe.mockResolvedValue([{ type: "list", id: "list-1", title: "Undo List" }])
-
-    await act(async () => {
-      await deleteSubscription?.mutateAsync({
-        subscription: { ...subscription, feedId: null, listId: "list-1", type: "list" },
-      })
-    })
-    await undoFromToast()
-
-    const [form] = mocks.subscribe.mock.calls[0]!
-    expect(form).toMatchObject({ listId: "list-1", url: undefined })
-    expect(form.feedId).toBeUndefined()
-  })
-
   test("reports an undo the server rejects", async () => {
     const error = new Error("Feed not found")
     mocks.unsubscribe.mockResolvedValue([

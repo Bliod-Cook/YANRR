@@ -108,7 +108,6 @@ describe("entrySyncServices.fetchEntries", () => {
       entryIdByCategory: {},
       entryIdByFeed: {},
       entryIdByInbox: {},
-      entryIdByList: {},
       entryIdSet: new Set(),
     })
     useCollectionStore.setState({ collections: {} })
@@ -166,24 +165,6 @@ describe("entrySyncServices.fetchEntries", () => {
 
     expect(listEntriesMock.mock.calls[0]?.[0]).toMatchObject({
       feedId: "feed-1",
-      publishedBefore: "2026-03-01T00:00:00.000Z",
-      sortOrder: "asc",
-    })
-    expect(listEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("publishedAfter")
-  })
-
-  it("uses the forward cursor for oldest-first unread list timelines", async () => {
-    listEntriesMock.mockResolvedValue({ data: [] })
-
-    await entrySyncServices.fetchEntries({
-      listId: "list-1",
-      read: false,
-      pageParam: "2026-03-01T00:00:00.000Z",
-      sortOrder: "asc",
-    })
-
-    expect(listEntriesMock.mock.calls[0]?.[0]).toMatchObject({
-      listId: "list-1",
       publishedBefore: "2026-03-01T00:00:00.000Z",
       sortOrder: "asc",
     })

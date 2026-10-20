@@ -31,7 +31,6 @@ type EntryId = string
 type FeedId = string
 type InboxId = string
 type Category = string
-type ListId = string
 
 interface EntryState {
   data: Record<EntryId, EntryModel>
@@ -39,7 +38,6 @@ interface EntryState {
   entryIdByCategory: Record<Category, Set<EntryId>>
   entryIdByFeed: Record<FeedId, Set<EntryId>>
   entryIdByInbox: Record<InboxId, Set<EntryId>>
-  entryIdByList: Record<ListId, Set<EntryId>>
   entryIdSet: Set<EntryId>
 }
 
@@ -57,7 +55,6 @@ const defaultState: EntryState = {
   entryIdByCategory: {},
   entryIdByFeed: {},
   entryIdByInbox: {},
-  entryIdByList: {},
   entryIdSet: new Set(),
 }
 
@@ -81,12 +78,10 @@ class EntryActions implements Hydratable, Resetable {
     draft,
     feedId,
     entryId,
-    sources,
   }: {
     draft: EntryState
     feedId?: FeedId | null
     entryId: EntryId
-    sources?: string[] | null
   }) {
     if (!feedId) return
 
@@ -96,17 +91,6 @@ class EntryActions implements Hydratable, Resetable {
         draft.entryIdByView[subscription.view]?.add(entryId)
       }
       draft.entryIdByView[FeedViewType.All]!.add(entryId)
-    }
-
-    // lists
-    for (const s of sources ?? []) {
-      const subscription = getSubscriptionById(s)
-      if (!subscription?.hideFromTimeline) {
-        if (typeof subscription?.view === "number") {
-          draft.entryIdByView[subscription.view]?.add(entryId)
-        }
-        draft.entryIdByView[FeedViewType.All]!.add(entryId)
-      }
     }
   }
 
@@ -167,24 +151,6 @@ class EntryActions implements Hydratable, Resetable {
     }
   }
 
-  private addEntryIdToList({
-    draft,
-    listId,
-    entryId,
-  }: {
-    draft: EntryState
-    listId?: ListId | null
-    entryId: EntryId
-  }) {
-    if (!listId) return
-    const entryIdSetByList = draft.entryIdByList[listId]
-    if (!entryIdSetByList) {
-      draft.entryIdByList[listId] = new Set([entryId])
-    } else {
-      entryIdSetByList.add(entryId)
-    }
-  }
-
   upsertManyInSession(entries: EntryModel[], options?: FetchEntriesPropsSettings) {
     if (entries.length === 0) return
     const { unreadOnly } = options || {}
@@ -203,7 +169,7 @@ class EntryActions implements Hydratable, Resetable {
         draft.entryIdSet.add(nextEntry.id)
         draft.data[nextEntry.id] = nextEntry
 
-        const { feedId, inboxHandle, read, sources } = nextEntry
+        const { feedId, inboxHandle, read } = nextEntry
         if (unreadOnly && read) continue
 
         if (inboxHandle) {
@@ -224,7 +190,6 @@ class EntryActions implements Hydratable, Resetable {
           draft,
           feedId,
           entryId: nextEntry.id,
-          sources,
         })
 
         this.addEntryIdToCategory({
@@ -232,16 +197,6 @@ class EntryActions implements Hydratable, Resetable {
           feedId,
           entryId: nextEntry.id,
         })
-
-        nextEntry.sources
-          ?.filter((s) => !!s && s !== "feed")
-          .forEach((s) => {
-            this.addEntryIdToList({
-              draft,
-              listId: s,
-              entryId: nextEntry.id,
-            })
-          })
       }
     })
   }
@@ -446,13 +401,6 @@ class EntryActions implements Hydratable, Resetable {
     })
   }
 
-  resetByList({ listId, entries }: { listId?: ListId; entries: EntryModel[] }) {
-    if (!listId) return
-    immerSet((draft) => {
-      draft.entryIdByList[listId] = new Set(entries.map((e) => e.id))
-    })
-  }
-
   deleteInboxEntryById(entryId: EntryId) {
     const entry = get().data[entryId]
     if (!entry || !entry.inboxHandle) return
@@ -484,7 +432,6 @@ class EntrySyncServices {
     const {
       feedId,
       inboxId,
-      listId,
       view,
       read,
       limit,
@@ -497,7 +444,6 @@ class EntrySyncServices {
     const params = getEntriesParams({
       feedId,
       inboxId,
-      listId,
       view,
       feedIdList,
     })

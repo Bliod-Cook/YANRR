@@ -324,11 +324,10 @@ const PreviewHeaderInfoWrapper: Component = ({ children }) => {
             presentLoginModal()
             return
           }
-          const { feedId, listId } = getRouteParams()
+          const { feedId } = getRouteParams()
           const feed = getFeedById(feedId)
           follow({
-            isList: !!listId,
-            id: listId ?? feedId,
+            id: feedId,
             url: feed?.type === "feed" ? feed.url : undefined,
           })
         }}
