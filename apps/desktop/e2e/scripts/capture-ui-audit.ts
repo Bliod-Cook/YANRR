@@ -26,35 +26,14 @@ const SETTING_TABS = [
   "profile",
   "data-control",
   "cli",
-  "plan",
   "about",
 ] as const
 
-const SUBVIEW_ROUTES = ["discover", "power", "action", "rsshub", "ai"] as const
+const SUBVIEW_ROUTES = ["discover", "action", "rsshub", "ai"] as const
 
 const waitForUiSettled = async (page: import("@playwright/test").Page, delay = 1200) => {
   await page.waitForLoadState("domcontentloaded")
   await page.waitForTimeout(delay)
-}
-
-const waitForRouteReady = async (
-  page: import("@playwright/test").Page,
-  route: (typeof SUBVIEW_ROUTES)[number],
-) => {
-  await waitForUiSettled(page, route === "power" ? 3500 : 1200)
-
-  if (route === "power") {
-    await page
-      .waitForFunction(
-        () =>
-          document.body.textContent?.includes("Your Balance") ||
-          document.body.textContent?.includes("Transactions") ||
-          document.body.textContent?.includes("Create Wallet"),
-        undefined,
-        { timeout: 15_000 },
-      )
-      .catch(() => {})
-  }
 }
 
 async function main() {
@@ -139,7 +118,7 @@ async function main() {
 
     for (const route of SUBVIEW_ROUTES) {
       await page.goto(buildWebAppURL(env, route), { waitUntil: "domcontentloaded" })
-      await waitForRouteReady(page, route)
+      await waitForUiSettled(page)
       await capture(`subview-${route}`)
     }
 

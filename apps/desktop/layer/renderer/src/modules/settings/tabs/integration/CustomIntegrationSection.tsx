@@ -13,7 +13,6 @@ import { SettingSectionTitle } from "../../section"
 import { CustomIntegrationModalContent } from "./CustomIntegrationModal"
 
 const { defineSettingItem, SettingBuilder } = createSetting(
-  "integration",
   useIntegrationSettingValue,
   setIntegrationSetting,
 )

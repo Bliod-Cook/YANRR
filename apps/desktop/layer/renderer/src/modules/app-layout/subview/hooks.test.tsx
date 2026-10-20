@@ -80,7 +80,7 @@ describe("useSubViewTitleValue", () => {
   })
 
   test("replaces the title left by the previous subview", async () => {
-    await enterSubview("Power")
+    await enterSubview("RSSHub")
     await leaveSubview()
 
     const container = await enterSubview("Actions")

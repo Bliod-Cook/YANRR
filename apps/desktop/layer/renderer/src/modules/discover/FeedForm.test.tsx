@@ -44,13 +44,9 @@ vi.mock("@follow/store/subscription/store", () => ({
 }))
 vi.mock("@follow/store/feed/hooks", () => ({ useFeedByIdOrUrl: () => undefined }))
 vi.mock("@follow/store/user/getters", () => ({ whoami: () => ({ id: "user-1" }) }))
-vi.mock("@follow/store/user/hooks", () => ({
-  useIsLoggedIn: () => true,
-  useUserRole: () => "user",
-}))
+vi.mock("@follow/store/user/hooks", () => ({ useIsLoggedIn: () => true }))
 vi.mock("sonner", () => ({ toast: mocks.toast }))
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
-vi.mock("~/atoms/server-configs", () => ({ useIsPaymentEnabled: () => false }))
 vi.mock("~/components/ui/auto-completion", () => ({ Autocomplete: () => null }))
 vi.mock("~/components/ui/modal/stacked/hooks", () => ({
   useCurrentModal: () => ({ setClickOutSideToDismiss: () => {}, dismiss: () => {} }),
@@ -66,7 +62,6 @@ vi.mock("~/lib/error-parser", () => ({
   getFetchErrorMessage: (error: Error) => `translated ${error.message}`,
   toastFetchError: vi.fn(),
 }))
-vi.mock("~/modules/settings/modal/useSettingModal", () => ({ useSettingModal: () => () => {} }))
 vi.mock("~/queries/feed", () => ({
   feed: { byId: () => ({ invalidate: () => {} }) },
   useFeedQuery: () =>

@@ -109,7 +109,7 @@ graph TD
   <div className="relative flex size-full">
     <FloatingHeader /> // Glass header with back button
     <ScrollArea>
-      <Outlet /> // Full-screen content (Discover, Power, etc.)
+      <Outlet /> // Full-screen content (Discover, Actions, etc.)
     </ScrollArea>
     <ProgressFAB /> // Scroll progress indicator
   </div>

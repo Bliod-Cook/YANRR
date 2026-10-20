@@ -11,13 +11,12 @@ import {
 import { Input } from "@follow/components/ui/input/index.js"
 import { LoadingCircle } from "@follow/components/ui/loading/index.jsx"
 import { Switch } from "@follow/components/ui/switch/index.jsx"
-import { FeedViewType, UserRole } from "@follow/constants"
+import { FeedViewType } from "@follow/constants"
 import { useListById, usePrefetchListById } from "@follow/store/list/hooks"
 import type { ListModel } from "@follow/store/list/types"
 import { useSubscriptionByFeedId } from "@follow/store/subscription/hooks"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
 import { whoami } from "@follow/store/user/getters"
-import { useUserRole } from "@follow/store/user/hooks"
 import { cn } from "@follow/utils/utils"
 import type { ListAnalyticsSchema } from "@follow-app/client-sdk"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -28,7 +27,6 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { z } from "zod"
 
-import { useIsPaymentEnabled } from "~/atoms/server-configs"
 import { useCurrentModal, useModalUnsavedChanges } from "~/components/ui/modal/stacked/hooks"
 import { useI18n } from "~/hooks/common"
 import { useFormHasChanges } from "~/hooks/common/useFormHasChanges"
@@ -37,7 +35,6 @@ import { getNewIssueUrl } from "~/lib/issues"
 
 import { useTOTPModalWrapper } from "../profile/hooks"
 import { ViewSelectorRadioGroup } from "../shared/ViewSelectorRadioGroup"
-import { PaidBadge } from "./FeedForm"
 import { FeedSummary } from "./FeedSummary"
 
 const formSchema = z.object({
@@ -268,15 +265,6 @@ const ListInnerForm = ({
 
   const t = useI18n()
 
-  // Private follow and hiding from the timeline are paid features for lists too, as in the feed
-  // form. Only turning them on needs the plan, so after a downgrade a list that has one on
-  // still lets the user turn it off.
-  const role = useUserRole()
-  const isPaymentEnabled = useIsPaymentEnabled()
-  const disabledForRole = role === UserRole.Free && isPaymentEnabled
-  const isPrivateAlready = subscription?.isPrivate === true
-  const isHiddenAlready = subscription?.hideFromTimeline === true
-
   return (
     <div className="flex flex-1 flex-col gap-y-4">
       <FeedSummary isLoading={isLoading} feed={list} analytics={analytics} showAnalytics />
@@ -321,10 +309,7 @@ const ListInnerForm = ({
               <FormItem>
                 <div className="flex items-center justify-between">
                   <div>
-                    <FormLabel className="flex items-center gap-1">
-                      <span>{t("feed_form.private_follow")}</span>
-                      <PaidBadge />
-                    </FormLabel>
+                    <FormLabel>{t("feed_form.private_follow")}</FormLabel>
                     <FormDescription>{t("feed_form.private_follow_description")}</FormDescription>
                   </div>
                   <FormControl>
@@ -333,7 +318,6 @@ const ListInnerForm = ({
                       // Off until the form knows the followed setting, so the switch stays controlled
                       checked={field.value ?? false}
                       onCheckedChange={field.onChange}
-                      disabled={disabledForRole && !isPrivateAlready}
                     />
                   </FormControl>
                 </div>
@@ -347,10 +331,7 @@ const ListInnerForm = ({
               <FormItem>
                 <div className="flex items-center justify-between">
                   <div>
-                    <FormLabel className="flex items-center gap-1">
-                      <span>{t("feed_form.hide_from_timeline")}</span>
-                      <PaidBadge />
-                    </FormLabel>
+                    <FormLabel>{t("feed_form.hide_from_timeline")}</FormLabel>
                     <FormDescription>
                       {t("feed_form.hide_from_timeline_description")}
                     </FormDescription>
@@ -360,7 +341,6 @@ const ListInnerForm = ({
                       className="shrink-0"
                       checked={field.value ?? false}
                       onCheckedChange={field.onChange}
-                      disabled={disabledForRole && !isHiddenAlready}
                     />
                   </FormControl>
                 </div>

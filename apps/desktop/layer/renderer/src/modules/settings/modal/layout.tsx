@@ -20,15 +20,12 @@ import { resizableOnly } from "~/components/ui/modal"
 import { useModalResizeAndDrag } from "~/components/ui/modal/stacked/internal/use-drag"
 import { ElECTRON_CUSTOM_TITLEBAR_HEIGHT } from "~/constants"
 import { useRequireLogin } from "~/hooks/common/useRequireLogin"
-import { useUpgradePlanModal } from "~/modules/plan"
 
 import { isGuestAccessibleSettingTab, SETTING_MODAL_ID } from "../constants"
 import { EnhancedSettingsIndicator } from "../helper/EnhancedIndicator"
 import { SettingSyncIndicator } from "../helper/SyncIndicator"
-import { useAvailableSettings, useSettingPageContext } from "../hooks/use-setting-ctx"
+import { useAvailableSettings } from "../hooks/use-setting-ctx"
 import { SettingsSidebarTitle } from "../title"
-import type { SettingPageConfig } from "../utils"
-import { DisableWhy } from "../utils"
 import { SettingModalContentPortalableContext, useSetSettingTab, useSettingTab } from "./context"
 import { defaultCtx, SettingContext } from "./hooks"
 
@@ -162,25 +159,13 @@ const SettingModalContentPortalable = () => {
 
 const SettingItemButtonImpl = (props: {
   setTab: (tab: string) => void
-  item: SettingPageConfig
   path: string
   isActive: boolean
   onChange?: (tab: string) => void
   guestLocked?: boolean
 }) => {
-  const { setTab, item, path, onChange, isActive, guestLocked = false } = props
-  const { disableIf } = item
-
-  const ctx = useSettingPageContext()
+  const { setTab, path, onChange, isActive, guestLocked = false } = props
   const { ensureLogin } = useRequireLogin()
-
-  const [disabledByConfig, whyFromConfig = DisableWhy.Noop] = disableIf?.(ctx) || [
-    false,
-    DisableWhy.Noop,
-  ]
-  const disabled = guestLocked || disabledByConfig
-  const why = disabledByConfig ? whyFromConfig : DisableWhy.Noop
-  const presentActivationModal = useUpgradePlanModal()
 
   return (
     <button
@@ -190,8 +175,7 @@ const SettingItemButtonImpl = (props: {
         isActive && "!bg-theme-item-active !text-text",
         !IN_ELECTRON && "duration-200 hover:bg-theme-item-hover",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/30",
-        disabled && "opacity-50",
-        disabledByConfig && "cursor-not-allowed",
+        guestLocked && "opacity-50",
       )}
       type="button"
       onClick={useCallback(() => {
@@ -199,20 +183,9 @@ const SettingItemButtonImpl = (props: {
           ensureLogin()
           return
         }
-        if (disabled) {
-          switch (why) {
-            case DisableWhy.NotActivation: {
-              presentActivationModal()
-              return
-            }
-            case DisableWhy.Noop: {
-              break
-            }
-          }
-        }
         setTab(path)
         onChange?.(path)
-      }, [disabled, ensureLogin, guestLocked, onChange, path, presentActivationModal, setTab, why])}
+      }, [ensureLogin, guestLocked, onChange, path, setTab])}
     >
       <SettingsSidebarTitle path={path} className="text-[0.94rem] font-medium" />
     </button>
@@ -236,7 +209,6 @@ export const SidebarItems = memo((props: { onChange?: (tab: string) => void }) =
         key={t.path}
         isActive={isActive}
         setTab={setTab}
-        item={t}
         path={t.path}
         onChange={onChange}
         guestLocked={guestLocked}

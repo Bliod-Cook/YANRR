@@ -48,28 +48,9 @@ export const useWhoami = () => {
 }
 
 const loggedInSelector = (state: UserStore) => !!state.whoami
-const roleSelector = (state: UserStore) => state.role
 export const useIsLoggedIn = () => {
   return useUserStore(loggedInSelector)
 }
-export const useUserRole = () => {
-  return useUserStore(roleSelector)
-}
-
-const roleEndAtSelector = (state: UserStore) => state.roleEndAt
-export const useRoleEndAt = () => {
-  return useUserStore(roleEndAtSelector)
-}
-
-export const useUserSubscriptionLimit = () => {
-  const rsshubLimit = useUserStore((state) => state.rsshubSubscriptionLimit)
-  const feedLimit = useUserStore((state) => state.feedSubscriptionLimit)
-  return {
-    rsshubLimit,
-    feedLimit,
-  }
-}
-
 export const useUserById = (userId: string | undefined) => {
   return useUserStore((state) => (userId ? state.users[userId] : undefined))
 }

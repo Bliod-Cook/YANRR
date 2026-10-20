@@ -274,13 +274,9 @@ class APIMorph {
       updatedAt: data.updatedAt,
       isAnonymous: data.isAnonymous,
       suspended: data.suspended,
-      role: data.role,
-      roleEndAt: data.roleEndAt,
       deleted: data.deleted,
-      stripeCustomerId: data.stripeCustomerId,
       inactive: data.inactive,
       lastLoginMethod: data.lastLoginMethod,
-      appleAppAccountToken: data.appleAppAccountToken,
     }
   }
 }

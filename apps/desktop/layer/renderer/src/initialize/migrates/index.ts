@@ -6,14 +6,7 @@ import type { DefineMigrationOptions } from "./helper"
 import { v1 } from "./v/v1"
 import { v2 } from "./v/v2"
 
-const appVersionKey = getStorageNS("app_version")
 const migrationVersionKey = getStorageNS("migration_version")
-
-declare global {
-  interface Window {
-    __app_is_upgraded__: boolean
-  }
-}
 
 const getMigrationVersions = () => {
   try {
@@ -36,17 +29,4 @@ export const doMigration = async () => {
   }
 
   localStorage.setItem(migrationVersionKey, JSON.stringify(Array.from(migrationVersions)))
-
-  // AppVersion logic
-  const lastVersion = localStorage.getItem(appVersionKey) || APP_VERSION
-  localStorage.setItem(appVersionKey, APP_VERSION)
-
-  const lastVersionParts = lastVersion.split("-")
-  const lastVersionMajorMinor = lastVersionParts[0]
-  const currentVersionMajorMinor = APP_VERSION.split("-")[0]
-  if (lastVersion === APP_VERSION) return
-  if (lastVersionMajorMinor === currentVersionMajorMinor) return
-
-  window.__app_is_upgraded__ = true
-  appLog(`Upgrade from ${lastVersion} to ${APP_VERSION}`)
 }

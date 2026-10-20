@@ -52,10 +52,10 @@ describe("settings route", () => {
   }
 
   test("opens the settings tab from the URL over the main view", async () => {
-    const router = await renderAt("/settings/plan")
+    const router = await renderAt("/settings/general")
 
     expect(router.state.location.pathname).toBe("/")
-    expect(showSettingsMock).toHaveBeenCalledWith("plan")
+    expect(showSettingsMock).toHaveBeenCalledWith("general")
   })
 
   test("opens the default tab for the bare settings URL", async () => {
