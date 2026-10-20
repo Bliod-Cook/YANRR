@@ -4,9 +4,6 @@ import { ExceptionCodeMap, FollowAPIError, FollowTimeoutError } from "@follow-ap
 import { t } from "i18next"
 import { FetchError } from "ofetch"
 
-import { getIsPaymentEnabled } from "@/src/atoms/server-configs"
-import { showUpgradeRequiredDialog } from "@/src/modules/dialogs/UpgradeRequiredDialog"
-
 import { isConnectionFailure } from "./network-error"
 import { toast } from "./toast"
 
@@ -120,14 +117,9 @@ export const toastFetchError = (error: Error, { title: _title }: { title?: strin
   let serverMessage = ""
   let _reason = ""
   let code: number | undefined
-  let status: number | undefined
 
   if (error instanceof FetchError) {
     try {
-      const resolvedStatus = error.statusCode ?? error.response?.status
-      if (resolvedStatus != null) {
-        status = Number(resolvedStatus)
-      }
       const json =
         typeof error.response?._data === "string"
           ? JSON.parse(error.response?._data)
@@ -156,7 +148,6 @@ export const toastFetchError = (error: Error, { title: _title }: { title?: strin
 
   if (error instanceof FollowAPIError) {
     code = getServerCode(error)
-    status = error.status ? Number(error.status) : status
     serverMessage = error.message
     try {
       message = code === undefined ? fallbackMessage : translateErrorCode(code, error.message)
@@ -173,22 +164,6 @@ export const toastFetchError = (error: Error, { title: _title }: { title?: strin
 
   // 2fa errors are handled by the form
   if (code === 4007 || code === 4008) {
-    return
-  }
-
-  const isPaymentFeatureEnabled = getIsPaymentEnabled()
-
-  if (status === 402 && !isPaymentFeatureEnabled) {
-    return toast.error(t("errors:1004"))
-  }
-
-  const needUpgradeError = status === 402 && isPaymentFeatureEnabled
-
-  if (needUpgradeError) {
-    showUpgradeRequiredDialog({
-      title: message || t("settings:subscription.actions.upgrade"),
-      message: t("settings:subscription.summary.free_description"),
-    })
     return
   }
 

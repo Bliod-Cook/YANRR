@@ -1,13 +1,10 @@
-import { UserRole } from "@follow/constants"
-import { useUserRole, useWhoami } from "@follow/store/user/hooks"
-import type { StatusConfigs as ServerConfigs } from "@follow-app/client-sdk"
+import { useWhoami } from "@follow/store/user/hooks"
 import i18next from "i18next"
 import type { FC } from "react"
 import { Fragment, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { PixelRatio, View } from "react-native"
 
-import { getIsPaymentEnabled, useServerConfigs } from "@/src/atoms/server-configs"
 import {
   GroupedInsetListCard,
   GroupedInsetListNavigationLink,
@@ -21,7 +18,6 @@ import { FlashlightCuteReIcon } from "@/src/icons/flashlight_cute_re"
 import { Magic2CuteFiIcon } from "@/src/icons/magic_2_cute_fi"
 import { NotificationCuteReIcon } from "@/src/icons/notification_cute_re"
 import { PaletteCuteFiIcon } from "@/src/icons/palette_cute_fi"
-import { PowerOutlineIcon } from "@/src/icons/power_outline"
 import { RadaCuteFiIcon } from "@/src/icons/rada_cute_fi"
 import { Settings1CuteFiIcon } from "@/src/icons/settings_1_cute_fi"
 import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
@@ -30,8 +26,6 @@ import { signOut } from "@/src/lib/auth"
 import { Dialog } from "@/src/lib/dialog"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import type { Navigation } from "@/src/lib/navigation/Navigation"
-import { isPaymentFeatureEnabled } from "@/src/lib/payment"
-import { accentColor } from "@/src/theme/colors"
 
 import { AboutScreen } from "./routes/About"
 import { AccountScreen } from "./routes/Account"
@@ -42,7 +36,6 @@ import { FeedsScreen } from "./routes/Feeds"
 import { GeneralScreen } from "./routes/General"
 import { ListsScreen } from "./routes/Lists"
 import { NotificationsScreen } from "./routes/Notifications"
-import { PlanScreen } from "./routes/Plan"
 import { SpotlightScreen } from "./routes/Spotlight"
 
 type SettingsNavigationTranslationKey =
@@ -52,7 +45,6 @@ type SettingsNavigationTranslationKey =
   | "titles.spotlight"
   | "titles.data_control"
   | "titles.account"
-  | "titles.subscription.short"
   | "titles.actions"
   | "titles.feeds"
   | "titles.lists"
@@ -63,10 +55,8 @@ interface GroupNavigationLinkBase {
   icon: React.ElementType
   onPress: (data: { navigation: Navigation }) => void
   iconBackgroundColor: string
-  trialNotAllowed?: boolean
   anonymous?: boolean
   todo?: boolean
-  hideIf?: (serverConfigs?: ServerConfigs | null) => boolean
   testID?: string
 }
 
@@ -137,19 +127,6 @@ const SettingGroupNavigationLinks: GroupNavigationLink[] = [
   },
 ]
 
-const SubscriptionGroupNavigationLinks: GroupNavigationLink[] = [
-  {
-    translationKey: "titles.subscription.short",
-    icon: PowerOutlineIcon,
-    onPress: ({ navigation }) => {
-      navigation.pushControllerView(PlanScreen)
-    },
-    iconBackgroundColor: accentColor,
-    anonymous: false,
-    hideIf: (serverConfigs) => !isPaymentFeatureEnabled(serverConfigs?.PAYMENT_ENABLED),
-  },
-]
-
 const DataGroupNavigationLinks: GroupNavigationLink[] = [
   {
     translationKey: "titles.actions",
@@ -159,7 +136,6 @@ const DataGroupNavigationLinks: GroupNavigationLink[] = [
     },
     iconBackgroundColor: "#9333EA",
     anonymous: false,
-    trialNotAllowed: true,
   },
 
   {
@@ -171,7 +147,6 @@ const DataGroupNavigationLinks: GroupNavigationLink[] = [
     iconBackgroundColor: "#EAB308",
     todo: true,
     anonymous: false,
-    trialNotAllowed: true,
     testID: "settings-feeds-link",
   },
   {
@@ -182,7 +157,6 @@ const DataGroupNavigationLinks: GroupNavigationLink[] = [
     },
     iconBackgroundColor: "#0EA5E9",
     anonymous: false,
-    trialNotAllowed: true,
   },
 ]
 
@@ -230,7 +204,6 @@ const NavigationLinkGroup: FC<{
   links: GroupNavigationLink[]
 }> = ({ links }) => {
   const navigation = useNavigation()
-  const role = useUserRole()
   const { t } = useTranslation("settings")
 
   return (
@@ -251,15 +224,7 @@ const NavigationLinkGroup: FC<{
                 </GroupedInsetListNavigationLinkIcon>
               }
               testID={link.testID}
-              onPress={() => {
-                // Free plans include lists and actions up to a limit, which the server enforces
-                // with an upgrade prompt; only the legacy trial role has none of them
-                if (link.trialNotAllowed && role === UserRole.Trial && getIsPaymentEnabled()) {
-                  navigation.presentControllerView(PlanScreen)
-                } else {
-                  link.onPress({ navigation })
-                }
-              }}
+              onPress={() => link.onPress({ navigation })}
             />
           )
         })}
@@ -270,27 +235,23 @@ const NavigationLinkGroup: FC<{
 const navigationGroups = [
   SettingGroupNavigationLinks,
   DataGroupNavigationLinks,
-  SubscriptionGroupNavigationLinks,
   AboutGroupNavigationLinks,
   ActionGroupNavigationLinks,
 ] as const
 
 export const SettingsList: FC = () => {
   const whoami = useWhoami()
-  const serverConfigs = useServerConfigs()
 
   const filteredNavigationGroups = useMemo(() => {
     return navigationGroups
       .map((group) => {
-        const filteredGroup = group
-          .filter((link) => link.anonymous !== !!whoami)
-          .filter((link) => !link.hideIf?.(serverConfigs))
+        const filteredGroup = group.filter((link) => link.anonymous !== !!whoami)
 
         if (filteredGroup.length === 0) return false
         return filteredGroup
       })
       .filter((group): group is GroupNavigationLink[] => group !== false)
-  }, [serverConfigs, whoami])
+  }, [whoami])
 
   const pixelRatio = PixelRatio.get()
   const groupGap = 100 / pixelRatio

@@ -52,11 +52,7 @@ export function Settings() {
         contentViewClassName="pb-8"
         contentViewStyle={contentViewStyle}
       >
-        <UserHeaderBanner
-          scrollY={screenContext.reAnimatedScrollY}
-          userId={whoami?.id}
-          showRoleBadge
-        />
+        <UserHeaderBanner scrollY={screenContext.reAnimatedScrollY} userId={whoami?.id} />
 
         <SettingsList />
       </SafeNavigationScrollView>

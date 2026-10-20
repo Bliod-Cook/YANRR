@@ -28,7 +28,7 @@ vi.mock("@/src/lib/jotai", async () => ({ jotaiStore: (await import("jotai")).cr
 vi.mock("@/src/lib/dialog-state", async () => ({
   nativeAlertCountAtom: (await import("jotai")).atom(0),
 }))
-vi.mock("@/src/lib/payment", () => ({ isAndroidApkInstall: () => false }))
+vi.mock("@/src/lib/install-source", () => ({ isAndroidApkInstall: () => false }))
 vi.mock("@follow/constants", () => ({
   APP_STORE_URLS: { iOS: "https://apps.apple.com/app", Android: "https://play.google.com/app" },
   GOOGLE_PLAY_PACKAGE_ID: "is.follow",

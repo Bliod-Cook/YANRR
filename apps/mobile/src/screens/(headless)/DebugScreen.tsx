@@ -32,7 +32,6 @@ import type { NavigationControllerView } from "@/src/lib/navigation/types"
 import { setEnvProfile, useEnvProfile } from "@/src/lib/proxy-env"
 import { reloadApp } from "@/src/lib/reload-app"
 import { toast } from "@/src/lib/toast"
-import { showUpgradeRequiredDialog } from "@/src/modules/dialogs/UpgradeRequiredDialog"
 
 import { ProfileScreen } from "../(modal)/ProfileScreen"
 import { MarkdownScreen } from "./(debug)/markdown"
@@ -173,15 +172,6 @@ export const DebugScreen: NavigationControllerView = () => {
           onPress: () => {
             navigation.presentControllerView(ProfileScreen, {
               userId: whoami()!.id,
-            })
-          },
-        },
-        {
-          title: "Upgrade Required Dialog",
-          onPress: () => {
-            showUpgradeRequiredDialog({
-              title: "Upgrade Required",
-              message: "Please upgrade to continue",
             })
           },
         },

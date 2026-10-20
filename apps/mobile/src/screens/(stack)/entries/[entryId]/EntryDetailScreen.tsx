@@ -1,10 +1,10 @@
-import { FeedViewType, UserRole } from "@follow/constants"
+import { FeedViewType } from "@follow/constants"
 import { useEntry, useEntryReadHistory, usePrefetchEntryDetail } from "@follow/store/entry/hooks"
 import { entrySyncServices } from "@follow/store/entry/store"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
 import { useAutoMarkAsRead } from "@follow/store/unread/hooks"
-import { useIsLoggedIn, useUserRole } from "@follow/store/user/hooks"
+import { useIsLoggedIn } from "@follow/store/user/hooks"
 import { PortalProvider } from "@gorhom/portal"
 import { useQuery } from "@tanstack/react-query"
 import * as WebBrowser from "expo-web-browser"
@@ -156,11 +156,7 @@ const EntryContentWebViewWithContext = ({ entryId }: { entryId: string }) => {
   const translationMode = useGeneralSettingKey("translationMode")
   const showTranslationOnce = useAtomValue(showAITranslationAtom)
   const actionLanguage = useActionLanguage()
-  const userRole = useUserRole()
   const showTranslation = translationSetting || showTranslationOnce
-  const translationPrefetchEnabled =
-    showTranslation &&
-    (userRole == null || (userRole !== UserRole.Free && userRole !== UserRole.Trial))
   const entry = useEntry(entryId, (state) => ({
     content: state.content,
     readabilityContent: state.readabilityContent,
@@ -171,7 +167,7 @@ const EntryContentWebViewWithContext = ({ entryId }: { entryId: string }) => {
     withContent: true,
     target: showReadabilityOnce && entry?.readabilityContent ? "readabilityContent" : "content",
     language: actionLanguage,
-    enabled: translationPrefetchEnabled,
+    enabled: showTranslation,
     mode: translationMode,
   })
 

@@ -43,7 +43,6 @@ export const {
   useSettingKey: useUISettingKey,
   useSettingSelector: useUISettingSelector,
   useSettingKeys: useUISettingKeys,
-  usePaidSettingLocked: useUIPaidSettingLocked,
   setSetting: setUISetting,
   clearSettings: clearUISettings,
   initializeDefaultSettings: initializeDefaultUISettings,

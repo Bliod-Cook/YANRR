@@ -1,5 +1,4 @@
 import { cn } from "@follow/utils"
-import { FollowAPIError } from "@follow-app/client-sdk"
 import * as Haptics from "expo-haptics"
 import type { FC, ReactNode } from "react"
 import * as React from "react"
@@ -17,18 +16,14 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useColor } from "react-native-uikit-colors"
 
-import { useIsPaymentEnabled } from "@/src/atoms/server-configs"
 import { BottomModal } from "@/src/components/ui/modal/BottomModal"
 import { Text } from "@/src/components/ui/typography/Text"
 import { AiCuteReIcon } from "@/src/icons/ai_cute_re"
 import { CloseCuteReIcon } from "@/src/icons/close_cute_re"
 import { CopyCuteReIcon } from "@/src/icons/copy_cute_re"
-import { PowerMonoIcon } from "@/src/icons/power_mono"
-import { RightCuteReIcon } from "@/src/icons/right_cute_re"
 import { getFetchErrorMessage } from "@/src/lib/error-parser"
 import { isAndroid, isIOS } from "@/src/lib/platform"
 import { toast } from "@/src/lib/toast"
-import { navigateToPlanScreen } from "@/src/modules/settings/routes/navigateToPlanScreen"
 
 export const AISummary: FC<{
   className?: string
@@ -82,26 +77,15 @@ export const AISummary: FC<{
     })
   }
   const purpleColor = useColor("purple")
-  const isPaymentEnabled = useIsPaymentEnabled()
-  const followApiError = error instanceof FollowAPIError ? error : null
-  const shouldSuggestUpgrade = Boolean(isPaymentEnabled && followApiError?.status === 402)
   const errorDetail =
     typeof error === "string"
       ? error
       : error instanceof Error
         ? getFetchErrorMessage(error)
         : undefined
-  const showErrorContent = Boolean(error && !shouldSuggestUpgrade)
   const errorTitle = t("ai.summary_not_available")
-  const upgradeTitle = t("ai.summary_upgrade_required_title")
-  const upgradeDescription = t("ai.summary_upgrade_required_description")
-  const upgradeCTA = t("ai.summary_upgrade_view_plans")
   const loadingTitle = t("ai.summary_generating")
   const summaryTitle = t("entry_content.ai_summary")
-  const handleUpgradePress = () => {
-    void Haptics.selectionAsync()
-    void navigateToPlanScreen()
-  }
 
   // Check if summary is a React element or string
   const isReactElement = React.isValidElement(summary)
@@ -134,20 +118,7 @@ export const AISummary: FC<{
       )
     }
 
-    if (shouldSuggestUpgrade) {
-      return (
-        <UpgradePrompt
-          forMeasurement={forMeasurement}
-          iconColor={purpleColor}
-          title={upgradeTitle}
-          description={upgradeDescription}
-          ctaLabel={upgradeCTA}
-          onPress={handleUpgradePress}
-        />
-      )
-    }
-
-    if (showErrorContent) {
+    if (error) {
       return (
         <ErrorContent
           forMeasurement={forMeasurement}
@@ -270,61 +241,6 @@ const ErrorContent = ({
             </Text>
           </Pressable>
         ))}
-    </View>
-  )
-}
-
-const UpgradePrompt = ({
-  forMeasurement,
-  iconColor,
-  title,
-  description,
-  ctaLabel,
-  onPress,
-}: {
-  forMeasurement: boolean
-  iconColor: string
-  title: string
-  description: string
-  ctaLabel: string
-  onPress: () => void
-}) => {
-  return (
-    <View className="mt-2 flex-row items-start gap-3">
-      {/* Icon */}
-      <View className="relative">
-        <View className="rounded-lg bg-purple p-2.5">
-          <PowerMonoIcon width={18} height={18} color="white" />
-        </View>
-      </View>
-
-      {/* Content */}
-      <View className="flex-1 gap-1">
-        {/* Title */}
-        <Text className="text-sm font-medium text-label">{title}</Text>
-
-        {/* Description */}
-        <Text className="text-sm text-secondary-label">{description}</Text>
-
-        {/* CTA Button */}
-        {forMeasurement ? (
-          <View className="mt-1 flex-row items-center gap-1 self-start">
-            <Text className="text-[13px] font-medium" style={{ color: iconColor }}>
-              {ctaLabel}
-            </Text>
-          </View>
-        ) : (
-          <Pressable
-            onPress={onPress}
-            className="mt-1 flex-row items-center gap-1 self-start active:opacity-70"
-          >
-            <Text className="text-[13px] font-medium" style={{ color: iconColor }}>
-              {ctaLabel}
-            </Text>
-            <RightCuteReIcon width={14} height={14} color={iconColor} />
-          </Pressable>
-        )}
-      </View>
     </View>
   )
 }

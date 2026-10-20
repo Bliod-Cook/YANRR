@@ -103,9 +103,8 @@ export function Select<T>({
   )
   const Trigger = (
     <Pressable
-      // grow rather than flex-1, as on iOS: in a view without a set height, such as the wrapper of a
-      // paid setting, Yoga kept the zero flex basis of flex-1 once the window resized and the value
-      // disappeared
+      // grow rather than flex-1, as on iOS: in a view without a set height, Yoga kept the zero flex
+      // basis of flex-1 once the window resized and the value disappeared
       className={cn(
         "min-w-24 shrink grow flex-row items-center rounded-lg pl-3",
         disabled ? "opacity-50" : "",
