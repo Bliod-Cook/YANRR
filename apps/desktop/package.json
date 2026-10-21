@@ -13,7 +13,6 @@
     "build:electron-forge:macos": "electron-forge make --arch=x64 --platform=darwin && electron-forge make --arch=arm64 --platform=darwin",
     "build:electron-vite": "electron-vite build",
     "build:web": "rimraf out/web && cross-env WEB_BUILD=1 vite build",
-    "bump": "vv --minor",
     "dedupe:locales": "eslint --fix locales/**/*.json",
     "depcheck": "npx depcheck --quiet",
     "dev:debug": "export DEBUG=true && vite --debug",
@@ -23,7 +22,6 @@
     "e2e:electron": "playwright test -c e2e/playwright.config.ts --project=electron",
     "e2e:install": "playwright install chromium",
     "e2e:web": "playwright test -c e2e/playwright.config.ts --project=web",
-    "hotfix": "vv -c bump.hotfix.config.js --patch",
     "start": "electron-vite preview"
   },
   "devDependencies": {
@@ -63,7 +61,6 @@
     "happy-dom": "20.14.5",
     "html-minifier-terser": "7.2.0",
     "kolorist": "1.8.0",
-    "nbump": "2.1.8",
     "pathe": "2.0.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
