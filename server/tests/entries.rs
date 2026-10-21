@@ -1,6 +1,8 @@
 mod common;
 
-use common::{Fixtures, Reply, SINGLE_ITEM_RSS, TestApp, json, json_feed, subscribe};
+use common::{
+    Fixtures, Reply, SINGLE_ITEM_RSS, TestApp, create_inbox, deliver, json, json_feed, subscribe,
+};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde_json::{Value, json};
 use yannr::entity::unread;
@@ -168,4 +170,41 @@ async fn readability_extracts_article() {
     assert!(!content.contains("About this site"));
     let unknown = app.get("/api/entries/readability?id=1").await;
     common::assert_error(unknown, 404, 3000).await;
+}
+
+#[tokio::test]
+async fn timeline_mixes_in_inbox_entries() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    let items: Vec<_> = [1, 3, 5]
+        .map(|day| json!({ "id": format!("feed-{day}"), "date_published": format!("2026-10-0{day}T08:00:00Z") }))
+        .into();
+    fixtures.set("/feed.json", Reply::Body(json_feed(json!(items))));
+    let feed_id = subscribe(&app, &fixtures.url("/feed.json"), json!({})).await;
+    let secret = create_inbox(&app, "news").await;
+    for day in [2, 4] {
+        let entry = json!({ "guid": format!("inbox-{day}"), "publishedAt": format!("2026-10-0{day}T08:00:00Z") });
+        deliver(&app, &secret, entry).await;
+    }
+
+    let first = timeline(&app, json!({ "limit": 3 })).await;
+    assert_eq!(guids(&first), ["feed-5", "inbox-4", "feed-3"]);
+    let cursor = &first[2]["entries"]["publishedAt"];
+    let next = timeline(&app, json!({ "view": 0, "publishedAfter": cursor })).await;
+    assert_eq!(guids(&next), ["inbox-2", "feed-1"]);
+    let oldest = json!({ "sortOrder": "asc", "limit": 2 });
+    assert_eq!(guids(&timeline(&app, oldest).await), ["feed-1", "inbox-2"]);
+    let inboxed = &first[1];
+    assert_eq!(
+        (&inboxed["from"], &inboxed["feeds"]["type"]),
+        (&json!(["inbox"]), &json!("inbox"))
+    );
+    assert_eq!(inboxed.get("collections"), None);
+
+    assert_eq!(
+        timeline(&app, json!({ "view": 1 })).await,
+        Vec::<Value>::new()
+    );
+    let feed_only = timeline(&app, json!({ "feedId": feed_id })).await;
+    assert_eq!(guids(&feed_only), ["feed-5", "feed-3", "feed-1"]);
 }

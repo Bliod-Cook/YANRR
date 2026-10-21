@@ -214,3 +214,95 @@ async fn webhook_and_email_delivery() {
         ]
     );
 }
+
+#[tokio::test]
+async fn inbox_entries_list_detail_delete() {
+    let app = TestApp::spawn().await;
+    app.sign_up("alice@example.com").await;
+    let secret = create_inbox(&app, "news").await;
+    for day in 1..=3 {
+        let entry = json!({
+            "guid": format!("g-{day}"),
+            "publishedAt": format!("2026-10-0{day}T08:00:00Z"),
+            "title": format!("Day {day}"),
+            "content": "<p>Body</p>",
+            "read": day == 2,
+        });
+        deliver(&app, &secret, entry).await;
+    }
+    app.insert_user("bob").await;
+    let sql = "INSERT INTO inboxes (handle, user_id, created_at) VALUES ('bobs', 'bob', now());
+        INSERT INTO inbox_entries (id, inbox_handle, guid, read, published_at, inserted_at)
+        VALUES (1, 'bobs', 'b', false, now(), now())";
+    app.state.db.execute_unprepared(sql).await.unwrap();
+    let list = async |body: Value| {
+        let listed = json(app.post("/api/entries/inbox", body).await).await;
+        listed["data"].as_array().unwrap().clone()
+    };
+    let titles = |items: &[Value]| -> Vec<Value> {
+        items
+            .iter()
+            .map(|item| item["entries"]["title"].clone())
+            .collect()
+    };
+
+    let first = list(json!({ "inboxId": "news", "limit": 2 })).await;
+    assert_eq!(titles(&first), [json!("Day 3"), json!("Day 2")]);
+    let cursor = &first[1]["entries"]["publishedAt"];
+    let next = list(json!({ "inboxId": "news", "publishedAfter": cursor })).await;
+    assert_eq!(titles(&next), [json!("Day 1")]);
+    let unread = list(json!({ "inboxId": "news", "read": false })).await;
+    assert_eq!(titles(&unread), [json!("Day 3"), json!("Day 1")]);
+    assert_eq!(
+        list(json!({ "inboxId": "bobs" })).await,
+        Vec::<Value>::new()
+    );
+
+    let item = &first[0];
+    let inbox = json(app.get("/api/inboxes?handle=news").await).await;
+    assert_eq!(item["feeds"], inbox["data"]);
+    assert_eq!(
+        (
+            &item["read"],
+            &item["entries"]["read"],
+            &item["entries"]["inboxHandle"]
+        ),
+        (&json!(false), &json!(false), &json!("news"))
+    );
+    assert_eq!(item["entries"].get("content"), None);
+    assert_eq!(item.get("collections"), None);
+    let id = item["entries"]["id"].as_str().unwrap();
+    let detail = json(app.get(&format!("/api/entries/inbox?id={id}")).await).await;
+    assert_eq!(detail["data"]["feeds"]["id"], "news");
+    assert_eq!(detail["data"]["entries"]["content"], "<p>Body</p>");
+    let foreign = json(app.get("/api/entries/inbox?id=1").await).await;
+    assert_eq!(foreign["data"], Value::Null);
+
+    let remove = async |id: &str| {
+        app.delete("/api/entries/inbox", json!({ "entryId": id }))
+            .await
+    };
+    assert_error(remove("1").await, 404, 3000).await;
+    let removed = json(remove(id).await).await;
+    assert_eq!(
+        (&removed["code"], &removed["data"]),
+        (&json!(0), &Value::Null)
+    );
+    assert!(removed["lastSyncId"].is_i64());
+    assert_error(remove(id).await, 404, 3000).await;
+    let removals: Vec<_> = app
+        .actions()
+        .await
+        .into_iter()
+        .filter(|action| action["model"] == "inbox_entry")
+        .map(|action| {
+            (
+                action["action"].clone(),
+                action["modelId"].clone(),
+                action["data"].clone(),
+            )
+        })
+        .collect();
+    let data = json!({ "inboxId": "news", "unread": true });
+    assert_eq!(removals, [(json!("D"), json!(id), data)]);
+}

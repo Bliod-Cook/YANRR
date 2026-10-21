@@ -349,3 +349,8 @@ pub async fn email(
     deliver(&state, &inbox, entry).await?;
     Ok(done())
 }
+
+/// Whether a timeline of `view` shows inbox entries: clients keep inboxes in Articles, which All includes.
+pub fn in_view(view: Option<i16>) -> bool {
+    view.is_none_or(|view| view == 0 || view == -1)
+}

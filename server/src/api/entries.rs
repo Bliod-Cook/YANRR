@@ -3,21 +3,23 @@ use std::collections::HashMap;
 use axum::{Json, extract::State, http::header, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use sea_orm::{
-    ColumnTrait, ConnectionTrait, DbBackend, EntityTrait, FromQueryResult, QueryFilter, Statement,
-    Value as SqlValue,
+    ColumnTrait, ConnectionTrait, DatabaseConnection, DbBackend, DbErr, EntityTrait,
+    FromQueryResult, QueryFilter, Statement, TransactionTrait, Value as SqlValue,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::{
     error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode},
+    inboxes,
     response::ok,
     session::AuthUser,
 };
 use crate::{
     AppState,
-    entity::{entry, feed},
+    entity::{entry, feed, inbox, inbox_entry},
     fetch, id,
+    sync::{self, Action},
     time::iso,
     wire,
 };
@@ -31,6 +33,11 @@ pub const TIMELINE: &str = "FROM entries e
     LEFT JOIN subscriptions s ON s.user_id = $1 AND s.feed_id = e.feed_id
     LEFT JOIN collections c ON c.user_id = $1 AND c.entry_id = e.id
     LEFT JOIN unreads u ON u.user_id = $1 AND u.entry_id = e.id";
+
+/// The user's inbox entries, named `e` like [`TIMELINE`]'s so that cursors and order fit both; `i` is the inbox
+/// and `$1` the user id. The join is the ownership check.
+pub const INBOX_TIMELINE: &str =
+    "FROM inbox_entries e JOIN inboxes i ON i.handle = e.inbox_handle AND i.user_id = $1";
 
 /// Values bound to a statement as `$1`, `$2`, …
 pub struct Params(pub Vec<SqlValue>);
@@ -59,18 +66,29 @@ impl Scope {
         self.is_collection == Some(true)
     }
 
-    /// A condition on [`TIMELINE`], or `None` when the scope covers nothing.
+    fn feed_ids(&self) -> Vec<&String> {
+        self.feed_id
+            .iter()
+            .chain(self.feed_id_list.iter().flatten())
+            .collect()
+    }
+
+    /// The timeline of everything the user follows, rather than of a feed, list, inbox or the collection.
+    fn is_subscriptions(&self) -> bool {
+        !self.is_collection()
+            && self.list_id.is_none()
+            && self.inbox_id.is_none()
+            && self.feed_ids().is_empty()
+    }
+
+    /// A condition on [`TIMELINE`], or `None` when the scope covers no feed entry.
     pub fn condition(&self, params: &mut Params) -> Option<String> {
-        // Lists and inboxes are not supported; ignoring them would cover every entry instead.
+        // Lists are not supported and inboxes hold no feed entries; ignoring them would cover every entry instead.
         if self.list_id.is_some() || self.inbox_id.is_some() {
             return None;
         }
         let view = self.view.filter(|view| *view != -1);
-        let feed_ids: Vec<_> = self
-            .feed_id
-            .iter()
-            .chain(self.feed_id_list.iter().flatten())
-            .collect();
+        let feed_ids = self.feed_ids();
         let mut conditions = Vec::new();
         if self.is_collection() {
             conditions.push("c.entry_id IS NOT NULL".to_string());
@@ -88,6 +106,14 @@ impl Scope {
         }
         Some(conditions.join(" AND "))
     }
+
+    /// A condition on [`INBOX_TIMELINE`], or `None` when the scope covers no inbox entry.
+    pub fn inbox_condition(&self, params: &mut Params) -> Option<String> {
+        match &self.inbox_id {
+            Some(handle) => Some(format!("i.handle = {}", params.bind(handle.clone()))),
+            None => (self.is_subscriptions() && inboxes::in_view(self.view)).then(|| "TRUE".into()),
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -104,25 +130,77 @@ pub struct TimelineBody {
     with_content: bool,
 }
 
+impl TimelineBody {
+    fn is_ascending(&self) -> bool {
+        self.sort_order.as_deref() == Some("asc")
+    }
+
+    /// Appends the cursors, read filter, order and `limit` to a query over `e` ordered by `time`; `read` is SQL
+    /// telling whether an entry is read.
+    ///
+    /// The cursors follow the clients: `publishedAfter` pages towards older entries and `publishedBefore` towards
+    /// newer ones, whatever their names say.
+    fn paginate(&self, sql: &mut String, params: &mut Params, time: &str, read: &str, limit: u64) {
+        if let Some(cursor) = self.published_after {
+            *sql += &format!(" AND {time} < {}", params.bind(cursor));
+        }
+        if let Some(cursor) = self.published_before {
+            *sql += &format!(" AND {time} > {}", params.bind(cursor));
+        }
+        match self.read {
+            Some(false) => *sql += &format!(" AND NOT ({read})"),
+            Some(true) => *sql += &format!(" AND ({read})"),
+            None => {}
+        }
+        let order = if self.is_ascending() { "ASC" } else { "DESC" };
+        *sql += &format!(" ORDER BY {time} {order}, e.id {order} LIMIT {limit}");
+    }
+}
+
+/// A timeline item and the time it is ordered by.
+struct Item {
+    time: DateTime<Utc>,
+    id: i64,
+    data: Value,
+}
+
 #[derive(FromQueryResult)]
 struct Marks {
     read: bool,
     view: Option<i16>,
     collected_at: Option<DateTime<Utc>>,
+    time: DateTime<Utc>,
 }
 
-/// `POST /entries`: a page of the timeline.
-///
-/// The cursors follow the clients: `publishedAfter` pages towards older entries and `publishedBefore` towards
-/// newer ones, whatever their names say. Collections page by the time they were collected.
+/// `POST /entries`, and `POST /entries/inbox` with an `inboxId`: a page of the timeline. Feed entries and inbox
+/// entries are each paged on their own, then merged.
 pub async fn timeline(
     State(state): State<AppState>,
     user: AuthUser,
     ApiJson(body): ApiJson<TimelineBody>,
 ) -> ApiResult<Json<Value>> {
-    let mut params = Params(vec![user.id.into()]);
+    let limit = body.limit.unwrap_or(PAGE_SIZE).clamp(1, MAX_PAGE_SIZE);
+    let mut items = feed_items(&state.db, &user.id, &body, limit).await?;
+    items.extend(inbox_items(&state.db, &user.id, &body, limit).await?);
+    items.sort_by_key(|item| (item.time, item.id));
+    if !body.is_ascending() {
+        items.reverse();
+    }
+    items.truncate(limit as usize);
+    let data: Vec<_> = items.into_iter().map(|item| item.data).collect();
+    Ok(ok(data))
+}
+
+/// Feed entries of the timeline; collections page by the time they were collected.
+async fn feed_items(
+    db: &DatabaseConnection,
+    user_id: &str,
+    body: &TimelineBody,
+    limit: u64,
+) -> Result<Vec<Item>, DbErr> {
+    let mut params = Params(vec![user_id.into()]);
     let Some(scope) = body.scope.condition(&mut params) else {
-        return Ok(ok(json!([])));
+        return Ok(Vec::new());
     };
     let time = match body.scope.is_collection() {
         true => "c.created_at",
@@ -130,46 +208,31 @@ pub async fn timeline(
     };
     let mut sql = format!(
         "SELECT e.*, u.entry_id IS NULL AS read, COALESCE(s.view, c.view) AS view,
-            c.created_at AS collected_at
+            c.created_at AS collected_at, {time} AS time
         {TIMELINE} WHERE {scope}"
     );
-    if let Some(cursor) = body.published_after {
-        sql += &format!(" AND {time} < {}", params.bind(cursor));
-    }
-    if let Some(cursor) = body.published_before {
-        sql += &format!(" AND {time} > {}", params.bind(cursor));
-    }
-    match body.read {
-        Some(false) => sql += " AND u.entry_id IS NOT NULL",
-        Some(true) => sql += " AND u.entry_id IS NULL",
-        None => {}
-    }
-    let order = match body.sort_order.as_deref() {
-        Some("asc") => "ASC",
-        _ => "DESC",
-    };
-    let limit = body.limit.unwrap_or(PAGE_SIZE).clamp(1, MAX_PAGE_SIZE);
-    sql += &format!(" ORDER BY {time} {order}, e.id {order} LIMIT {limit}");
+    body.paginate(&mut sql, &mut params, time, "u.entry_id IS NULL", limit);
 
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
-    let rows = state.db.query_all_raw(statement).await?;
-    let mut items = Vec::new();
+    let rows = db.query_all_raw(statement).await?;
+    let mut entries = Vec::new();
     for row in &rows {
         let entry = entry::Model::from_query_result(row, "")?;
-        items.push((entry, Marks::from_query_result(row, "")?));
+        entries.push((entry, Marks::from_query_result(row, "")?));
     }
-    let feed_ids = items.iter().map(|(entry, _)| entry.feed_id);
+    let feed_ids = entries.iter().map(|(entry, _)| entry.feed_id);
     let feeds: HashMap<_, _> = feed::Entity::find()
         .filter(feed::Column::Id.is_in(feed_ids))
-        .all(&state.db)
+        .all(db)
         .await?
         .into_iter()
         .map(|feed| (feed.id, feed))
         .collect();
-    let data: Vec<_> = items
+    let items = entries
         .into_iter()
         .map(|(entry, marks)| {
-            let mut item = json!({
+            let id = entry.id;
+            let mut data = json!({
                 "read": marks.read,
                 "view": marks.view.or(body.scope.view).unwrap_or(0),
                 "from": ["feed"],
@@ -178,12 +241,58 @@ pub async fn timeline(
             });
             // Clients drop their star when the key is missing; `null` would keep it.
             if let Some(collected_at) = marks.collected_at {
-                item["collections"] = json!({ "createdAt": iso(collected_at) });
+                data["collections"] = json!({ "createdAt": iso(collected_at) });
             }
-            item
+            Item {
+                time: marks.time,
+                id,
+                data,
+            }
         })
         .collect();
-    Ok(ok(data))
+    Ok(items)
+}
+
+/// Inbox entries of the timeline, which cannot be collected.
+async fn inbox_items(
+    db: &DatabaseConnection,
+    user_id: &str,
+    body: &TimelineBody,
+    limit: u64,
+) -> Result<Vec<Item>, DbErr> {
+    let mut params = Params(vec![user_id.into()]);
+    let Some(scope) = body.scope.inbox_condition(&mut params) else {
+        return Ok(Vec::new());
+    };
+    let mut sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE {scope}");
+    body.paginate(&mut sql, &mut params, "e.published_at", "e.read", limit);
+
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
+    let entries = inbox_entry::Model::find_by_statement(statement)
+        .all(db)
+        .await?;
+    let inboxes: HashMap<_, _> = inbox::Entity::find()
+        .filter(inbox::Column::UserId.eq(user_id))
+        .all(db)
+        .await?
+        .into_iter()
+        .map(|inbox| (inbox.handle.clone(), inbox))
+        .collect();
+    let items = entries
+        .into_iter()
+        .map(|entry| Item {
+            time: entry.published_at,
+            id: entry.id,
+            data: json!({
+                "read": entry.read,
+                "view": 0,
+                "from": ["inbox"],
+                "feeds": wire::Inbox::from(&inboxes[&entry.inbox_handle]),
+                "entries": wire::InboxEntry::new(entry, body.with_content),
+            }),
+        })
+        .collect();
+    Ok(items)
 }
 
 #[derive(Deserialize)]
@@ -253,4 +362,74 @@ pub async fn readability(
         .ok_or_else(|| ApiError::new(ExceptionCode::FeedFetchError, "The entry has no URL"))?;
     let content = fetch::readability::extract(&state, &url).await?;
     Ok(ok(json!({ "content": content })))
+}
+
+/// `GET /entries/inbox`: one of the user's inbox entries with its content, or `null`.
+pub async fn get_inbox_entry(
+    State(state): State<AppState>,
+    user: AuthUser,
+    ApiQuery(query): ApiQuery<EntryQuery>,
+) -> ApiResult<Json<Value>> {
+    let Some(id) = id::parse(&query.id) else {
+        return Ok(ok(Value::Null));
+    };
+    let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = $2");
+    let statement =
+        Statement::from_sql_and_values(DbBackend::Postgres, sql, [user.id.into(), id.into()]);
+    let Some(entry) = inbox_entry::Model::find_by_statement(statement)
+        .one(&state.db)
+        .await?
+    else {
+        return Ok(ok(Value::Null));
+    };
+    let inbox = inbox::Entity::find_by_id(&entry.inbox_handle)
+        .one(&state.db)
+        .await?;
+    let data = inbox.map(|inbox| {
+        json!({ "feeds": wire::Inbox::from(&inbox), "entries": wire::InboxEntry::new(entry, true) })
+    });
+    Ok(ok(data))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteInboxEntryBody {
+    entry_id: String,
+}
+
+/// `DELETE /entries/inbox`
+pub async fn delete_inbox_entry(
+    State(state): State<AppState>,
+    user: AuthUser,
+    ApiJson(body): ApiJson<DeleteInboxEntryBody>,
+) -> ApiResult<Json<Value>> {
+    let id = id::parse(&body.entry_id).ok_or_else(ApiError::entry_not_found)?;
+    let sql = format!(
+        "DELETE FROM inbox_entries WHERE id IN (SELECT e.id {INBOX_TIMELINE} WHERE e.id = $2)
+        RETURNING inbox_handle, read"
+    );
+    let values = [user.id.clone().into(), id.into()];
+    let txn = state.db.begin().await?;
+    let deleted = txn
+        .query_one_raw(Statement::from_sql_and_values(
+            DbBackend::Postgres,
+            sql,
+            values,
+        ))
+        .await?
+        .ok_or_else(ApiError::entry_not_found)?;
+    let handle: String = deleted.try_get("", "inbox_handle")?;
+    let read: bool = deleted.try_get("", "read")?;
+    let action = Action {
+        user_id: user.id,
+        model: "inbox_entry",
+        model_id: Some(id.to_string()),
+        action: "D",
+        data: json!({ "inboxId": handle, "unread": !read }),
+    };
+    let last_sync_id = sync::record(&txn, vec![action]).await?;
+    txn.commit().await?;
+    Ok(Json(
+        json!({ "code": 0, "data": null, "lastSyncId": last_sync_id }),
+    ))
 }
