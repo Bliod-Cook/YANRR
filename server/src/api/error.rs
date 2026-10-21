@@ -79,7 +79,7 @@ impl ApiError {
         Self::new(ExceptionCode::EntryNoFound, "Entry not found")
     }
 
-    fn validation(message: String) -> Self {
+    pub fn validation(message: String) -> Self {
         Self {
             data: Some(json!([{ "message": message }])),
             ..Self::new(ExceptionCode::InvalidInput, message)
