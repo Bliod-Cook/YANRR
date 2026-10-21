@@ -147,14 +147,18 @@ const config: ForgeConfig = {
     extendInfo: {
       ITSAppUsesNonExemptEncryption: false,
     },
-    osxSign: {
-      optionsForFile: () => ({
-        entitlements: "build/entitlements.mac.plist",
-      }),
-      keychain: process.env.OSX_SIGN_KEYCHAIN_PATH,
-      identity: process.env.OSX_SIGN_IDENTITY,
-      provisioningProfile: process.env.OSX_SIGN_PROVISIONING_PROFILE_PATH,
-    },
+    // Without an identity the fuses plugin signs the arm64 app ad hoc instead, which Apple silicon
+    // requires to launch it
+    ...(process.env.OSX_SIGN_IDENTITY && {
+      osxSign: {
+        optionsForFile: () => ({
+          entitlements: "build/entitlements.mac.plist",
+        }),
+        keychain: process.env.OSX_SIGN_KEYCHAIN_PATH,
+        identity: process.env.OSX_SIGN_IDENTITY,
+        provisioningProfile: process.env.OSX_SIGN_PROVISIONING_PROFILE_PATH,
+      },
+    }),
     ...(process.env.APPLE_ID &&
       process.env.APPLE_PASSWORD &&
       process.env.APPLE_TEAM_ID && {
