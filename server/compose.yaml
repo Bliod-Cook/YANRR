@@ -1,0 +1,33 @@
+# Copy config.example.toml to config.toml next to this file, then in it:
+#   - set server.public_url and auth.secret
+#   - uncomment web_dir = "web"
+#   - point database.url at postgres://yannr:yannr@postgres/yannr
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: yannr
+      POSTGRES_PASSWORD: yannr
+      POSTGRES_DB: yannr
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "yannr"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  yannr:
+    image: ghcr.io/bliod-cook/yannr:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config.toml:/app/config.toml:ro
+
+volumes:
+  postgres:
