@@ -27,6 +27,9 @@ pub enum ExceptionCode {
     EntryNoFound = 3000,
     SettingInvalidTab = 7001,
     SettingPayloadInvalid = 7002,
+    InboxNotFound = 10000,
+    InboxAlreadyExists = 10001,
+    InboxPermissionDenied = 10003,
     RSSHubRouteError = 13000,
     RSSHubUnavailable = 13007,
 }
@@ -39,12 +42,16 @@ impl ExceptionCode {
             | Self::FeedParseError
             | Self::SettingInvalidTab
             | Self::SettingPayloadInvalid
+            | Self::InboxAlreadyExists
             | Self::RSSHubUnavailable => StatusCode::BAD_REQUEST,
             Self::UnprocessableContent | Self::FeedMissingId => StatusCode::UNPROCESSABLE_ENTITY,
-            Self::NotFound | Self::FeedNoFound | Self::EntryNoFound | Self::RSSHubRouteError => {
-                StatusCode::NOT_FOUND
-            }
+            Self::NotFound
+            | Self::FeedNoFound
+            | Self::EntryNoFound
+            | Self::InboxNotFound
+            | Self::RSSHubRouteError => StatusCode::NOT_FOUND,
             Self::AuthError => StatusCode::UNAUTHORIZED,
+            Self::InboxPermissionDenied => StatusCode::FORBIDDEN,
             Self::MissingConfiguration | Self::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

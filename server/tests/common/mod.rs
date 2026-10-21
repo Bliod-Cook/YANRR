@@ -111,6 +111,15 @@ impl TestApp {
             .unwrap()
     }
 
+    pub async fn put(&self, path: &str, body: Value) -> Response {
+        self.client
+            .put(format!("{}{path}", self.url))
+            .json(&body)
+            .send()
+            .await
+            .unwrap()
+    }
+
     pub async fn post_bytes(&self, path: &str, body: impl Into<reqwest::Body>) -> Response {
         self.client
             .post(format!("{}{path}", self.url))
