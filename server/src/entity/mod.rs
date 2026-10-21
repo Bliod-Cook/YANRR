@@ -1,6 +1,7 @@
 pub mod collection;
 pub mod entry;
 pub mod feed;
+pub mod inbox;
 pub mod messaging_token;
 pub mod setting;
 pub mod subscription;

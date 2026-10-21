@@ -4,6 +4,7 @@ mod discover;
 mod entries;
 mod error;
 mod feeds;
+mod inboxes;
 mod messaging;
 mod opml;
 mod reads;
@@ -44,6 +45,14 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
         .route("/entries/readability", get(entries::readability))
         .route("/feeds", get(feeds::get))
         .route("/feeds/refresh", get(feeds::refresh))
+        .route(
+            "/inboxes",
+            get(inboxes::get)
+                .post(inboxes::create)
+                .put(inboxes::update)
+                .delete(inboxes::delete),
+        )
+        .route("/inboxes/list", get(inboxes::list))
         .route(
             "/messaging",
             get(messaging::list)

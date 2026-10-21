@@ -1,10 +1,10 @@
-//! Feeds, entries and subscriptions as API responses and change log data show them.
+//! Feeds, inboxes, entries and subscriptions as API responses and change log data show them.
 
 use serde::Serialize;
 use serde_json::Value;
 
 use crate::{
-    entity::{entry, feed, subscription},
+    entity::{entry, feed, inbox, subscription},
     time::iso,
 };
 
@@ -112,8 +112,74 @@ impl Entry {
     }
 }
 
-/// An item of `GET /subscriptions`. Clients tell subscription types apart by which of `feeds`, `lists` or
-/// `inboxes` is present, so only `feeds` is ever written.
+/// `InboxOpenApiSchema`, whose id is the handle.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Inbox {
+    #[serde(rename = "type")]
+    kind: &'static str,
+    id: String,
+    secret: String,
+    title: Option<String>,
+    // Inboxes have no description or image, and owners are not shown: always null.
+    description: (),
+    image: (),
+    owner_user_id: String,
+    owner: (),
+}
+
+impl From<&inbox::Model> for Inbox {
+    fn from(inbox: &inbox::Model) -> Self {
+        Self {
+            kind: "inbox",
+            id: inbox.handle.clone(),
+            secret: inbox.secret.clone(),
+            title: inbox.title.clone(),
+            description: (),
+            image: (),
+            owner_user_id: inbox.user_id.clone(),
+            owner: (),
+        }
+    }
+}
+
+/// An item of `GET /subscriptions` for an inbox, which is always in the Articles view and cannot be edited as a
+/// subscription.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxSubscription {
+    inboxes: Inbox,
+    /// Clients name an inbox's timeline `inbox-<handle>`.
+    feed_id: String,
+    inbox_id: String,
+    title: Option<String>,
+    user_id: String,
+    view: i16,
+    category: (),
+    is_private: bool,
+    hide_from_timeline: (),
+    created_at: String,
+}
+
+impl From<&inbox::Model> for InboxSubscription {
+    fn from(inbox: &inbox::Model) -> Self {
+        Self {
+            inboxes: inbox.into(),
+            feed_id: format!("inbox-{}", inbox.handle),
+            inbox_id: inbox.handle.clone(),
+            title: inbox.title.clone(),
+            user_id: inbox.user_id.clone(),
+            view: 0,
+            category: (),
+            is_private: false,
+            hide_from_timeline: (),
+            created_at: iso(inbox.created_at),
+        }
+    }
+}
+
+/// An item of `GET /subscriptions` for a feed. Clients tell subscription types apart by which of `feeds`, `lists`
+/// or `inboxes` is present.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Subscription {

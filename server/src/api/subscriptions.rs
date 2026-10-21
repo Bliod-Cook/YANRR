@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     AppState,
-    entity::{feed, subscription},
+    entity::{feed, inbox, subscription},
     fetch, id,
     subscription::{self as subscriptions, Changes, Form},
     sync, wire,
@@ -21,14 +21,14 @@ pub struct ListQuery {
     view: Option<i16>,
 }
 
-/// `GET /subscriptions`
+/// `GET /subscriptions`: feeds, then inboxes, which are in the Articles view.
 pub async fn list(
     State(state): State<AppState>,
     user: AuthUser,
     ApiQuery(query): ApiQuery<ListQuery>,
 ) -> ApiResult<Json<Value>> {
     let mut select = subscription::Entity::find()
-        .filter(subscription::Column::UserId.eq(user.id))
+        .filter(subscription::Column::UserId.eq(&user.id))
         .order_by_asc(subscription::Column::CreatedAt);
     if let Some(view) = query.view {
         select = select.filter(subscription::Column::View.eq(view));
@@ -37,10 +37,24 @@ pub async fn list(
         .find_also_related(feed::Entity)
         .all(&state.db)
         .await?;
-    let subscriptions: Vec<_> = rows
+    let mut subscriptions: Vec<_> = rows
         .into_iter()
-        .filter_map(|(subscription, feed)| Some(wire::Subscription::new(subscription, &feed?)))
+        .filter_map(|(subscription, feed)| {
+            Some(json!(wire::Subscription::new(subscription, &feed?)))
+        })
         .collect();
+    if query.view.is_none_or(|view| view == 0) {
+        let inboxes = inbox::Entity::find()
+            .filter(inbox::Column::UserId.eq(user.id))
+            .order_by_asc(inbox::Column::CreatedAt)
+            .all(&state.db)
+            .await?;
+        subscriptions.extend(
+            inboxes
+                .iter()
+                .map(|inbox| json!(wire::InboxSubscription::from(inbox))),
+        );
+    }
     Ok(ok(subscriptions))
 }
 
