@@ -21,6 +21,10 @@ const googleServiceInfoPlist = process.env.GOOGLE_SERVICE_INFO_PLIST
 const googleServicesJson = process.env.GOOGLE_SERVICES_JSON
 const withFirebase = !!(googleServiceInfoPlist || googleServicesJson)
 
+// Android installs only an equal or higher version code over an app; minor and patch stay below 100
+const [major, minor, patch] = PKG.version.split(".").map(Number) as [number, number, number]
+const versionCode = major * 10000 + minor * 100 + patch
+
 export default ({ config }: ConfigContext): ExpoConfig => {
   const result: ExpoConfig = {
     ...config,
@@ -53,6 +57,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     android: {
       package: "io.github.bliodcook.yannr",
+      versionCode,
       // Media selection uses system pickers; saving only needs write access on older Android versions.
       blockedPermissions: [
         "android.permission.ACCESS_MEDIA_LOCATION",
