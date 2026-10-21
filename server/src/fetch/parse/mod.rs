@@ -85,6 +85,12 @@ pub struct EntryLink {
     pub content_html: Option<String>,
 }
 
+/// The start of an HTML summary's text, or `None` if it has none.
+pub fn describe(html: &str) -> Option<String> {
+    let text = html::text(html);
+    (!text.is_empty()).then(|| text.chars().take(DESCRIPTION_LENGTH).collect())
+}
+
 /// Parses RSS, Atom or JSON Feed; `url` resolves relative links.
 pub fn parse(body: &[u8], url: &str) -> Result<ParsedFeed, String> {
     let is_json = body.iter().find(|byte| !byte.is_ascii_whitespace()) == Some(&b'{');
@@ -144,13 +150,11 @@ impl Draft {
     fn finish(self, base: Option<&Url>, feed_language: Option<&str>) -> ParsedEntry {
         let url = self.url.and_then(|url| resolve(base, &url));
         let content = self.content.or_else(|| self.summary.clone());
-        let summary_text = self
+        let description = self
             .summary
-            .or_else(|| content.clone())
-            .map(|html| html::text(&html));
-        let description = summary_text
-            .filter(|text| !text.is_empty())
-            .map(|text| text.chars().take(DESCRIPTION_LENGTH).collect());
+            .as_deref()
+            .or(content.as_deref())
+            .and_then(describe);
 
         let mut media = self.media;
         if let Some(content) = &content {

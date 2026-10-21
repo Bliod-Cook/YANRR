@@ -17,6 +17,11 @@ registration = true
 [rsshub]
 url = "https://rsshub.app"
 
+[inbox]
+# Bearer token your inbound mail service posts emails to /api/inboxes/email with (optional; emails are refused
+# without it). Mail to <handle>@<any domain> goes to the inbox with that handle.
+# email_secret = ""
+
 # Push notifications (optional), sent through Firebase Cloud Messaging.
 # [push]
 # Service account key of the Firebase project the clients are built with

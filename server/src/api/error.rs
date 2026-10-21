@@ -75,6 +75,10 @@ impl ApiError {
         }
     }
 
+    pub fn unauthorized() -> Self {
+        Self::new(ExceptionCode::AuthError, "Unauthorized")
+    }
+
     pub fn feed_not_found() -> Self {
         Self::new(ExceptionCode::FeedNoFound, "Feed not found")
     }

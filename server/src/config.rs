@@ -9,6 +9,8 @@ pub struct Config {
     pub auth: AuthConfig,
     #[serde(default)]
     pub rsshub: RsshubConfig,
+    #[serde(default)]
+    pub inbox: InboxConfig,
     /// Push notifications are sent only when configured.
     pub push: Option<PushConfig>,
 }
@@ -45,6 +47,12 @@ impl Default for RsshubConfig {
             url: "https://rsshub.app".into(),
         }
     }
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct InboxConfig {
+    /// Bearer token the inbound mail service posts emails with; emails are refused without one.
+    pub email_secret: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
