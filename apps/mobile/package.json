@@ -5,7 +5,6 @@
   "main": "src/main.tsx",
   "scripts": {
     "android": "expo run:android",
-    "bump": "vv",
     "dev": "npm run start",
     "e2e:android": "sh ./e2e/run-maestro.sh android",
     "e2e:doctor": "sh -c 'for f in e2e/flows/shared/*.yaml e2e/flows/android/*.yaml e2e/flows/ios/*.yaml; do maestro check-syntax $f; done'",
@@ -138,7 +137,6 @@
     "babel-plugin-inline-import": "3.0.0",
     "babel-preset-expo": "57.0.12",
     "expo-drizzle-studio-plugin": "0.2.1",
-    "nbump": "2.1.8",
     "pathe": "2.0.3",
     "postcss": "8.5.28",
     "sf-symbols-typescript": "2.2.0",
