@@ -1,8 +1,9 @@
 mod common;
 
-use common::{TestApp, assert_error, json};
-use sea_orm::ConnectionTrait;
+use common::{TestApp, assert_error, create_inbox, deliver, json};
+use sea_orm::{ConnectionTrait, EntityTrait, QueryOrder};
 use serde_json::{Value, json};
+use yannr::entity::inbox_entry;
 
 #[tokio::test]
 async fn inbox_lifecycle() {
@@ -90,6 +91,126 @@ async fn inbox_lifecycle() {
             (json!("I"), json!("news"), subscription),
             (json!("U"), json!("news"), json!({ "title": "Letters" })),
             (json!("D"), json!("news"), Value::Null),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn webhook_and_email_delivery() {
+    let app =
+        TestApp::spawn_with(|config| config.inbox.email_secret = Some("mail-secret".into())).await;
+    app.sign_up("alice@example.com").await;
+    let secret = create_inbox(&app, "news").await;
+
+    let hook =
+        json!({ "guid": "w-1", "publishedAt": "2026-10-01T08:00:00.123456Z", "title": "Hook" });
+    assert_error(deliver(&app, "wrong", hook.clone()).await, 401, 1000).await;
+    for _ in 0..2 {
+        assert_eq!(
+            json(deliver(&app, &secret, hook.clone()).await).await,
+            json!({ "code": 0 })
+        );
+    }
+    let seen = json!({ "guid": "w-2", "publishedAt": "2026-10-02T08:00:00Z", "read": true });
+    deliver(&app, &secret, seen).await;
+
+    let email = |to: &str| {
+        json!({
+            "from": { "name": "Bob", "address": "bob@example.com" },
+            "to": { "address": to },
+            "subject": "The weekly news about the world",
+            "messageId": "<m-1@example.com>",
+            "date": "2026-10-03T08:00:00Z",
+            "html": "<h1>Hello</h1><p>This is the weekly newsletter, sent to everyone who subscribed.</p>",
+        })
+    };
+    let mail = async |token: &str, body: Value| {
+        app.client
+            .post(format!("{}/api/inboxes/email", app.url))
+            .bearer_auth(token)
+            .json(&body)
+            .send()
+            .await
+            .unwrap()
+    };
+    assert_error(mail("wrong", email("news@example.com")).await, 401, 1000).await;
+    assert_error(
+        mail("mail-secret", email("nobody@example.com")).await,
+        404,
+        10000,
+    )
+    .await;
+    mail("mail-secret", email("News@example.com")).await;
+
+    let stored = inbox_entry::Entity::find()
+        .order_by_asc(inbox_entry::Column::PublishedAt)
+        .all(&app.state.db)
+        .await
+        .unwrap();
+    let summary: Vec<_> = stored
+        .iter()
+        .map(|entry| {
+            (
+                entry.guid.as_str(),
+                entry.read,
+                entry.published_at.to_rfc3339(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        summary,
+        [
+            ("w-1", false, "2026-10-01T08:00:00.123+00:00".to_string()),
+            ("w-2", true, "2026-10-02T08:00:00+00:00".to_string()),
+            (
+                "<m-1@example.com>",
+                false,
+                "2026-10-03T08:00:00+00:00".to_string()
+            ),
+        ]
+    );
+    let mailed = &stored[2];
+    assert_eq!(
+        (
+            mailed.title.as_deref(),
+            mailed.author.as_deref(),
+            mailed.author_url.as_deref(),
+            mailed.description.as_deref(),
+            mailed.language.as_deref(),
+        ),
+        (
+            Some("The weekly news about the world"),
+            Some("Bob"),
+            Some("mailto:bob@example.com"),
+            Some("Hello This is the weekly newsletter, sent to everyone who subscribed."),
+            Some("en"),
+        )
+    );
+
+    let arrivals: Vec<_> = app
+        .actions()
+        .await
+        .into_iter()
+        .filter(|action| action["action"] == "N")
+        .map(|action| (action["modelId"].clone(), action["data"].clone()))
+        .collect();
+    let arrival = |published_at: &str, unread: u8| {
+        let data = json!({
+            "inboxId": "news",
+            "isInbox": true,
+            "count": 1,
+            "unread": unread,
+            "latestPublishedAt": published_at,
+            "from": ["inbox"],
+        });
+        (json!("news"), data)
+    };
+    assert_eq!(
+        arrivals,
+        [
+            arrival("2026-10-01T08:00:00.123Z", 1),
+            arrival("2026-10-02T08:00:00.000Z", 0),
+            arrival("2026-10-03T08:00:00.000Z", 1),
         ]
     );
 }

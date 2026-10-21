@@ -1,6 +1,6 @@
 mod html;
 pub(crate) mod http;
-mod language;
+pub(crate) mod language;
 pub mod parse;
 pub mod readability;
 pub mod scheduler;

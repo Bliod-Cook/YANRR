@@ -52,7 +52,9 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
                 .put(inboxes::update)
                 .delete(inboxes::delete),
         )
+        .route("/inboxes/email", post(inboxes::email))
         .route("/inboxes/list", get(inboxes::list))
+        .route("/inboxes/webhook", post(inboxes::webhook))
         .route(
             "/messaging",
             get(messaging::list)

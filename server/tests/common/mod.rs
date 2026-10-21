@@ -339,3 +339,21 @@ async fn rsshub(Query(query): Query<HashMap<String, String>>) -> axum::response:
         _ => StatusCode::NOT_FOUND.into_response(),
     }
 }
+
+/// Creates an inbox for the signed-in user and returns its secret.
+pub async fn create_inbox(app: &TestApp, handle: &str) -> String {
+    app.post("/api/inboxes", json!({ "handle": handle })).await;
+    let inbox = json(app.get(&format!("/api/inboxes?handle={handle}")).await).await;
+    inbox["data"]["secret"].as_str().unwrap().to_string()
+}
+
+/// Posts `entry` to the webhook of the inbox with `secret`.
+pub async fn deliver(app: &TestApp, secret: &str, entry: Value) -> Response {
+    app.client
+        .post(format!("{}/api/inboxes/webhook", app.url))
+        .bearer_auth(secret)
+        .json(&entry)
+        .send()
+        .await
+        .unwrap()
+}

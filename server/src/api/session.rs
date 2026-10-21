@@ -6,7 +6,7 @@ use axum::{
 };
 use better_auth::integrations::axum::OptionalSession;
 
-use super::error::{ApiError, ExceptionCode};
+use super::error::ApiError;
 use crate::{AppState, auth::AppAuthSchema};
 
 /// The signed-in user; rejects with the API's 401 format instead of Better Auth's.
@@ -29,7 +29,7 @@ impl FromRequestParts<AppState> for AuthUser {
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, ApiError> {
         signed_in(parts, state)
             .await
-            .ok_or_else(|| ApiError::new(ExceptionCode::AuthError, "Unauthorized"))
+            .ok_or_else(ApiError::unauthorized)
     }
 }
 
