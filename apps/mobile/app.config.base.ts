@@ -148,6 +148,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       require("./plugins/with-android-jdk-21.js"),
       require("./plugins/with-android-manifest-plugin.js"),
       require("./plugins/with-android-launch-link-guard.js"),
+      require("./plugins/with-android-release-signing.js"),
       "expo-secure-store",
       ...(withFirebase ? [["@react-native-firebase/app", { ios: { disableSPM: true } }]] : []),
       [
