@@ -3,7 +3,7 @@ mod common;
 use common::{TestApp, assert_error, create_inbox, deliver, json};
 use sea_orm::{ConnectionTrait, EntityTrait, QueryOrder};
 use serde_json::{Value, json};
-use yannr::entity::inbox_entry;
+use yanrr::entity::inbox_entry;
 
 #[tokio::test]
 async fn inbox_lifecycle() {

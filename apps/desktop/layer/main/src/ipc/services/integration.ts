@@ -170,7 +170,7 @@ export class IntegrationService extends IpcService {
         author,
         publishedAt,
         description,
-        tags: ["yannr"],
+        tags: ["yanrr"],
         feedTitle,
         feedUrl,
       })

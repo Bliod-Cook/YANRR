@@ -179,11 +179,11 @@ describe("auth cookies", () => {
     })
 
     expect(remove).toHaveBeenCalledWith(
-      "https://__yannr_cookie_cleanup__.api.example.com/",
+      "https://__yanrr_cookie_cleanup__.api.example.com/",
       "better-auth.session_token",
     )
     expect(remove).toHaveBeenCalledWith(
-      "https://__yannr_cookie_cleanup__.api.example.com/",
+      "https://__yanrr_cookie_cleanup__.api.example.com/",
       "__Secure-better-auth.session_token",
     )
     expect(remove).toHaveBeenCalledTimes(2)

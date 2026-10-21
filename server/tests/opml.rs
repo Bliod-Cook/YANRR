@@ -3,7 +3,7 @@ mod common;
 use common::{Fixtures, TestApp, json};
 use reqwest::multipart::{Form, Part};
 use serde_json::{Value, json};
-use yannr::opml;
+use yanrr::opml;
 
 fn urls(items: &Value) -> Vec<&str> {
     let items = items.as_array().unwrap();

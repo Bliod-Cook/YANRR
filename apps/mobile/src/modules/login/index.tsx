@@ -65,7 +65,7 @@ export function Login() {
               }}
             >
               <Text className="text-3xl font-semibold">{`${isRegister ? t("signin.sign_up_to") : t("signin.sign_in_to")} `}</Text>
-              <Text className="text-3xl font-bold">Yannr</Text>
+              <Text className="text-3xl font-bold">Yanrr</Text>
             </Text>
             {currentServer ? (
               <>

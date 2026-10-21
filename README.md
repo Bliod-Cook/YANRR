@@ -1,4 +1,4 @@
-# Yannr
+# Yanrr
 
 自托管的个人 RSS 阅读器：Rust 服务端，加上 Web、桌面与移动客户端。
 

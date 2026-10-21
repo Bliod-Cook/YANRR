@@ -3,4 +3,4 @@
 export const SQLITE_DB_NAME = "follow.db"
 
 // The name of the file "Export Database" saves
-export const EXPORTED_DB_FILE_NAME = "yannr.db"
+export const EXPORTED_DB_FILE_NAME = "yanrr.db"

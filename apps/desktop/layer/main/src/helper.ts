@@ -26,5 +26,5 @@ export const getTrayIconPath = () => {
 }
 
 export const filePathToAppUrl = (filePath: string) => {
-  return `app://yannr${pathToFileURL(filePath).pathname}`
+  return `app://yanrr${pathToFileURL(filePath).pathname}`
 }

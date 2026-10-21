@@ -13,7 +13,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>Yannr</string>
+	<string>Yanrr</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -41,14 +41,14 @@
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>yannr</string>
-				<string>io.github.bliodcook.yannr</string>
+				<string>yanrr</string>
+				<string>io.github.bliodcook.yanrr</string>
 			</array>
 		</dict>
 		<dict>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>exp+yannr</string>
+				<string>exp+yanrr</string>
 			</array>
 		</dict>
 	</array>

@@ -124,15 +124,15 @@ const ignorePattern = new RegExp(`^/node_modules/(?!(?:${keepModulePattern})(?:/
 
 const config: ForgeConfig = {
   packagerConfig: {
-    name: isStaging ? "Yannr Staging" : "Yannr",
+    name: isStaging ? "Yanrr Staging" : "Yanrr",
     appCategoryType: "public.app-category.news",
     buildVersion: process.env.BUILD_VERSION || undefined,
-    appBundleId: "io.github.bliodcook.yannr",
+    appBundleId: "io.github.bliodcook.yanrr",
     icon: isStaging ? "resources/icon-staging" : "resources/icon",
     protocols: [
       {
-        name: "Yannr",
-        schemes: ["yannr"],
+        name: "Yanrr",
+        schemes: ["yanrr"],
       },
     ],
 
@@ -216,17 +216,17 @@ const config: ForgeConfig = {
     new MakerDeb(
       {
         options: {
-          name: isStaging ? "yannr-staging" : "yannr",
-          productName: isStaging ? "Yannr Staging" : "Yannr",
+          name: isStaging ? "yanrr-staging" : "yanrr",
+          productName: isStaging ? "Yanrr Staging" : "Yanrr",
           // must match the executable emitted by electron-packager (packagerConfig.name)
-          bin: isStaging ? "Yannr Staging" : "Yannr",
+          bin: isStaging ? "Yanrr Staging" : "Yanrr",
           genericName: "RSS Reader",
           description: "Self-hosted personal RSS reader",
           maintainer: "Bliod-Cook",
           categories: ["Network", "News"],
           section: "web",
           icon: isStaging ? "resources/icon-staging.png" : "resources/icon.png",
-          mimeType: ["x-scheme-handler/yannr"],
+          mimeType: ["x-scheme-handler/yanrr"],
         },
       },
       ["linux"],
@@ -234,7 +234,7 @@ const config: ForgeConfig = {
     // Without an iconUrl, Programs and Features shows the Electron icon: Squirrel downloads it at
     // install time, and the app has no public URL to serve one from
     new MakerSquirrel({
-      name: "Yannr",
+      name: "Yanrr",
       setupIcon: isStaging ? "resources/icon-staging.ico" : "resources/icon.ico",
     }),
   ],

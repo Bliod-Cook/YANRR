@@ -126,7 +126,7 @@ const requestAuth = async ({
     headers: {
       "Cache-Control": "no-store",
       "content-type": "application/json",
-      "x-app-name": "Yannr Web",
+      "x-app-name": "Yanrr Web",
       "x-app-platform": "desktop/web",
       "x-app-version": "1.4.0",
       "x-client-id": nanoid(),

@@ -7,7 +7,7 @@ import { JotaiPersistSyncStorage } from "./jotai"
 
 const [, , useStoredServerUrl, , getStoredServerUrl, setStoredServerUrl] = createAtomHooks(
   atomWithStorage<string | null>(
-    "##Yannr-Server-Url",
+    "##Yanrr-Server-Url",
     null,
     JotaiPersistSyncStorage as JotaiSyncStorage<string | null>,
     { getOnInit: true },
@@ -15,7 +15,7 @@ const [, , useStoredServerUrl, , getStoredServerUrl, setStoredServerUrl] = creat
 )
 
 // Builds can come with their server, such as for development, E2E, or a deployment's own app
-const serverUrlOverride = normalizeServerUrl(process.env.EXPO_PUBLIC_YANNR_SERVER_URL ?? "")
+const serverUrlOverride = normalizeServerUrl(process.env.EXPO_PUBLIC_YANRR_SERVER_URL ?? "")
 
 /** Whether the build comes with its server, which the user then cannot change */
 export const isServerUrlBuiltIn = serverUrlOverride !== null
@@ -43,7 +43,7 @@ export const serverEnv = {
   },
 }
 
-/** Whether a Yannr server answers at this address */
+/** Whether a Yanrr server answers at this address */
 export const answersAsServer = async (server: string) => {
   try {
     const response = await fetch(`${getApiUrl(server)}/status/configs`, {

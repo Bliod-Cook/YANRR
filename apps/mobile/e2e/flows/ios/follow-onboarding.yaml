@@ -1,4 +1,4 @@
-appId: io.github.bliodcook.yannr
+appId: io.github.bliodcook.yanrr
 ---
 - runFlow:
     file: ./dismiss-overlays.yaml
@@ -7,7 +7,7 @@ appId: io.github.bliodcook.yannr
 - tapOn:
     id: discover-search-input
 - eraseText
-- inputText: yannr://onboarding
+- inputText: yanrr://onboarding
 - pressKey: Enter
 - extendedWaitUntil:
     visible:
@@ -32,6 +32,6 @@ appId: io.github.bliodcook.yannr
 - tapOn:
     text: Subscriptions
 - extendedWaitUntil:
-    visible: Welcome to Yannr
+    visible: Welcome to Yanrr
     timeout: 20000
-- assertVisible: Welcome to Yannr
+- assertVisible: Welcome to Yanrr

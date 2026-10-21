@@ -100,7 +100,7 @@ fn document(writer: &mut Writer<Vec<u8>>, outlines: &[Outline]) -> io::Result<()
             writer
                 .create_element("head")
                 .write_inner_content(|writer| {
-                    let title = BytesText::new("YANNR subscriptions");
+                    let title = BytesText::new("YANRR subscriptions");
                     writer.create_element("title").write_text_content(title)?;
                     Ok(())
                 })?;

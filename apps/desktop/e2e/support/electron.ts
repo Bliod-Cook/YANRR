@@ -26,7 +26,7 @@ const ensureElectronBuilt = (env: DesktopE2EEnv) => {
 export const launchElectronApp = async (env: DesktopE2EEnv) => {
   ensureElectronBuilt(env)
 
-  const userDataDir = await mkdtemp(join(tmpdir(), "yannr-e2e-"))
+  const userDataDir = await mkdtemp(join(tmpdir(), "yanrr-e2e-"))
   const electronApp = await electron.launch({
     args: [env.desktopAppDir],
     cwd: env.desktopAppDir,
@@ -34,8 +34,8 @@ export const launchElectronApp = async (env: DesktopE2EEnv) => {
       ...process.env,
       CI: process.env.CI ?? "1",
       NODE_ENV: "test",
-      YANNR_SERVER_URL: env.serverURL,
-      YANNR_E2E_USER_DATA_DIR: userDataDir,
+      YANRR_SERVER_URL: env.serverURL,
+      YANRR_E2E_USER_DATA_DIR: userDataDir,
     },
     timeout: 120_000,
   })

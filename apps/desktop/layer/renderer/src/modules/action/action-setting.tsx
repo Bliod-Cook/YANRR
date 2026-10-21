@@ -212,7 +212,7 @@ const ShareImportSection = () => {
     }
   }, [t])
 
-  const clipboardPrefix = "yannr:actions#"
+  const clipboardPrefix = "yanrr:actions#"
   const handleCopyToClipboard = useCallback(async () => {
     try {
       const jsonData = actionActions.exportRules()

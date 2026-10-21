@@ -28,7 +28,7 @@ const addReleaseSigning = (contents) =>
     src: contents,
     anchor: (lines) => lines.length - 1,
     newSrc: RELEASE_SIGNING,
-    tag: "yannr-release-signing",
+    tag: "yanrr-release-signing",
   }).contents
 
 const withAndroidReleaseSigning = (config) =>

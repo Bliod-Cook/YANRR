@@ -48,9 +48,9 @@ describe("handleUrlRouting", () => {
     const mainWindow = createMainWindow()
     mocks.getMainWindow.mockReturnValue(mainWindow)
 
-    handleUrlRouting("yannr://this/is/not-a-route?x=1")
-    handleUrlRouting("yannr://entry?id=1&view=0")
-    handleUrlRouting("yannr://list?id=1&view=0")
+    handleUrlRouting("yanrr://this/is/not-a-route?x=1")
+    handleUrlRouting("yanrr://entry?id=1&view=0")
+    handleUrlRouting("yanrr://list?id=1&view=0")
 
     expect(mocks.createWindow).not.toHaveBeenCalled()
     expect(mocks.warn).toHaveBeenCalledTimes(3)
@@ -60,18 +60,18 @@ describe("handleUrlRouting", () => {
   it("opens the main window first when it is gone, then routes the link again", () => {
     mocks.getMainWindow.mockReturnValue(null)
 
-    handleUrlRouting("yannr://this/is/not-a-route")
+    handleUrlRouting("yanrr://this/is/not-a-route")
 
     expect(mocks.createWindow).not.toHaveBeenCalled()
     expect(mocks.createMainWindow).toHaveBeenCalledTimes(1)
-    expect(mocks.openDeepLink).toHaveBeenCalledWith("yannr://this/is/not-a-route")
+    expect(mocks.openDeepLink).toHaveBeenCalledWith("yanrr://this/is/not-a-route")
   })
 
   it("keeps routing the links the app knows", () => {
     const mainWindow = createMainWindow()
     mocks.getMainWindow.mockReturnValue(mainWindow)
 
-    handleUrlRouting("yannr://feed?id=41&view=2")
+    handleUrlRouting("yanrr://feed?id=41&view=2")
 
     expect(mocks.goToFeed).toHaveBeenCalledWith({ id: "41", view: 2 })
     expect(mocks.createWindow).not.toHaveBeenCalled()

@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url"
 import { join } from "pathe"
 
 export interface DesktopE2EEnv {
-  /** The Yannr server: the web dev server forwards `/api` to it, Electron talks to it directly */
+  /** The Yanrr server: the web dev server forwards `/api` to it, Electron talks to it directly */
   serverURL: string
   apiURL: string
   webURL: string
@@ -26,11 +26,11 @@ const normalizeRoute = (route: string) => {
 }
 
 /**
- * The web dev server proxies `/api` to a running Yannr server (`VITE_DEV_PROXY_TARGET`), so the
+ * The web dev server proxies `/api` to a running Yanrr server (`VITE_DEV_PROXY_TARGET`), so the
  * app and the API share an origin like they do when the server hosts the web build.
  */
 export const resolveDesktopE2EEnv = (): DesktopE2EEnv => {
-  const webBaseURL = process.env.YANNR_E2E_WEB_URL ?? "http://localhost:2233"
+  const webBaseURL = process.env.YANRR_E2E_WEB_URL ?? "http://localhost:2233"
 
   return {
     serverURL: process.env.VITE_DEV_PROXY_TARGET ?? "http://localhost:3000",

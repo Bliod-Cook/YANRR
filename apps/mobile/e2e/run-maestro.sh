@@ -9,7 +9,7 @@ run_suffix="$(date +%s)-$$"
 mkdir -p "${debug_output}"
 
 : "${E2E_PASSWORD:=Password123!}"
-: "${E2E_EMAIL:=yannr-e2e-${platform}-${run_suffix}@example.com}"
+: "${E2E_EMAIL:=yanrr-e2e-${platform}-${run_suffix}@example.com}"
 
 export E2E_EMAIL
 export E2E_PASSWORD
@@ -49,7 +49,7 @@ resolve_ios_app_path() {
     fi
 
     if [ -f "${MAESTRO_IOS_APP_PATH}" ] && echo "${MAESTRO_IOS_APP_PATH}" | grep -q '\.tar\.gz$'; then
-      extract_dir="$(mktemp -d /tmp/yannr-ios-app-XXXXXX)"
+      extract_dir="$(mktemp -d /tmp/yanrr-ios-app-XXXXXX)"
       extract_ios_app_from_tar "${MAESTRO_IOS_APP_PATH}" "${extract_dir}"
       return
     fi
@@ -57,7 +57,7 @@ resolve_ios_app_path() {
 
   latest_tar="$(find . -maxdepth 1 -name 'build-*.tar.gz' | sort | tail -n1)"
   if [ -n "${latest_tar}" ]; then
-    extract_dir="$(mktemp -d /tmp/yannr-ios-app-XXXXXX)"
+    extract_dir="$(mktemp -d /tmp/yanrr-ios-app-XXXXXX)"
     extract_ios_app_from_tar "${latest_tar}" "${extract_dir}"
     return
   fi
@@ -128,7 +128,7 @@ build_ios_simulator_app() {
     pod install
     set -- $(append_ios_arch_args)
     PROFILE=e2e-ios-simulator \
-    EXPO_PUBLIC_YANNR_SERVER_URL="${EXPO_PUBLIC_YANNR_SERVER_URL:-}" \
+    EXPO_PUBLIC_YANRR_SERVER_URL="${EXPO_PUBLIC_YANRR_SERVER_URL:-}" \
     EXPO_PUBLIC_E2E_LANGUAGE="${EXPO_PUBLIC_E2E_LANGUAGE:-en}" \
     xcodebuild -workspace Folo.xcworkspace \
       -scheme Folo \
@@ -165,7 +165,7 @@ case "${platform}" in
 
     prepare_ios_simulator "${device_id}"
     xcrun simctl install "${device_id}" "${app_path}" >/dev/null 2>&1 || true
-    xcrun simctl launch "${device_id}" io.github.bliodcook.yannr >/dev/null 2>&1 || true
+    xcrun simctl launch "${device_id}" io.github.bliodcook.yanrr >/dev/null 2>&1 || true
 
     case "${mode}" in
       full)
@@ -195,8 +195,8 @@ case "${platform}" in
       exit 1
     fi
     wait_for_android_ready "${device_id}"
-    adb -s "${device_id}" shell pm clear io.github.bliodcook.yannr >/dev/null 2>&1 || true
-    adb -s "${device_id}" shell monkey -p io.github.bliodcook.yannr -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
+    adb -s "${device_id}" shell pm clear io.github.bliodcook.yanrr >/dev/null 2>&1 || true
+    adb -s "${device_id}" shell monkey -p io.github.bliodcook.yanrr -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
     maestro test --format junit --platform android --device "${device_id}" --debug-output "${debug_output}" \
       -e E2E_EMAIL="${E2E_EMAIL}" -e E2E_PASSWORD="${E2E_PASSWORD}" "${flow_target}"
     ;;

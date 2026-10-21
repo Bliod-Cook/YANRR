@@ -5,7 +5,7 @@ use common::{
 };
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde_json::{Value, json};
-use yannr::entity::unread;
+use yanrr::entity::unread;
 
 async fn timeline(app: &TestApp, query: Value) -> Vec<Value> {
     let listed = json(app.post("/api/entries", query).await).await;

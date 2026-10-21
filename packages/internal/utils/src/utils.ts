@@ -236,7 +236,7 @@ export const getAvatarUrl = (user?: {
       return `https://unavatar.webp.se/gravatar/${user.email}?fallback=${encodeURIComponent(fallbackUrl)}`
     }
   } else {
-    return `https://avatar.vercel.sh/yannr`
+    return `https://avatar.vercel.sh/yanrr`
   }
 }
 

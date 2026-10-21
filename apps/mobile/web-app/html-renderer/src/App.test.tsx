@@ -21,12 +21,12 @@ describe("onboarding Markdown", () => {
 
   test("renders headings, emphasis and images through the regular article renderer", () => {
     const article = renderEntry({
-      url: "yannr://onboarding/1",
-      content: `Welcome to **Yannr**.\n\n### Your Subscriptions\n\n![Guide](${coverImageUrl})`,
+      url: "yanrr://onboarding/1",
+      content: `Welcome to **Yanrr**.\n\n### Your Subscriptions\n\n![Guide](${coverImageUrl})`,
     })
 
     expect(article?.querySelector("h3")?.textContent).toBe("Your Subscriptions")
-    expect(article?.querySelector("strong")?.textContent).toBe("Yannr")
+    expect(article?.querySelector("strong")?.textContent).toBe("Yanrr")
     expect(article?.querySelector("button img")?.getAttribute("src")).toBe(coverImageUrl)
     expect(article?.textContent).not.toContain("###")
   })
@@ -34,7 +34,7 @@ describe("onboarding Markdown", () => {
   test("keeps media hiding and HTML sanitization for onboarding content", () => {
     window.__FO_BRIDGE__.dispatch("setNoMedia", "true")
     const article = renderEntry({
-      url: "yannr://onboarding/1",
+      url: "yanrr://onboarding/1",
       content: `### Guide\n\n![Guide](${coverImageUrl})\n\n[Unsafe](javascript:alert(1))`,
     })
 

@@ -38,5 +38,5 @@ pnpm run e2e:ios:bootstrap
 - `E2E_PASSWORD`
 - `MAESTRO_DEBUG_OUTPUT`
 - `MAESTRO_IOS_APP_PATH`
-- `EXPO_PUBLIC_YANNR_SERVER_URL`: the server the build talks to; without it the login screen asks for one
+- `EXPO_PUBLIC_YANRR_SERVER_URL`: the server the build talks to; without it the login screen asks for one
 - `EXPO_PUBLIC_E2E_LANGUAGE`

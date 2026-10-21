@@ -16,7 +16,7 @@ describe("parseSocialMedia", () => {
 
   it("ignores x.com routes that are not handles", () => {
     expect(parseSocialMedia("https://x.com/i/web/status/2109361546505966046")).toBeUndefined()
-    expect(parseSocialMedia("https://x.com/search?q=yannr")).toBeUndefined()
+    expect(parseSocialMedia("https://x.com/search?q=yanrr")).toBeUndefined()
     expect(parseSocialMedia("https://x.com/")).toBeUndefined()
   })
 

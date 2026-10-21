@@ -8,7 +8,7 @@ declare global {
     /** The server's addresses overriding `@follow/shared/env.desktop`, see `env.desktop.ts` */
     __followEnv?: Record<string, string>
   }
-  export const APP_NAME = "Yannr"
+  export const APP_NAME = "Yanrr"
 }
 
 declare module "virtual:pwa-register/react" {

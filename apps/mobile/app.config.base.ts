@@ -33,16 +33,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       e2eLanguage: process.env.EXPO_PUBLIC_E2E_LANGUAGE ?? null,
     },
 
-    name: "Yannr",
-    slug: "yannr",
+    name: "Yanrr",
+    slug: "yanrr",
     version: PKG.version,
     orientation: "portrait" as const,
     icon: iconPath,
-    scheme: ["yannr"],
+    scheme: ["yanrr"],
     userInterfaceStyle: "automatic" as const,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "io.github.bliodcook.yannr",
+      bundleIdentifier: "io.github.bliodcook.yanrr",
       infoPlist: {
         LSApplicationCategoryType: "public.app-category.news",
         ITSAppUsesNonExemptEncryption: false,
@@ -56,7 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       ...(googleServiceInfoPlist && { googleServicesFile: googleServiceInfoPlist }),
     },
     android: {
-      package: "io.github.bliodcook.yannr",
+      package: "io.github.bliodcook.yanrr",
       versionCode,
       // Media selection uses system pickers; saving only needs write access on older Android versions.
       blockedPermissions: [

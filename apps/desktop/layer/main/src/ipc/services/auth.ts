@@ -22,7 +22,7 @@ import { getApiURL, getServerUrl, getWebURL } from "../../lib/server-url"
 import { store } from "../../lib/store"
 import { deleteNotificationsToken, updateNotificationsToken } from "../../lib/user"
 
-/** Whether a Yannr server answers at this address */
+/** Whether a Yanrr server answers at this address */
 const answersAsServer = async (server: string) => {
   try {
     const response = await net.fetch(`${getApiUrl(server)}/status/configs`, {

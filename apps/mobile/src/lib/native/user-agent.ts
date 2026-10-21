@@ -5,5 +5,5 @@ const expoUserAgentPromise = Constants.getWebViewUserAgentAsync()
 
 export const getUserAgent = async () => {
   const expoUserAgent = await expoUserAgentPromise
-  return `${expoUserAgent ? `${expoUserAgent} ` : ""}Yannr/${nativeApplicationVersion}.${nativeBuildVersion}`
+  return `${expoUserAgent ? `${expoUserAgent} ` : ""}Yanrr/${nativeApplicationVersion}.${nativeBuildVersion}`
 }

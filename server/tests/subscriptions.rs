@@ -3,7 +3,7 @@ mod common;
 use common::{Fixtures, TestApp, assert_error, json};
 use sea_orm::{EntityTrait, PaginatorTrait};
 use serde_json::{Value, json};
-use yannr::entity::unread;
+use yanrr::entity::unread;
 
 #[tokio::test]
 async fn subscription_lifecycle() {

@@ -1,4 +1,4 @@
-appId: io.github.bliodcook.yannr
+appId: io.github.bliodcook.yanrr
 ---
 - runFlow: register.yaml
 - runFlow: sign-out.yaml

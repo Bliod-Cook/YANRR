@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("@follow/shared/constants", () => ({ APP_PROTOCOL: "yannr" }))
+vi.mock("@follow/shared/constants", () => ({ APP_PROTOCOL: "yanrr" }))
 
 describe("deep link queue", () => {
   beforeEach(() => {
@@ -11,16 +11,16 @@ describe("deep link queue", () => {
     const { openDeepLink, setDeepLinkHandler, setRendererReady } = await import("./deep-link")
     const handler = vi.fn()
 
-    openDeepLink("yannr://add?id=1")
+    openDeepLink("yanrr://add?id=1")
     setDeepLinkHandler(handler)
-    openDeepLink("yannr://add?id=2")
+    openDeepLink("yanrr://add?id=2")
     expect(handler).not.toHaveBeenCalled()
 
     setRendererReady(true)
-    expect(handler.mock.calls).toEqual([["yannr://add?id=1"], ["yannr://add?id=2"]])
+    expect(handler.mock.calls).toEqual([["yanrr://add?id=1"], ["yanrr://add?id=2"]])
 
-    openDeepLink("yannr://add?id=3")
-    expect(handler).toHaveBeenLastCalledWith("yannr://add?id=3")
+    openDeepLink("yanrr://add?id=3")
+    expect(handler).toHaveBeenLastCalledWith("yanrr://add?id=3")
   })
 
   it("holds links again while the renderer reloads", async () => {
@@ -30,18 +30,18 @@ describe("deep link queue", () => {
     setRendererReady(true)
 
     setRendererReady(false)
-    openDeepLink("yannr://feed?id=1")
+    openDeepLink("yanrr://feed?id=1")
     expect(handler).not.toHaveBeenCalled()
 
     setRendererReady(true)
-    expect(handler).toHaveBeenCalledWith("yannr://feed?id=1")
+    expect(handler).toHaveBeenCalledWith("yanrr://feed?id=1")
   })
 
   it("recognizes the app protocol among launch arguments", async () => {
     const { isDeepLink } = await import("./deep-link")
 
-    expect(isDeepLink("yannr://add?id=1")).toBe(true)
+    expect(isDeepLink("yanrr://add?id=1")).toBe(true)
     expect(isDeepLink("--start-in-tray")).toBe(false)
-    expect(isDeepLink("/Applications/Yannr.app")).toBe(false)
+    expect(isDeepLink("/Applications/Yanrr.app")).toBe(false)
   })
 })

@@ -139,12 +139,12 @@ const ExportFeedsForm = () => {
     }
     try {
       // Fetched through the API client, which is signed in on desktop too, and saved from a blob,
-      // so the file is named yannr.opml whatever name the server suggests
+      // so the file is named yanrr.opml whatever name the server suggests
       const response = await followClient.request<Response>("/subscriptions/export", {
         query,
         asRaw: true,
       })
-      downloadBlob(await response.blob(), "yannr.opml")
+      downloadBlob(await response.blob(), "yanrr.opml")
     } catch (error) {
       toastFetchError(error as Error)
     }

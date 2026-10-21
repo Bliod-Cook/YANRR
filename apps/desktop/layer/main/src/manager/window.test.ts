@@ -19,7 +19,7 @@ vi.mock("@follow/shared/bridge", () => ({
   }),
   WindowState: {},
 }))
-vi.mock("@follow/shared/constants", () => ({ APP_PROTOCOL: "yannr", DEV: false }))
+vi.mock("@follow/shared/constants", () => ({ APP_PROTOCOL: "yanrr", DEV: false }))
 vi.mock("electron", () => ({
   BrowserWindow: class {},
   screen: {},
@@ -27,7 +27,7 @@ vi.mock("electron", () => ({
 }))
 vi.mock("~/env", () => ({ isMacOS: true, isWindows: false }))
 vi.mock("~/helper", () => ({
-  filePathToAppUrl: (filePath: string) => `app://yannr${filePath}`,
+  filePathToAppUrl: (filePath: string) => `app://yanrr${filePath}`,
   getIconPath: vi.fn(),
 }))
 vi.mock("~/lib/deep-link", () => ({ setRendererReady: vi.fn() }))
@@ -90,7 +90,7 @@ describe("main window navigation", () => {
   })
 
   it("keeps the app's own pages, e.g. on a reload", () => {
-    const event = navigate("app://yannr/Applications/Yannr.app/renderer/index.html#/timeline")
+    const event = navigate("app://yanrr/Applications/Yanrr.app/renderer/index.html#/timeline")
 
     expect(event.preventDefault).not.toHaveBeenCalled()
     expect(mocks.openExternal).not.toHaveBeenCalled()
@@ -112,7 +112,7 @@ describe("main window navigation", () => {
   })
 
   it("leaves the app's deep links to the system", () => {
-    const event = navigate("yannr://feed?id=1")
+    const event = navigate("yanrr://feed?id=1")
 
     expect(event.preventDefault).not.toHaveBeenCalled()
   })
