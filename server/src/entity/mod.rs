@@ -1,6 +1,7 @@
 pub mod collection;
 pub mod entry;
 pub mod feed;
+pub mod messaging_token;
 pub mod setting;
 pub mod subscription;
 pub mod sync_action;

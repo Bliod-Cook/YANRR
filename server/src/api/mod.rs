@@ -4,6 +4,7 @@ mod discover;
 mod entries;
 mod error;
 mod feeds;
+mod messaging;
 mod opml;
 mod reads;
 mod response;
@@ -43,6 +44,12 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
         .route("/entries/readability", get(entries::readability))
         .route("/feeds", get(feeds::get))
         .route("/feeds/refresh", get(feeds::refresh))
+        .route(
+            "/messaging",
+            get(messaging::list)
+                .post(messaging::create)
+                .delete(messaging::delete),
+        )
         .route(
             "/reads",
             get(reads::counts)
