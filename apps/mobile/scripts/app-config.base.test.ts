@@ -2,11 +2,19 @@ import { describe, expect, it } from "vitest"
 
 import createExpoConfig from "../app.config.base"
 
-describe("Android media permissions", () => {
-  const config = createExpoConfig({
-    config: {},
-  } as Parameters<typeof createExpoConfig>[0])
+const config = createExpoConfig({
+  config: {},
+} as Parameters<typeof createExpoConfig>[0])
 
+describe("Android version code", () => {
+  it("grows with the version, so a release installs over the one before", () => {
+    const [major, minor, patch] = config.version!.split(".").map(Number)
+
+    expect(config.android?.versionCode).toBe(major! * 10000 + minor! * 100 + patch!)
+  })
+})
+
+describe("Android media permissions", () => {
   it("blocks broad media access that is not required by the app", () => {
     expect(config.android?.blockedPermissions).toEqual([
       "android.permission.ACCESS_MEDIA_LOCATION",
