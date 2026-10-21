@@ -4,7 +4,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::{
-    entity::{entry, feed, inbox, subscription},
+    entity::{entry, feed, inbox, inbox_entry, subscription},
     time::iso,
 };
 
@@ -108,6 +108,44 @@ impl Entry {
             language: entry.language,
             published_at: iso(entry.published_at),
             inserted_at: iso(entry.inserted_at),
+        }
+    }
+}
+
+/// An inbox entry: [`Entry`] with its read state and inbox.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxEntry {
+    #[serde(flatten)]
+    entry: Entry,
+    read: bool,
+    inbox_handle: String,
+}
+
+impl InboxEntry {
+    pub fn new(entry: inbox_entry::Model, with_content: bool) -> Self {
+        Self {
+            read: entry.read,
+            inbox_handle: entry.inbox_handle,
+            entry: Entry {
+                id: entry.id.to_string(),
+                guid: entry.guid,
+                title: entry.title,
+                url: entry.url,
+                description: entry.description,
+                content: with_content.then_some(entry.content),
+                summary: (),
+                author: entry.author,
+                author_url: entry.author_url,
+                author_avatar: entry.author_avatar,
+                categories: entry.categories,
+                media: entry.media,
+                attachments: entry.attachments,
+                extra: entry.extra,
+                language: entry.language,
+                published_at: iso(entry.published_at),
+                inserted_at: iso(entry.inserted_at),
+            },
         }
     }
 }
