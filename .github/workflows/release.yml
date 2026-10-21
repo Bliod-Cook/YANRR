@@ -1,0 +1,282 @@
+# Builds the server, web, desktop and Android apps for a version tag and releases them.
+#
+# To release: set the version in apps/desktop/package.json, apps/mobile/package.json and
+# server/Cargo.toml, run `cargo check` in server/ to update Cargo.lock, commit, and push the tag
+# `v<version>`. A manual run only builds, to try the workflow.
+#
+# Secrets:
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#     The keystore that signs the Android app; a release needs it, a manual run signs with the
+#     debug key without it
+#   GOOGLE_SERVICES_JSON     Firebase config of the Android app, for push (optional)
+# Variables, for a deployment's own builds (optional):
+#   VITE_FIREBASE_CONFIG     Firebase web config of the desktop and web apps, for push
+#   YANNR_SERVER_URL         The server the Android app comes with; users cannot change it then
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+name: 🚀 Release
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+permissions:
+  contents: read
+jobs:
+  version:
+    name: Check the version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: version
+        run: |
+          desktop=$(node -p 'require("./apps/desktop/package.json").version')
+          mobile=$(node -p 'require("./apps/mobile/package.json").version')
+          server=$(sed -n 's/^version = "\(.*\)"$/\1/p' server/Cargo.toml | head -n 1)
+          version=$desktop
+          if [ "$GITHUB_REF_TYPE" = tag ]; then version=${GITHUB_REF_NAME#v}; fi
+          # The Android version code is made of the three numbers
+          if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$version is not a major.minor.patch version"
+            exit 1
+          fi
+          if [ "$desktop" != "$version" ] || [ "$mobile" != "$version" ] || [ "$server" != "$version" ]; then
+            echo "::error::Expected $version, got desktop $desktop, mobile $mobile, server $server"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  web:
+    name: Build the web app
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --child-concurrency=1
+      - run: pnpm run build:web
+        env:
+          VITE_FIREBASE_CONFIG: ${{ vars.VITE_FIREBASE_CONFIG }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web
+          path: apps/desktop/out/web
+          if-no-files-found: error
+
+  server:
+    name: Build the server (${{ matrix.arch }})
+    needs: version
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    # The glibc of the image's distroless base
+    container: rust:1-trixie
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: server
+      - run: cargo build --release --locked
+      - uses: actions/upload-artifact@v7
+        with:
+          name: server-${{ matrix.arch }}
+          path: server/target/release/yannr
+          if-no-files-found: error
+
+  docker:
+    name: Build the Docker image
+    needs: [version, web, server]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: web
+          path: context/web
+      - uses: actions/download-artifact@v8
+        with:
+          name: server-amd64
+          path: context/bin/amd64
+      - uses: actions/download-artifact@v8
+        with:
+          name: server-arm64
+          path: context/bin/arm64
+      - id: tags
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/yannr
+          echo "tags=$image:$VERSION,$image:${VERSION%.*},$image:latest" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: github.ref_type == 'tag'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: context
+          file: server/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.ref_type == 'tag' }}
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+  desktop:
+    name: Build the desktop app (${{ matrix.os }})
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      NODE_OPTIONS: --max-old-space-size=8192
+      VITE_FIREBASE_CONFIG: ${{ vars.VITE_FIREBASE_CONFIG }}
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      # appdmg makes the DMG and builds native modules with node-gyp
+      - if: runner.os == 'macOS'
+        run: brew install python-setuptools && pnpm add -g appdmg
+      # The deb maker
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y fakeroot dpkg
+      - run: pnpm install --frozen-lockfile --child-concurrency=1
+      - run: pnpm run build:electron-vite
+      - if: runner.os == 'macOS'
+        run: |
+          pnpm run build:electron-forge:macos
+          # Apple silicon launches only a validly signed app; without a certificate it's signed ad hoc
+          codesign --verify --deep --strict out/Yannr-darwin-arm64/Yannr.app
+      - if: runner.os != 'macOS'
+        run: pnpm run build:electron-forge
+      - uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ runner.os }}
+          path: |
+            apps/desktop/out/make/**/Yannr-*.dmg
+            apps/desktop/out/make/**/Yannr-*.exe
+            apps/desktop/out/make/**/Yannr-*.AppImage
+            apps/desktop/out/make/**/Yannr-*.deb
+          if-no-files-found: error
+
+  android:
+    name: Build the Android app
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      PROFILE: production
+      EXPO_PUBLIC_YANNR_SERVER_URL: ${{ vars.YANNR_SERVER_URL }}
+    steps:
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/julia*
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/setup-java@v6
+        with:
+          java-version: "21"
+          distribution: zulu
+      - uses: android-actions/setup-android@v4
+        with:
+          # The default also installs the obsolete `tools` package, which the SDK repository no
+          # longer serves
+          packages: platform-tools
+      - run: pnpm install --frozen-lockfile --child-concurrency=1
+      - name: Write the keystore and Firebase config
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          elif [ "$GITHUB_REF_TYPE" = tag ]; then
+            # An APK signed with the debug key could not be updated by later releases
+            echo "::error::A release needs the ANDROID_KEYSTORE_BASE64 secret"
+            exit 1
+          fi
+          if [ -n "$GOOGLE_SERVICES" ]; then
+            printf '%s' "$GOOGLE_SERVICES" > "$RUNNER_TEMP/google-services.json"
+            echo "GOOGLE_SERVICES_JSON=$RUNNER_TEMP/google-services.json" >> "$GITHUB_ENV"
+          fi
+      - working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install
+      - working-directory: apps/mobile/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+          mv app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/Yannr-$VERSION-android.apk"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android
+          path: ${{ runner.temp }}/Yannr-*-android.apk
+          if-no-files-found: error
+
+  release:
+    name: Release
+    if: github.ref_type == 'tag'
+    needs: [version, web, server, docker, desktop, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+      - name: Pack the server with the web app
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          for arch in amd64 arm64; do
+            dir=yannr-server-$VERSION-linux-$arch
+            mkdir "$dir"
+            install -m 755 "artifacts/server-$arch/yannr" "$dir/yannr"
+            cp -r artifacts/web "$dir/web"
+            cp server/config.example.toml "$dir/"
+            tar -czf "$dir.tar.gz" "$dir"
+          done
+      - uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: |
+            yannr-server-*.tar.gz
+            artifacts/desktop-*/**/Yannr-*
+            artifacts/android/Yannr-*.apk
+            server/compose.yaml
+            server/config.example.toml
