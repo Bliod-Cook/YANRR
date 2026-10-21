@@ -2,7 +2,7 @@ import { FollowClient } from "@follow-app/client-sdk"
 import { describe, expect, it, vi } from "vitest"
 
 describe("FollowClient", () => {
-  // The Yannr server serves the API under /api (see patches/@follow-app__client-sdk@0.3.98.patch)
+  // The Yanrr server serves the API under /api (see patches/@follow-app__client-sdk@0.3.98.patch)
   it("keeps the path of the base URL", async () => {
     const fetch = vi.fn(
       async (_input: RequestInfo | URL, _init?: RequestInit) =>

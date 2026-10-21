@@ -3,7 +3,7 @@ mod common;
 use common::{Fixtures, RSS2, Reply, SINGLE_ITEM_RSS, TWO_ITEM_RSS, TestApp, json};
 use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder};
 use serde_json::{Value, json};
-use yannr::{
+use yanrr::{
     entity::{entry, feed, subscription, unread},
     fetch::{self, FetchError, scheduler},
 };

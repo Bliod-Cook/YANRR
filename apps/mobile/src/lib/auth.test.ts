@@ -54,7 +54,7 @@ vi.mock("react-native-device-info", () => ({
 }))
 vi.mock("./client-session", () => ({ getClientId: () => "client", getSessionId: () => "session" }))
 vi.mock("./local-data-reset", () => ({ scheduleLocalDataReset: vi.fn() }))
-vi.mock("./native/user-agent", () => ({ getUserAgent: async () => "Yannr" }))
+vi.mock("./native/user-agent", () => ({ getUserAgent: async () => "Yanrr" }))
 vi.mock("./navigation/Navigation", () => ({
   Navigation: { rootNavigation: { popToRoot: vi.fn() } },
 }))

@@ -6,7 +6,7 @@ use common::{Fixtures, Reply, TestApp, assert_error, json};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation};
 use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use serde_json::{Value, json};
-use yannr::config::PushConfig;
+use yanrr::config::PushConfig;
 
 #[tokio::test]
 async fn tokens_replace_per_channel() {
@@ -87,7 +87,7 @@ async fn tokens_replace_per_channel() {
 async fn test_push_sends_through_fcm() {
     let fixtures = Fixtures::spawn().await;
     let token_uri = fixtures.url("/token");
-    let send_path = "/v1/projects/yannr-test/messages:send";
+    let send_path = "/v1/projects/yanrr-test/messages:send";
     fixtures.set(
         "/token",
         Reply::Body(json!({ "access_token": "fcm-access", "expires_in": 3599 }).to_string()),
@@ -98,8 +98,8 @@ async fn test_push_sends_through_fcm() {
     );
     let account = json!({
         "type": "service_account",
-        "project_id": "yannr-test",
-        "client_email": "push@yannr-test.iam.gserviceaccount.com",
+        "project_id": "yanrr-test",
+        "client_email": "push@yanrr-test.iam.gserviceaccount.com",
         "private_key": include_str!("fixtures/push-key.pem"),
         "token_uri": token_uri,
     });
@@ -133,7 +133,7 @@ async fn test_push_sends_through_fcm() {
     let claims = jsonwebtoken::decode::<Value>(assertion, &key, &validation)
         .unwrap()
         .claims;
-    assert_eq!(claims["iss"], "push@yannr-test.iam.gserviceaccount.com");
+    assert_eq!(claims["iss"], "push@yanrr-test.iam.gserviceaccount.com");
     assert_eq!(
         claims["scope"],
         "https://www.googleapis.com/auth/firebase.messaging"
@@ -147,13 +147,13 @@ async fn test_push_sends_through_fcm() {
         message,
         json!({ "message": {
             "token": "mac-token",
-            "notification": { "title": "Yannr", "body": "Test notification" },
+            "notification": { "title": "Yanrr", "body": "Test notification" },
             "data": {
                 "type": "new-entry",
                 "feedId": "",
                 "entryId": "",
                 "view": "0",
-                "title": "Yannr",
+                "title": "Yanrr",
                 "description": "Test notification",
             },
         }})

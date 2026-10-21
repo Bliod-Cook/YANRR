@@ -6,7 +6,7 @@ public_url = "http://localhost:3000"
 # web_dir = "web"
 
 [database]
-url = "postgres://yannr:yannr@localhost/yannr"
+url = "postgres://yanrr:yanrr@localhost/yanrr"
 
 [auth]
 # At least 32 random characters; signs session cookies.

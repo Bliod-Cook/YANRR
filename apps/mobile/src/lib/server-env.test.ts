@@ -23,7 +23,7 @@ describe("server address", () => {
   })
 
   it("is the one built into the app, which the user cannot change", async () => {
-    vi.stubEnv("EXPO_PUBLIC_YANNR_SERVER_URL", "https://rss.example.com/")
+    vi.stubEnv("EXPO_PUBLIC_YANRR_SERVER_URL", "https://rss.example.com/")
     const { getServerUrl, isServerUrlBuiltIn, saveServerUrl } = await import("./server-env")
 
     saveServerUrl("https://other.example.com")
@@ -33,7 +33,7 @@ describe("server address", () => {
   })
 
   it("is the one the user enters when the app comes without one", async () => {
-    vi.stubEnv("EXPO_PUBLIC_YANNR_SERVER_URL", "")
+    vi.stubEnv("EXPO_PUBLIC_YANRR_SERVER_URL", "")
     const { getServerUrl, isServerUrlBuiltIn, saveServerUrl } = await import("./server-env")
 
     saveServerUrl("https://other.example.com")

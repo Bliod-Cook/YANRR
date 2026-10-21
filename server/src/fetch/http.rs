@@ -19,7 +19,7 @@ pub struct Fetched {
 
 pub fn client() -> Client {
     Client::builder()
-        .user_agent(concat!("YANNR/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("YANRR/", env!("CARGO_PKG_VERSION")))
         .timeout(Duration::from_secs(30))
         // Followed by hand to tell permanent redirects apart.
         .redirect(redirect::Policy::none())

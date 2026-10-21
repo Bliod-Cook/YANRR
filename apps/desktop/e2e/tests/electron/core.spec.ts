@@ -45,7 +45,7 @@ test.describe("electron core flows", () => {
               window.focus()
               app.focus({ steal: true })
               await window.webContents.executeJavaScript(
-                'navigator.clipboard.writeText("Yannr dependency upgrade clipboard 中文")',
+                'navigator.clipboard.writeText("Yanrr dependency upgrade clipboard 中文")',
                 true,
               )
               // The renderer and the main process receive OS clipboard changes
@@ -53,7 +53,7 @@ test.describe("electron core flows", () => {
               let text = ""
               for (let attempt = 0; attempt < 100; attempt++) {
                 text = await clipboard.readText()
-                if (text === "Yannr dependency upgrade clipboard 中文") break
+                if (text === "Yanrr dependency upgrade clipboard 中文") break
                 await new Promise((resolve) => setTimeout(resolve, 20))
               }
               await window.webContents.executeJavaScript(
@@ -78,7 +78,7 @@ test.describe("electron core flows", () => {
             }
           },
         )
-        expect(result).toEqual({ text: "Yannr dependency upgrade clipboard 中文", hasImage: true })
+        expect(result).toEqual({ text: "Yanrr dependency upgrade clipboard 中文", hasImage: true })
       })
 
       await test.step("registers a new account", async () => {

@@ -21,7 +21,7 @@ use reqwest::{Client, Response, header};
 use sea_orm::ConnectionTrait;
 use serde_json::{Value, json};
 use tokio::net::TcpListener;
-use yannr::{AppState, config::Config};
+use yanrr::{AppState, config::Config};
 
 pub const PASSWORD: &str = "correct-horse-battery";
 
@@ -47,7 +47,7 @@ impl TestApp {
         );
         postgres.setup().await.unwrap();
         postgres.start().await.unwrap();
-        postgres.create_database("yannr").await.unwrap();
+        postgres.create_database("yanrr").await.unwrap();
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
@@ -61,13 +61,13 @@ impl TestApp {
             [auth]
             secret = "test-secret-that-is-at-least-32-characters"
             "#,
-            database = postgres.settings().url("yannr"),
+            database = postgres.settings().url("yanrr"),
         ))
         .unwrap();
         customize(&mut config);
 
-        let state = yannr::init(config).await.unwrap();
-        let app = yannr::router(state.clone());
+        let state = yanrr::init(config).await.unwrap();
+        let app = yanrr::router(state.clone());
         tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
 
         let mut headers = header::HeaderMap::new();

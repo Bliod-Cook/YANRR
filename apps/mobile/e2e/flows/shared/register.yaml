@@ -1,4 +1,4 @@
-appId: io.github.bliodcook.yannr
+appId: io.github.bliodcook.yanrr
 ---
 - runFlow: open-auth.yaml
 # A device someone signed in on before opens the screen on signing in

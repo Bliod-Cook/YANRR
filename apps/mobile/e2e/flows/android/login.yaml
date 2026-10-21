@@ -1,4 +1,4 @@
-appId: io.github.bliodcook.yannr
+appId: io.github.bliodcook.yanrr
 ---
 - runFlow:
     file: ./dismiss-system-dialogs.yaml

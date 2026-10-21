@@ -122,7 +122,7 @@ export default ({ mode }) => {
 
           manifest: {
             theme_color: "#000000",
-            name: "Yannr",
+            name: "Yanrr",
             display: "standalone",
             background_color: "#ffffff",
             icons: [

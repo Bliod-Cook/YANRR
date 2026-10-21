@@ -36,7 +36,7 @@ type ParsedSetCookie = {
 }
 
 const MANAGED_AUTH_COOKIE_NAME_SET = new Set<string>(MANAGED_AUTH_COOKIE_NAMES)
-const COOKIE_CLEANUP_SUBDOMAIN = "__yannr_cookie_cleanup__"
+const COOKIE_CLEANUP_SUBDOMAIN = "__yanrr_cookie_cleanup__"
 
 const splitSetCookieHeader = (header: string) => {
   const parts: string[] = []

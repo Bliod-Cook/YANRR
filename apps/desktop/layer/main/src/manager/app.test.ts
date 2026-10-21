@@ -30,7 +30,7 @@ const credentials = {
     publicKey: "public-key",
   },
   config: {
-    bundleId: "io.github.bliodcook.yannr",
+    bundleId: "io.github.bliodcook.yanrr",
     projectId: "project-id",
     vapidKey: "vapid-key",
   },
@@ -92,8 +92,8 @@ vi.mock("@follow/shared/bridge", () => ({
 }))
 
 vi.mock("@follow/shared/constants", () => ({
-  APP_ID: "io.github.bliodcook.yannr",
-  APP_PROTOCOL: "yannr",
+  APP_ID: "io.github.bliodcook.yanrr",
+  APP_PROTOCOL: "yanrr",
   DEV: false,
 }))
 
@@ -278,7 +278,7 @@ describe("AppManager URL schemes", () => {
     registerProtocols()
 
     expect(mocks.app.setAsDefaultProtocolClient.mock.calls.map(([scheme]) => scheme)).toEqual([
-      "yannr",
+      "yanrr",
     ])
   })
 

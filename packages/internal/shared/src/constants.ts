@@ -21,8 +21,8 @@ export const { PROD } = import.meta.env ?? {}
 export const DEV =
   "process" in globalThis ? process.env.NODE_ENV === "development" : import.meta.env.DEV
 
-export const APP_ID = "io.github.bliodcook.yannr"
-export const APP_PROTOCOL = DEV ? "yannr-dev" : "yannr"
+export const APP_ID = "io.github.bliodcook.yanrr"
+export const APP_PROTOCOL = DEV ? "yanrr-dev" : "yanrr"
 
 export const SYSTEM_CAN_UNDER_BLUR_WINDOW = globalThis?.window?.electron
   ? globalThis?.window.api?.canWindowBlur

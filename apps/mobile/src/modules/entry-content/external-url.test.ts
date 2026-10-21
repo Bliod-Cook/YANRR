@@ -19,7 +19,7 @@ describe("getExternalEntryUrl", () => {
   })
 
   it("has no link outside the app for the onboarding entries", () => {
-    expect(getExternalEntryUrl("yannr://onboarding/entry/1", "https://example.com")).toBeNull()
+    expect(getExternalEntryUrl("yanrr://onboarding/entry/1", "https://example.com")).toBeNull()
   })
 
   it("resolves a relative link against the feed's site", () => {
@@ -36,7 +36,7 @@ describe("getExternalEntryUrl", () => {
 
   it("has no link when a relative one cannot be resolved to a web page", () => {
     expect(getExternalEntryUrl("/posts/relative-1", null)).toBeNull()
-    expect(getExternalEntryUrl("/posts/relative-1", "yannr://onboarding")).toBeNull()
+    expect(getExternalEntryUrl("/posts/relative-1", "yanrr://onboarding")).toBeNull()
     expect(getExternalEntryUrl("", "https://example.com")).toBeNull()
     expect(getExternalEntryUrl(null, "https://example.com")).toBeNull()
   })

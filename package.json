@@ -8,10 +8,10 @@
   "license": "AGPL-3.0-only",
   "scripts": {
     "build:packages": "turbo run build --filter=\"./packages/**/*\"",
-    "build:web": "turbo run Yannr#build:web",
+    "build:web": "turbo run Yanrr#build:web",
     "dedupe:locales": "eslint --fix locales/**",
     "depcheck": "npx depcheck --quiet",
-    "dev:web": "pnpm --filter Yannr dev:web",
+    "dev:web": "pnpm --filter Yanrr dev:web",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "icons:app": "tsx scripts/generate-icons.ts",

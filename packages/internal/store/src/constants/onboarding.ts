@@ -1,6 +1,6 @@
 import { getEntry } from "../modules/entry/getter"
 
-const ONBOARDING_ENTRY_URL_PREFIX = "yannr://onboarding"
+const ONBOARDING_ENTRY_URL_PREFIX = "yanrr://onboarding"
 
 export const isOnboardingEntryUrl = (url?: string | null) => {
   return typeof url === "string" && url.startsWith(ONBOARDING_ENTRY_URL_PREFIX)

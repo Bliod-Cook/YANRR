@@ -5,7 +5,7 @@ use std::time::Duration;
 use common::TestApp;
 use sea_orm::{ConnectionTrait, TransactionTrait};
 use serde_json::{Value, json};
-use yannr::sync::{self, Action};
+use yanrr::sync::{self, Action};
 
 async fn record(app: &TestApp, user_id: &str) -> i64 {
     let txn = app.state.db.begin().await.unwrap();

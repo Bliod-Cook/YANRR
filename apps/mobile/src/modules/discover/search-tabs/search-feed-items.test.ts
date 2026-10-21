@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest"
 import { resolveSearchFeedItems } from "./search-feed-items"
 
 describe("resolveSearchFeedItems", () => {
-  test.each(["yannr://onboarding", "https://example.com/feed.xml"])(
+  test.each(["yanrr://onboarding", "https://example.com/feed.xml"])(
     "creates a direct feed item for %s when discovery is empty",
     (url) => {
       expect(resolveSearchFeedItems([], url)).toEqual([

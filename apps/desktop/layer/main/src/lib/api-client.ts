@@ -39,7 +39,7 @@ const createApiClient = () => {
     })
     const sessionCookie = cookies ? getPreferredSessionTokenCookie(cookies) : null
     const headerCookie = sessionCookie ? `${sessionCookie.name}=${sessionCookie.value}` : ""
-    const userAgent = window?.webContents.getUserAgent() || `Yannr/${PKG.version}`
+    const userAgent = window?.webContents.getUserAgent() || `Yanrr/${PKG.version}`
 
     options.headers = {
       ...header,

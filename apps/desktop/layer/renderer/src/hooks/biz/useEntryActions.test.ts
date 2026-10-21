@@ -31,7 +31,7 @@ describe("toggleEntryReadability", () => {
   })
 
   it("leaves the onboarding entries alone", async () => {
-    await toggleEntryReadability({ id: "onboarding-entry", url: "yannr://onboarding/entry/1" })
+    await toggleEntryReadability({ id: "onboarding-entry", url: "yanrr://onboarding/entry/1" })
 
     expect(fetchEntryReadabilityContentMock).not.toHaveBeenCalled()
     expect(getReadabilityStatus()["onboarding-entry"]).toBeUndefined()

@@ -1,10 +1,10 @@
-appId: io.github.bliodcook.yannr
+appId: io.github.bliodcook.yanrr
 ---
 - tapOn:
     id: tab-DiscoverTabScreen
 - tapOn:
     id: discover-search-input
-- inputText: yannr://onboarding
+- inputText: yanrr://onboarding
 - pressKey: Enter
 - extendedWaitUntil:
     visible:
@@ -21,8 +21,8 @@ appId: io.github.bliodcook.yannr
 - tapOn:
     id: tab-SubscriptionsTabScreen
 - extendedWaitUntil:
-    visible: Welcome to Yannr
+    visible: Welcome to Yanrr
     timeout: 20000
-- assertVisible: Welcome to Yannr
+- assertVisible: Welcome to Yanrr
 - assertVisible:
     id: tab-IndexTabScreen

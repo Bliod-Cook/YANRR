@@ -1,5 +1,5 @@
 {
-  "name": "Yannr",
+  "name": "Yanrr",
   "type": "module",
   "version": "0.1.0",
   "private": true,
@@ -77,5 +77,5 @@
     "workbox-build": "7.4.1",
     "workbox-window": "7.4.1"
   },
-  "productName": "Yannr"
+  "productName": "Yanrr"
 }

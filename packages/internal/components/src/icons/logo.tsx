@@ -8,7 +8,7 @@ export const LOGO_GLYPH_PATH = "M250 260h170l92 147.6 92-147.6h170L587 560v204H4
 
 export const Logo = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" {...props}>
-    <title>Yannr</title>
+    <title>Yanrr</title>
     <path fill={LOGO_BACKGROUND} d={LOGO_SHAPE_PATH} />
     <path fill="#fff" d={LOGO_GLYPH_PATH} />
   </svg>

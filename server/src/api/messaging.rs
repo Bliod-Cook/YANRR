@@ -154,7 +154,7 @@ pub async fn test(
         .map(|row| row.token)
         .collect();
     let notification = Notification {
-        title: "Yannr".into(),
+        title: "Yanrr".into(),
         description: "Test notification".into(),
         feed_id: String::new(),
         entry_id: String::new(),

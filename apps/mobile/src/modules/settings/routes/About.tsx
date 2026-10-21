@@ -30,7 +30,7 @@ export const AboutScreen = () => {
         <GroupedInsetListBaseCell className="flex-col py-6">
           <View className="flex-1 items-center justify-center">
             <Logo height={80} width={80} />
-            <Text className="mt-4 text-2xl font-semibold text-label">Yannr</Text>
+            <Text className="mt-4 text-2xl font-semibold text-label">Yanrr</Text>
             <Text className="font-mono text-sm text-tertiary-label">{appVersionLabel}</Text>
           </View>
           <View className="mt-6 flex-1">
@@ -58,7 +58,7 @@ export const AboutScreen = () => {
               )}
               values={{
                 currentYear: new Date().getFullYear(),
-                appName: "Yannr",
+                appName: "Yanrr",
               }}
             />
           </View>
