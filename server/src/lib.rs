@@ -6,6 +6,7 @@ pub mod fetch;
 mod id;
 mod migration;
 pub mod opml;
+mod rsshub;
 mod subscription;
 pub mod sync;
 mod time;
@@ -26,6 +27,7 @@ pub struct AppState {
     pub auth: Arc<Auth>,
     pub config: Arc<Config>,
     pub http: reqwest::Client,
+    pub rsshub: Arc<rsshub::Catalog>,
 }
 
 impl FromRef<AppState> for Arc<Auth> {
@@ -43,6 +45,7 @@ pub async fn init(config: Config) -> Result<AppState, Box<dyn Error + Send + Syn
         auth,
         config: Arc::new(config),
         http: fetch::http_client(),
+        rsshub: Arc::default(),
     })
 }
 

@@ -1,14 +1,20 @@
+use std::sync::Arc;
+
 use axum::{Json, extract::State};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::{
-    error::{ApiJson, ApiResult},
+    error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode},
     feeds::latest_entries,
     response::ok,
     session::AuthUser,
 };
-use crate::{AppState, fetch, wire};
+use crate::{
+    AppState, fetch,
+    rsshub::{self, Filter, Namespaces},
+    wire,
+};
 
 const PREVIEW_ENTRIES: u64 = 4;
 
@@ -33,4 +39,50 @@ pub async fn discover(
         results.push(json!({ "feed": wire::Feed::from(&feed), "entries": entries }));
     }
     Ok(ok(results))
+}
+
+/// `GET /discover/rsshub`: routes of the configured RSSHub instance.
+pub async fn rsshub(
+    State(state): State<AppState>,
+    _user: AuthUser,
+    ApiQuery(filter): ApiQuery<Filter>,
+) -> ApiResult<Json<Value>> {
+    let namespaces = catalog(&state).await?;
+    Ok(ok(rsshub::select(&namespaces, &filter)))
+}
+
+#[derive(Deserialize)]
+pub struct RouteQuery {
+    route: String,
+}
+
+/// `GET /discover/rsshub/route`: one route with its namespace, by a path like `/github/issue/:user/:repo?`.
+pub async fn rsshub_route(
+    State(state): State<AppState>,
+    _user: AuthUser,
+    ApiQuery(query): ApiQuery<RouteQuery>,
+) -> ApiResult<Json<Value>> {
+    let namespaces = catalog(&state).await?;
+    let (prefix, namespace, route) = rsshub::find(&namespaces, &query.route)
+        .ok_or_else(|| ApiError::new(ExceptionCode::RSSHubRouteError, "RSSHub route not found"))?;
+    Ok(ok(json!({
+        "route": route,
+        "prefix": prefix,
+        "name": namespace.name,
+        "description": namespace.description,
+        "url": namespace.url,
+    })))
+}
+
+async fn catalog(state: &AppState) -> ApiResult<Arc<Namespaces>> {
+    state
+        .rsshub
+        .namespaces(&state.http, &state.config.rsshub.url)
+        .await
+        .map_err(|err| {
+            ApiError::new(
+                ExceptionCode::RSSHubUnavailable,
+                format!("RSSHub is unavailable: {err}"),
+            )
+        })
 }
