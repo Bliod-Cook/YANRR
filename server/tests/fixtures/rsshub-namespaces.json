@@ -1,0 +1,56 @@
+{
+  "github": {
+    "name": "GitHub",
+    "url": "github.com",
+    "description": "Code hosting",
+    "lang": "en",
+    "categories": ["programming"],
+    "routes": {
+      "/issue/:user/:repo?": {
+        "path": "/issue/:user/:repo?",
+        "categories": ["programming", "popular"],
+        "example": "/github/issue/DIYgod/RSSHub",
+        "parameters": {
+          "user": "GitHub username",
+          "repo": { "description": "GitHub repo name", "default": "RSSHub" }
+        },
+        "name": "Repo Issues",
+        "maintainers": ["HenryQW"],
+        "location": "issue.ts",
+        "description": "Issues of a repository",
+        "radar": [{ "source": ["github.com/:user/:repo/issues"] }],
+        "view": 0
+      },
+      "/trending/:since": {
+        "path": ["/trending/:since/:language", "/trending/:since"],
+        "categories": ["programming"],
+        "name": "Trending",
+        "maintainers": ["DIYgod"],
+        "location": "trending.ts"
+      }
+    }
+  },
+  "bilibili": {
+    "name": "哔哩哔哩",
+    "url": "www.bilibili.com",
+    "lang": "zh-CN",
+    "routes": {
+      "/user/dynamic/:uid": {
+        "path": "/user/dynamic/:uid",
+        "categories": ["social-media", "popular"],
+        "example": "/bilibili/user/dynamic/2267573",
+        "parameters": { "uid": "用户 id" },
+        "name": "UP 主动态",
+        "maintainers": ["DIYgod"],
+        "location": "dynamic.ts",
+        "view": 1
+      }
+    }
+  },
+  "empty": {
+    "name": "Empty",
+    "url": "example.com",
+    "lang": "en",
+    "routes": {}
+  }
+}

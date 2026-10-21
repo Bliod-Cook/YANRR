@@ -36,6 +36,8 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
             post(collections::collect).delete(collections::uncollect),
         )
         .route("/discover", post(discover::discover))
+        .route("/discover/rsshub", get(discover::rsshub))
+        .route("/discover/rsshub/route", get(discover::rsshub_route))
         .route("/entries", get(entries::get).post(entries::timeline))
         .route("/entries/stream", post(entries::stream))
         .route("/entries/readability", get(entries::readability))

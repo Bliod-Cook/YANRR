@@ -1,5 +1,5 @@
 mod html;
-mod http;
+pub(crate) mod http;
 mod language;
 pub mod parse;
 pub mod readability;

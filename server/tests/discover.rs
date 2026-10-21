@@ -45,6 +45,57 @@ async fn discover_resolves_feeds_and_html_links() {
 }
 
 #[tokio::test]
+async fn rsshub_catalog_and_route() {
+    let fixtures = Fixtures::spawn().await;
+    let instance = fixtures.url("/hub");
+    let app = TestApp::spawn_with(move |config| config.rsshub.url = instance).await;
+    app.sign_up("alice@example.com").await;
+    let catalog = async |query: &str| app.get(&format!("/api/discover/rsshub{query}")).await;
+
+    assert_error(catalog("").await, 400, 13007).await;
+
+    let namespaces = include_str!("fixtures/rsshub-namespaces.json");
+    fixtures.set("/hub/api/namespace", Reply::Body(namespaces.into()));
+    let popular = json(catalog("?categories=popular&lang=en").await).await;
+    let routes = &popular["data"]["github"]["routes"];
+    assert_eq!(popular["data"].as_object().unwrap().len(), 1);
+    assert_eq!(routes.as_object().unwrap().len(), 1);
+    assert_eq!(routes["/issue/:user/:repo?"]["name"], "Repo Issues");
+
+    let route = async |route: &str| {
+        app.get(&format!("/api/discover/rsshub/route?route={route}"))
+            .await
+    };
+    let found = json(route("/github/issue/:user/:repo%3F").await).await;
+    assert_eq!(
+        (
+            &found["data"]["prefix"],
+            &found["data"]["name"],
+            &found["data"]["url"],
+            &found["data"]["route"]["path"],
+        ),
+        (
+            &json!("github"),
+            &json!("GitHub"),
+            &json!("github.com"),
+            &json!("/issue/:user/:repo?"),
+        )
+    );
+    assert_error(route("/github/nothing").await, 404, 13000).await;
+
+    // Served from the cache while the instance is down.
+    fixtures.set("/hub/api/namespace", Reply::Status(500));
+    let cached = json(catalog("?namespace=github").await).await;
+    assert_eq!(
+        cached["data"]["github"]["routes"]
+            .as_object()
+            .unwrap()
+            .len(),
+        2
+    );
+}
+
+#[tokio::test]
 async fn feed_detail_with_entries() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
     fixtures.set("/live", Reply::Body(SINGLE_ITEM_RSS.into()));
