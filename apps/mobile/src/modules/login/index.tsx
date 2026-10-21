@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Logo } from "@/src/components/ui/logo"
 import { Text } from "@/src/components/ui/typography/Text"
 import { useIsTabletLayout, useReadableContainerStyle, useScaleHeight } from "@/src/lib/responsive"
-import { useServerUrl } from "@/src/lib/server-env"
+import { isServerUrlBuiltIn, useServerUrl } from "@/src/lib/server-env"
 
 import { EmailLogin, EmailSignUp } from "./email"
 import { hasSignedInBefore } from "./returning-user"
@@ -69,7 +69,10 @@ export function Login() {
             </Text>
             {currentServer ? (
               <>
-                <CurrentServer server={currentServer} onChange={() => setIsChangingServer(true)} />
+                <CurrentServer
+                  server={currentServer}
+                  onChange={isServerUrlBuiltIn ? undefined : () => setIsChangingServer(true)}
+                />
                 {isRegister ? <EmailSignUp /> : <EmailLogin />}
               </>
             ) : (

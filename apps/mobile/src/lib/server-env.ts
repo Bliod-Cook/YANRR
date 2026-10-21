@@ -14,8 +14,11 @@ const [, , useStoredServerUrl, , getStoredServerUrl, setStoredServerUrl] = creat
   ),
 )
 
-// Builds for development and E2E can come with their server
+// Builds can come with their server, such as for development, E2E, or a deployment's own app
 const serverUrlOverride = normalizeServerUrl(process.env.EXPO_PUBLIC_YANNR_SERVER_URL ?? "")
+
+/** Whether the build comes with its server, which the user then cannot change */
+export const isServerUrlBuiltIn = serverUrlOverride !== null
 
 /** The server the app talks to, which the user enters on the login screen; null until then */
 export const getServerUrl = () => serverUrlOverride ?? getStoredServerUrl()
