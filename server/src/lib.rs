@@ -6,6 +6,7 @@ pub mod fetch;
 mod id;
 mod migration;
 pub mod opml;
+mod push;
 mod rsshub;
 mod subscription;
 pub mod sync;
@@ -28,6 +29,7 @@ pub struct AppState {
     pub config: Arc<Config>,
     pub http: reqwest::Client,
     pub rsshub: Arc<rsshub::Catalog>,
+    pub push: Option<Arc<push::Fcm>>,
 }
 
 impl FromRef<AppState> for Arc<Auth> {
@@ -40,12 +42,19 @@ pub async fn init(config: Config) -> Result<AppState, Box<dyn Error + Send + Syn
     let db = Database::connect(&config.database.url).await?;
     Migrator::up(&db, None).await?;
     let auth = Arc::new(auth::build(&config, db.clone()).await?);
+    let push = config
+        .push
+        .as_ref()
+        .map(push::Fcm::load)
+        .transpose()?
+        .map(Arc::new);
     Ok(AppState {
         db,
         auth,
         config: Arc::new(config),
         http: fetch::http_client(),
         rsshub: Arc::default(),
+        push,
     })
 }
 

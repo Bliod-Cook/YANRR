@@ -16,3 +16,9 @@ registration = true
 
 [rsshub]
 url = "https://rsshub.app"
+
+# Push notifications (optional), sent through Firebase Cloud Messaging.
+# [push]
+# Service account key of the Firebase project the clients are built with
+# (VITE_FIREBASE_CONFIG on desktop and web, GOOGLE_SERVICES_JSON / GOOGLE_SERVICE_INFO_PLIST on mobile).
+# firebase_service_account = "firebase-service-account.json"

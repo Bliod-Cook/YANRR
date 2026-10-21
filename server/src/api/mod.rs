@@ -50,6 +50,7 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
                 .post(messaging::create)
                 .delete(messaging::delete),
         )
+        .route("/messaging/test", get(messaging::test))
         .route(
             "/reads",
             get(reads::counts)

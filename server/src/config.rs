@@ -9,6 +9,8 @@ pub struct Config {
     pub auth: AuthConfig,
     #[serde(default)]
     pub rsshub: RsshubConfig,
+    /// Push notifications are sent only when configured.
+    pub push: Option<PushConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -43,6 +45,19 @@ impl Default for RsshubConfig {
             url: "https://rsshub.app".into(),
         }
     }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PushConfig {
+    /// Service account key (JSON) of the Firebase project the clients are built with.
+    pub firebase_service_account: PathBuf,
+    /// Where the FCM API is; only tests change it.
+    #[serde(default = "fcm_url")]
+    pub fcm_url: String,
+}
+
+fn fcm_url() -> String {
+    "https://fcm.googleapis.com".into()
 }
 
 fn enabled() -> bool {
