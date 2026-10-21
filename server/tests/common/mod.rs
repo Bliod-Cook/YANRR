@@ -224,6 +224,7 @@ pub enum Reply {
 struct FixtureState {
     replies: Arc<Mutex<HashMap<String, Reply>>>,
     not_modified: Arc<AtomicUsize>,
+    requests: Arc<Mutex<Vec<(String, Recorded)>>>,
 }
 
 /// A local feed server: `/rss`, `/etag` (answers 304 to `If-None-Match: "v1"`), `/rsshub/*`, and any path set with [`Fixtures::set`].
@@ -237,6 +238,7 @@ impl Fixtures {
         let state = FixtureState {
             replies: Arc::default(),
             not_modified: Arc::default(),
+            requests: Arc::default(),
         };
         let app = Router::new()
             .route("/rss", get(|| async { RSS2 }))
@@ -265,6 +267,22 @@ impl Fixtures {
     pub fn not_modified_count(&self) -> usize {
         self.state.not_modified.load(Ordering::SeqCst)
     }
+
+    /// Requests made to `path` among those answered by [`Fixtures::set`], oldest first.
+    pub fn requests(&self, path: &str) -> Vec<Recorded> {
+        let requests = self.state.requests.lock().unwrap();
+        requests
+            .iter()
+            .filter(|(requested, _)| requested == path)
+            .map(|(_, request)| request.clone())
+            .collect()
+    }
+}
+
+#[derive(Clone)]
+pub struct Recorded {
+    pub authorization: Option<String>,
+    pub body: String,
 }
 
 async fn etag(State(state): State<FixtureState>, headers: HeaderMap) -> axum::response::Response {
@@ -278,7 +296,24 @@ async fn etag(State(state): State<FixtureState>, headers: HeaderMap) -> axum::re
     ([(header::ETAG, "\"v1\"")], RSS2).into_response()
 }
 
-async fn replied(State(state): State<FixtureState>, uri: Uri) -> axum::response::Response {
+async fn replied(
+    State(state): State<FixtureState>,
+    uri: Uri,
+    headers: HeaderMap,
+    body: String,
+) -> axum::response::Response {
+    let authorization = headers
+        .get(header::AUTHORIZATION)
+        .map(|value| value.to_str().unwrap().to_string());
+    let request = Recorded {
+        authorization,
+        body,
+    };
+    state
+        .requests
+        .lock()
+        .unwrap()
+        .push((uri.path().into(), request));
     let reply = state.replies.lock().unwrap().get(uri.path()).cloned();
     match reply.unwrap_or(Reply::Status(404)) {
         Reply::Body(body) => body.into_response(),

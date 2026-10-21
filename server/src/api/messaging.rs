@@ -7,13 +7,14 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::{
-    error::{ApiError, ApiJson, ApiResult},
-    response::{ok, synced},
+    error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode},
+    response::{done, ok, synced},
     session::AuthUser,
 };
 use crate::{
     AppState,
     entity::messaging_token,
+    push::Notification,
     sync::{self, Action},
 };
 
@@ -122,4 +123,45 @@ pub async fn delete(
     let last_sync_id = sync::record(&txn, actions.into_iter().collect()).await?;
     txn.commit().await?;
     Ok(synced(last_sync_id))
+}
+
+#[derive(Deserialize)]
+pub struct TestQuery {
+    channel: Option<String>,
+}
+
+/// `GET /messaging/test`: a notification to each of the user's devices, or to those on `channel`.
+pub async fn test(
+    State(state): State<AppState>,
+    user: AuthUser,
+    ApiQuery(query): ApiQuery<TestQuery>,
+) -> ApiResult<Json<Value>> {
+    let fcm = state.push.as_ref().ok_or_else(|| {
+        ApiError::new(
+            ExceptionCode::MissingConfiguration,
+            "Push notifications are not configured",
+        )
+    })?;
+    let mut select =
+        messaging_token::Entity::find().filter(messaging_token::Column::UserId.eq(user.id));
+    if let Some(channel) = query.channel {
+        select = select.filter(messaging_token::Column::Channel.eq(channel));
+    }
+    let tokens: Vec<_> = select
+        .all(&state.db)
+        .await?
+        .into_iter()
+        .map(|row| row.token)
+        .collect();
+    let notification = Notification {
+        title: "Yannr".into(),
+        description: "Test notification".into(),
+        feed_id: String::new(),
+        entry_id: String::new(),
+        view: 0,
+    };
+    fcm.send(&state.http, &tokens, &notification)
+        .await
+        .map_err(|err| ApiError::new(ExceptionCode::InternalError, err))?;
+    Ok(done())
 }

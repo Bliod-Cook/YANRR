@@ -16,6 +16,7 @@ use crate::fetch::FetchError;
 pub enum ExceptionCode {
     UnprocessableContent = 3,
     InvalidInput = 4,
+    MissingConfiguration = 5,
     NotFound = 6,
     AuthError = 1000,
     InternalError = 1005,
@@ -44,7 +45,7 @@ impl ExceptionCode {
                 StatusCode::NOT_FOUND
             }
             Self::AuthError => StatusCode::UNAUTHORIZED,
-            Self::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::MissingConfiguration | Self::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
