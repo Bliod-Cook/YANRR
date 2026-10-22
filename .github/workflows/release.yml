@@ -133,6 +133,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
+        env:
+          # The release job downloads every artifact, and the build record fails to download
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: context
           file: server/Dockerfile
