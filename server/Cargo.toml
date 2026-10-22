@@ -32,6 +32,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 whatlang = "0.18"
 
 [dev-dependencies]
-postgresql_embedded = { version = "0.21", default-features = false, features = ["bundled", "tokio", "tls-rustls-ring"] }
+postgresql_embedded = { version = "0.22", default-features = false, features = ["bundled", "tokio", "tls-rustls-ring"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "multipart", "rustls-tls"] }
 tempfile = "3"
