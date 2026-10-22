@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process"
 import fs, { readdirSync } from "node:fs"
 import { cp, readdir } from "node:fs/promises"
 
@@ -147,8 +148,7 @@ const config: ForgeConfig = {
     extendInfo: {
       ITSAppUsesNonExemptEncryption: false,
     },
-    // Without an identity the fuses plugin signs the arm64 app ad hoc instead, which Apple silicon
-    // requires to launch it
+    // Without an identity the postPackage hook signs the app ad hoc instead
     ...(process.env.OSX_SIGN_IDENTITY && {
       osxSign: {
         optionsForFile: () => ({
@@ -251,6 +251,16 @@ const config: ForgeConfig = {
     }),
   ],
   hooks: {
+    // Apple silicon launches only a validly signed app. The fuses plugin signs the arm64 app ad hoc,
+    // but packaging then rewrites its Info.plist, which breaks that signature.
+    postPackage: async (_config, { platform, outputPaths }) => {
+      if (platform !== "darwin" || process.env.OSX_SIGN_IDENTITY) return
+      for (const outputPath of outputPaths) {
+        for (const app of readdirSync(outputPath).filter((file) => file.endsWith(".app"))) {
+          execFileSync("codesign", ["--force", "--deep", "--sign", "-", path.join(outputPath, app)])
+        }
+      }
+    },
     postMake: async (_config, makeResults) => {
       return makeResults.map((result) => {
         result.artifacts = result.artifacts
