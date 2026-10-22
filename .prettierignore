@@ -1,6 +1,6 @@
 pnpm-lock.yaml
 
-CHANGELOG.md
+*.md
 .context
 .claude/worktrees
 .waylog
@@ -17,3 +17,6 @@ apps/mobile/native/ios
 apps/mobile/.expo
 
 generated-routes.ts
+
+# Formatted by cargo fmt; its fixtures are test input
+server
