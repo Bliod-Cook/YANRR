@@ -6,27 +6,21 @@ YANRR is one server (with the web app built in) plus PostgreSQL. The desktop and
 
 - A Linux server (amd64 or arm64) with Docker and its Compose plugin (`docker compose`, not `docker-compose`).
 - A domain whose DNS A/AAAA record points at the server, with ports 80 and 443 open. The bundled Caddy uses them to get an HTTPS certificate, and the Android app only connects over HTTPS.
-- A GitHub account with access to [Bliod-Cook/YANRR](https://github.com/Bliod-Cook/YANRR). The repository and its image are private.
 
 ## Install
 
-1. Make a directory and download `compose.yaml` and `example.env` into it from the [latest release](https://github.com/Bliod-Cook/YANRR/releases/latest). Then rename `example.env` to `.env`. With the [GitHub CLI](https://cli.github.com/):
+1. Make a directory and download `compose.yaml` and `example.env` from the [latest release](https://github.com/Bliod-Cook/YANRR/releases/latest), then rename `example.env` to `.env`:
 
    ```sh
    mkdir yanrr && cd yanrr
-   gh release download --repo Bliod-Cook/YANRR --pattern compose.yaml --pattern example.env
+   curl -fLO https://github.com/Bliod-Cook/YANRR/releases/latest/download/compose.yaml
+   curl -fLO https://github.com/Bliod-Cook/YANRR/releases/latest/download/example.env
    mv example.env .env
    ```
 
 2. In `.env`, set `YANRR_SERVER__PUBLIC_URL` to your address, e.g. `https://rss.example.com`, and `YANRR_AUTH__SECRET` to the output of `openssl rand -hex 32`.
 
-3. Sign in to GitHub's registry with a [token that has the `read:packages` scope](https://github.com/settings/tokens/new?scopes=read:packages) (paste it as the password):
-
-   ```sh
-   docker login ghcr.io -u <your GitHub username>
-   ```
-
-4. Start everything:
+3. Start the services:
 
    ```sh
    docker compose up -d
@@ -34,7 +28,7 @@ YANRR is one server (with the web app built in) plus PostgreSQL. The desktop and
 
    Open your address and sign up. The first visit can take a few seconds while Caddy gets the certificate.
 
-5. Once everyone who needs an account has one, set `YANRR_AUTH__REGISTRATION=false` in `.env` and run `docker compose up -d` again. Do this early: anyone with an account can make the server fetch any URL, including ones on your private network.
+4. Once everyone who needs an account has one, set `YANRR_AUTH__REGISTRATION=false` in `.env` and run `docker compose up -d` again. Do this early: anyone with an account can make the server fetch any URL, including ones on your private network.
 
 There is no password reset, so keep your password somewhere safe.
 
@@ -181,7 +175,6 @@ Logs: `docker compose logs yanrr` (or `caddy`).
 
 | Symptom | Fix |
 | --- | --- |
-| Pulling the image fails with *denied* or *unauthorized* | Run `docker login ghcr.io` with a `read:packages` token. |
 | `yanrr` keeps restarting; the log says *Secret key cannot be empty* or *must be at least 32 characters* | Set `YANRR_AUTH__SECRET` (see Install). |
 | Signing in fails with *Invalid origin* | You opened a different address than `YANRR_SERVER__PUBLIC_URL`. Scheme, host and port must all match. |
 | Signing in seems to work, but you're signed out right away | One side uses `https://` and the other `http://`. |
