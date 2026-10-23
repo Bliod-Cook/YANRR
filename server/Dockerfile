@@ -7,6 +7,8 @@ ARG TARGETARCH
 WORKDIR /app
 COPY --chmod=755 bin/${TARGETARCH}/yanrr yanrr
 COPY web web
+ENV YANRR_SERVER__LISTEN=0.0.0.0:3000 \
+    YANRR_SERVER__WEB_DIR=web
 EXPOSE 3000
-# Reads /app/config.toml
+# The rest of the config comes from YANRR_* variables or /app/config.toml
 ENTRYPOINT ["/app/yanrr"]

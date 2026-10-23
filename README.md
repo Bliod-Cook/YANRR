@@ -9,6 +9,10 @@
 - `apps/mobile`：Expo（React Native）移动端
 - `packages/internal`：客户端共用的组件、状态、数据库与工具（`@follow/*`）
 
+## 部署
+
+见 [docs/self-hosting.md](docs/self-hosting.md)。
+
 ## 开发
 
 ```bash
