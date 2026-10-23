@@ -11,6 +11,7 @@ better-auth = { git = "https://github.com/better-auth-rs/better-auth-rs", rev = 
 chrono = { version = "0.4", features = ["serde"] }
 dom_smoothie = "0.18"
 feed-rs = "3"
+figment = { version = "0.10", features = ["toml", "env"] }
 futures = "0.3"
 isolang = { version = "2", default-features = false }
 jsonwebtoken = { version = "11", default-features = false, features = ["rust_crypto", "use_pem"] }
@@ -32,6 +33,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 whatlang = "0.18"
 
 [dev-dependencies]
+figment = { version = "0.10", features = ["test"] }
 postgresql_embedded = { version = "0.22", default-features = false, features = ["bundled", "tokio", "tls-rustls-ring"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "multipart", "rustls-tls"] }
 tempfile = "3"

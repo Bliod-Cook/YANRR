@@ -1,3 +1,5 @@
+# An environment variable YANRR_<SECTION>__<KEY> (e.g. YANRR_AUTH__SECRET) overrides the key in this file.
+
 [server]
 listen = "0.0.0.0:3000"
 # The URL clients use; an https:// URL makes session cookies Secure.

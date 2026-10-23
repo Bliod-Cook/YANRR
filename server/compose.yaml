@@ -1,7 +1,4 @@
-# Copy config.example.toml to config.toml next to this file, then in it:
-#   - set server.public_url and auth.secret
-#   - uncomment web_dir = "web"
-#   - point database.url at postgres://yanrr:yanrr@postgres/yanrr
+# Save example.env as .env next to this file and fill it in; see docs/self-hosting.md.
 services:
   postgres:
     image: postgres:18
@@ -24,10 +21,27 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # The server doesn't handle SIGTERM as PID 1
+    init: true
+    env_file: .env
+    environment:
+      YANRR_DATABASE__URL: postgres://yanrr:yanrr@postgres/yanrr
+    # For a reverse proxy on this host
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+
+  caddy:
+    image: caddy:2
+    profiles: [caddy]
+    restart: unless-stopped
+    command: caddy reverse-proxy --from ${YANRR_SERVER__PUBLIC_URL} --to yanrr:3000
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
     volumes:
-      - ./config.toml:/app/config.toml:ro
+      - caddy:/data
 
 volumes:
   postgres:
+  caddy:

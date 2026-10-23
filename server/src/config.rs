@@ -1,5 +1,13 @@
-use std::{error::Error, net::SocketAddr, path::PathBuf};
+use std::{
+    error::Error,
+    net::SocketAddr,
+    path::{Path, PathBuf},
+};
 
+use figment::{
+    Figment,
+    providers::{Env, Format, Toml},
+};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -73,7 +81,78 @@ fn enabled() -> bool {
 }
 
 impl Config {
+    /// Reads the TOML file at `path` if it exists; `YANRR_<SECTION>__<KEY>` environment variables override it.
     pub fn load(path: &str) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        Ok(toml::from_str(&std::fs::read_to_string(path)?)?)
+        let mut figment = Figment::new();
+        if Path::new(path).exists() {
+            figment = figment.merge(Toml::file_exact(path));
+        }
+        Ok(figment
+            .merge(Env::prefixed("YANRR_").split("__"))
+            .extract()?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use figment::Jail;
+
+    use super::*;
+
+    #[test]
+    fn environment_overrides_and_extends_the_file() {
+        Jail::expect_with(|jail| {
+            jail.create_file(
+                "config.toml",
+                r#"
+                [server]
+                listen = "0.0.0.0:3000"
+                public_url = "http://localhost:3000"
+                [database]
+                url = "postgres://localhost/yanrr"
+                "#,
+            )?;
+            jail.set_env("YANRR_SERVER__PUBLIC_URL", "https://rss.example.com");
+            jail.set_env(
+                "YANRR_AUTH__SECRET",
+                "a-secret-that-is-at-least-32-characters",
+            );
+            jail.set_env("YANRR_AUTH__REGISTRATION", "false");
+
+            let config = Config::load("config.toml").unwrap();
+
+            assert_eq!(config.server.public_url, "https://rss.example.com");
+            assert_eq!(config.database.url, "postgres://localhost/yanrr");
+            assert_eq!(
+                config.auth.secret,
+                "a-secret-that-is-at-least-32-characters"
+            );
+            assert!(!config.auth.registration);
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn environment_alone_is_enough() {
+        Jail::expect_with(|jail| {
+            jail.set_env("YANRR_SERVER__LISTEN", "0.0.0.0:3000");
+            jail.set_env("YANRR_SERVER__PUBLIC_URL", "https://rss.example.com");
+            jail.set_env("YANRR_SERVER__WEB_DIR", "web");
+            jail.set_env(
+                "YANRR_DATABASE__URL",
+                "postgres://yanrr:yanrr@postgres/yanrr",
+            );
+            jail.set_env(
+                "YANRR_AUTH__SECRET",
+                "a-secret-that-is-at-least-32-characters",
+            );
+
+            let config = Config::load("config.toml").unwrap();
+
+            assert_eq!(config.server.listen, "0.0.0.0:3000".parse().unwrap());
+            assert_eq!(config.server.web_dir, Some(PathBuf::from("web")));
+            assert_eq!(config.database.url, "postgres://yanrr:yanrr@postgres/yanrr");
+            Ok(())
+        });
     }
 }
