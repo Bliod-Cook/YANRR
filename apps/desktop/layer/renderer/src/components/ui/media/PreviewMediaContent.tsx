@@ -227,7 +227,7 @@ const HeaderActions: FC<{
         description={t(COPY_MAP.OpenInBrowser())}
         onClick={() => window.open(src)}
       >
-        <i className="i-mgc-external-link-cute-re" />
+        <i className="i-mingcute-external-link-line" />
       </GlassButton>
       {IN_ELECTRON && (
         <GlassButton
@@ -238,7 +238,7 @@ const HeaderActions: FC<{
             ipcServices?.app.download(src)
           }}
         >
-          <i className="i-mgc-download-2-cute-re" />
+          <i className="i-mingcute-download-2-line" />
         </GlassButton>
       )}
 
@@ -251,7 +251,7 @@ const HeaderActions: FC<{
         )}
         onClick={dismiss}
       >
-        <i className="i-mgc-close-cute-re" />
+        <i className="i-mingcute-close-line" />
       </GlassButton>
     </m.div>
   )
@@ -468,7 +468,7 @@ const FallbackableImage: FC<
           onClick={stopPropagation}
           tabIndex={-1}
         >
-          <i className="i-mgc-close-cute-re text-[60px] text-red-400" />
+          <i className="i-mingcute-close-line text-[60px] text-red-400" />
 
           <span>{t("media.image_load_failed")}</span>
           <div className="center gap-2">

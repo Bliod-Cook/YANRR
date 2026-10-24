@@ -101,7 +101,7 @@ These classes map to the UIKit color variables (see `apps/desktop/AGENTS.md`).
 
 ### Icons (Desktop/Web)
 
-- Prefer MingCute with `i-mgc-` prefix (e.g., `i-mgc-copy-cute-re`). Use `i-mingcute-` only if no `i-mgc-` exists.
+- Use the open-source MingCute set with the `i-mingcute-` prefix (e.g., `i-mingcute-copy-line`). Never use the proprietary MGC set (`i-mgc-`); Folo's license forbids redistributing it.
 
 ### Motion (Desktop/Web)
 

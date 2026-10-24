@@ -4,7 +4,7 @@
   "about.appVersion": "アプリ",
   "about.copyEnvironment": "環境をコピー",
   "about.environmentCopied": "環境情報をコピーしました",
-  "about.iconLibrary": "使用されているアイコンライブラリは <IconLibraryLink />  によって著作権が保護されており、再配布できません。",
+  "about.iconLibrary": "アイコンは <IconLibraryLink /> のものを使用しています（Apache-2.0 ライセンス）。",
   "about.licenseInfo": "Copyright © {{currentYear}} {{appName}}. All rights reserved.",
   "about.projectLicense": "{{appName}} は GNU Affero General Public License バージョン3に追加の例外条項を加えたライセンスで提供されています。",
   "about.rendererVersion": "レンダラー",

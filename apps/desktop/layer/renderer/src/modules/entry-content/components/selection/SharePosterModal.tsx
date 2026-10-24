@@ -421,7 +421,7 @@ export function SharePosterModal({ selectedText, entryId }: SharePosterModalProp
               whileTap={{ scale: 0.95 }}
               title={t("entry_content.share_poster.share_to_x")}
             >
-              <span className="i-mgc-social-x-cute-li text-base" />
+              <span className="i-mingcute-social-x-line text-base" />
             </m.button>
 
             {/* Divider */}

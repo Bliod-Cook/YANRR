@@ -48,7 +48,7 @@ export const EntryContentFallback = memo(({ entryId, children }: EntryContentFal
     if (!hasLocalEntry && isUnauthorized(error)) {
       return (
         <div className="center absolute inset-0 flex flex-col gap-3">
-          <i className="i-mgc-user-3-cute-re text-4xl text-text-secondary" />
+          <i className="i-mingcute-user-3-line text-4xl text-text-secondary" />
           <span className="text-balance text-center text-sm">
             {t("entry_content.login_required")}
           </span>
@@ -62,7 +62,7 @@ export const EntryContentFallback = memo(({ entryId, children }: EntryContentFal
     if (!hasLocalEntry) {
       return (
         <div className="center absolute inset-0 flex flex-col gap-3">
-          <i className="i-mgc-warning-cute-re text-4xl text-red" />
+          <i className="i-mingcute-warning-line text-4xl text-red" />
           <span className="text-balance text-center text-sm">
             {t("entry_content.network_error")}
           </span>

@@ -50,7 +50,7 @@ const EmptyActionPlaceholder = ({ onCreateRule }: { onCreateRule: () => void }) 
     <div className="flex min-h-96 w-full items-center justify-center py-10">
       <div className="flex w-full max-w-xl flex-col items-center gap-6 rounded-3xl border border-fill-secondary bg-material-ultra-thin px-8 py-10 text-center shadow-sm">
         <div className="flex size-16 items-center justify-center rounded-2xl border border-fill-secondary bg-fill-quinary">
-          <i className="i-mgc-magic-2-cute-re size-8 text-text-secondary" />
+          <i className="i-mingcute-magic-2-line size-8 text-text-secondary" />
         </div>
 
         <div className="space-y-2">
@@ -64,7 +64,7 @@ const EmptyActionPlaceholder = ({ onCreateRule }: { onCreateRule: () => void }) 
 
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button onClick={onCreateRule}>
-            <i className="i-mgc-add-cute-re mr-2 size-4" />
+            <i className="i-mingcute-add-line mr-2 size-4" />
             {t("actions.action_card.empty.cta")}
           </Button>
         </div>
@@ -78,7 +78,7 @@ const ActionLoadError = ({ isRetrying, onRetry }: { isRetrying: boolean; onRetry
 
   return (
     <div className="flex min-h-96 w-full flex-col items-center justify-center gap-3 py-10">
-      <i className="i-mgc-warning-cute-re text-3xl text-red" />
+      <i className="i-mingcute-warning-line text-3xl text-red" />
       <span className="text-sm text-text-secondary">{t("actions.load_failed")}</span>
       <Button variant="outline" isLoading={isRetrying} onClick={onRetry}>
         {t("retry", { ns: "common" })}
@@ -109,7 +109,7 @@ export const ActionSetting = () => {
     return (
       <LoadingWithIcon
         className="flex h-64 items-center justify-center"
-        icon={<i className="i-mgc-magic-2-cute-re" />}
+        icon={<i className="i-mingcute-magic-2-line" />}
         size="large"
       />
     )
@@ -267,27 +267,27 @@ const ShareImportSection = () => {
             <i
               className={cn(
                 "size-4",
-                hasActions ? "i-mgc-share-forward-cute-re" : "i-mgc-file-import-cute-re",
+                hasActions ? "i-mingcute-share-forward-line" : "i-mingcute-file-import-line",
               )}
             />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={handleExport} disabled={!hasActions}>
-            <i className="i-mgc-download-2-cute-re mr-3 size-4" />
+            <i className="i-mingcute-download-2-line mr-3 size-4" />
             {t("actions.action_card.summary.export")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleImport}>
-            <i className="i-mgc-file-upload-cute-re mr-3 size-4" />
+            <i className="i-mingcute-file-upload-line mr-3 size-4" />
             {t("actions.action_card.summary.import_file")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleCopyToClipboard} disabled={!hasActions}>
-            <i className="i-mgc-copy-2-cute-re mr-3 size-4" />
+            <i className="i-mingcute-copy-2-line mr-3 size-4" />
             {t("actions.action_card.summary.copy")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleImportFromClipboard}>
-            <i className="i-mgc-paste-cute-re mr-3 size-4" />
+            <i className="i-mingcute-paste-line mr-3 size-4" />
             {t("actions.action_card.summary.import_clipboard")}
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -387,7 +387,7 @@ const RuleListItem = ({
         [
           new MenuItemText({
             label: t("actions.action_card.summary.delete"),
-            icon: <i className="i-mgc-delete-2-cute-re" />,
+            icon: <i className="i-mingcute-delete-2-line" />,
             click: () => handleDelete(index),
             requiresLogin: true,
           }),
@@ -466,7 +466,7 @@ const ActionButtonGroup = ({ onCreateRule }: { onCreateRule: () => void }) => {
         {hasActions && (
           <HeaderActionButton
             variant="accent"
-            icon="i-mgc-check-circle-cute-re"
+            icon="i-mingcute-check-circle-line"
             disabled={!isDirty}
             loading={mutation.isPending}
             onClick={save}

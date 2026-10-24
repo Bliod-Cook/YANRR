@@ -98,7 +98,7 @@ export const AIDisplayFlowPart = toolMemo(({ part }: { part: ToolWithState<any> 
         )}
         title={t("chat.flow_chart.open_full_screen")}
       >
-        <i className="i-mgc-external-link-cute-re size-4" />
+        <i className="i-mingcute-external-link-line size-4" />
         <span>{t("chat.flow_chart.preview")}</span>
       </button>
     </div>

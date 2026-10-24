@@ -4,7 +4,7 @@
   "about.appVersion": "应用",
   "about.copyEnvironment": "复制环境",
   "about.environmentCopied": "环境信息已复制",
-  "about.iconLibrary": "使用的图标库受版权保护，版权所有者为 <IconLibraryLink />，不得重新分发。",
+  "about.iconLibrary": "图标来自 <IconLibraryLink />，基于 Apache-2.0 许可。",
   "about.licenseInfo": "Copyright © {{currentYear}} {{appName}}. 保留所有权利。",
   "about.projectLicense": "{{appName}} 采用 GNU Affero 通用公共许可证第3版授权，并附有额外的例外条款。",
   "about.rendererVersion": "渲染层",

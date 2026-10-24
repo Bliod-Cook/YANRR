@@ -98,7 +98,7 @@ export const AISummaryCardBase: React.FC<AISummaryCardBaseProps> = ({
             <div className="center relative">
               <i
                 className={cn(
-                  "i-mgc-ai-cute-re text-lg",
+                  "i-mingcute-ai-line text-lg",
                   isLoading
                     ? "text-purple-500/70 dark:text-purple-400/70"
                     : "text-purple-600 dark:text-purple-400",
@@ -142,7 +142,7 @@ export const AISummaryCardBase: React.FC<AISummaryCardBaseProps> = ({
                 "sm:opacity-0 sm:duration-300 sm:group-hover:translate-y-0 sm:group-hover:opacity-100",
               )}
             >
-              <i className="i-mgc-ai-cute-re text-base" />
+              <i className="i-mingcute-ai-line text-base" />
               <span>{t("entry_content.selection_toolbar.ask_ai")}</span>
             </MotionButtonBase>
           )}

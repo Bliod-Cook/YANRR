@@ -185,7 +185,7 @@ export const UserChatMessage: React.FC<UserChatMessageProps> = React.memo(({ mes
                   className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-fill-secondary"
                   title={t("chat.message.edit")}
                 >
-                  <i className="i-mgc-edit-cute-re size-3" />
+                  <i className="i-mingcute-edit-line size-3" />
                   <span>{t("words.edit", { ns: "common" })}</span>
                 </button>
                 <button
@@ -195,7 +195,7 @@ export const UserChatMessage: React.FC<UserChatMessageProps> = React.memo(({ mes
                   className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-text-secondary transition-colors hover:bg-fill-secondary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
                   title={t("retry", { ns: "common" })}
                 >
-                  <i className="i-mgc-refresh-2-cute-re size-3" />
+                  <i className="i-mingcute-refresh-2-line size-3" />
                   <span>{t("retry", { ns: "common" })}</span>
                 </button>
               </m.div>

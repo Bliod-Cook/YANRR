@@ -5,7 +5,7 @@ import { UpdatePasswordForm } from "~/modules/profile/update-password-form"
 import { SettingsTitle } from "~/modules/settings/title"
 import { defineSettingPageData } from "~/modules/settings/utils"
 
-const iconName = "i-mgc-user-setting-cute-re"
+const iconName = "i-mingcute-user-setting-line"
 const priority = (1000 << 3) + 10
 export const handle = defineSettingPageData({
   icon: iconName,

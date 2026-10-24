@@ -234,7 +234,7 @@ export function UnifiedDiscoverForm() {
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 rounded-full border border-accent px-2 py-px text-accent hover:bg-accent/10"
                       >
-                        <i className="i-mgc-book-6-cute-re" />
+                        <i className="i-mingcute-book-6-line" />
                         <span>{t("discover.rsshub_docs")}</span>
                       </a>
                     </div>
@@ -255,7 +255,7 @@ export function UnifiedDiscoverForm() {
               {/* Compact Tools */}
               <div className="mt-5 flex items-center justify-center gap-3 text-xs">
                 <ToolLink
-                  icon="i-mgc-file-upload-cute-re"
+                  icon="i-mingcute-file-upload-line"
                   label={t("discover.tools.import")}
                   onClick={() => {
                     present({
@@ -266,7 +266,7 @@ export function UnifiedDiscoverForm() {
                   }}
                 />
                 <ToolLink
-                  icon="i-mgc-web-cute-re"
+                  icon="i-mingcute-web-line"
                   label={t("discover.tools.transform")}
                   onClick={() => {
                     present({
@@ -277,7 +277,7 @@ export function UnifiedDiscoverForm() {
                   }}
                 />
                 <ToolLink
-                  icon="i-mgc-inbox-cute-re"
+                  icon="i-mingcute-inbox-line"
                   label={t("discover.tools.inbox")}
                   onClick={() => {
                     present({
@@ -306,7 +306,7 @@ export function UnifiedDiscoverForm() {
                 mutation.reset()
               }}
             >
-              <i className="i-mgc-close-cute-re" />
+              <i className="i-mingcute-close-line" />
             </MotionButtonBase>
           </div>
           <div className="space-y-4 text-sm">

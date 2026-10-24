@@ -79,7 +79,7 @@ export const LoginModalContent = (props: LoginModalContentProps) => {
           className="absolute -right-2 -top-2 flex size-8 items-center justify-center rounded-lg border-0 bg-transparent transition-colors hover:bg-fill/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
           onClick={modal.dismiss}
         >
-          <i aria-hidden className="i-mgc-close-cute-re pointer-events-none size-4" />
+          <i aria-hidden className="i-mingcute-close-line pointer-events-none size-4" />
         </button>
       )}
       <m.div

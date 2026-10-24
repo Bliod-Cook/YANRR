@@ -127,7 +127,7 @@ export const WhenSection = ({ index }: WhenSectionProps) => {
                               actionActions.deleteConditionItem(actionConditionIndex)
                             }}
                           >
-                            <i className="i-mgc-delete-2-cute-re" />
+                            <i className="i-mingcute-delete-2-line" />
                           </button>
                         </div>
                         {conditionIdx !== orConditions.length - 1 && (
@@ -152,7 +152,7 @@ export const WhenSection = ({ index }: WhenSectionProps) => {
                       })
                     }}
                   >
-                    <i className="i-mgc-add-cute-re mr-2" />
+                    <i className="i-mingcute-add-line mr-2" />
                     {t("actions.action_card.and")}
                   </Button>
                 </div>
@@ -175,7 +175,7 @@ export const WhenSection = ({ index }: WhenSectionProps) => {
             }}
             disabled={disabled}
           >
-            <i className="i-mgc-add-cute-re mr-2" />
+            <i className="i-mingcute-add-line mr-2" />
             {t("actions.action_card.or")}
           </Button>
         </div>

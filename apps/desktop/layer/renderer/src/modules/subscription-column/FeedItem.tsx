@@ -264,7 +264,7 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
                 })
               }}
             >
-              <i className="i-mgc-add-cute-re text-base text-accent" />
+              <i className="i-mingcute-add-line text-base text-accent" />
             </Button>
           ) : (
             <UnreadNumber unread={feedUnread} className="ml-2" />

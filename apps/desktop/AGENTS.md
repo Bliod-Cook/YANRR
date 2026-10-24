@@ -51,14 +51,9 @@ These colors automatically adapt to light/dark mode following Apple's design sys
 
 ## Icons
 
-For icon usage, prioritize the MingCute icon library with the `i-mgc-` prefix. Icons are available in the format `i-mgc-[icon-name]-[style]` where style can be `re` (regular), `fi` (filled), etc.
+Use the open-source MingCute icon library with the `i-mingcute-` prefix, in the format `i-mingcute-[icon-name]-[style]` where style is `line` or `fill` (e.g., `i-mingcute-copy-line`, `i-mingcute-external-link-line`).
 
-**Important**: Always try to find an appropriate icon with the `i-mgc-` prefix first. Only use the `i-mingcute-` prefix as a fallback when no suitable `i-mgc-` icon exists.
-
-Examples:
-
-- Preferred: `i-mgc-copy-cute-re`, `i-mgc-external-link-cute-re`
-- Fallback only: `i-mingcute-copy-line` (only if no mgc equivalent exists)
+**Important**: Never use the proprietary MGC set (`i-mgc-`); Folo's license forbids redistributing it.
 
 ## Using Framer Motion
 
@@ -83,7 +78,7 @@ When building UI components, follow this hierarchy:
 
 - **Purpose**: Components should be generic and reusable across different apps/contexts
 - **No Business Logic**: Avoid coupling with specific app business logic, APIs, or state management
-- **Follow All Style Rules**: Must adhere to UIKit colors, MingCute icons (`i-mgc-` prefix), and Framer Motion (`m.` prefix) guidelines
+- **Follow All Style Rules**: Must adhere to UIKit colors, MingCute icons (`i-mingcute-` prefix), and Framer Motion (`m.` prefix) guidelines
 - **Export Pattern**: Export components from appropriate index files for clean imports
 - **TypeScript**: Use proper TypeScript interfaces for props and maintain type safety
 

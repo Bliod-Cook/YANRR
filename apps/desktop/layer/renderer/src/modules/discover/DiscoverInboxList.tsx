@@ -26,7 +26,7 @@ export function DiscoverInboxList() {
             })
           }
         >
-          <i className="i-mgc-add-cute-re" />
+          <i className="i-mingcute-add-line" />
           {t("discover.inbox_create")}
         </Button>
       </div>

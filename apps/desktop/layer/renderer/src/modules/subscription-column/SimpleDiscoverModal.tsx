@@ -158,7 +158,7 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
                       Link: (
                         <Link className="text-accent underline" to="/discover" onClick={dismiss} />
                       ),
-                      Icon: <i className="i-mgc-arrow-right-up-cute-re" />,
+                      Icon: <i className="i-mingcute-arrow-right-up-line" />,
                       br: <br />,
                     }}
                   />

@@ -145,7 +145,7 @@ export const EntryTitle = ({ entryId, compact, containerClassName }: EntryLinkPr
 
             {entry.author && (
               <div className="flex items-center gap-1.5">
-                <i className="i-mgc-user-3-cute-re text-base" />
+                <i className="i-mingcute-user-3-line text-base" />
                 {entry.authorUrl ? (
                   <a
                     href={entry.authorUrl}
@@ -162,7 +162,7 @@ export const EntryTitle = ({ entryId, compact, containerClassName }: EntryLinkPr
             )}
 
             <div className="flex items-center gap-1.5">
-              <i className="i-mgc-calendar-time-add-cute-re text-base" />
+              <i className="i-mingcute-calendar-time-add-line text-base" />
               <span className="text-xs tabular-nums">
                 <RelativeTime date={entry.publishedAt} />
               </span>
@@ -170,7 +170,7 @@ export const EntryTitle = ({ entryId, compact, containerClassName }: EntryLinkPr
 
             {entry.estimatedMins !== undefined && (
               <div className="flex items-center gap-1.5">
-                <i className="i-mgc-time-cute-re text-base" />
+                <i className="i-mingcute-time-line text-base" />
                 <span className="text-xs tabular-nums">
                   {formatEstimatedMins(entry.estimatedMins, (unit, values) =>
                     t(`time.duration.${unit}`, values),

@@ -21,12 +21,12 @@ interface AIModelIndicatorProps {
 type ProviderType = "openai" | "google" | "auto" | "deepseek" | "anthropic" | "moonshotai"
 
 const providerIcons: Record<ProviderType, string> = {
-  auto: "i-mgc-ai-cute-re",
-  openai: "i-mgc-openai-original",
+  auto: "i-mingcute-ai-line",
+  openai: "i-simple-icons-openai",
   google: "i-simple-icons-googlegemini",
   anthropic: "i-simple-icons-claude",
-  deepseek: "i-mgc-deepseek-original",
-  moonshotai: "i-mgc-moonshotai-original",
+  deepseek: "i-simple-icons-deepseek",
+  moonshotai: "i-simple-icons-moonshotai",
 }
 
 const parseModelString = (modelString: string) => {

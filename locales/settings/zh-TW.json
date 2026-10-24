@@ -4,7 +4,7 @@
   "about.appVersion": "應用程式",
   "about.copyEnvironment": "複製環境",
   "about.environmentCopied": "環境資訊已複製",
-  "about.iconLibrary": "所使用的圖標庫版權由 <IconLibraryLink />  所有，不得重新分發。",
+  "about.iconLibrary": "圖示來自 <IconLibraryLink />，採用 Apache-2.0 授權。",
   "about.licenseInfo": "版權所有 © {{currentYear}} {{appName}}。保留所有權利。",
   "about.projectLicense": "{{appName}} 採用 GNU Affero 通用公共授權條款第3版授權，並附有額外的例外條款。",
   "about.rendererVersion": "渲染層",

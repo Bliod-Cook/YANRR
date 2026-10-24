@@ -73,7 +73,7 @@ const BackTopIndicator: Component = memo(({ className }) => {
             "mt-1 flex flex-nowrap items-center gap-2 text-sm opacity-50 transition-all duration-500 hover:opacity-100",
           )}
         >
-          <i className="i-mgc-ai-cute-re" />
+          <i className="i-mingcute-ai-line" />
           <span>{t("entry_content.selection_toolbar.ask_ai")}</span>
         </MotionButtonBase>
       )}

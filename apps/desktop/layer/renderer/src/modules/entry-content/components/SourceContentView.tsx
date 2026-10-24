@@ -67,7 +67,7 @@ const EmbedBlockedNotice = ({ src }: { src: string }) => {
 
   return (
     <div className="relative flex shrink-0 items-center gap-3 border-t border-border px-4 py-2 text-sm text-text-secondary">
-      <i className="i-mgc-information-cute-re shrink-0 text-base" />
+      <i className="i-mingcute-information-line shrink-0 text-base" />
       <span className="min-w-0 grow">{t("entry_content.source_embed_notice")}</span>
       <Button variant="outline" size="sm" onClick={() => window.open(src, "_blank")}>
         {t("entry_actions.open_in_browser", { which: t("words.newTab") })}

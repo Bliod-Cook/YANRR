@@ -48,7 +48,7 @@ export const EntryEmptyList = ({
     >
       {error != null ? (
         <div className="flex -translate-y-6 flex-col items-center justify-center gap-3">
-          <i className="i-mgc-warning-cute-re text-3xl text-red" />
+          <i className="i-mingcute-warning-line text-3xl text-red" />
           <span className="text-base">{t("entry_list.load_failed")}</span>
           {onRetry && (
             <Button variant="outline" isLoading={isRetrying} onClick={onRetry}>
@@ -58,12 +58,12 @@ export const EntryEmptyList = ({
         </div>
       ) : offline ? (
         <div className="flex -translate-y-6 flex-col items-center justify-center gap-2">
-          <i className="i-mgc-wifi-off-cute-re text-3xl" />
+          <i className="i-mingcute-wifi-off-line text-3xl" />
           <span className="text-base">{t("entry_list.offline")}</span>
         </div>
       ) : unreadOnly ? (
         <>
-          <i className="i-mgc-celebrate-cute-re -mt-11 text-3xl" />
+          <i className="i-mingcute-celebrate-line -mt-11 text-3xl" />
           <span className="text-base">{t("entry_list.zero_unread")}</span>
         </>
       ) : (

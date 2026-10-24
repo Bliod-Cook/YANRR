@@ -140,7 +140,7 @@ export const useFeedActions = ({
           categories.size > 0 && MenuItemSeparator.default,
           new MenuItemText({
             label: t("sidebar.feed_column.context_menu.create_category"),
-            icon: <i className="i-mgc-add-cute-re" />,
+            icon: <i className="i-mingcute-add-line" />,
             click() {
               presentCategoryCreationModal(view!, isMultipleSelection ? feedIds : [feedId])
             },

@@ -106,7 +106,7 @@ export const DiscoverFeedCard: FC<DiscoverFeedCardProps> = memo(({ item, classNa
               <div className="flex items-center gap-3 text-sm text-text-secondary">
                 {!!item.analytics?.subscriptionCount && (
                   <div className="flex items-center gap-1.5">
-                    <i className="i-mgc-user-3-cute-re" />
+                    <i className="i-mingcute-user-3-line" />
 
                     <span>
                       {formatNumber(item.analytics.subscriptionCount)}{" "}
@@ -116,14 +116,14 @@ export const DiscoverFeedCard: FC<DiscoverFeedCardProps> = memo(({ item, classNa
                 )}
                 {item.analytics?.updatesPerWeek ? (
                   <div className="flex items-center gap-1.5">
-                    <i className="i-mgc-safety-certificate-cute-re" />
+                    <i className="i-mingcute-safety-certificate-line" />
                     <span>
                       {t("feed.entry_week", { count: item.analytics.updatesPerWeek ?? 0 })}
                     </span>
                   </div>
                 ) : item.analytics?.latestEntryPublishedAt ? (
                   <div className="flex items-center gap-1.5">
-                    <i className="i-mgc-safe-alert-cute-re" />
+                    <i className="i-mingcute-safe-alert-line" />
                     <span>{t("feed.updated_at")}</span>
                     <RelativeTime
                       date={item.analytics.latestEntryPublishedAt}
@@ -164,7 +164,7 @@ export const SearchResultContent: FC<{
           </div>
         ) : (
           <div className="flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <i className="i-mgc-link-cute-re shrink-0 translate-y-px self-start text-[14px]" />
+            <i className="i-mingcute-link-line shrink-0 translate-y-px self-start text-[14px]" />
             <span className="line-clamp-2 break-all">
               {entry.url || t("discover.untitled_entry")}
             </span>

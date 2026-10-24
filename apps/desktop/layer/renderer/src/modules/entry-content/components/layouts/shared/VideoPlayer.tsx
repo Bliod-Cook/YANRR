@@ -159,7 +159,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           />
         ) : (
           <div className="center aspect-video w-full flex-col gap-1 rounded-md bg-material-medium text-xs text-text-secondary">
-            <i className="i-mgc-sad-cute-re size-6" />
+            <i className="i-mingcute-sad-line size-6" />
             {t("entry_content.no_video")}
           </div>
         )}

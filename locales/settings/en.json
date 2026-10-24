@@ -4,7 +4,7 @@
   "about.appVersion": "App",
   "about.copyEnvironment": "Copy environment",
   "about.environmentCopied": "Environment info copied",
-  "about.iconLibrary": "The icon library used is copyrighted by <IconLibraryLink />  and cannot be redistributed.",
+  "about.iconLibrary": "Icons by <IconLibraryLink />, licensed under Apache-2.0.",
   "about.licenseInfo": "Copyright © {{currentYear}} {{appName}}. All rights reserved.",
   "about.projectLicense": "{{appName}} is licensed under the GNU Affero General Public License version 3 with additional exceptions.",
   "about.rendererVersion": "Renderer",

@@ -7,6 +7,9 @@
     "./tailwindcss/web": "./tailwindcss/web.ts",
     "./tsconfig.extend.json": "./tsconfig.extend.json"
   },
+  "scripts": {
+    "test": "vitest run"
+  },
   "peerDependencies": {
     "tailwindcss": ">=4 <5"
   },
@@ -15,8 +18,6 @@
     "@iconify-json/logos": "1.2.14",
     "@iconify-json/mingcute": "1.2.8",
     "@iconify-json/simple-icons": "1.2.97",
-    "@iconify/tools": "5.0.14",
-    "@iconify/utils": "3.1.7",
     "@tailwindcss/container-queries": "0.1.1",
     "@tailwindcss/typography": "0.5.20",
     "es-toolkit": "1.52.0",
@@ -29,7 +30,6 @@
   "devDependencies": {
     "postcss": "8.5.28",
     "postcss-js": "5.1.0",
-    "tailwindcss": "4.3.3",
-    "workspace-root": "3.3.1"
+    "tailwindcss": "4.3.3"
   }
 }

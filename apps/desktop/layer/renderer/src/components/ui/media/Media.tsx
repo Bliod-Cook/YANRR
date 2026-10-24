@@ -325,7 +325,7 @@ const FallbackMedia: FC<MediaProps> = ({ type, mediaContainerClassName, classNam
         )}
       >
         <div className="hidden @sm:hidden @md:contents">
-          <i className="i-mgc-close-cute-re text-xl text-red" />
+          <i className="i-mingcute-close-line text-xl text-red" />
           <p>{t("media.load_failed")}</p>
           <div className="space-x-1 break-all px-4 text-sm">
             <Trans
@@ -342,7 +342,7 @@ const FallbackMedia: FC<MediaProps> = ({ type, mediaContainerClassName, classNam
                 ),
               }}
             />
-            <i className="i-mgc-external-link-cute-re translate-y-0.5" />
+            <i className="i-mingcute-external-link-line translate-y-0.5" />
           </div>
         </div>
       </div>
@@ -445,7 +445,7 @@ const VideoPreview: FC<{
           isPaused ? "opacity-100" : "opacity-0",
         )}
       >
-        <i className="i-mgc-play-cute-fi" />
+        <i className="i-mingcute-play-fill" />
       </div>
     </div>
   )

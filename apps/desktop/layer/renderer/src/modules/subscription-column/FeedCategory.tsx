@@ -282,7 +282,7 @@ function FeedCategoryImpl({
                   }}
                   className="center -ml-1 flex size-5 shrink-0 rounded-lg hover:bg-material-ultra-thick"
                 >
-                  <i className="i-mgc-close-cute-re text-red" />
+                  <i className="i-mingcute-close-line text-red" />
                 </MotionButtonBase>
               </div>
             ) : (
@@ -294,7 +294,7 @@ function FeedCategoryImpl({
                 aria-expanded={open}
                 data-state={open ? "open" : "close"}
                 className={cn(
-                  "flex h-8 items-center data-[state=open]:[&_.i-mgc-right-cute-fi]:rotate-90",
+                  "flex h-8 items-center data-[state=open]:[&_.i-mingcute-right-fill]:rotate-90",
                 )}
                 tabIndex={-1}
               >
@@ -302,7 +302,7 @@ function FeedCategoryImpl({
                   <LoadingCircle size="small" className="mr-2 size-[16px]" />
                 ) : (
                   <div className="center mr-2 size-[16px]">
-                    <i className="i-mgc-right-cute-fi transition-transform" />
+                    <i className="i-mingcute-right-fill transition-transform" />
                   </div>
                 )}
               </button>

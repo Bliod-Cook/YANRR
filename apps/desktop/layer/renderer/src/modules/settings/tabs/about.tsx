@@ -131,7 +131,7 @@ export const SettingAbout = () => {
             }}
             className="inline-flex items-center rounded-full px-3 py-1 text-xs text-text-tertiary transition-colors hover:bg-fill-secondary hover:text-text-secondary"
           >
-            <i className="i-mgc-copy-cute-re mr-1.5" />
+            <i className="i-mingcute-copy-line mr-1.5" />
             {t("about.copyEnvironment")}
           </button>
         </div>
@@ -167,11 +167,11 @@ export const SettingAbout = () => {
                 IconLibraryLink: (
                   <a
                     className="text-accent hover:underline"
-                    href="https://mgc.mingcute.com/"
+                    href="https://github.com/Richard9394/MingCute"
                     target="_blank"
                     rel="noreferrer"
                   >
-                    MingCute Icons
+                    MingCute Icon
                   </a>
                 ),
               }}

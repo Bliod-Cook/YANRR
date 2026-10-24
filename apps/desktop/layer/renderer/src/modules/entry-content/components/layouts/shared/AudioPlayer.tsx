@@ -178,7 +178,7 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
                 }}
                 title={t("player.back_10s")}
               >
-                <i className="i-mgc-back-2-cute-re size-4 text-text-secondary transition-colors group-hover:text-text" />
+                <i className="i-mingcute-back-2-line size-4 text-text-secondary transition-colors group-hover:text-text" />
               </button>
 
               {/* Play/Pause Button */}
@@ -199,11 +199,11 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
                 title={isPlaying ? t("player.pause") : t("player.play")}
               >
                 {isLoading ? (
-                  <i className="i-mgc-loading-3-cute-re size-6 animate-spin text-white" />
+                  <i className="i-mingcute-loading-3-line size-6 animate-spin text-white" />
                 ) : isPlaying ? (
-                  <i className="i-mgc-pause-cute-fi size-6 text-white" />
+                  <i className="i-mingcute-pause-fill size-6 text-white" />
                 ) : (
-                  <i className="i-mgc-play-cute-fi size-6 text-white" />
+                  <i className="i-mingcute-play-fill size-6 text-white" />
                 )}
               </button>
 
@@ -227,7 +227,7 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
                 }}
                 title={t("player.forward_10s")}
               >
-                <i className="i-mgc-forward-2-cute-re size-4 text-text-secondary transition-colors group-hover:text-text" />
+                <i className="i-mingcute-forward-2-line size-4 text-text-secondary transition-colors group-hover:text-text" />
               </button>
             </div>
 
@@ -295,7 +295,7 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
                 className="group relative flex size-8 items-center justify-center rounded-full bg-transparent transition-all duration-300 hover:[background:linear-gradient(to_right,hsl(var(--fo-a)/0.08),hsl(var(--fo-a)/0.05))] hover:[border-color:hsl(var(--fo-a)/0.25)]"
                 title={t("player.download")}
               >
-                <i className="i-mgc-download-2-cute-re size-4 text-text-secondary transition-colors group-hover:text-text" />
+                <i className="i-mingcute-download-2-line size-4 text-text-secondary transition-colors group-hover:text-text" />
               </button>
             </div>
           </div>

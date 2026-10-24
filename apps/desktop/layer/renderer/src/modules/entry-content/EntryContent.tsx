@@ -190,7 +190,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
                     EventBus.dispatch(COMMAND_ID.timeline.switchToPrevious)
                   }}
                 >
-                  <i className="i-mgc-left-small-sharp size-6" />
+                  <i className="i-mingcute-left-small-line size-6" />
                 </GlassButton>
               </div>
 
@@ -203,7 +203,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
                     EventBus.dispatch(COMMAND_ID.timeline.switchToNext)
                   }}
                 >
-                  <i className="i-mgc-right-small-sharp size-6" />
+                  <i className="i-mingcute-right-small-line size-6" />
                 </GlassButton>
               </div>
             </>
@@ -231,7 +231,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
                     />
                   ) : error ? (
                     <div className="center mt-36 flex flex-col items-center gap-3">
-                      <i className="i-mgc-warning-cute-re text-4xl text-red" />
+                      <i className="i-mingcute-warning-line text-4xl text-red" />
                       <span className="text-balance text-center text-sm">
                         {t("entry_content.network_error")}
                       </span>

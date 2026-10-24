@@ -115,7 +115,7 @@ export const GlobalFileDropZone: FC<GlobalFileDropZoneProps> = memo(({ children,
               ) : (
                 <>
                   <div className="relative text-accent">
-                    <i className="i-mgc-file-upload-cute-re size-16" />
+                    <i className="i-mingcute-file-upload-line size-16" />
                     <m.div
                       className="absolute inset-0 text-accent blur-lg"
                       animate={{
@@ -128,7 +128,7 @@ export const GlobalFileDropZone: FC<GlobalFileDropZoneProps> = memo(({ children,
                         ease: "easeInOut",
                       }}
                     >
-                      <i className="i-mgc-file-upload-cute-re size-16" />
+                      <i className="i-mingcute-file-upload-line size-16" />
                     </m.div>
                   </div>
                   <div className="text-center">

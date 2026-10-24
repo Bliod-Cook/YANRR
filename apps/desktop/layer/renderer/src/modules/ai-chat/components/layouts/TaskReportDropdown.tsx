@@ -71,7 +71,7 @@ export const TaskReportDropdown = ({ triggerElement, asChild = true }: TaskRepor
 
   const defaultTrigger = (
     <ActionButton tooltip={t("chat.task_reports.title")} className="relative">
-      <i className="i-mgc-calendar-time-add-cute-re size-5 text-text-secondary" />
+      <i className="i-mingcute-calendar-time-add-line size-5 text-text-secondary" />
       {hasUnreadSessions && (
         <span
           className="absolute right-1 top-1 block size-2 rounded-full bg-accent shadow-[0_0_0_2px_var(--color-bg-default)] dark:shadow-[0_0_0_2px_var(--color-bg-default)]"
@@ -122,14 +122,14 @@ export const TaskReportDropdown = ({ triggerElement, asChild = true }: TaskRepor
           <EmptyState
             message={t("chat.task_reports.empty")}
             icon={
-              <i className="i-mgc-calendar-time-add-cute-re mb-2 block size-8 text-text-secondary" />
+              <i className="i-mingcute-calendar-time-add-line mb-2 block size-8 text-text-secondary" />
             }
           />
         )}
 
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleScheduleActionClick}>
-          <i className="i-mgc-add-cute-re mr-2 size-4" />
+          <i className="i-mingcute-add-line mr-2 size-4" />
           {t("tasks.actions.new_task")}
         </DropdownMenuItem>
       </DropdownMenuContent>

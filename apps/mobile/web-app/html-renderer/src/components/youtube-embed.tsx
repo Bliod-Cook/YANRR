@@ -39,7 +39,7 @@ export const YouTubeEmbedCard = ({ videoId, title }: { videoId: string; title?: 
       loading="lazy"
     />
     <span className="absolute left-1/2 top-1/2 flex h-12 w-[68px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl bg-[#ff0033]">
-      <i className="i-mgc-play-cute-fi size-6 text-white" />
+      <i className="i-mingcute-play-fill size-6 text-white" />
     </span>
   </a>
 )

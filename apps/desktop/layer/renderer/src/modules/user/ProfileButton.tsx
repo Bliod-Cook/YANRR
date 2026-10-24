@@ -52,7 +52,7 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
             settingModalPresent()
           }}
         >
-          <i className="i-mgc-settings-7-cute-re size-5 text-text-secondary" />
+          <i className="i-mingcute-settings-7-line size-5 text-text-secondary" />
         </ActionButton>
         <LoginButton {...props} />
       </>
@@ -98,7 +98,7 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
             onClick={() => {
               navigate("/ai")
             }}
-            icon={<i className="i-mgc-ai-cute-re" />}
+            icon={<i className="i-mingcute-ai-line" />}
           >
             {t("user_button.ai")}
           </DropdownMenuItem>
@@ -110,7 +110,7 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
           onClick={() => {
             settingModalPresent()
           }}
-          icon={<i className="i-mgc-settings-7-cute-re" />}
+          icon={<i className="i-mingcute-settings-7-line" />}
           shortcut={"$mod+,"}
         >
           {t("user_button.preferences")}
@@ -123,7 +123,7 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
           onClick={() => {
             navigate("/action")
           }}
-          icon={<i className="i-mgc-magic-2-cute-re" />}
+          icon={<i className="i-mingcute-magic-2-line" />}
         >
           {t("words.actions")}
         </DropdownMenuItem>
@@ -132,7 +132,7 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
           className="pl-3"
           data-testid="profile-menu-logout"
           onClick={signOut}
-          icon={<i className="i-mgc-exit-cute-re" />}
+          icon={<i className="i-mingcute-exit-line" />}
         >
           {t("user_button.log_out")}
         </DropdownMenuItem>

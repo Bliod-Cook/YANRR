@@ -49,7 +49,7 @@ export const ByokProviderItem = ({ provider, onEdit, onDelete }: ByokProviderIte
                 aria-label={t("byok.providers.edit")}
                 onClick={onEdit}
               >
-                <i className="i-mgc-edit-cute-re size-4" />
+                <i className="i-mingcute-edit-line size-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("byok.providers.edit")}</TooltipContent>
@@ -62,7 +62,7 @@ export const ByokProviderItem = ({ provider, onEdit, onDelete }: ByokProviderIte
                 aria-label={t("byok.providers.delete")}
                 onClick={onDelete}
               >
-                <i className="i-mgc-delete-2-cute-re size-4" />
+                <i className="i-mingcute-delete-2-line size-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>{t("byok.providers.delete")}</TooltipContent>

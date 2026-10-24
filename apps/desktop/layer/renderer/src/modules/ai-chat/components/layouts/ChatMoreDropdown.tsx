@@ -77,13 +77,13 @@ export const ChatMoreDropdown = ({
           onClick={handleGenerateTitle}
           disabled={!currentChatId || !hasMessages || isGenerating}
         >
-          <i className="i-mgc-magic-2-cute-re mr-2 size-4" />
+          <i className="i-mingcute-magic-2-line mr-2 size-4" />
           <span>{isGenerating ? t("common.generating_title") : t("common.generate_title")}</span>
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => settingModalPresent("ai")}>
-          <i className="i-mgc-settings-1-cute-re mr-2 size-4" />
+          <i className="i-mingcute-settings-1-line mr-2 size-4" />
           <span>{t("settings.title")}</span>
         </DropdownMenuItem>
 
@@ -91,7 +91,7 @@ export const ChatMoreDropdown = ({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleCloseSidebar}>
-              <i className="i-mgc-close-cute-re mr-2 size-4" />
+              <i className="i-mingcute-close-line mr-2 size-4" />
               <span>{t("chat.header.close_sidebar")}</span>
             </DropdownMenuItem>
           </>

@@ -82,7 +82,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
               <EntryContentLoading icon={!isInbox ? (feed as FeedModel)?.siteUrl : undefined} />
             ) : error ? (
               <div className="center mt-36 flex flex-col items-center gap-3">
-                <i className="i-mgc-warning-cute-re text-4xl text-red" />
+                <i className="i-mingcute-warning-line text-4xl text-red" />
                 <span className="text-balance text-center text-sm">
                   {t("entry_content.network_error")}
                 </span>
