@@ -1,3 +1,4 @@
+import { LICENSE_URL, SOURCE_CODE_URL } from "@follow/constants"
 import { nativeApplicationVersion, nativeBuildVersion } from "expo-application"
 import { Trans, useTranslation } from "react-i18next"
 import { View } from "react-native"
@@ -59,6 +60,19 @@ export const AboutScreen = () => {
               values={{
                 currentYear: new Date().getFullYear(),
                 appName: "Yanrr",
+              }}
+            />
+
+            <Trans
+              ns="settings"
+              i18nKey="about.projectLicense"
+              parent={({ children }: { children: React.ReactNode }) => (
+                <Text className="mt-4 text-[15px] text-label">{children}</Text>
+              )}
+              values={{ appName: "Yanrr" }}
+              components={{
+                LicenseLink: <Link href={LICENSE_URL} />,
+                SourceLink: <Link href={SOURCE_CODE_URL} />,
               }}
             />
           </View>

@@ -5,6 +5,9 @@
   "packageManager": "pnpm@12.5.1",
   "description": "Self-hosted personal RSS reader",
   "author": "Bliod-Cook",
+  "contributors": [
+    "Folo Team (https://github.com/RSSNext/Folo)"
+  ],
   "license": "AGPL-3.0-only",
   "scripts": {
     "build:packages": "turbo run build --filter=\"./packages/**/*\"",

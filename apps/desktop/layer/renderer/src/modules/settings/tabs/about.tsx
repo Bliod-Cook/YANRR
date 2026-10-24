@@ -1,5 +1,6 @@
 import { Logo } from "@follow/components/icons/logo.jsx"
 import { Wordmark } from "@follow/components/icons/wordmark.jsx"
+import { LICENSE_URL, SOURCE_CODE_URL } from "@follow/constants"
 import { MODE, ModeEnum } from "@follow/shared/constants"
 import { getCurrentEnvironment } from "@follow/utils/environment"
 import PKG from "@pkg"
@@ -157,7 +158,29 @@ export const SettingAbout = () => {
         <h2 className="mb-4 text-sm font-semibold text-text-secondary">{t("about.resources")}</h2>
         <div className="space-y-4">
           <p className="text-sm leading-relaxed text-text-secondary">
-            {t("about.projectLicense", { appName: APP_NAME })}
+            <Trans
+              ns="settings"
+              i18nKey="about.projectLicense"
+              values={{ appName: APP_NAME }}
+              components={{
+                LicenseLink: (
+                  <a
+                    className="text-accent hover:underline"
+                    href={LICENSE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                  />
+                ),
+                SourceLink: (
+                  <a
+                    className="text-accent hover:underline"
+                    href={SOURCE_CODE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                  />
+                ),
+              }}
+            />
           </p>
           <p className="text-sm leading-relaxed text-text-secondary">
             <Trans

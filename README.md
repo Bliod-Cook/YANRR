@@ -39,4 +39,4 @@ corepack pnpm run build:web
 
 ## 许可与致谢
 
-AGPL-3.0，见 [LICENSE](LICENSE)。客户端派生自 [Folo](https://github.com/RSSNext/Folo)（git remote `upstream`）。
+AGPL-3.0，见 [LICENSE](LICENSE)。客户端派生自 [Folo](https://github.com/RSSNext/Folo) dev 分支的 `5788748bb`（git remote `upstream`），自 2026-10-20 起修改，修改内容见 git 历史。
