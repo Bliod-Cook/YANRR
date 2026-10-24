@@ -13,7 +13,7 @@ import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-cont
 import { ReAnimatedPressable } from "@/src/components/common/AnimatedComponents"
 import { getDefaultHeaderHeight } from "@/src/components/layouts/utils"
 import { SetNavigationHeaderHeightContext } from "@/src/components/layouts/views/NavigationHeaderContext"
-import { Search2CuteReIcon } from "@/src/icons/search_2_cute_re"
+import { Search2LineIcon } from "@/src/icons/search_2_line"
 import { useScreenIsInSheetModal } from "@/src/lib/navigation/hooks"
 import { queryClient } from "@/src/lib/query-client"
 import { useHeaderWindowControlsInsets } from "@/src/lib/window-controls"
@@ -170,7 +170,7 @@ const SearchInput = () => {
       <View style={styles.searchbar} className="bg-tertiary-system-fill">
         {focusOrHasValue && (
           <Animated.View style={placeholderAnimatedStyle}>
-            <Search2CuteReIcon color={placeholderTextColor} height={18} width={18} />
+            <Search2LineIcon color={placeholderTextColor} height={18} width={18} />
             {!searchValue && !tempSearchValue && (
               <Text className="ml-2 text-secondary-label" style={styles.searchPlaceholderText}>
                 {t("words.search")}
@@ -211,7 +211,7 @@ const SearchInput = () => {
         />
 
         <Animated.View style={skeletonAnimatedStyle} pointerEvents="none">
-          <Search2CuteReIcon color={placeholderTextColor} height={18} width={18} />
+          <Search2LineIcon color={placeholderTextColor} height={18} width={18} />
           <Text
             allowFontScaling={false}
             className="ml-1 text-secondary-label"

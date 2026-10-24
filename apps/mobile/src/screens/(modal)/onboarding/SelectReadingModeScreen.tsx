@@ -9,9 +9,9 @@ import {
 } from "@/src/components/layouts/views/SafeNavigationScrollView"
 import { GroupedInsetListNavigationLinkIcon } from "@/src/components/ui/grouped/GroupedList"
 import { Text } from "@/src/components/ui/typography/Text"
-import { Eye2CuteReIcon } from "@/src/icons/eye_2_cute_re"
-import { Grid2CuteReIcon } from "@/src/icons/grid_2_cute_re"
-import { PowerIcon } from "@/src/icons/power"
+import { Eye2LineIcon } from "@/src/icons/eye_2_line"
+import { FlashCircleFillIcon } from "@/src/icons/flash_circle_fill"
+import { Grid2LineIcon } from "@/src/icons/grid_2_line"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
 import { useReadingBehavior } from "@/src/modules/onboarding/hooks/use-reading-behavior"
 
@@ -27,7 +27,7 @@ export const SelectReadingModeScreen: NavigationControllerView = () => {
         <Card
           icon={
             <GroupedInsetListNavigationLinkIcon backgroundColor="#F87181">
-              <PowerIcon color="#fff" width={40} height={40} />
+              <FlashCircleFillIcon color="#fff" width={40} height={40} />
             </GroupedInsetListNavigationLinkIcon>
           }
           isSelected={behavior === "radical"}
@@ -41,7 +41,7 @@ export const SelectReadingModeScreen: NavigationControllerView = () => {
         <Card
           icon={
             <GroupedInsetListNavigationLinkIcon backgroundColor="#34D399">
-              <Grid2CuteReIcon color="#fff" width={40} height={40} />
+              <Grid2LineIcon color="#fff" width={40} height={40} />
             </GroupedInsetListNavigationLinkIcon>
           }
           isSelected={behavior === "balanced"}
@@ -55,7 +55,7 @@ export const SelectReadingModeScreen: NavigationControllerView = () => {
         <Card
           icon={
             <GroupedInsetListNavigationLinkIcon backgroundColor="#CBAD6D">
-              <Eye2CuteReIcon color="#fff" width={40} height={40} />
+              <Eye2LineIcon color="#fff" width={40} height={40} />
             </GroupedInsetListNavigationLinkIcon>
           }
           isSelected={behavior === "conservative"}

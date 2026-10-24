@@ -2,13 +2,13 @@ import type { ViewDefinition as ViewDefinitionBase } from "@follow/constants"
 import { FeedViewType, getViewList } from "@follow/constants"
 import type { FC } from "react"
 
-import { AnnouncementCuteFiIcon } from "../icons/announcement_cute_fi"
-import { BubbleCuteFiIcon } from "../icons/bubble_cute_fi"
-import { MicCuteFiIcon } from "../icons/mic_cute_fi"
-import { PaperCuteFiIcon } from "../icons/paper_cute_fi"
-import { PicCuteFiIcon } from "../icons/pic_cute_fi"
-import { ThoughtCuteFiIcon } from "../icons/thought_cute_fi"
-import { VideoCuteFiIcon } from "../icons/video_cute_fi"
+import { AnnouncementFillIcon } from "../icons/announcement_fill"
+import { BubbleFillIcon } from "../icons/bubble_fill"
+import { MicFillIcon } from "../icons/mic_fill"
+import { PaperFillIcon } from "../icons/paper_fill"
+import { PicFillIcon } from "../icons/pic_fill"
+import { ThoughtFillIcon } from "../icons/thought_fill"
+import { VideoFillIcon } from "../icons/video_fill"
 
 interface ViewDefinitionExtended {
   icon: FC<{ color?: string; height?: number; width?: number }>
@@ -16,25 +16,25 @@ interface ViewDefinitionExtended {
 
 const extendMap: Record<FeedViewType, ViewDefinitionExtended> = {
   [FeedViewType.All]: {
-    icon: BubbleCuteFiIcon,
+    icon: BubbleFillIcon,
   },
   [FeedViewType.Articles]: {
-    icon: PaperCuteFiIcon,
+    icon: PaperFillIcon,
   },
   [FeedViewType.SocialMedia]: {
-    icon: ThoughtCuteFiIcon,
+    icon: ThoughtFillIcon,
   },
   [FeedViewType.Pictures]: {
-    icon: PicCuteFiIcon,
+    icon: PicFillIcon,
   },
   [FeedViewType.Videos]: {
-    icon: VideoCuteFiIcon,
+    icon: VideoFillIcon,
   },
   [FeedViewType.Audios]: {
-    icon: MicCuteFiIcon,
+    icon: MicFillIcon,
   },
   [FeedViewType.Notifications]: {
-    icon: AnnouncementCuteFiIcon,
+    icon: AnnouncementFillIcon,
   },
 }
 

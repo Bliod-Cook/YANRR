@@ -9,11 +9,11 @@ import { Pressable, View } from "react-native"
 import { setGeneralSetting, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { UserAvatar } from "@/src/components/ui/avatar/UserAvatar"
 import { UIBarButton } from "@/src/components/ui/button/UIBarButton"
-import { CheckCircleCuteReIcon } from "@/src/icons/check_circle_cute_re"
-import { RoundCuteFiIcon } from "@/src/icons/round_cute_fi"
-import { RoundCuteReIcon } from "@/src/icons/round_cute_re"
-import { SortAscendingCuteReIcon } from "@/src/icons/sort_ascending_cute_re"
-import { SortDescendingCuteReIcon } from "@/src/icons/sort_descending_cute_re"
+import { CheckCircleLineIcon } from "@/src/icons/check_circle_line"
+import { RoundFillIcon } from "@/src/icons/round_fill"
+import { RoundLineIcon } from "@/src/icons/round_line"
+import { SortAscendingLineIcon } from "@/src/icons/sort_ascending_line"
+import { SortDescendingLineIcon } from "@/src/icons/sort_descending_line"
 import { useSwitchTab } from "@/src/lib/navigation/bottom-tab/hooks"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { toast } from "@/src/lib/toast"
@@ -75,7 +75,7 @@ export const MarkAllAsReadActionButton = ({ variant = "secondary" }: HeaderActio
   return (
     <UIBarButton
       label={t("operation.mark_all_as_read")}
-      normalIcon={<CheckCircleCuteReIcon height={size} width={size} color={color} />}
+      normalIcon={<CheckCircleLineIcon height={size} width={size} color={color} />}
       onPress={() => {
         showMarkAllAsReadDialog(selectedFeed, selectedView)
       }}
@@ -100,8 +100,8 @@ export const UnreadOnlyActionButton = ({ variant = "secondary" }: HeaderActionBu
           ? t("operation.toggle_unread_only.show_all.label")
           : t("operation.toggle_unread_only.show_unread_only.label")
       }
-      normalIcon={<RoundCuteReIcon height={size} width={size} color={color} />}
-      selectedIcon={<RoundCuteFiIcon height={size} width={size} color={color} />}
+      normalIcon={<RoundLineIcon height={size} width={size} color={color} />}
+      selectedIcon={<RoundFillIcon height={size} width={size} color={color} />}
       onPress={() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
         setGeneralSetting("unreadOnly", !unreadOnly)
@@ -132,9 +132,9 @@ export const EntrySortOrderActionButton = ({ variant = "secondary" }: HeaderActi
       }
       normalIcon={
         sortOrder === "asc" ? (
-          <SortAscendingCuteReIcon height={size} width={size} color={color} />
+          <SortAscendingLineIcon height={size} width={size} color={color} />
         ) : (
-          <SortDescendingCuteReIcon height={size} width={size} color={color} />
+          <SortDescendingLineIcon height={size} width={size} color={color} />
         )
       }
       onPress={() => {

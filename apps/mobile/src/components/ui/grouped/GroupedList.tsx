@@ -11,7 +11,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated"
 import type { SFSymbol } from "sf-symbols-typescript"
 
 import { Text } from "@/src/components/ui/typography/Text"
-import { CheckFilledIcon } from "@/src/icons/check_filled"
+import { CheckFillIcon } from "@/src/icons/check_fill"
 import { MingcuteRightLine } from "@/src/icons/mingcute_right_line"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
 import { accentColor, useColor } from "@/src/theme/colors"
@@ -319,7 +319,7 @@ export const GroupedInsetListActionCellRadio: FC<{
           </View>
 
           <View className="ml-4 size-[18px]">
-            {selected && <CheckFilledIcon height={18} width={18} color={accentColor} />}
+            {selected && <CheckFillIcon height={18} width={18} color={accentColor} />}
           </View>
         </GroupedInsetListBaseCell>
       )}

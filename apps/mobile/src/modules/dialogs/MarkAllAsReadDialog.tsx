@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { View } from "react-native"
 
 import { Text } from "@/src/components/ui/typography/Text"
-import { CheckCircleCuteReIcon } from "@/src/icons/check_circle_cute_re"
+import { CheckCircleLineIcon } from "@/src/icons/check_circle_line"
 import type { DialogComponent } from "@/src/lib/dialog"
 import { Dialog } from "@/src/lib/dialog"
 
@@ -22,7 +22,7 @@ export const MarkAllAsReadDialog: DialogComponent = () => {
 }
 MarkAllAsReadDialog.title = t("operation.mark_all_as_read")
 MarkAllAsReadDialog.id = "mark-all-as-read"
-MarkAllAsReadDialog.headerIcon = <CheckCircleCuteReIcon />
+MarkAllAsReadDialog.headerIcon = <CheckCircleLineIcon />
 
 /**
  * The caller passes the timeline it shows, because the dialog renders at the app root, outside

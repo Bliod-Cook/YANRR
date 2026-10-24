@@ -7,7 +7,7 @@ import RootSiblings from "react-native-root-siblings"
 import { FullWindowOverlay } from "../components/common/FullWindowOverlay"
 import { RotateableLoading } from "../components/common/RotateableLoading"
 import { PlatformActivityIndicator } from "../components/ui/loading/PlatformActivityIndicator"
-import { CloseCuteReIcon } from "../icons/close_cute_re"
+import { CloseLineIcon } from "../icons/close_line"
 
 class LoadingStatic {
   start(): { done: () => void }
@@ -63,7 +63,7 @@ const LoadingContainer: FC<{
           <View className="absolute inset-x-0 bottom-24 flex-row justify-center">
             <Pressable onPress={cancel}>
               <View className="rounded-full border-2 border-opaque-separator p-2">
-                <CloseCuteReIcon color="gray" height={20} width={20} />
+                <CloseLineIcon color="gray" height={20} width={20} />
               </View>
             </Pressable>
           </View>

@@ -27,7 +27,7 @@ import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-cont
 import type { ViewProps } from "react-native-svg/lib/typescript/fabric/utils"
 import { useColor } from "react-native-uikit-colors"
 
-import { CloseCuteReIcon } from "@/src/icons/close_cute_re"
+import { CloseLineIcon } from "@/src/icons/close_line"
 import { MingcuteLeftLineIcon } from "@/src/icons/mingcute_left_line"
 import {
   useCanBack,
@@ -438,7 +438,7 @@ export const DefaultHeaderBackButton = ({
       {!showCloseIcon ? (
         <MingcuteLeftLineIcon height={20} width={20} color={label} />
       ) : (
-        <CloseCuteReIcon height={20} width={20} color={label} />
+        <CloseLineIcon height={20} width={20} color={label} />
       )}
     </UINavigationHeaderActionButton>
   )

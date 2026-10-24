@@ -7,7 +7,7 @@ import { runOnJS, useAnimatedStyle, useSharedValue, withSpring } from "react-nat
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { ReAnimatedPressable } from "@/src/components/common/AnimatedComponents"
-import { BugCuteReIcon } from "@/src/icons/bug_cute_re"
+import { BugLineIcon } from "@/src/icons/bug_line"
 import { JotaiPersistSyncStorage } from "@/src/lib/jotai"
 import { Navigation } from "@/src/lib/navigation/Navigation"
 import { DebugScreen } from "@/src/screens/(headless)/DebugScreen"
@@ -82,7 +82,7 @@ export const DebugButton = () => {
         style={animatedStyle}
         className="absolute right-0 top-[-20] z-[100] mt-5 flex size-8 items-center justify-center rounded-l-md bg-accent"
       >
-        <BugCuteReIcon height={24} width={24} color="#fff" />
+        <BugLineIcon height={24} width={24} color="#fff" />
       </ReAnimatedPressable>
     </GestureDetector>
   )

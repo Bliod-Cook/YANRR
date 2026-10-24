@@ -5,8 +5,8 @@ import { StyleSheet, View } from "react-native"
 
 import { ThemedBlurView } from "@/src/components/common/ThemedBlurView"
 import { PlatformActivityIndicator } from "@/src/components/ui/loading/PlatformActivityIndicator"
-import { PauseCuteFiIcon } from "@/src/icons/pause_cute_fi"
-import { PlayCuteFiIcon } from "@/src/icons/play_cute_fi"
+import { PauseFillIcon } from "@/src/icons/pause_fill"
+import { PlayFillIcon } from "@/src/icons/play_fill"
 import type { SimpleMediaState } from "@/src/lib/player"
 
 import { NativePressable } from "../pressable/NativePressable"
@@ -36,10 +36,10 @@ export function PlayerAction({
     onPress()
   }, [onPress])
 
-  let playButtonIcon = <PlayCuteFiIcon color="white" width={iconSize} height={iconSize} />
+  let playButtonIcon = <PlayFillIcon color="white" width={iconSize} height={iconSize} />
   switch (mediaState) {
     case "playing": {
-      playButtonIcon = <PauseCuteFiIcon color="white" width={iconSize} height={iconSize} />
+      playButtonIcon = <PauseFillIcon color="white" width={iconSize} height={iconSize} />
       break
     }
     case "loading": {

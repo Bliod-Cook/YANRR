@@ -4,7 +4,7 @@ import { useCallback } from "react"
 import { Pressable, Text, View } from "react-native"
 import { measure, runOnJS, runOnUI, useAnimatedRef } from "react-native-reanimated"
 
-import { User4CuteFiIcon } from "@/src/icons/user_4_cute_fi"
+import { User4FillIcon } from "@/src/icons/user_4_fill"
 
 import { Image } from "../image/Image"
 import { useLightboxControls } from "../lightbox/lightboxState"
@@ -84,7 +84,7 @@ export const UserAvatar = ({
             {name.slice(0, 2)}
           </Text>
         ) : (
-          <User4CuteFiIcon width={size} height={size} color={color} />
+          <User4FillIcon width={size} height={size} color={color} />
         )}
       </View>
     )

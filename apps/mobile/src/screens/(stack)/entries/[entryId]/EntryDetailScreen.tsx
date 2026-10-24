@@ -23,7 +23,7 @@ import { FeedIcon } from "@/src/components/ui/icon/feed-icon"
 import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
 import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { Text } from "@/src/components/ui/typography/Text"
-import { CalendarTimeAddCuteReIcon } from "@/src/icons/calendar_time_add_cute_re"
+import { CalendarTimeAddLineIcon } from "@/src/icons/calendar_time_add_line"
 import { openLink } from "@/src/lib/native"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
@@ -242,7 +242,7 @@ const EntryInfo = ({ entryId }: { entryId: string }) => {
         </View>
       )}
       <View className="flex flex-row items-center gap-1">
-        <CalendarTimeAddCuteReIcon width={16} height={16} color={secondaryLabelColor} />
+        <CalendarTimeAddLineIcon width={16} height={16} color={secondaryLabelColor} />
         <RelativeDateTime
           date={publishedAt}
           className="text-xs leading-tight text-secondary-label"

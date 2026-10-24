@@ -7,7 +7,7 @@ import { Pressable, StyleSheet, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Text } from "@/src/components/ui/typography/Text"
-import { CheckFilledIcon } from "@/src/icons/check_filled"
+import { CheckFillIcon } from "@/src/icons/check_fill"
 import { MingcuteDownLineIcon } from "@/src/icons/mingcute_down_line"
 import { accentColor, useColor } from "@/src/theme/colors"
 
@@ -86,7 +86,7 @@ export function Select<T>({
             </View>
             {isSelected && (
               <View className="ml-2">
-                <CheckFilledIcon color={accentColor} height={20} width={20} />
+                <CheckFillIcon color={accentColor} height={20} width={20} />
               </View>
             )}
           </Pressable>

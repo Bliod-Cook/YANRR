@@ -10,9 +10,9 @@ import type { ViewStyle } from "react-native"
 import { Pressable, StyleSheet, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { CloseCuteReIcon } from "@/src/icons/close_cute_re"
-import { Download2CuteReIcon } from "@/src/icons/download_2_cute_re"
-import { ShareForwardCuteReIcon } from "@/src/icons/share_forward_cute_re"
+import { CloseLineIcon } from "@/src/icons/close_line"
+import { Download2LineIcon } from "@/src/icons/download_2_line"
+import { ShareForwardLineIcon } from "@/src/icons/share_forward_line"
 import { useWindowControlsInsets } from "@/src/lib/window-controls"
 
 type Props = {
@@ -55,7 +55,7 @@ const ImageDefaultHeader = ({
           accessibilityHint={t("image.close_hint")}
           onAccessibilityEscape={onRequestClose}
         >
-          <CloseCuteReIcon color="#fff" width={20} height={20} />
+          <CloseLineIcon color="#fff" width={20} height={20} />
         </Pressable>
       </View>
 
@@ -71,7 +71,7 @@ const ImageDefaultHeader = ({
               accessibilityLabel={t("image.save")}
               accessibilityHint={t("image.save_hint")}
             >
-              <Download2CuteReIcon color="#fff" width={20} height={20} />
+              <Download2LineIcon color="#fff" width={20} height={20} />
             </Pressable>
 
             <Pressable
@@ -82,7 +82,7 @@ const ImageDefaultHeader = ({
               accessibilityLabel={t("image.share")}
               accessibilityHint={t("image.share_hint")}
             >
-              <ShareForwardCuteReIcon color="#fff" width={20} height={20} />
+              <ShareForwardLineIcon color="#fff" width={20} height={20} />
             </Pressable>
           </>
         )}

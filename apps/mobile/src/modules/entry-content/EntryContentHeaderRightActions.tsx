@@ -20,12 +20,12 @@ import type { MenuItemIconProps } from "zeego/lib/typescript/menu"
 import { getActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { ActionBarItem } from "@/src/components/ui/action-bar/ActionBarItem"
 import { DropdownMenu } from "@/src/components/ui/context-menu"
-import { DocmentCuteReIcon } from "@/src/icons/docment_cute_re"
-import { More1CuteReIcon } from "@/src/icons/more_1_cute_re"
-import { ShareForwardCuteReIcon } from "@/src/icons/share_forward_cute_re"
-import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
-import { StarCuteReIcon } from "@/src/icons/star_cute_re"
-import { Translate2CuteReIcon } from "@/src/icons/translate_2_cute_re"
+import { DocmentLineIcon } from "@/src/icons/docment_line"
+import { More1LineIcon } from "@/src/icons/more_1_line"
+import { ShareForwardLineIcon } from "@/src/icons/share_forward_line"
+import { StarFillIcon } from "@/src/icons/star_fill"
+import { StarLineIcon } from "@/src/icons/star_line"
+import { Translate2LineIcon } from "@/src/icons/translate_2_line"
 import { hideIntelligenceGlowEffect, openLink } from "@/src/lib/native"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { createLinkShareContent } from "@/src/lib/share"
@@ -155,7 +155,7 @@ const HeaderRightActionsImpl = ({
       !!entry && {
         key: "Star",
         title: isStarred ? t("operation.unstar") : t("operation.star"),
-        icon: isStarred ? <StarCuteFiIcon /> : <StarCuteReIcon />,
+        icon: isStarred ? <StarFillIcon /> : <StarLineIcon />,
         iconIOS: {
           name: isStarred ? "star.fill" : "star",
           paletteColors: isStarred ? ["#facc15"] : undefined,
@@ -167,7 +167,7 @@ const HeaderRightActionsImpl = ({
     !showReadabilitySetting && {
       key: "ShowReadability",
       title: t("entry_content.header.show_readability"),
-      icon: <DocmentCuteReIcon />,
+      icon: <DocmentLineIcon />,
       iconIOS: { name: "doc.text" },
       onPress: toggleReadability,
       active: showReadability,
@@ -178,7 +178,7 @@ const HeaderRightActionsImpl = ({
       !showAITranslationSetting && {
         key: "ShowTranslation",
         title: t("entry_content.header.show_translation"),
-        icon: <Translate2CuteReIcon />,
+        icon: <Translate2LineIcon />,
         iconIOS: { name: "globe" },
         onPress: toggleAITranslation,
         active: showTranslation,
@@ -188,7 +188,7 @@ const HeaderRightActionsImpl = ({
     !!externalUrl && {
       key: "Share",
       title: t("operation.share"),
-      icon: <ShareForwardCuteReIcon />,
+      icon: <ShareForwardLineIcon />,
       iconIOS: { name: "square.and.arrow.up" },
       onPress: handleShare,
     },
@@ -260,7 +260,7 @@ const HeaderRightActionsImpl = ({
             hitSlop={10}
             accessibilityLabel={t("entry_content.header.more_actions")}
           >
-            <More1CuteReIcon color={labelColor} />
+            <More1LineIcon color={labelColor} />
           </Pressable>
         </DropdownMenu.Trigger>
 

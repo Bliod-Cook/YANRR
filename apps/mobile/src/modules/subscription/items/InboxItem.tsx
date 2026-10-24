@@ -11,7 +11,7 @@ import { GROUPED_ICON_TEXT_GAP, GROUPED_LIST_MARGIN } from "@/src/components/ui/
 import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
 import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { Text } from "@/src/components/ui/typography/Text"
-import { InboxCuteFiIcon } from "@/src/icons/inbox_cute_fi"
+import { InboxFillIcon } from "@/src/icons/inbox_fill"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
 import { selectFeed } from "@/src/modules/screen/atoms"
@@ -57,7 +57,7 @@ export const InboxItem = memo(({ id, isFirst, isLast }: SubscriptionItemBaseProp
           }}
         >
           <View className="ml-0.5 overflow-hidden rounded">
-            <InboxCuteFiIcon
+            <InboxFillIcon
               height={20}
               width={20}
               color={colorScheme === "dark" ? "white" : "black"}

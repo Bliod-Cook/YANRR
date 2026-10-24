@@ -32,9 +32,9 @@ import { TextField } from "@/src/components/ui/form/TextField"
 import { GroupedInsetListCard } from "@/src/components/ui/grouped/GroupedList"
 import { PlatformActivityIndicator } from "@/src/components/ui/loading/PlatformActivityIndicator"
 import { Text } from "@/src/components/ui/typography/Text"
-import { SafeAlertCuteReIcon } from "@/src/icons/safe_alert_cute_re"
-import { SafetyCertificateCuteReIcon } from "@/src/icons/safety_certificate_cute_re"
-import { User3CuteReIcon } from "@/src/icons/user_3_cute_re"
+import { SafeAlertLineIcon } from "@/src/icons/safe_alert_line"
+import { SafetyCertificateLineIcon } from "@/src/icons/safety_certificate_line"
+import { User3LineIcon } from "@/src/icons/user_3_line"
 import { isNotFoundError, toastFetchError } from "@/src/lib/error-parser"
 import { destination } from "@/src/lib/navigation/biz/Destination"
 import { useCanDismiss, useNavigation } from "@/src/lib/navigation/hooks"
@@ -264,7 +264,7 @@ function FollowImpl(props: { feedId: string; defaultView?: FeedViewType }) {
         <FeedSummary className="px-5 py-4" feed={feed}>
           <View className="ml-11 mt-2 flex-row items-center gap-3 opacity-60">
             <View className="flex-row items-center gap-1">
-              <User3CuteReIcon color={textLabelColor} width={12} height={12} />
+              <User3LineIcon color={textLabelColor} width={12} height={12} />
               <Text className="text-sm text-text">
                 {typeof feed.subscriptionCount === "number" ? (
                   formatNumber(feed.subscriptionCount || 0)
@@ -278,7 +278,7 @@ function FollowImpl(props: { feedId: string; defaultView?: FeedViewType }) {
             </View>
             {feed.updatesPerWeek ? (
               <View className="flex-row items-center gap-1">
-                <SafetyCertificateCuteReIcon color={textLabelColor} width={12} height={12} />
+                <SafetyCertificateLineIcon color={textLabelColor} width={12} height={12} />
                 <Text className="text-sm text-text">
                   {tCommon("feed.entry_week", {
                     count: feed.updatesPerWeek,
@@ -287,7 +287,7 @@ function FollowImpl(props: { feedId: string; defaultView?: FeedViewType }) {
               </View>
             ) : feed.latestEntryPublishedAt ? (
               <View className="flex-row items-center gap-1">
-                <SafeAlertCuteReIcon color={textLabelColor} width={12} height={12} />
+                <SafeAlertLineIcon color={textLabelColor} width={12} height={12} />
                 <Text className="text-sm text-text">{tCommon("feed.updated_at")}</Text>
                 <RelativeDateTime
                   className="text-sm text-text"

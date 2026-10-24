@@ -18,9 +18,9 @@ import { useColor } from "react-native-uikit-colors"
 
 import { BottomModal } from "@/src/components/ui/modal/BottomModal"
 import { Text } from "@/src/components/ui/typography/Text"
-import { AiCuteReIcon } from "@/src/icons/ai_cute_re"
-import { CloseCuteReIcon } from "@/src/icons/close_cute_re"
-import { CopyCuteReIcon } from "@/src/icons/copy_cute_re"
+import { AiLineIcon } from "@/src/icons/ai_line"
+import { CloseLineIcon } from "@/src/icons/close_line"
+import { CopyLineIcon } from "@/src/icons/copy_line"
 import { getFetchErrorMessage } from "@/src/lib/error-parser"
 import { isAndroid, isIOS } from "@/src/lib/platform"
 import { toast } from "@/src/lib/toast"
@@ -152,7 +152,7 @@ export const AISummary: FC<{
     >
       <View className="mb-2 flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
-          <AiCuteReIcon height={16} width={16} color={purpleColor} />
+          <AiLineIcon height={16} width={16} color={purpleColor} />
           <Text className="text-[16px] font-semibold text-label">{summaryTitle}</Text>
         </View>
         {summaryTextForSheet && (
@@ -171,7 +171,7 @@ export const AISummary: FC<{
               right: 8,
             }}
           >
-            <CopyCuteReIcon width={14} height={14} color={purpleColor} />
+            <CopyLineIcon width={14} height={14} color={purpleColor} />
           </Pressable>
         )}
       </View>
@@ -271,14 +271,14 @@ const SelectableTextSheet: FC<{
             onPress={handleCopyAll}
             className="rounded-full bg-zinc-100 p-2 active:opacity-80 dark:bg-zinc-800"
           >
-            <CopyCuteReIcon width={18} height={18} color={textColor} />
+            <CopyLineIcon width={18} height={18} color={textColor} />
           </Pressable>
           <Text className="text-lg font-semibold text-label">{t("entry_content.ai_summary")}</Text>
           <Pressable
             onPress={onClose}
             className="rounded-full bg-zinc-100 p-2 active:opacity-80 dark:bg-zinc-800"
           >
-            <CloseCuteReIcon width={18} height={18} color={textColor} />
+            <CloseLineIcon width={18} height={18} color={textColor} />
           </Pressable>
         </View>
         <ScrollView showsVerticalScrollIndicator={false}>

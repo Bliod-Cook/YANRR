@@ -1,32 +1,32 @@
-import { BlackBoard2CuteFiIcon } from "../icons/black_board_2_cute_fi"
-import { BlackBoard2CuteReIcon } from "../icons/black_board_2_cute_re"
-import { Home5CuteFiIcon } from "../icons/home_5_cute_fi"
-import { Home5CuteReIcon } from "../icons/home_5_cute_re"
-import { Search3CuteFiIcon } from "../icons/search_3_cute_fi"
-import { Search3CuteReIcon } from "../icons/search_3_cute_re"
-import { Settings1CuteFiIcon } from "../icons/settings_1_cute_fi"
-import { Settings1CuteReIcon } from "../icons/settings_1_cute_re"
+import { BlackBoard2FillIcon } from "../icons/black_board_2_fill"
+import { BlackBoard2LineIcon } from "../icons/black_board_2_line"
+import { Home5FillIcon } from "../icons/home_5_fill"
+import { Home5LineIcon } from "../icons/home_5_line"
+import { Search3FillIcon } from "../icons/search_3_fill"
+import { Search3LineIcon } from "../icons/search_3_line"
+import { Settings1FillIcon } from "../icons/settings_1_fill"
+import { Settings1LineIcon } from "../icons/settings_1_line"
 
 export const IconNodeMap = {
-  home5CuteRe: Home5CuteReIcon,
-  home5CuteFi: Home5CuteFiIcon,
-  settings1CuteRe: Settings1CuteReIcon,
-  settings1CuteFi: Settings1CuteFiIcon,
-  blackBoard2CuteRe: BlackBoard2CuteReIcon,
-  blackBoard2CuteFi: BlackBoard2CuteFiIcon,
-  search3CuteRe: Search3CuteReIcon,
-  search3CuteFi: Search3CuteFiIcon,
+  home5Line: Home5LineIcon,
+  home5Fill: Home5FillIcon,
+  settings1Line: Settings1LineIcon,
+  settings1Fill: Settings1FillIcon,
+  blackBoard2Line: BlackBoard2LineIcon,
+  blackBoard2Fill: BlackBoard2FillIcon,
+  search3Line: Search3LineIcon,
+  search3Fill: Search3FillIcon,
 } as const
 
 export const IconNativeNameMap = {
-  home5CuteRe: "home_5_cute_re",
-  home5CuteFi: "home_5_cute_fi",
-  settings1CuteRe: "settings_1_cute_re",
-  settings1CuteFi: "settings_1_cute_fi",
-  blackBoard2CuteRe: "black_board_2_cute_re",
-  blackBoard2CuteFi: "black_board_2_cute_fi",
-  search3CuteRe: "search_3_cute_re",
-  search3CuteFi: "search_3_cute_fi",
+  home5Line: "home_5_line",
+  home5Fill: "home_5_fill",
+  settings1Line: "settings_1_line",
+  settings1Fill: "settings_1_fill",
+  blackBoard2Line: "black_board_2_line",
+  blackBoard2Fill: "black_board_2_fill",
+  search3Line: "search_3_line",
+  search3Fill: "search_3_fill",
 } as const
 
 export type IconNativeName = keyof typeof IconNativeNameMap

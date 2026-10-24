@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated"
 
-import { Loading3CuteReIcon } from "@/src/icons/loading_3_cute_re"
+import { Loading3LineIcon } from "@/src/icons/loading_3_line"
 import { useColor } from "@/src/theme/colors"
 
 export interface RotateableLoadingProps {
@@ -47,7 +47,7 @@ export const RotateableLoading: FC<RotateableLoadingProps> = ({
 
   return (
     <Animated.View className={className} style={[rotateStyle, style]}>
-      <Loading3CuteReIcon height={size} width={size} color={iconColor} />
+      <Loading3LineIcon height={size} width={size} color={iconColor} />
     </Animated.View>
   )
 }

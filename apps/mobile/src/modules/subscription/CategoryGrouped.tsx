@@ -10,7 +10,7 @@ import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
 import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { NativePressable } from "@/src/components/ui/pressable/NativePressable"
 import { Text } from "@/src/components/ui/typography/Text"
-import { RightCuteFiIcon } from "@/src/icons/right_cute_fi"
+import { RightFillIcon } from "@/src/icons/right_fill"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
 import { selectFeed } from "@/src/modules/screen/atoms"
@@ -93,7 +93,7 @@ export const CategoryGrouped = memo(
                 className="size-5 flex-row items-center justify-center"
               >
                 <Animated.View style={rotateStyle} className="ml-2">
-                  <RightCuteFiIcon color={secondaryLabelColor} height={14} width={14} />
+                  <RightFillIcon color={secondaryLabelColor} height={14} width={14} />
                 </Animated.View>
               </NativePressable>
               <Text className="ml-4 text-sm font-medium text-text">{category}</Text>

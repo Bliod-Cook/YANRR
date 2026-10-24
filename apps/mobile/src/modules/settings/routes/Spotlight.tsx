@@ -21,7 +21,7 @@ import {
   GroupedOutlineDescription,
   GroupedPlainButtonCell,
 } from "@/src/components/ui/grouped/GroupedList"
-import { AddCuteReIcon } from "@/src/icons/add_cute_re"
+import { AddLineIcon } from "@/src/icons/add_line"
 import { Navigation } from "@/src/lib/navigation/Navigation"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
 import { useColor } from "@/src/theme/colors"
@@ -121,7 +121,7 @@ const AddSpotlightRuleButton = () => {
       onPress={addSpotlightRule}
       accessibilityLabel={t("spotlight.add_rule")}
     >
-      <AddCuteReIcon height={20} width={20} color={labelColor} />
+      <AddLineIcon height={20} width={20} color={labelColor} />
     </UINavigationHeaderActionButton>
   )
 }

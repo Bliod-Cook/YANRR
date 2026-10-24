@@ -1,10 +1,9 @@
-/* eslint-disable no-console */
 import { useEffect, useRef } from "react"
 import { Button, Pressable, SafeAreaView, ScrollView, View } from "react-native"
 
 import { FullWindowOverlay } from "@/src/components/common/FullWindowOverlay"
 import { Text } from "@/src/components/ui/typography/Text"
-import { CloseCuteReIcon } from "@/src/icons/close_cute_re"
+import { CloseLineIcon } from "@/src/icons/close_line"
 
 import { useNavigation } from "../hooks"
 import { Navigation } from "../Navigation"
@@ -113,7 +112,7 @@ const TestScreen3: NavigationControllerView = () => {
           navigation.back()
         }}
       >
-        <CloseCuteReIcon height={20} width={20} color="black" />
+        <CloseLineIcon height={20} width={20} color="black" />
       </Pressable>
 
       <Text>TestScreen3</Text>
@@ -141,7 +140,7 @@ const TestScreen: NavigationControllerView = () => {
           navigation.back()
         }}
       >
-        <CloseCuteReIcon height={20} width={20} color="black" />
+        <CloseLineIcon height={20} width={20} color="black" />
       </Pressable>
       <ScrollView className="flex-1 bg-white">
         {TEST_SCREEN_ROWS.map((rowKey) => {

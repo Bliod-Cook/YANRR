@@ -39,4 +39,4 @@ corepack pnpm run build:web
 
 ## 许可与致谢
 
-AGPL-3.0，见 [LICENSE](LICENSE)；`icons/mgc` 中的图标版权归 [MingCute](https://mgc.mingcute.com/) 所有，不得再分发。客户端派生自 [Folo](https://github.com/RSSNext/Folo)（git remote `upstream`）。
+AGPL-3.0，见 [LICENSE](LICENSE)。客户端派生自 [Folo](https://github.com/RSSNext/Folo)（git remote `upstream`）。

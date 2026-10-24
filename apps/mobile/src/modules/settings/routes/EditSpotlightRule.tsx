@@ -28,7 +28,7 @@ import {
 } from "@/src/components/ui/grouped/GroupedList"
 import { Switch } from "@/src/components/ui/switch/Switch"
 import { Text } from "@/src/components/ui/typography/Text"
-import { CheckFilledIcon } from "@/src/icons/check_filled"
+import { CheckFillIcon } from "@/src/icons/check_fill"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
 import { dropSpotlightRuleWithoutPattern } from "@/src/modules/spotlight/rules"
@@ -166,7 +166,7 @@ export const EditSpotlightRuleScreen: NavigationControllerView<{
 
                       {isSelected && (
                         <View className="absolute -bottom-1 -right-1 size-5 items-center justify-center rounded-full bg-blue">
-                          <CheckFilledIcon height={14} width={14} color="#FFFFFF" />
+                          <CheckFillIcon height={14} width={14} color="#FFFFFF" />
                         </View>
                       )}
                     </Pressable>

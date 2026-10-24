@@ -3,8 +3,8 @@ import * as React from "react"
 import { useEffect, useMemo, useState } from "react"
 import { Pressable, Text, View } from "react-native"
 
-import { BugCuteReIcon } from "@/src/icons/bug_cute_re"
-import { CloseCuteReIcon } from "@/src/icons/close_cute_re"
+import { BugLineIcon } from "@/src/icons/bug_line"
+import { CloseLineIcon } from "@/src/icons/close_line"
 
 import { htmlUrl } from "./constants"
 import type { WebViewDebugState } from "./index"
@@ -55,7 +55,7 @@ export function DebugPanel({ mode, onModeToggle }: DebugPanelProps) {
           className="flex size-12 items-center justify-center rounded-full bg-orange-500"
           onPress={() => setVisible(true)}
         >
-          <BugCuteReIcon color="#fff" />
+          <BugLineIcon color="#fff" />
         </Pressable>
       </View>
 
@@ -65,7 +65,7 @@ export function DebugPanel({ mode, onModeToggle }: DebugPanelProps) {
           <View className="mb-3 flex-row items-center justify-between">
             <Text className="text-sm font-medium text-label">WebView Debug</Text>
             <Pressable onPress={() => setVisible(false)}>
-              <CloseCuteReIcon width={16} height={16} color="#8E8E93" />
+              <CloseLineIcon width={16} height={16} color="#8E8E93" />
             </Pressable>
           </View>
 

@@ -112,7 +112,7 @@ These classes map to the UIKit color variables (see `apps/desktop/AGENTS.md`).
 ### React Native (Mobile)
 
 - Styling: NativewindCSS; do not use external `StyleSheet.create` for new UI.
-- Icons: use `@/apps/mobile/icons` only.
+- Icons: use `@/apps/mobile/icons` only; add missing ones with `pnpm icons:sync <mingcute-icon-name>`.
 - Colors: use React Native UIKit color system (via `react-native-uikit-colors`) with Tailwind utilities:
   - Backgrounds: `system-background`, `secondary-system-background`, `tertiary-system-background`.
   - Grouped backgrounds: `system-grouped-background`, `secondary-system-grouped-background`, `tertiary-system-grouped-background`.

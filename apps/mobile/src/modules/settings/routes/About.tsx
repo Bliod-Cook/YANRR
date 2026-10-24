@@ -42,8 +42,8 @@ export const AboutScreen = () => {
               )}
               components={{
                 IconLibraryLink: (
-                  <Link className="text-accent" href="https://mgc.mingcute.com/">
-                    https://mgc.mingcute.com/
+                  <Link className="text-accent" href="https://github.com/Richard9394/MingCute">
+                    https://github.com/Richard9394/MingCute
                   </Link>
                 ),
                 ExternalLinkIcon: <View />,

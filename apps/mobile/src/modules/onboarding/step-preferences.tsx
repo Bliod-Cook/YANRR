@@ -5,12 +5,12 @@ import { useColor } from "react-native-uikit-colors"
 
 import { GroupedInsetListNavigationLinkIcon } from "@/src/components/ui/grouped/GroupedList"
 import { Text } from "@/src/components/ui/typography/Text"
-import { DocmentCuteReIcon } from "@/src/icons/docment_cute_re"
-import { FileImportCuteReIcon } from "@/src/icons/file_import_cute_re"
-import { ListCheck2CuteReIcon } from "@/src/icons/list_check_2_cute_re"
+import { DocmentLineIcon } from "@/src/icons/docment_line"
+import { FileImportLineIcon } from "@/src/icons/file_import_line"
+import { ListCheck2LineIcon } from "@/src/icons/list_check_2_line"
 import { MingcuteRightLine } from "@/src/icons/mingcute_right_line"
-import { Settings1CuteReIcon } from "@/src/icons/settings_1_cute_re"
-import { Translate2CuteReIcon } from "@/src/icons/translate_2_cute_re"
+import { Settings1LineIcon } from "@/src/icons/settings_1_line"
+import { Translate2LineIcon } from "@/src/icons/translate_2_line"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { SelectReadingModeScreen } from "@/src/screens/(modal)/onboarding/SelectReadingModeScreen"
 import { accentColor } from "@/src/theme/colors"
@@ -28,7 +28,7 @@ export const StepPreferences = () => {
   return (
     <OnboardingSectionScreenContainer>
       <View className="mb-10 flex items-center gap-4">
-        <ListCheck2CuteReIcon height={80} width={80} color={accentColor} />
+        <ListCheck2LineIcon height={80} width={80} color={accentColor} />
         <Text className="mt-2 text-center text-xl font-bold text-text">
           {t("onboarding.preferences_title")}
         </Text>
@@ -42,7 +42,7 @@ export const StepPreferences = () => {
           showRightArrow={false}
           icon={
             <GroupedInsetListNavigationLinkIcon backgroundColor="#FCA5A5">
-              <Translate2CuteReIcon color="#fff" width={40} height={40} />
+              <Translate2LineIcon color="#fff" width={40} height={40} />
             </GroupedInsetListNavigationLinkIcon>
           }
         >
@@ -66,7 +66,7 @@ export const StepPreferences = () => {
           title={t("onboarding.import_content")}
           icon={
             <GroupedInsetListNavigationLinkIcon backgroundColor="#CBAD6D">
-              <FileImportCuteReIcon color="#fff" width={40} height={40} />
+              <FileImportLineIcon color="#fff" width={40} height={40} />
             </GroupedInsetListNavigationLinkIcon>
           }
           onPress={importOpml}
@@ -82,7 +82,7 @@ export const StepPreferences = () => {
           title={t("onboarding.edit_profile")}
           icon={
             <GroupedInsetListNavigationLinkIcon backgroundColor="#34D399">
-              <Settings1CuteReIcon color="#fff" width={40} height={40} />
+              <Settings1LineIcon color="#fff" width={40} height={40} />
             </GroupedInsetListNavigationLinkIcon>
           }
           onPress={() => {
@@ -99,7 +99,7 @@ export const StepPreferences = () => {
           title={t("onboarding.reading_preferences")}
           icon={
             <GroupedInsetListNavigationLinkIcon backgroundColor="#F59E0B">
-              <DocmentCuteReIcon color="#fff" width={40} height={40} />
+              <DocmentLineIcon color="#fff" width={40} height={40} />
             </GroupedInsetListNavigationLinkIcon>
           }
           onPress={() => {

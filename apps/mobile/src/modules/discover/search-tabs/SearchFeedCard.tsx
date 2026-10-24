@@ -8,9 +8,9 @@ import { Pressable, View } from "react-native"
 
 import { RelativeDateTime } from "@/src/components/ui/datetime/RelativeDateTime"
 import { Text } from "@/src/components/ui/typography/Text"
-import { SafeAlertCuteReIcon } from "@/src/icons/safe_alert_cute_re"
-import { SafetyCertificateCuteReIcon } from "@/src/icons/safety_certificate_cute_re"
-import { User3CuteReIcon } from "@/src/icons/user_3_cute_re"
+import { SafeAlertLineIcon } from "@/src/icons/safe_alert_line"
+import { SafetyCertificateLineIcon } from "@/src/icons/safety_certificate_line"
+import { User3LineIcon } from "@/src/icons/user_3_line"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { FollowScreen } from "@/src/screens/(modal)/FollowScreen"
 import { useColor } from "@/src/theme/colors"
@@ -69,7 +69,7 @@ export const SearchFeedCard = ({
     <FeedSummary feed={item.feed!} className="py-4 pl-4" testID="discover-feed-card">
       <View className="mt-4 flex-row items-center gap-6">
         <View className="flex-row items-center gap-1.5">
-          <User3CuteReIcon width={14} height={14} color={iconColor} />
+          <User3LineIcon width={14} height={14} color={iconColor} />
           <Text className="text-xs text-secondary-label">
             {formatNumber(followerCount)} {t("feed.follower", { count: followerCount })}
           </Text>
@@ -77,14 +77,14 @@ export const SearchFeedCard = ({
         <View className="flex-row items-center gap-1.5">
           {item.analytics?.updatesPerWeek ? (
             <>
-              <SafetyCertificateCuteReIcon width={14} height={14} color={iconColor} />
+              <SafetyCertificateLineIcon width={14} height={14} color={iconColor} />
               <Text className="text-xs text-secondary-label">
                 {t("feed.entry_week", { count: item.analytics.updatesPerWeek })}
               </Text>
             </>
           ) : item.analytics?.latestEntryPublishedAt ? (
             <>
-              <SafeAlertCuteReIcon width={14} height={14} color={iconColor} />
+              <SafeAlertLineIcon width={14} height={14} color={iconColor} />
               <Text className="text-xs text-secondary-label">{t("feed.updated_at")}</Text>
               <RelativeDateTime
                 className="text-xs text-secondary-label"

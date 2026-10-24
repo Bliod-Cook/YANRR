@@ -34,7 +34,7 @@ import { PlatformActivityIndicator } from "@/src/components/ui/loading/PlatformA
 import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { Switch } from "@/src/components/ui/switch/Switch"
 import { Text } from "@/src/components/ui/typography/Text"
-import { Magic2CuteFiIcon } from "@/src/icons/magic_2_cute_fi"
+import { Magic2FillIcon } from "@/src/icons/magic_2_fill"
 import { toastFetchError } from "@/src/lib/error-parser"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useSetScreenOptions } from "@/src/lib/navigation/ScreenOptionsContext"
@@ -82,7 +82,7 @@ export const ActionsScreen = () => {
           <GroupedInformationCell
             title={t("titles.actions")}
             description={t("actions.info")}
-            icon={<Magic2CuteFiIcon height={40} width={40} color="#fff" />}
+            icon={<Magic2FillIcon height={40} width={40} color="#fff" />}
             iconBackgroundColor="#9333EA"
           />
         </GroupedInsetListCard>

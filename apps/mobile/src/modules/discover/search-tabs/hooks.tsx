@@ -5,7 +5,7 @@ import { Pressable } from "react-native"
 
 import { PlatformActivityIndicator } from "@/src/components/ui/loading/PlatformActivityIndicator"
 import { Text } from "@/src/components/ui/typography/Text"
-import { SadCuteReIcon } from "@/src/icons/sad_cute_re"
+import { SadLineIcon } from "@/src/icons/sad_line"
 import { getFetchErrorMessage } from "@/src/lib/error-parser"
 import { useColor } from "@/src/theme/colors"
 
@@ -25,7 +25,7 @@ export const useDataSkeleton = (isLoading: boolean, itemCount: number | undefine
     if (itemCount === 0) {
       return (
         <BaseSearchPageRootView className="h-64 items-center justify-center">
-          <SadCuteReIcon height={32} width={32} color={withOpacity(textColor, 0.5)} />
+          <SadLineIcon height={32} width={32} color={withOpacity(textColor, 0.5)} />
           <Text className="mt-2 text-text/50">{t("search.empty.no_results")}</Text>
         </BaseSearchPageRootView>
       )
@@ -39,7 +39,7 @@ export const SearchErrorView = ({ error, onRetry }: { error: Error; onRetry: () 
   const textColor = useColor("text")
   return (
     <BaseSearchPageRootView className="h-64 items-center justify-center px-6">
-      <SadCuteReIcon height={32} width={32} color={withOpacity(textColor, 0.5)} />
+      <SadLineIcon height={32} width={32} color={withOpacity(textColor, 0.5)} />
       <Text className="mt-2 text-center text-text/50">{getFetchErrorMessage(error)}</Text>
       <Pressable
         accessibilityRole="button"

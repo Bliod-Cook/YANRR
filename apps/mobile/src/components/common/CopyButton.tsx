@@ -10,8 +10,8 @@ import Animated, {
 } from "react-native-reanimated"
 import { useEventCallback } from "usehooks-ts"
 
-import { CheckFilledIcon } from "@/src/icons/check_filled"
-import { Copy2CuteReIcon } from "@/src/icons/copy_2_cute_re"
+import { CheckFillIcon } from "@/src/icons/check_fill"
+import { Copy2LineIcon } from "@/src/icons/copy_2_line"
 import { useColor } from "@/src/theme/colors"
 
 type Size = "sm" | "md" | "tiny"
@@ -93,10 +93,10 @@ export const CopyButton = ({ onCopy, className, size = "sm" }: CopyButtonProps) 
       onPress={handlePress}
     >
       <Animated.View style={initialStyle}>
-        <Copy2CuteReIcon color="#fff" height={sizeIconSize[size]} width={sizeIconSize[size]} />
+        <Copy2LineIcon color="#fff" height={sizeIconSize[size]} width={sizeIconSize[size]} />
       </Animated.View>
       <Animated.View style={pressedStyle}>
-        <CheckFilledIcon color="#fff" height={sizeIconSize[size]} width={sizeIconSize[size]} />
+        <CheckFillIcon color="#fff" height={sizeIconSize[size]} width={sizeIconSize[size]} />
       </Animated.View>
     </AnimatedPressable>
   )

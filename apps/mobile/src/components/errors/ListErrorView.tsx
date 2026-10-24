@@ -3,7 +3,7 @@ import { Pressable, View } from "react-native"
 import { useColor } from "react-native-uikit-colors"
 
 import { Text } from "@/src/components/ui/typography/Text"
-import { AlertCuteFiIcon } from "@/src/icons/alert_cute_fi"
+import { AlertFillIcon } from "@/src/icons/alert_fill"
 import { getFetchErrorMessage } from "@/src/lib/error-parser"
 
 import { MonoText } from "../ui/typography/MonoText"
@@ -24,7 +24,7 @@ export const ListErrorView = ({
     <View className="flex-1 items-center justify-center p-4">
       <View className="w-full max-w-[300px] items-center rounded-2xl bg-secondary-system-grouped-background p-6">
         <View className="mb-4 items-center justify-center rounded-3xl bg-quaternary-system-fill p-3">
-          <AlertCuteFiIcon color={red} height={48} width={48} />
+          <AlertFillIcon color={red} height={48} width={48} />
         </View>
         <Text className="mb-2 text-center text-lg font-semibold text-label">
           {t("error_screen.list_unable_to_load")}

@@ -5,7 +5,7 @@ import Animated, { useAnimatedStyle, withTiming } from "react-native-reanimated"
 import { useColor } from "react-native-uikit-colors"
 
 import { Text } from "@/src/components/ui/typography/Text"
-import { ArrowLeftCuteReIcon } from "@/src/icons/arrow_left_cute_re"
+import { ArrowLeftLineIcon } from "@/src/icons/arrow_left_line"
 
 import type { UsePullUpToNextReturn } from "./types"
 
@@ -44,7 +44,7 @@ export const PullUpIndicatorAndroid: UsePullUpToNextReturn["EntryPullUpToNext"] 
             active ? "opacity-0" : "opacity-100",
           )}
         >
-          <ArrowLeftCuteReIcon width={16} height={16} color={iconColor} />
+          <ArrowLeftLineIcon width={16} height={16} color={iconColor} />
         </View>
         <Text style={{ color: textColor }}>
           {active ? t("entry.release_to_next_entry") : t("entry.pull_up_to_next_entry")}

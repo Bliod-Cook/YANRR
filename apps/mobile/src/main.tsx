@@ -71,8 +71,8 @@ function RootComponent() {
             <App>
               <TabRoot>
                 <TabScreen
-                  activeIcon={"home5CuteFi"}
-                  icon={"home5CuteRe"}
+                  activeIcon={"home5Fill"}
+                  icon={"home5Line"}
                   title={t("tabs.home")}
                   identifier="IndexTabScreen"
                 >
@@ -80,8 +80,8 @@ function RootComponent() {
                 </TabScreen>
 
                 <TabScreen
-                  activeIcon={"blackBoard2CuteFi"}
-                  icon={"blackBoard2CuteRe"}
+                  activeIcon={"blackBoard2Fill"}
+                  icon={"blackBoard2Line"}
                   title={t("tabs.subscriptions")}
                   identifier="SubscriptionsTabScreen"
                 >
@@ -89,16 +89,16 @@ function RootComponent() {
                 </TabScreen>
 
                 <TabScreen
-                  activeIcon={"search3CuteFi"}
-                  icon={"search3CuteRe"}
+                  activeIcon={"search3Fill"}
+                  icon={"search3Line"}
                   title={t("tabs.discover")}
                   identifier="DiscoverTabScreen"
                 >
                   <DiscoverTabScreen />
                 </TabScreen>
                 <TabScreen
-                  activeIcon={"settings1CuteFi"}
-                  icon={"settings1CuteRe"}
+                  activeIcon={"settings1Fill"}
+                  icon={"settings1Line"}
                   title={t("tabs.settings")}
                   identifier="SettingsTabScreen"
                 >

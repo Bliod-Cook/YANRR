@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { Pressable } from "react-native"
 import * as DropdownMenu from "zeego/dropdown-menu"
 
-import { ListExpansionCuteReIcon } from "@/src/icons/list_expansion_cute_re"
+import { ListExpansionLineIcon } from "@/src/icons/list_expansion_line"
 
 import {
   setFeedListSortMethod,
@@ -74,7 +74,7 @@ export const SortActionButton = () => {
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <Pressable className="size-5 rounded-full">
-          <ListExpansionCuteReIcon width={20} height={20} />
+          <ListExpansionLineIcon width={20} height={20} />
         </Pressable>
       </DropdownMenu.Trigger>
 

@@ -7,15 +7,15 @@ import * as DropdownMenu from "zeego/dropdown-menu"
 
 import { ReAnimatedPressable } from "@/src/components/common/AnimatedComponents"
 import { Text } from "@/src/components/ui/typography/Text"
-import { Back2CuteReIcon } from "@/src/icons/back_2_cute_re"
-import { Forward2CuteReIcon } from "@/src/icons/forward_2_cute_re"
-import { PauseCuteFiIcon } from "@/src/icons/pause_cute_fi"
-import { PlayCuteFiIcon } from "@/src/icons/play_cute_fi"
-import { RewindBackward15CuteReIcon } from "@/src/icons/rewind_backward_15_cute_re"
-import { RewindForward30CuteReIcon } from "@/src/icons/rewind_forward_30_cute_re"
-import { StopCircleCuteFiIcon } from "@/src/icons/stop_circle_cute_fi"
-import { VolumeCuteReIcon } from "@/src/icons/volume_cute_re"
-import { VolumeOffCuteReIcon } from "@/src/icons/volume_off_cute_re"
+import { Back2LineIcon } from "@/src/icons/back_2_line"
+import { Forward2LineIcon } from "@/src/icons/forward_2_line"
+import { PauseFillIcon } from "@/src/icons/pause_fill"
+import { PlayFillIcon } from "@/src/icons/play_fill"
+import { RewindBackward15LineIcon } from "@/src/icons/rewind_backward_15_line"
+import { RewindForward30LineIcon } from "@/src/icons/rewind_forward_30_line"
+import { StopCircleFillIcon } from "@/src/icons/stop_circle_fill"
+import { VolumeLineIcon } from "@/src/icons/volume_line"
+import { VolumeOffLineIcon } from "@/src/icons/volume_off_line"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { allowedRate, player, useIsPlaying, useProgress, useRate } from "@/src/lib/player"
 import { useVolume } from "@/src/lib/volume"
@@ -45,9 +45,9 @@ export function PlayPauseButton({ size = 24, className, color }: ControlButtonPr
         }}
       >
         {playing ? (
-          <PauseCuteFiIcon color={color ?? label} width={size} height={size} />
+          <PauseFillIcon color={color ?? label} width={size} height={size} />
         ) : (
-          <PlayCuteFiIcon color={color ?? label} width={size} height={size} />
+          <PlayFillIcon color={color ?? label} width={size} height={size} />
         )}
       </ReAnimatedPressable>
     </View>
@@ -77,13 +77,13 @@ export function SeekButton({
         }}
       >
         {offset === 30 ? (
-          <RewindForward30CuteReIcon color={color ?? label} width={size} height={size} />
+          <RewindForward30LineIcon color={color ?? label} width={size} height={size} />
         ) : offset === -15 ? (
-          <RewindBackward15CuteReIcon color={color ?? label} width={size} height={size} />
+          <RewindBackward15LineIcon color={color ?? label} width={size} height={size} />
         ) : offset > 0 ? (
-          <Forward2CuteReIcon color={color ?? label} width={size} height={size} />
+          <Forward2LineIcon color={color ?? label} width={size} height={size} />
         ) : (
-          <Back2CuteReIcon color={color ?? label} width={size} height={size} />
+          <Back2LineIcon color={color ?? label} width={size} height={size} />
         )}
       </Pressable>
     </View>
@@ -140,7 +140,7 @@ export function StopButton({
         onStopped?.()
       }}
     >
-      <StopCircleCuteFiIcon color={color ?? label} width={size} height={size} />
+      <StopCircleFillIcon color={color ?? label} width={size} height={size} />
     </Pressable>
   )
 }
@@ -240,7 +240,7 @@ export function VolumeBar() {
   return (
     <View className="mb-10">
       <View className="flex-row items-center justify-between">
-        <VolumeOffCuteReIcon height={15} width={15} color={buttonColor} />
+        <VolumeOffLineIcon height={15} width={15} color={buttonColor} />
         <View className="flex-1 flex-row px-4">
           <Slider
             progress={progress}
@@ -259,7 +259,7 @@ export function VolumeBar() {
             maximumValue={max}
           />
         </View>
-        <VolumeCuteReIcon height={15} width={15} color={buttonColor} />
+        <VolumeLineIcon height={15} width={15} color={buttonColor} />
       </View>
     </View>
   )

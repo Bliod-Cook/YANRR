@@ -27,7 +27,7 @@ import { GroupedInsetListCard } from "@/src/components/ui/grouped/GroupedList"
 import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
 import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { Text } from "@/src/components/ui/typography/Text"
-import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
+import { StarFillIcon } from "@/src/icons/star_fill"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
 import { selectFeed } from "@/src/modules/screen/atoms"
@@ -239,7 +239,7 @@ const StarItem = () => {
         }}
         className="h-12 w-full flex-row items-center px-3"
       >
-        <StarCuteFiIcon color="rgb(245, 158, 11)" height={20} width={20} />
+        <StarFillIcon color="rgb(245, 158, 11)" height={20} width={20} />
         <Text
           className="ml-2 font-medium text-text"
           style={{

@@ -11,16 +11,16 @@ import {
   GroupedInsetListNavigationLinkIcon,
 } from "@/src/components/ui/grouped/GroupedList"
 import { Text } from "@/src/components/ui/typography/Text"
-import { CertificateCuteFiIcon } from "@/src/icons/certificate_cute_fi"
+import { CertificateFillIcon } from "@/src/icons/certificate_fill"
 import { DatabaseIcon } from "@/src/icons/database"
-import { ExitCuteFiIcon } from "@/src/icons/exit_cute_fi"
-import { FlashlightCuteReIcon } from "@/src/icons/flashlight_cute_re"
-import { Magic2CuteFiIcon } from "@/src/icons/magic_2_cute_fi"
-import { NotificationCuteReIcon } from "@/src/icons/notification_cute_re"
-import { PaletteCuteFiIcon } from "@/src/icons/palette_cute_fi"
-import { Settings1CuteFiIcon } from "@/src/icons/settings_1_cute_fi"
-import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
-import { UserSettingCuteFiIcon } from "@/src/icons/user_setting_cute_fi"
+import { ExitFillIcon } from "@/src/icons/exit_fill"
+import { FlashlightLineIcon } from "@/src/icons/flashlight_line"
+import { Magic2FillIcon } from "@/src/icons/magic_2_fill"
+import { NotificationLineIcon } from "@/src/icons/notification_line"
+import { PaletteFillIcon } from "@/src/icons/palette_fill"
+import { Settings1FillIcon } from "@/src/icons/settings_1_fill"
+import { StarFillIcon } from "@/src/icons/star_fill"
+import { UserSettingFillIcon } from "@/src/icons/user_setting_fill"
 import { signOut } from "@/src/lib/auth"
 import { Dialog } from "@/src/lib/dialog"
 import { useNavigation } from "@/src/lib/navigation/hooks"
@@ -70,7 +70,7 @@ type GroupNavigationLink =
 const SettingGroupNavigationLinks: GroupNavigationLink[] = [
   {
     translationKey: "titles.general",
-    icon: Settings1CuteFiIcon,
+    icon: Settings1FillIcon,
     onPress: ({ navigation }) => {
       navigation.pushControllerView(GeneralScreen)
     },
@@ -79,7 +79,7 @@ const SettingGroupNavigationLinks: GroupNavigationLink[] = [
   },
   {
     translationKey: "titles.notifications",
-    icon: NotificationCuteReIcon,
+    icon: NotificationLineIcon,
     onPress: ({ navigation }) => {
       navigation.pushControllerView(NotificationsScreen)
     },
@@ -89,7 +89,7 @@ const SettingGroupNavigationLinks: GroupNavigationLink[] = [
   },
   {
     translationKey: "titles.appearance",
-    icon: PaletteCuteFiIcon,
+    icon: PaletteFillIcon,
     onPress: ({ navigation }) => {
       navigation.pushControllerView(AppearanceScreen)
     },
@@ -97,7 +97,7 @@ const SettingGroupNavigationLinks: GroupNavigationLink[] = [
   },
   {
     translationKey: "titles.spotlight",
-    icon: FlashlightCuteReIcon,
+    icon: FlashlightLineIcon,
     onPress: ({ navigation }) => {
       navigation.pushControllerView(SpotlightScreen)
     },
@@ -114,7 +114,7 @@ const SettingGroupNavigationLinks: GroupNavigationLink[] = [
   },
   {
     translationKey: "titles.account",
-    icon: UserSettingCuteFiIcon,
+    icon: UserSettingFillIcon,
     onPress: ({ navigation }) => {
       navigation.pushControllerView(AccountScreen)
     },
@@ -127,7 +127,7 @@ const SettingGroupNavigationLinks: GroupNavigationLink[] = [
 const DataGroupNavigationLinks: GroupNavigationLink[] = [
   {
     translationKey: "titles.actions",
-    icon: Magic2CuteFiIcon,
+    icon: Magic2FillIcon,
     onPress: ({ navigation }) => {
       navigation.pushControllerView(ActionsScreen)
     },
@@ -137,7 +137,7 @@ const DataGroupNavigationLinks: GroupNavigationLink[] = [
 
   {
     translationKey: "titles.feeds",
-    icon: CertificateCuteFiIcon,
+    icon: CertificateFillIcon,
     onPress: ({ navigation }) => {
       navigation.pushControllerView(FeedsScreen)
     },
@@ -151,7 +151,7 @@ const DataGroupNavigationLinks: GroupNavigationLink[] = [
 const AboutGroupNavigationLinks: GroupNavigationLink[] = [
   {
     translationKey: "titles.about",
-    icon: StarCuteFiIcon,
+    icon: StarFillIcon,
     onPress: ({ navigation }) => {
       navigation.pushControllerView(AboutScreen)
     },
@@ -162,7 +162,7 @@ const AboutGroupNavigationLinks: GroupNavigationLink[] = [
 const ActionGroupNavigationLinks: GroupNavigationLink[] = [
   {
     translationKey: "titles.sign_out",
-    icon: ExitCuteFiIcon,
+    icon: ExitFillIcon,
     onPress: () => {
       Dialog.show({
         id: "settings-sign-out-dialog",

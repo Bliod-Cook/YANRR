@@ -11,8 +11,8 @@ import { Grid } from "@/src/components/ui/grid"
 import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
 import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { Text } from "@/src/components/ui/typography/Text"
-import { FilterCuteReIcon } from "@/src/icons/filter_cute_re"
-import { Grid2CuteReIcon } from "@/src/icons/grid_2_cute_re"
+import { FilterLineIcon } from "@/src/icons/filter_line"
+import { Grid2LineIcon } from "@/src/icons/grid_2_line"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { Recommendations } from "@/src/modules/discover/Recommendations"
 import { DiscoverSettingsScreen } from "@/src/screens/(modal)/DiscoverSettingsScreen"
@@ -30,7 +30,7 @@ export const Category = () => {
     <>
       <View className="mt-4 flex-row items-center justify-between pb-1 pl-6 pr-5 pt-4">
         <View className="flex-row items-center gap-2">
-          <Grid2CuteReIcon width={24} height={24} color={label} />
+          <Grid2LineIcon width={24} height={24} color={label} />
           <Text className="pb-2 text-xl font-bold leading-[1.1] text-label">
             {t("words.categories")}
           </Text>
@@ -44,7 +44,7 @@ export const Category = () => {
             navigation.presentControllerView(DiscoverSettingsScreen)
           }}
         >
-          <FilterCuteReIcon width={20} height={20} color={label} />
+          <FilterLineIcon width={20} height={20} color={label} />
         </ItemPressable>
       </View>
 

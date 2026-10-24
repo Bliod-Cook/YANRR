@@ -13,7 +13,7 @@ import { PlatformActivityIndicator } from "@/src/components/ui/loading/PlatformA
 import { ItemPressableStyle } from "@/src/components/ui/pressable/enum"
 import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { Text } from "@/src/components/ui/typography/Text"
-import { WifiOffCuteReIcon } from "@/src/icons/wifi_off_cute_re"
+import { WifiOffLineIcon } from "@/src/icons/wifi_off_line"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
 import { selectFeed } from "@/src/modules/screen/atoms"
@@ -98,7 +98,7 @@ export const SubscriptionItem = memo(
                 >
                   {subscription?.title || feed.title}
                 </Text>
-                {!!feed.errorAt && <WifiOffCuteReIcon color={red} height={18} width={18} />}
+                {!!feed.errorAt && <WifiOffLineIcon color={red} height={18} width={18} />}
               </View>
               <UnreadCount unread={unreadCount} className="ml-auto" />
             </ItemPressable>
