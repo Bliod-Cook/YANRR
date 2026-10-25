@@ -54,7 +54,7 @@
     "dayjs": "1.11.23",
     "es-toolkit": "1.52.0",
     "expo": "57.0.24",
-    "expo-application": "57.0.3",
+    "expo-application": "58.1.2",
     "expo-background-task": "57.0.19",
     "expo-blur": "57.0.3",
     "expo-build-properties": "57.0.21",
