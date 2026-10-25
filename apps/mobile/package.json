@@ -38,7 +38,7 @@
     "@gorhom/portal": "1.0.14",
     "@hookform/resolvers": "5.9.1",
     "@react-native-community/image-editor": "4.3.1",
-    "@react-native-firebase/app": "26.4.0",
+    "@react-native-firebase/app": "27.0.0",
     "@react-native-firebase/messaging": "26.4.0",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@react-native-menu/menu": "2.0.0",
