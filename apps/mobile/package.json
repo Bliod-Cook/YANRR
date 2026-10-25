@@ -23,7 +23,7 @@
   "dependencies": {
     "@better-auth/expo": "1.7.5",
     "@expo/dom-webview": "57.0.1",
-    "@expo/metro-runtime": "57.0.16",
+    "@expo/metro-runtime": "58.0.15",
     "@expo/react-native-action-sheet": "4.1.1",
     "@follow-app/client-sdk": "catalog:",
     "@follow/components": "workspace:*",
