@@ -55,7 +55,7 @@
     "es-toolkit": "1.52.0",
     "expo": "57.0.24",
     "expo-application": "57.0.3",
-    "expo-background-task": "57.0.19",
+    "expo-background-task": "58.0.11",
     "expo-blur": "57.0.3",
     "expo-build-properties": "57.0.21",
     "expo-clipboard": "57.0.2",
