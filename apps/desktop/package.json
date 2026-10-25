@@ -61,7 +61,7 @@
     "electron-vite": "5.0.0",
     "es-toolkit": "1.52.0",
     "fake-indexeddb": "6.2.5",
-    "happy-dom": "20.14.5",
+    "happy-dom": "21.0.4",
     "html-minifier-terser": "7.2.0",
     "kolorist": "1.8.0",
     "pathe": "2.0.3",
