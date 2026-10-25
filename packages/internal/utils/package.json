@@ -39,7 +39,7 @@
     "hast-util-to-jsx-runtime": "2.3.6",
     "hast-util-to-text": "4.0.2",
     "jotai": "3.0.0",
-    "motion": "13.4.0",
+    "motion": "14.6.0",
     "nanoid": "6.0.1",
     "path-to-regexp": "8.4.2",
     "rehype-infer-description-meta": "2.0.0",
