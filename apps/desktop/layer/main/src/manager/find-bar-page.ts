@@ -23,17 +23,16 @@ export const FIND_BAR_SHADOW_MARGIN = { top: 6, side: 16, bottom: 16 } as const
 export const FIND_BAR_WIDTH = 256
 export const FIND_BAR_HEIGHT = 36
 
-// MingCute back-2, forward-2 and close (cute, regular)
+// MingCute's open-source back-2-line, forward-2-line and close-line
 const icons = {
   previous:
-    "***REMOVED***",
-  next: "***REMOVED***",
+    '<path fill="currentColor" d="M20 15.5a1 1 0 1 0 2 0zM3.418 12.706a1 1 0 1 0 1.911.588L4.373 13zm7.035.237a1 1 0 1 0-.348-1.97l.174.985zM4.37 13l-.985.174a1 1 0 0 0 1.159.81zm-.057-6.082a1 1 0 1 0-1.97.347l.985-.174zM12.5 7v1a7.5 7.5 0 0 1 7.5 7.5h2A9.5 9.5 0 0 0 12.5 6zm-8.127 6l.956.294A7.5 7.5 0 0 1 12.5 8V6a9.5 9.5 0 0 0-9.081 6.706zm5.906-1.042l-.174-.985l-5.909 1.042l.174.985l.174.985l5.909-1.042zM4.37 13l.985-.174l-1.042-5.908l-.985.173l-.985.174l1.042 5.909z"/>',
+  next: '<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15.5a8.5 8.5 0 0 1 16.456-3m-5.735-.542L19.63 13l1.042-5.909"/>',
   close:
-    "***REMOVED***",
+    '<path fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2" d="m5.636 5.637l12.728 12.728m-12.728 0L18.364 5.637"/>',
 }
 
-const icon = (path: string) =>
-  `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}" fill="currentColor" fill-rule="evenodd"/></svg>`
+const icon = (body: string) => `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`
 
 // Runs in the page. Kept as a function so that it is type-checked, then inlined as source.
 function findBarScript(channel: typeof FindBarChannel) {

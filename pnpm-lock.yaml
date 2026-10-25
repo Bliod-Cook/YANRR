@@ -551,6 +551,9 @@ importers:
       '@follow/types':
         specifier: workspace:*
         version: link:../../../../packages/internal/types
+      '@iconify-json/mingcute':
+        specifier: 1.2.8
+        version: 1.2.8
       '@types/node':
         specifier: 26.6.2
         version: 26.6.2
