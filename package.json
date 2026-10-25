@@ -18,6 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "icons:app": "tsx scripts/generate-icons.ts",
+    "icons:check-mgc": "tsx scripts/check-mgc.ts",
     "icons:sync": "tsx scripts/svg-to-rn.ts",
     "lint": "pnpm run lint:tsl && eslint",
     "lint:fix": "eslint --fix",
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@electron-toolkit/tsconfig": "2.0.0",
     "@eslint/compat": "2.1.1",
+    "@iconify-json/mingcute": "1.2.8",
     "@shockpkg/icon-encoder": "3.2.3",
     "@stylistic/eslint-plugin": "5.10.0",
     "@tsslint/cli": "3.1.4",

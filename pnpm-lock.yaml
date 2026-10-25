@@ -232,6 +232,9 @@ importers:
       '@eslint/compat':
         specifier: 2.1.1
         version: 2.1.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))
+      '@iconify-json/mingcute':
+        specifier: 1.2.8
+        version: 1.2.8
       '@shockpkg/icon-encoder':
         specifier: 3.2.3
         version: 3.2.3
