@@ -13,7 +13,7 @@ use crate::{entity::sync_action, time::iso};
 const RETENTION_DAYS: u32 = 30;
 const PAGE_SIZE: u64 = 500;
 /// Advisory lock that orders change log commits.
-const LOG_LOCK: i64 = 0x7379_6e63;
+pub const LOG_LOCK: i64 = 0x7379_6e63;
 
 /// A change log row. The `data` of each model follows Folo's sync engine design
 /// (`docs/superpowers/specs/2026-09-16-sync-engine-design.md` in the Folo repository).

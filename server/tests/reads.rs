@@ -1,8 +1,14 @@
 mod common;
 
+use std::time::Duration;
+
 use chrono::{DateTime, Utc};
 use common::{Fixtures, TestApp, create_inbox, deliver, json, subscribe};
+use sea_orm::{
+    ConnectionTrait, DbBackend, EntityTrait, PaginatorTrait, Statement, TransactionTrait,
+};
 use serde_json::{Value, json};
+use yanrr::{entity::unread, sync::LOG_LOCK};
 
 async fn entry_ids(app: &TestApp, feed_id: &str) -> Vec<String> {
     let listed = json(app.post("/api/entries", json!({ "feedId": feed_id })).await).await;
@@ -63,6 +69,61 @@ async fn read_marks_flip_once() {
             (json!("U"), Value::Null, flip(false)),
         ]
     );
+}
+
+/// Waits until `count` sessions wait for a lock.
+async fn lock_waiters(app: &TestApp, count: i64) {
+    let sql = "SELECT count(*) AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock'";
+    loop {
+        let statement = Statement::from_string(DbBackend::Postgres, sql);
+        let row = app
+            .state
+            .db
+            .query_one_raw(statement)
+            .await
+            .unwrap()
+            .unwrap();
+        if row.try_get::<i64>("", "n").unwrap() >= count {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+}
+
+#[tokio::test]
+async fn unsubscribe_drops_concurrent_unread_mark() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    let feed_id = subscribe(&app, &fixtures.url("/rss"), json!({})).await;
+    let entry_id = entry_ids(&app, &feed_id).await.remove(0);
+    app.post("/api/reads", json!({ "entryIds": [entry_id] }))
+        .await;
+
+    // Holding the change log lock parks each request after its writes, before it commits.
+    let log = app.state.db.begin().await.unwrap();
+    let lock = "SELECT pg_advisory_xact_lock($1)";
+    log.execute_raw(Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        lock,
+        [LOG_LOCK.into()],
+    ))
+    .await
+    .unwrap();
+    tokio::join!(
+        app.delete("/api/reads", json!({ "entryId": entry_id })),
+        async {
+            lock_waiters(&app, 1).await;
+            let unfollow = json!({ "feedIdList": [feed_id] });
+            app.delete("/api/subscriptions", unfollow).await
+        },
+        async {
+            lock_waiters(&app, 2).await;
+            log.commit().await.unwrap();
+        },
+    );
+
+    let unread = unread::Entity::find().count(&app.state.db).await.unwrap();
+    assert_eq!(unread, 0);
 }
 
 #[tokio::test]

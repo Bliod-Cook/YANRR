@@ -151,11 +151,14 @@ pub async fn mark_unread(
             let condition = format!("e.id = {entry_id}");
             flip_inbox(&txn, false, &condition, params).await?
         } else {
+            // The subscription is locked, so an unsubscribe in flight either waits and then drops this row
+            // too, or removes the subscription first and leaves nothing to insert.
             let sql = format!(
                 "INSERT INTO unreads (user_id, entry_id, feed_id)
                 SELECT s.user_id, e.id, e.feed_id
                 FROM entries e JOIN subscriptions s ON s.feed_id = e.feed_id AND s.user_id = $1
                 WHERE e.id = {entry_id}
+                FOR KEY SHARE OF s
                 ON CONFLICT DO NOTHING
                 RETURNING *"
             );
