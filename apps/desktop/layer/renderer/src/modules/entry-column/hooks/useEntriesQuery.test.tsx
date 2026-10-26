@@ -299,7 +299,10 @@ describe("useEntriesQuery", () => {
     await vi.waitFor(() => {
       expect(fetchEntriesSpy).toHaveBeenCalledTimes(2)
     })
-    expect(fetchEntriesSpy.mock.calls[1]?.[0].pageParam).toBe("2026-03-02T00:00:00.000Z")
+    expect(fetchEntriesSpy.mock.calls[1]?.[0].pageParam).toEqual({
+      time: "2026-03-02T00:00:00.000Z",
+      id: "entry-1",
+    })
   })
 
   test("uses newest-first cache and request order for all-content timelines", async () => {

@@ -11,6 +11,50 @@ index bf5fb898c888a9050c7309b2368bf6286796af15..bb6f9724e742a143602c9e27727229eb
  		if (query) Object.entries(query).forEach(([key, value]) => {
  			if (value !== void 0 && value !== null) {
  				if (Array.isArray(value)) value.forEach((v) => {
+diff --git a/dist/index.d.cts b/dist/index.d.cts
+index 150eabbe515f64183661c7b00befe8bc0caf2e25..6b904a337a31107b746db55044eab4fe0a44a872 100644
+--- a/dist/index.d.cts
++++ b/dist/index.d.cts
+@@ -1691,6 +1691,8 @@ type EntryListRequest = {
+   limit?: number;
+   publishedAfter?: DateISOString;
+   publishedBefore?: DateISOString;
++  /** The entry at the cursor, which places it among the entries of its time */
++  cursorId?: string;
+   sortOrder?: "asc" | "desc";
+   isCollection?: boolean;
+   isArchived?: boolean;
+@@ -1762,6 +1764,8 @@ interface InboxListEntryRequestInput {
+   limit?: number;
+   publishedAfter?: string;
+   publishedBefore?: string;
++  /** The entry at the cursor, which places it among the entries of its time */
++  cursorId?: string;
+ }
+ type EntrySettings = SettingsModel$1;
+ interface EntryExtraResponse {
+diff --git a/dist/index.d.mts b/dist/index.d.mts
+index 153849fbca63dc7828fc14b90aa177b87a8f4490..d343a6c7be2277064102520f26fa38a5095c9587 100644
+--- a/dist/index.d.mts
++++ b/dist/index.d.mts
+@@ -1691,6 +1691,8 @@ type EntryListRequest = {
+   limit?: number;
+   publishedAfter?: DateISOString;
+   publishedBefore?: DateISOString;
++  /** The entry at the cursor, which places it among the entries of its time */
++  cursorId?: string;
+   sortOrder?: "asc" | "desc";
+   isCollection?: boolean;
+   isArchived?: boolean;
+@@ -1762,6 +1764,8 @@ interface InboxListEntryRequestInput {
+   limit?: number;
+   publishedAfter?: string;
+   publishedBefore?: string;
++  /** The entry at the cursor, which places it among the entries of its time */
++  cursorId?: string;
+ }
+ type EntrySettings = SettingsModel$1;
+ interface EntryExtraResponse {
 diff --git a/dist/index.mjs b/dist/index.mjs
 index 0e2372b734525abfbc7c6e912550e0953024c58c..bfc22a03359c78dd150d324f1e49bbf08e150aed 100644
 --- a/dist/index.mjs
@@ -38,3 +82,25 @@ index 229e77843ea2c63338db920b9e74a1826e2a4976..fabd642a4b699186daeef5ca0a31d2a2
  
      if (query) {
        Object.entries(query).forEach(([key, value]) => {
+diff --git a/src/modules/entries/types.ts b/src/modules/entries/types.ts
+index c5c2de5d4ae23b27b83804032ae6c7490b513f02..77c8439be50529577361ed15912eed784e8cce5a 100644
+--- a/src/modules/entries/types.ts
++++ b/src/modules/entries/types.ts
+@@ -90,6 +90,8 @@ export type EntryListRequest = {
+   limit?: number
+   publishedAfter?: DateISOString
+   publishedBefore?: DateISOString
++  /** The entry at the cursor, which places it among the entries of its time */
++  cursorId?: string
+   sortOrder?: "asc" | "desc"
+   isCollection?: boolean
+   isArchived?: boolean
+@@ -181,6 +183,8 @@ export interface InboxListEntryRequestInput {
+   limit?: number
+   publishedAfter?: string
+   publishedBefore?: string
++  /** The entry at the cursor, which places it among the entries of its time */
++  cursorId?: string
+ }
+ export type EntrySettings = SettingsModel
+ 

@@ -85,6 +85,7 @@ const createCollectionResponseItem = (index: number) => ({
 describe("entrySyncServices.fetchEntries", () => {
   const inboxListEntriesMock = vi.fn()
   const listEntriesMock = vi.fn()
+  const pageParam = { time: "2026-03-01T00:00:00.000Z", id: "entry-1" }
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -159,13 +160,14 @@ describe("entrySyncServices.fetchEntries", () => {
     await entrySyncServices.fetchEntries({
       feedId: "feed-1",
       read: false,
-      pageParam: "2026-03-01T00:00:00.000Z",
+      pageParam,
       sortOrder: "asc",
     })
 
     expect(listEntriesMock.mock.calls[0]?.[0]).toMatchObject({
       feedId: "feed-1",
       publishedBefore: "2026-03-01T00:00:00.000Z",
+      cursorId: "entry-1",
       sortOrder: "asc",
     })
     expect(listEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("publishedAfter")
@@ -176,13 +178,14 @@ describe("entrySyncServices.fetchEntries", () => {
 
     await entrySyncServices.fetchEntries({
       feedId: "feed-1",
-      pageParam: "2026-03-01T00:00:00.000Z",
+      pageParam,
       sortOrder: "asc",
     })
 
     expect(listEntriesMock.mock.calls[0]?.[0]).toMatchObject({
       feedId: "feed-1",
       publishedAfter: "2026-03-01T00:00:00.000Z",
+      cursorId: "entry-1",
       sortOrder: "desc",
     })
     expect(listEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("publishedBefore")
@@ -193,13 +196,14 @@ describe("entrySyncServices.fetchEntries", () => {
 
     await entrySyncServices.fetchEntries({
       feedId: "feed-1",
-      pageParam: "2026-03-01T00:00:00.000Z",
+      pageParam,
       sortOrder: "desc",
     })
 
     expect(listEntriesMock.mock.calls[0]?.[0]).toMatchObject({
       feedId: "feed-1",
       publishedAfter: "2026-03-01T00:00:00.000Z",
+      cursorId: "entry-1",
       sortOrder: "desc",
     })
     expect(listEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("publishedBefore")
@@ -211,13 +215,14 @@ describe("entrySyncServices.fetchEntries", () => {
     await entrySyncServices.fetchEntries({
       inboxId: "inbox-1",
       read: false,
-      pageParam: "2026-03-01T00:00:00.000Z",
+      pageParam,
       sortOrder: "asc",
     })
 
     expect(inboxListEntriesMock.mock.calls[0]?.[0]).toMatchObject({
       inboxId: "inbox-1",
       publishedAfter: "2026-03-01T00:00:00.000Z",
+      cursorId: "entry-1",
     })
     expect(inboxListEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("publishedBefore")
     expect(inboxListEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("sortOrder")
@@ -228,13 +233,14 @@ describe("entrySyncServices.fetchEntries", () => {
 
     await entrySyncServices.fetchEntries({
       inboxId: "inbox-1",
-      pageParam: "2026-03-01T00:00:00.000Z",
+      pageParam,
       sortOrder: "desc",
     })
 
     expect(inboxListEntriesMock.mock.calls[0]?.[0]).toMatchObject({
       inboxId: "inbox-1",
       publishedAfter: "2026-03-01T00:00:00.000Z",
+      cursorId: "entry-1",
     })
     expect(inboxListEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("publishedBefore")
     expect(inboxListEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("sortOrder")
@@ -246,13 +252,14 @@ describe("entrySyncServices.fetchEntries", () => {
     await entrySyncServices.fetchEntries({
       isCollection: true,
       read: false,
-      pageParam: "2026-03-01T00:00:00.000Z",
+      pageParam,
       sortOrder: "asc",
     })
 
     expect(listEntriesMock.mock.calls[0]?.[0]).toMatchObject({
       isCollection: true,
       publishedAfter: "2026-03-01T00:00:00.000Z",
+      cursorId: "entry-1",
       sortOrder: "desc",
     })
     expect(listEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("publishedBefore")

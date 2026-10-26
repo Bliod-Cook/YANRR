@@ -3,6 +3,8 @@ import type { EntrySchema } from "@follow/database/schemas/types"
 
 export type EntryModel = EntrySchema
 export type EntrySortOrder = "asc" | "desc"
+/** Where the next page starts: the time the list is sorted by and the id of its last entry */
+export type EntriesPageParam = { time: string; id: string }
 export type FetchEntriesProps = {
   feedId?: string
   feedIdList?: string[]
@@ -10,7 +12,7 @@ export type FetchEntriesProps = {
   view?: number
   read?: boolean
   limit?: number
-  pageParam?: string
+  pageParam?: EntriesPageParam
   isCollection?: boolean
   aiSort?: boolean
   sortOrder?: EntrySortOrder

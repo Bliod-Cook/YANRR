@@ -19,7 +19,12 @@ import {
 } from "./getter"
 import { fetchNextPageAfterRefetch } from "./next-page"
 import { entrySyncServices, useEntryStore } from "./store"
-import type { EntryModel, FetchEntriesProps, FetchEntriesPropsSettings } from "./types"
+import type {
+  EntriesPageParam,
+  EntryModel,
+  FetchEntriesProps,
+  FetchEntriesPropsSettings,
+} from "./types"
 import {
   getEffectiveEntrySortOrder,
   isTimelineEntriesSource,
@@ -56,7 +61,7 @@ export const invalidateEntriesQuery = ({
 }
 
 type EntriesPage = Awaited<ReturnType<typeof entrySyncServices.fetchEntries>>
-type EntriesQueryData = InfiniteData<EntriesPage, string | undefined>
+type EntriesQueryData = InfiniteData<EntriesPage, EntriesPageParam | undefined>
 
 const readEntriesQueryKey = (queryKey: QueryKey) => {
   const [, feedId, inboxId, view, limit, feedIdList, isCollection, unreadOnly, aiSort, sortOrder] =
@@ -177,7 +182,7 @@ export const refreshEntriesHead = async ({
 }
 
 const defaultStaleTime = 10 * (60 * 1000) // 10 minutes
-const toPageParam = (value: Date | string | null | undefined) => {
+const toCursorTime = (value: Date | string | null | undefined) => {
   if (!value) return
   return typeof value === "string" ? value : value.toISOString()
 }
@@ -243,12 +248,14 @@ export const useEntriesQuery = (
       if (aiSort) return
 
       const lastEntry = lastPage.data?.at(-1)
-      return isCollectionQuery
-        ? (toPageParam(lastEntry?.collections?.createdAt) ??
-            toPageParam(lastEntry?.entries.publishedAt))
-        : toPageParam(lastEntry?.entries.publishedAt)
+      const time = isCollectionQuery
+        ? (toCursorTime(lastEntry?.collections?.createdAt) ??
+          toCursorTime(lastEntry?.entries.publishedAt))
+        : toCursorTime(lastEntry?.entries.publishedAt)
+      // The id places the cursor among the entries of its time
+      return lastEntry && time ? { time, id: lastEntry.entries.id } : undefined
     },
-    initialPageParam: undefined as undefined | string,
+    initialPageParam: undefined as undefined | EntriesPageParam,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     // DON'T refetch when the router is pop to previous page

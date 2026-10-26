@@ -459,7 +459,8 @@ class EntrySyncServices {
 
     const res = params.inboxId
       ? await api().entries.inbox.list({
-          publishedAfter: pageParam,
+          publishedAfter: pageParam?.time,
+          cursorId: pageParam?.id,
           read,
           limit,
           isCollection,
@@ -470,8 +471,9 @@ class EntrySyncServices {
       : await api().entries.list(
           {
             ...(effectiveSortOrder === "asc"
-              ? { publishedBefore: pageParam }
-              : { publishedAfter: pageParam }),
+              ? { publishedBefore: pageParam?.time }
+              : { publishedAfter: pageParam?.time }),
+            cursorId: pageParam?.id,
             read,
             limit,
             isCollection,
