@@ -137,7 +137,7 @@ async fn insert(state: &AppState, url: &str, update: Update) -> Result<feed::Mod
     Ok(feed)
 }
 
-/// Fetches a feed again, recording the error on failure.
+/// Fetches a feed again, recording the error on failure; `error_at` keeps when the failures began.
 pub async fn refresh_feed(state: &AppState, feed_id: i64) -> Result<(), FetchError> {
     let feed = feed::Entity::find_by_id(feed_id)
         .one(&state.db)
@@ -150,7 +150,7 @@ pub async fn refresh_feed(state: &AppState, feed_id: i64) -> Result<(), FetchErr
             id: Unchanged(feed.id),
             checked_at: Set(now),
             error_message: Set(Some(message.clone())),
-            error_at: Set(Some(now)),
+            error_at: Set(feed.error_at.or(Some(now))),
             ..Default::default()
         }
         .update(&state.db)

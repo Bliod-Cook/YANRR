@@ -96,6 +96,13 @@ async fn fetch_error_is_recorded_then_cleared() {
     assert_eq!(failed.error_message.as_deref(), Some("HTTP 503"));
     assert!(failed.error_at.is_some());
 
+    // `errorAt` marks when the failures began: clients only flag a feed failing for a day.
+    fixtures.set("/live", Reply::Status(500));
+    let _ = fetch::refresh_feed(&app.state, feed.id).await;
+    let still_failing = reload(&app, feed.id).await;
+    assert_eq!(still_failing.error_message.as_deref(), Some("HTTP 500"));
+    assert_eq!(still_failing.error_at, failed.error_at);
+
     fixtures.set("/live", Reply::Body(RSS2.into()));
     fetch::refresh_feed(&app.state, feed.id).await.unwrap();
     let recovered = reload(&app, feed.id).await;
