@@ -1,3 +1,4 @@
+mod actions;
 mod categories;
 mod collections;
 mod discover;
@@ -29,6 +30,7 @@ use crate::{AppState, auth::Auth};
 pub fn router(auth: Arc<Auth>) -> Router<AppState> {
     Router::new()
         .route("/status/configs", get(status::configs))
+        .route("/actions", get(actions::get).put(actions::put))
         .route(
             "/categories",
             patch(categories::update).delete(categories::delete),

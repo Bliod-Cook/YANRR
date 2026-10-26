@@ -8,6 +8,7 @@ mod migration;
 pub mod opml;
 mod push;
 mod rsshub;
+mod rules;
 mod subscription;
 pub mod sync;
 mod time;

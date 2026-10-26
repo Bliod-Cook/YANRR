@@ -18,6 +18,7 @@ jsonwebtoken = { version = "11", default-features = false, features = ["rust_cry
 # Only enables vendored OpenSSL for better-auth-api, which depends on it directly.
 openssl = { version = "0.10", features = ["vendored"] }
 quick-xml = "0.42"
+regex = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 scraper = "0.24"
 sea-orm = { version = "2.0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-chrono", "with-json", "postgres-array"] }

@@ -30,6 +30,7 @@ pub enum ExceptionCode {
     InboxNotFound = 10000,
     InboxAlreadyExists = 10001,
     InboxPermissionDenied = 10003,
+    ActionRulesConflict = 12001,
     RSSHubRouteError = 13000,
     RSSHubUnavailable = 13007,
 }
@@ -52,6 +53,7 @@ impl ExceptionCode {
             | Self::RSSHubRouteError => StatusCode::NOT_FOUND,
             Self::AuthError => StatusCode::UNAUTHORIZED,
             Self::InboxPermissionDenied => StatusCode::FORBIDDEN,
+            Self::ActionRulesConflict => StatusCode::CONFLICT,
             Self::MissingConfiguration | Self::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }

@@ -1,3 +1,4 @@
+pub mod action_rule;
 pub mod collection;
 pub mod entry;
 pub mod feed;
