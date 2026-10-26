@@ -131,6 +131,8 @@ pub struct TimelineBody {
     limit: Option<u64>,
     published_after: Option<DateTime<Utc>>,
     published_before: Option<DateTime<Utc>>,
+    /// The entry the cursor stands at, which places it among the entries of its time.
+    cursor_id: Option<String>,
     sort_order: Option<String>,
     #[serde(default)]
     with_content: bool,
@@ -145,13 +147,16 @@ impl TimelineBody {
     /// telling whether an entry is read.
     ///
     /// The cursors follow the clients: `publishedAfter` pages towards older entries and `publishedBefore` towards
-    /// newer ones, whatever their names say.
+    /// newer ones, whatever their names say. Without `cursorId` a cursor skips every entry of its time.
     fn paginate(&self, sql: &mut String, params: &mut Params, time: &str, read: &str, limit: u64) {
-        if let Some(cursor) = self.published_after {
-            *sql += &format!(" AND {time} < {}", params.bind(cursor));
-        }
-        if let Some(cursor) = self.published_before {
-            *sql += &format!(" AND {time} > {}", params.bind(cursor));
+        let id = self.cursor_id.as_deref().and_then(id::parse);
+        for (cursor, op) in [(self.published_after, "<"), (self.published_before, ">")] {
+            let Some(cursor) = cursor else { continue };
+            let cursor = params.bind(cursor);
+            *sql += &match id {
+                Some(id) => format!(" AND ({time}, e.id) {op} ({cursor}, {})", params.bind(id)),
+                None => format!(" AND {time} {op} {cursor}"),
+            };
         }
         match self.read {
             Some(false) => *sql += &format!(" AND NOT ({read})"),

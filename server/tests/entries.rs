@@ -78,8 +78,11 @@ async fn timeline_scopes_and_read_state() {
 #[tokio::test]
 async fn timeline_pages_by_published_time() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    // Posts 2 to 4 share a time, so pages of two end inside it either way.
+    let days = [1, 3, 3, 3, 5];
     let items: Vec<_> = (1..=5)
-        .map(|n| json!({ "id": format!("post-{n}"), "content_text": "text", "date_published": format!("2026-10-0{n}T08:00:00Z") }))
+        .zip(days)
+        .map(|(n, day)| json!({ "id": format!("post-{n}"), "content_text": "text", "date_published": format!("2026-10-0{day}T08:00:00Z") }))
         .collect();
     fixtures.set("/feed.json", Reply::Body(json_feed(json!(items))));
     app.sign_up("alice@example.com").await;
@@ -88,15 +91,17 @@ async fn timeline_pages_by_published_time() {
     let mut pages = Vec::new();
     for (order, cursor_name) in [("desc", "publishedAfter"), ("asc", "publishedBefore")] {
         let mut seen = Vec::new();
-        let mut cursor = Value::Null;
+        let mut cursor = None;
         loop {
             let mut query = json!({ "limit": 2, "sortOrder": order });
-            if !cursor.is_null() {
-                query[cursor_name] = cursor.clone();
+            if let Some((time, id)) = cursor {
+                query[cursor_name] = time;
+                query["cursorId"] = id;
             }
             let page = timeline(&app, query).await;
             let Some(last) = page.last() else { break };
-            cursor = last["entries"]["publishedAt"].clone();
+            let entry = &last["entries"];
+            cursor = Some((entry["publishedAt"].clone(), entry["id"].clone()));
             seen.extend(guids(&page).into_iter().map(String::from));
         }
         pages.push(seen);
