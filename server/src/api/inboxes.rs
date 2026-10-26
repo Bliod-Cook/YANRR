@@ -4,6 +4,7 @@ use axum::{
     http::{HeaderMap, header},
 };
 use chrono::{DateTime, SubsecRound, Utc};
+use reqwest::Url;
 use sea_orm::{
     ActiveModelTrait,
     ActiveValue::{Set, Unchanged},
@@ -21,7 +22,7 @@ use super::{
 use crate::{
     AppState,
     entity::{inbox, inbox_entry},
-    fetch::{language, parse},
+    fetch::{html, language, parse},
     id::next_id,
     subscription::blank_to_none,
     sync::{self, Action},
@@ -208,9 +209,19 @@ pub struct NewEntry {
     read: Option<bool>,
 }
 
-/// Stores `entry` in `inbox` unless the inbox has one with its guid, and tells the owner with a `timeline N`.
+/// Stores `entry` in `inbox` unless the inbox has one with its guid, and tells the owner with a `timeline N`. A
+/// description or media left out are taken from the content, as for feeds.
 async fn deliver(state: &AppState, inbox: &inbox::Model, entry: NewEntry) -> ApiResult<()> {
     let read = entry.read.unwrap_or(false);
+    let content = entry.content.as_deref();
+    let description = entry
+        .description
+        .or_else(|| content.and_then(parse::describe));
+    let media = entry.media.or_else(|| {
+        let base = entry.url.as_deref().and_then(|url| Url::parse(url).ok());
+        let media = html::media(content?, base.as_ref());
+        (!media.is_empty()).then(|| json!(media))
+    });
     // Clients send timestamps back as cursors with millisecond precision.
     let published_at = entry.published_at.trunc_subsecs(3);
     let row = inbox_entry::ActiveModel {
@@ -219,13 +230,13 @@ async fn deliver(state: &AppState, inbox: &inbox::Model, entry: NewEntry) -> Api
         guid: Set(entry.guid),
         title: Set(entry.title),
         url: Set(entry.url),
-        description: Set(entry.description),
+        description: Set(description),
         content: Set(entry.content),
         author: Set(entry.author),
         author_url: Set(entry.author_url),
         author_avatar: Set(entry.author_avatar),
         categories: Set(entry.categories),
-        media: Set(entry.media),
+        media: Set(media),
         attachments: Set(entry.attachments),
         extra: Set(entry.extra),
         language: Set(entry.language),

@@ -1,7 +1,7 @@
 mod json;
 mod xml;
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -101,6 +101,23 @@ pub fn parse(body: &[u8], url: &str) -> Result<ParsedFeed, String> {
     }
 }
 
+/// Finishes a feed's entries in the order the feed lists them, newest first: each may be dated a millisecond
+/// earlier than the one before at the latest, so that undated entries keep that order.
+fn finish_all(
+    drafts: impl Iterator<Item = Draft>,
+    base: Option<&Url>,
+    feed_language: Option<&str>,
+) -> Vec<ParsedEntry> {
+    let now = Utc::now();
+    drafts
+        .enumerate()
+        .map(|(index, draft)| {
+            let latest = now - TimeDelta::milliseconds(index as i64);
+            draft.finish(base, feed_language, latest)
+        })
+        .collect()
+}
+
 /// Entry fields as a format provides them, before the shared normalization in [`Draft::finish`].
 #[derive(Default)]
 struct Draft {
@@ -147,7 +164,12 @@ impl Draft {
         });
     }
 
-    fn finish(self, base: Option<&Url>, feed_language: Option<&str>) -> ParsedEntry {
+    fn finish(
+        self,
+        base: Option<&Url>,
+        feed_language: Option<&str>,
+        latest: DateTime<Utc>,
+    ) -> ParsedEntry {
         let url = self.url.and_then(|url| resolve(base, &url));
         let content = self.content.or_else(|| self.summary.clone());
         let description = self
@@ -187,7 +209,6 @@ impl Draft {
             .iter()
             .filter_map(|author| author.name.as_deref())
             .collect();
-        let now = Utc::now();
         ParsedEntry {
             guid,
             title: self.title,
@@ -203,7 +224,9 @@ impl Draft {
             extra: self.extra,
             language: language.or_else(|| feed_language.map(String::from)),
             // A future date would pin the entry to the top of every timeline.
-            published_at: self.published.map_or(now, |published| published.min(now)),
+            published_at: self
+                .published
+                .map_or(latest, |published| published.min(latest)),
         }
     }
 }
@@ -412,5 +435,23 @@ mod tests {
         assert_eq!(guids[0], "Only a title");
         assert!(!guids[1].is_empty());
         assert_eq!(guids, parse_guids());
+    }
+
+    #[test]
+    fn undated_entries_keep_feed_order() {
+        let xml = br#"<rss version="2.0"><channel><title>t</title>
+            <item><guid>newer</guid></item>
+            <item><guid>older</guid></item>
+        </channel></rss>"#;
+
+        let feed = parse(xml, "https://example.com/feed.xml").unwrap();
+
+        let [newer, older] = &feed.entries[..] else {
+            panic!("expected two entries")
+        };
+        assert_eq!(
+            newer.published_at - older.published_at,
+            TimeDelta::milliseconds(1)
+        );
     }
 }

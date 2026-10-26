@@ -102,8 +102,12 @@ async fn webhook_and_email_delivery() {
     app.sign_up("alice@example.com").await;
     let secret = create_inbox(&app, "news").await;
 
-    let hook =
-        json!({ "guid": "w-1", "publishedAt": "2026-10-01T08:00:00.123456Z", "title": "Hook" });
+    let hook = json!({
+        "guid": "w-1",
+        "publishedAt": "2026-10-01T08:00:00.123456Z",
+        "title": "Hook",
+        "content": r#"<p>Hello from the hook.</p><img src="https://example.com/hook.jpg">"#,
+    });
     assert_error(deliver(&app, "wrong", hook.clone()).await, 401, 1000).await;
     for _ in 0..2 {
         assert_eq!(
@@ -121,7 +125,8 @@ async fn webhook_and_email_delivery() {
             "subject": "The weekly news about the world",
             "messageId": "<m-1@example.com>",
             "date": "2026-10-03T08:00:00Z",
-            "html": "<h1>Hello</h1><p>This is the weekly newsletter, sent to everyone who subscribed.</p>",
+            "html": r#"<h1>Hello</h1><p>This is the weekly newsletter, sent to everyone who subscribed.</p>
+                <img src="https://example.com/mail.png">"#,
         })
     };
     let mail = async |token: &str, body: Value| {
@@ -169,7 +174,18 @@ async fn webhook_and_email_delivery() {
             ),
         ]
     );
+    // What a webhook or email leaves out of the description and media is taken from the content.
+    let photo = |url: &str| Some(json!([{ "url": url, "type": "photo" }]));
+    let hooked = &stored[0];
+    assert_eq!(
+        (hooked.description.as_deref(), hooked.media.clone()),
+        (
+            Some("Hello from the hook."),
+            photo("https://example.com/hook.jpg")
+        )
+    );
     let mailed = &stored[2];
+    assert_eq!(mailed.media, photo("https://example.com/mail.png"));
     assert_eq!(
         (
             mailed.title.as_deref(),

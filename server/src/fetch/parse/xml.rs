@@ -6,7 +6,7 @@ use feed_rs::{
 };
 use reqwest::Url;
 
-use super::{Attachment, Author, Draft, Media, MediaKind, ParsedFeed, html, resolve};
+use super::{Attachment, Author, Draft, Media, MediaKind, ParsedFeed, finish_all, html, resolve};
 
 pub fn parse(body: &[u8], url: &str) -> Result<ParsedFeed, String> {
     // Empty ids are filled in by `Draft::finish`; feed-rs would fall back to a random UUID.
@@ -23,11 +23,8 @@ pub fn parse(body: &[u8], url: &str) -> Result<ParsedFeed, String> {
         .and_then(|url| Url::parse(url).ok())
         .or(feed_url);
     let language = feed.language;
-    let entries = feed
-        .entries
-        .into_iter()
-        .map(|entry| draft(entry).finish(base.as_ref(), language.as_deref()))
-        .collect();
+    let drafts = feed.entries.into_iter().map(draft);
+    let entries = finish_all(drafts, base.as_ref(), language.as_deref());
     Ok(ParsedFeed {
         title: feed.title.map(plain),
         description: feed.description.map(plain),

@@ -3,7 +3,7 @@ use reqwest::Url;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{Attachment, Author, Draft, Media, MediaKind, ParsedFeed, resolve};
+use super::{Attachment, Author, Draft, Media, MediaKind, ParsedFeed, finish_all, resolve};
 
 /// JSON Feed 1.0/1.1 plus RSSHub's `_extra`; feed-rs drops avatars, item images, durations and `_extra`.
 #[derive(Deserialize)]
@@ -68,11 +68,8 @@ pub fn parse(body: &[u8], url: &str) -> Result<ParsedFeed, String> {
         .and_then(|url| Url::parse(url).ok())
         .or(feed_url);
     let language = feed.language;
-    let entries = feed
-        .items
-        .into_iter()
-        .map(|item| draft(item).finish(base.as_ref(), language.as_deref()))
-        .collect();
+    let drafts = feed.items.into_iter().map(draft);
+    let entries = finish_all(drafts, base.as_ref(), language.as_deref());
     Ok(ParsedFeed {
         title: feed.title,
         description: feed.description,
