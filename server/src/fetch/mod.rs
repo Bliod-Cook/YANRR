@@ -24,8 +24,12 @@ use self::{
 };
 use crate::{
     AppState,
-    entity::{entry, feed, subscription, unread},
+    entity::{blocked_entry, collection, entry, feed, subscription, unread},
     id::next_id,
+    rules::{
+        Rules, Subject,
+        deliver::{self, Delivery},
+    },
     subscription as subscriptions,
     sync::{self, Action},
     time::iso,
@@ -131,10 +135,11 @@ async fn freshen(state: &AppState, feed: feed::Model) -> Result<feed::Model, Fet
 async fn insert(state: &AppState, url: &str, update: Update) -> Result<feed::Model, FetchError> {
     let txn = state.db.begin().await?;
     let feed = find_or_create(&txn, update.moved_to.as_deref().unwrap_or(url)).await?;
-    let (feed, actions) = store(&txn, feed.id, update).await?;
-    sync::record(&txn, actions).await?;
+    let stored = store(&txn, feed.id, update).await?;
+    sync::record(&txn, stored.actions).await?;
     txn.commit().await?;
-    Ok(feed)
+    deliver::spawn(state, &stored.feed, stored.deliveries);
+    Ok(stored.feed)
 }
 
 /// Fetches a feed again, recording the error on failure; `error_at` keeps when the failures began.
@@ -179,21 +184,23 @@ async fn refresh(state: &AppState, feed: &feed::Model) -> Result<(), FetchError>
         }
         None => None,
     };
-    let actions = match target {
-        None => store(&txn, feed.id, update).await?.1,
+    let stored = match target {
+        None => store(&txn, feed.id, update).await?,
         Some(target) => {
-            let (target, mut actions) = store(&txn, target.id, update).await?;
+            let mut stored = store(&txn, target.id, update).await?;
             let migrated = feed::ActiveModel {
                 migrate_to: Set(Some(target.id)),
                 ..checked(feed.id)
             };
             migrated.update(&txn).await?;
-            actions.extend(subscriptions::migrate(&txn, feed.id, &target).await?);
-            actions
+            let moved = subscriptions::migrate(&txn, feed.id, &stored.feed).await?;
+            stored.actions.extend(moved);
+            stored
         }
     };
-    sync::record(&txn, actions).await?;
+    sync::record(&txn, stored.actions).await?;
     txn.commit().await?;
+    deliver::spawn(state, &stored.feed, stored.deliveries);
     Ok(())
 }
 
@@ -273,13 +280,16 @@ async fn find_or_create(db: &impl ConnectionTrait, url: &str) -> Result<feed::Mo
         .ok_or_else(|| DbErr::RecordNotFound(url.into()))
 }
 
-/// Writes the feed's metadata and new entries, and marks the entries unread for its subscribers; run it in the
-/// caller's transaction, which records the returned actions.
-async fn store(
-    db: &impl ConnectionTrait,
-    feed_id: i64,
-    update: Update,
-) -> Result<(feed::Model, Vec<Action>), DbErr> {
+/// What storing a fetched feed did: the actions to record, and what to deliver once they are committed.
+struct Stored {
+    feed: feed::Model,
+    actions: Vec<Action>,
+    deliveries: Vec<Delivery>,
+}
+
+/// Writes the feed's metadata and new entries, and hands the entries to its subscribers; run it in the caller's
+/// transaction, which records the actions.
+async fn store(db: &impl ConnectionTrait, feed_id: i64, update: Update) -> Result<Stored, DbErr> {
     let Update {
         feed: parsed,
         validators,
@@ -314,50 +324,105 @@ async fn store(
         )
         .exec_with_returning(db)
         .await?;
-    let actions = fan_out(db, feed_id, &new).await?;
-    Ok((feed, actions))
+    let (actions, deliveries) = fan_out(db, &feed, &new).await?;
+    Ok(Stored {
+        feed,
+        actions,
+        deliveries,
+    })
 }
 
-/// Marks new entries unread for the feed's subscribers and tells each of them with one `timeline N`.
+/// Hands new entries to the feed's subscribers as their rules say: blocks them, or marks them unread and stars
+/// or forwards them. Each subscriber hears of what arrived with one `timeline N`.
 async fn fan_out(
     db: &impl ConnectionTrait,
-    feed_id: i64,
+    feed: &feed::Model,
     entries: &[entry::Model],
-) -> Result<Vec<Action>, DbErr> {
-    let Some(latest) = entries.iter().map(|entry| entry.published_at).max() else {
-        return Ok(Vec::new());
-    };
+) -> Result<(Vec<Action>, Vec<Delivery>), DbErr> {
+    if entries.is_empty() {
+        return Ok(Default::default());
+    }
     let subscribers = subscription::Entity::find()
-        .filter(subscription::Column::FeedId.eq(feed_id))
+        .filter(subscription::Column::FeedId.eq(feed.id))
         .all(db)
         .await?;
-    let unread = subscribers.iter().flat_map(|subscription| {
-        entries.iter().map(|entry| unread::ActiveModel {
-            user_id: Set(subscription.user_id.clone()),
-            entry_id: Set(entry.id),
-            feed_id: Set(feed_id),
-        })
-    });
+    let user_ids = subscribers
+        .iter()
+        .map(|subscription| subscription.user_id.clone());
+    let rules = Rules::load_many(db, user_ids).await?;
+    // Collection times are timeline cursors, which clients send back in milliseconds.
+    let now = Utc::now().trunc_subsecs(3);
+    let (mut unread, mut blocked, mut collected) = (Vec::new(), Vec::new(), Vec::new());
+    let (mut actions, mut deliveries) = (Vec::new(), Vec::new());
+    for subscription in &subscribers {
+        let user_id = &subscription.user_id;
+        let mut arrived = Vec::new();
+        for entry in entries {
+            let subject = Subject::arriving(feed, entry, subscription);
+            let settings = rules.get(user_id).and_then(|rules| rules.apply(&subject));
+            let settings = settings.unwrap_or_default();
+            if settings.blocks(entry) {
+                blocked.push(blocked_entry::ActiveModel {
+                    user_id: Set(user_id.clone()),
+                    entry_id: Set(entry.id),
+                });
+                continue;
+            }
+            arrived.push(entry);
+            unread.push(unread::ActiveModel {
+                user_id: Set(user_id.clone()),
+                entry_id: Set(entry.id),
+                feed_id: Set(feed.id),
+            });
+            if settings.star == Some(true) {
+                collected.push(collection::ActiveModel {
+                    user_id: Set(user_id.clone()),
+                    entry_id: Set(entry.id),
+                    view: Set(subscription.view),
+                    created_at: Set(now),
+                });
+                actions.push(Action {
+                    user_id: user_id.clone(),
+                    model: "collection",
+                    model_id: Some(entry.id.to_string()),
+                    action: "I",
+                    data: json!({
+                        "entryId": entry.id.to_string(),
+                        "feedId": feed.id.to_string(),
+                        "view": subscription.view,
+                        "createdAt": iso(now),
+                    }),
+                });
+            }
+            deliveries.extend(Delivery::of(&settings, feed, entry, subscription));
+        }
+        let Some(latest) = arrived.iter().map(|entry| entry.published_at).max() else {
+            continue;
+        };
+        actions.push(Action {
+            user_id: user_id.clone(),
+            model: "timeline",
+            model_id: Some(feed.id.to_string()),
+            action: "N",
+            data: json!({
+                "feedId": feed.id.to_string(),
+                "count": arrived.len(),
+                "unread": arrived.len(),
+                "latestPublishedAt": iso(latest),
+                "from": ["feed"],
+            }),
+        });
+    }
     unread::Entity::insert_many(unread)
         .exec_without_returning(db)
         .await?;
-    let data = json!({
-        "feedId": feed_id.to_string(),
-        "count": entries.len(),
-        "unread": entries.len(),
-        "latestPublishedAt": iso(latest),
-        "from": ["feed"],
-    });
-    Ok(subscribers
-        .into_iter()
-        .map(|subscription| Action {
-            user_id: subscription.user_id,
-            model: "timeline",
-            model_id: Some(feed_id.to_string()),
-            action: "N",
-            data: data.clone(),
-        })
-        .collect())
+    blocked_entry::Entity::insert_many(blocked)
+        .exec_without_returning(db)
+        .await?;
+    collection::Entity::insert_many(collected)
+        .exec_without_returning(db)
+        .await?;
+    Ok((actions, deliveries))
 }
 
 fn entry_model(feed_id: i64, entry: ParsedEntry, now: DateTime<Utc>) -> entry::ActiveModel {

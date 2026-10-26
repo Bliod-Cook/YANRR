@@ -113,7 +113,8 @@ pub async fn subscribe(
         == 1;
     if created {
         let sql = "INSERT INTO unreads (user_id, entry_id, feed_id)
-            SELECT $1, id, feed_id FROM entries WHERE feed_id = $2";
+            SELECT $1, id, feed_id FROM entries WHERE feed_id = $2
+                AND id NOT IN (SELECT entry_id FROM blocked_entries WHERE user_id = $1)";
         txn.execute_raw(Statement::from_sql_and_values(
             DbBackend::Postgres,
             sql,

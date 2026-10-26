@@ -4,7 +4,7 @@ use axum::{Json, extract::State, http::header, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use sea_orm::{
     ColumnTrait, ConnectionTrait, DatabaseConnection, DbBackend, DbErr, EntityTrait,
-    FromQueryResult, QueryFilter, Statement, TransactionTrait, Value as SqlValue,
+    FromQueryResult, QueryFilter, QueryResult, Statement, TransactionTrait, Value as SqlValue,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -19,6 +19,7 @@ use crate::{
     AppState,
     entity::{entry, feed, inbox, inbox_entry},
     fetch, id,
+    rules::{EntrySettings, Rules, Subject},
     sync::{self, Action},
     time::iso,
     wire,
@@ -28,11 +29,16 @@ const PAGE_SIZE: u64 = 20;
 const MAX_PAGE_SIZE: u64 = 100;
 
 /// The user's view of entries: `e` is the entry, `s` the user's subscription to its feed, `c` the user's
-/// collection of it and `u` its unread mark; `$1` is the user id.
+/// collection of it, `u` its unread mark and `b` its block by the user's rules; `$1` is the user id.
 pub const TIMELINE: &str = "FROM entries e
     LEFT JOIN subscriptions s ON s.user_id = $1 AND s.feed_id = e.feed_id
     LEFT JOIN collections c ON c.user_id = $1 AND c.entry_id = e.id
-    LEFT JOIN unreads u ON u.user_id = $1 AND u.entry_id = e.id";
+    LEFT JOIN unreads u ON u.user_id = $1 AND u.entry_id = e.id
+    LEFT JOIN blocked_entries b ON b.user_id = $1 AND b.entry_id = e.id";
+
+/// The columns of an entry and its [`Marks`] on [`TIMELINE`].
+const MARKED: &str = "e.*, u.entry_id IS NULL AS read, COALESCE(s.view, c.view) AS view,
+    c.created_at AS collected_at, s.title AS subscription_title, s.category";
 
 /// The user's inbox entries, named `e` like [`TIMELINE`]'s so that cursors and order fit both; `i` is the inbox
 /// and `$1` the user id. The join is the ownership check.
@@ -89,7 +95,7 @@ impl Scope {
         }
         let view = self.view.filter(|view| *view != -1);
         let feed_ids = self.feed_ids();
-        let mut conditions = Vec::new();
+        let mut conditions = vec!["b.entry_id IS NULL".to_string()];
         if self.is_collection() {
             conditions.push("c.entry_id IS NOT NULL".to_string());
             conditions.extend(view.map(|view| format!("c.view = {}", params.bind(view))));
@@ -164,12 +170,54 @@ struct Item {
     data: Value,
 }
 
+/// What the user did with an entry: read it, follows its feed or collected it.
 #[derive(FromQueryResult)]
 struct Marks {
     read: bool,
     view: Option<i16>,
     collected_at: Option<DateTime<Utc>>,
-    time: DateTime<Utc>,
+    subscription_title: Option<String>,
+    category: Option<String>,
+}
+
+/// An entry and its marks from a row selecting [`MARKED`].
+fn marked(row: &QueryResult) -> Result<(entry::Model, Marks), DbErr> {
+    let entry = entry::Model::from_query_result(row, "")?;
+    Ok((entry, Marks::from_query_result(row, "")?))
+}
+
+async fn feeds(
+    db: &DatabaseConnection,
+    ids: impl IntoIterator<Item = i64>,
+) -> Result<HashMap<i64, feed::Model>, DbErr> {
+    let feeds = feed::Entity::find()
+        .filter(feed::Column::Id.is_in(ids))
+        .all(db)
+        .await?;
+    Ok(feeds.into_iter().map(|feed| (feed.id, feed)).collect())
+}
+
+/// The entry as the user's rules show it, rewritten, and what they do to it.
+fn personalize(
+    rules: &Rules,
+    feed: &feed::Model,
+    mut entry: entry::Model,
+    marks: &Marks,
+) -> (entry::Model, Option<EntrySettings>) {
+    let subject = Subject {
+        feed,
+        entry: &entry,
+        view: marks.view,
+        title: marks.subscription_title.as_deref(),
+        category: marks.category.as_deref(),
+        read: marks.read,
+        collected: marks.collected_at.is_some(),
+    };
+    let settings = rules.apply(&subject);
+    if let Some(settings) = &settings {
+        settings.rewrite(&mut entry);
+    }
+    (entry, settings)
 }
 
 /// `POST /entries`, and `POST /entries/inbox` with an `inboxId`: a page of the timeline. Feed entries and inbox
@@ -206,48 +254,39 @@ async fn feed_items(
         true => "c.created_at",
         false => "e.published_at",
     };
-    let mut sql = format!(
-        "SELECT e.*, u.entry_id IS NULL AS read, COALESCE(s.view, c.view) AS view,
-            c.created_at AS collected_at, {time} AS time
-        {TIMELINE} WHERE {scope}"
-    );
+    let mut sql = format!("SELECT {MARKED}, {time} AS time {TIMELINE} WHERE {scope}");
     body.paginate(&mut sql, &mut params, time, "u.entry_id IS NULL", limit);
 
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
     let rows = db.query_all_raw(statement).await?;
     let mut entries = Vec::new();
     for row in &rows {
-        let entry = entry::Model::from_query_result(row, "")?;
-        entries.push((entry, Marks::from_query_result(row, "")?));
+        let time: DateTime<Utc> = row.try_get("", "time")?;
+        entries.push((marked(row)?, time));
     }
-    let feed_ids = entries.iter().map(|(entry, _)| entry.feed_id);
-    let feeds: HashMap<_, _> = feed::Entity::find()
-        .filter(feed::Column::Id.is_in(feed_ids))
-        .all(db)
-        .await?
-        .into_iter()
-        .map(|feed| (feed.id, feed))
-        .collect();
+    let feeds = feeds(db, entries.iter().map(|((entry, _), _)| entry.feed_id)).await?;
+    let rules = Rules::load(db, user_id).await?;
     let items = entries
         .into_iter()
-        .map(|(entry, marks)| {
+        .map(|((entry, marks), time)| {
+            let feed = &feeds[&entry.feed_id];
+            let (entry, settings) = personalize(&rules, feed, entry, &marks);
             let id = entry.id;
             let mut data = json!({
                 "read": marks.read,
                 "view": marks.view.or(body.scope.view).unwrap_or(0),
                 "from": ["feed"],
-                "feeds": wire::Feed::from(&feeds[&entry.feed_id]),
+                "feeds": wire::Feed::from(feed),
                 "entries": wire::Entry::new(entry, body.with_content),
             });
             // Clients drop their star when the key is missing; `null` would keep it.
             if let Some(collected_at) = marks.collected_at {
                 data["collections"] = json!({ "createdAt": iso(collected_at) });
             }
-            Item {
-                time: marks.time,
-                id,
-                data,
+            if let Some(settings) = settings {
+                data["settings"] = json!(settings);
             }
+            Item { time, id, data }
         })
         .collect();
     Ok(items)
@@ -303,20 +342,32 @@ pub struct EntryQuery {
 /// `GET /entries`: one entry with its content, or `null` if there is no such entry.
 pub async fn get(
     State(state): State<AppState>,
-    _user: AuthUser,
+    user: AuthUser,
     ApiQuery(query): ApiQuery<EntryQuery>,
 ) -> ApiResult<Json<Value>> {
     let Some(id) = id::parse(&query.id) else {
         return Ok(ok(Value::Null));
     };
-    let found = entry::Entity::find_by_id(id)
-        .find_also_related(feed::Entity)
+    let sql = format!("SELECT {MARKED} {TIMELINE} WHERE e.id = $2");
+    let values = [user.id.clone().into(), id.into()];
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
+    let Some(row) = state.db.query_one_raw(statement).await? else {
+        return Ok(ok(Value::Null));
+    };
+    let (entry, marks) = marked(&row)?;
+    let Some(feed) = feed::Entity::find_by_id(entry.feed_id)
         .one(&state.db)
-        .await?;
-    let data = found.and_then(|(entry, feed)| {
-        let feed = feed?;
-        Some(json!({ "feeds": wire::Feed::from(&feed), "entries": wire::Entry::new(entry, true) }))
-    });
+        .await?
+    else {
+        return Ok(ok(Value::Null));
+    };
+    let rules = Rules::load(&state.db, &user.id).await?;
+    let (entry, settings) = personalize(&rules, &feed, entry, &marks);
+    let mut data =
+        json!({ "feeds": wire::Feed::from(&feed), "entries": wire::Entry::new(entry, true) });
+    if let Some(settings) = settings {
+        data["settings"] = json!(settings);
+    }
     Ok(ok(data))
 }
 
@@ -328,18 +379,21 @@ pub struct StreamBody {
 /// `POST /entries/stream`: the content of each entry that has one, as NDJSON lines of `{ id, content }`.
 pub async fn stream(
     State(state): State<AppState>,
-    _user: AuthUser,
+    user: AuthUser,
     ApiJson(body): ApiJson<StreamBody>,
 ) -> ApiResult<impl IntoResponse> {
-    let ids = body.ids.iter().filter_map(|id| id::parse(id));
-    let entries = entry::Entity::find()
-        .filter(entry::Column::Id.is_in(ids))
-        .filter(entry::Column::Content.is_not_null())
-        .all(&state.db)
-        .await?;
+    let ids: Vec<_> = body.ids.iter().filter_map(|id| id::parse(id)).collect();
+    let sql = format!("SELECT {MARKED} {TIMELINE} WHERE e.id = ANY($2) AND e.content IS NOT NULL");
+    let values = [user.id.clone().into(), ids.into()];
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
+    let rows = state.db.query_all_raw(statement).await?;
+    let entries = rows.iter().map(marked).collect::<Result<Vec<_>, _>>()?;
+    let feeds = feeds(&state.db, entries.iter().map(|(entry, _)| entry.feed_id)).await?;
+    let rules = Rules::load(&state.db, &user.id).await?;
     let lines: String = entries
         .into_iter()
-        .map(|entry| {
+        .map(|(entry, marks)| {
+            let (entry, _) = personalize(&rules, &feeds[&entry.feed_id], entry, &marks);
             json!({ "id": entry.id.to_string(), "content": entry.content }).to_string() + "\n"
         })
         .collect();
