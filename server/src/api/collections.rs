@@ -1,21 +1,26 @@
 use axum::{Json, extract::State};
 use chrono::{SubsecRound, Utc};
 use sea_orm::{
-    ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter, TransactionTrait,
-    sea_query::OnConflict,
+    ActiveValue::Set, ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter,
+    TransactionTrait, sea_query::OnConflict,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::{
+    entries::find_marked,
     error::{ApiError, ApiJson, ApiResult, view},
     response::synced,
     session::AuthUser,
 };
 use crate::{
     AppState,
-    entity::{collection, entry},
+    entity::{collection, entry, feed},
     id,
+    rules::{
+        Rules,
+        deliver::{self, Delivery},
+    },
     sync::{self, Action},
     time::iso,
 };
@@ -27,7 +32,8 @@ pub struct CollectBody {
     view: Option<i16>,
 }
 
-/// `POST /collections`: collecting an entry twice keeps the first time.
+/// `POST /collections`: collecting an entry twice keeps the first time. Rules matching the entry once it is
+/// collected forward it.
 pub async fn collect(
     State(state): State<AppState>,
     user: AuthUser,
@@ -53,6 +59,11 @@ pub async fn collect(
         .on_conflict(OnConflict::columns(key).do_nothing().to_owned())
         .exec_without_returning(&txn)
         .await?;
+    let delivery = if inserted == 1 {
+        starred(&txn, &user.id, entry.id).await?
+    } else {
+        None
+    };
     let actions = (inserted == 1).then(|| Action {
         user_id: user.id,
         model: "collection",
@@ -67,7 +78,33 @@ pub async fn collect(
     });
     let last_sync_id = sync::record(&txn, actions.into_iter().collect()).await?;
     txn.commit().await?;
+    if let Some((feed, delivery)) = delivery {
+        deliver::spawn(&state, &feed, vec![delivery]);
+    }
     Ok(synced(last_sync_id))
+}
+
+/// What the user's rules send out about an entry just collected: only those matching it because it is collected
+/// do, so that the others do not send it again.
+async fn starred(
+    db: &impl ConnectionTrait,
+    user_id: &str,
+    entry_id: i64,
+) -> Result<Option<(feed::Model, Delivery)>, DbErr> {
+    let Some((entry, marks)) = find_marked(db, user_id, entry_id).await? else {
+        return Ok(None);
+    };
+    let Some(feed) = feed::Entity::find_by_id(entry.feed_id).one(db).await? else {
+        return Ok(None);
+    };
+    let rules = Rules::load(db, user_id).await?;
+    let subject = marks.subject(&feed, &entry);
+    let Some(sent) = rules.apply_collected(&subject) else {
+        return Ok(None);
+    };
+    let shown = rules.apply(&subject).unwrap_or_default();
+    let delivery = Delivery::of(user_id, &subject, &sent, &shown);
+    Ok(delivery.map(|delivery| (feed, delivery)))
 }
 
 #[derive(Deserialize)]

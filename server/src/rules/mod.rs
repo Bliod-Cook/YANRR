@@ -12,6 +12,7 @@ use serde_json::{Number, Value};
 use crate::entity::{action_rule, entry, feed, subscription};
 
 /// An entry as one user's rules see it.
+#[derive(Clone, Copy)]
 pub struct Subject<'a> {
     pub feed: &'a feed::Model,
     pub entry: &'a entry::Model,
@@ -87,19 +88,39 @@ impl Rules {
 
     /// What the enabled rules matching the entry do together, or `None` when none matches.
     pub fn apply(&self, subject: &Subject) -> Option<EntrySettings> {
-        let mut matched = self
-            .rules
+        combine(self.matching(subject))
+    }
+
+    /// What the enabled rules matching the collected entry only because it is collected do together, or `None`
+    /// when none does.
+    pub fn apply_collected(&self, subject: &Subject) -> Option<EntrySettings> {
+        let uncollected = Subject {
+            collected: false,
+            ..*subject
+        };
+        let newly = self
+            .matching(subject)
+            .filter(|rule| !rule.condition.holds(&uncollected, &self.patterns));
+        combine(newly)
+    }
+
+    fn matching<'r>(&'r self, subject: &'r Subject) -> impl Iterator<Item = &'r Rule> {
+        self.rules
             .iter()
             .filter(|rule| rule.result.disabled != Some(true))
             .filter(|rule| rule.condition.holds(subject, &self.patterns))
-            .peekable();
-        matched.peek()?;
-        let mut settings = EntrySettings::default();
-        for rule in matched {
-            settings.add(&rule.result);
-        }
-        Some(settings)
     }
+}
+
+/// What the rules do together, or `None` when there are none.
+fn combine<'r>(rules: impl Iterator<Item = &'r Rule>) -> Option<EntrySettings> {
+    let mut rules = rules.peekable();
+    rules.peek()?;
+    let mut settings = EntrySettings::default();
+    for rule in rules {
+        settings.add(&rule.result);
+    }
+    Some(settings)
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

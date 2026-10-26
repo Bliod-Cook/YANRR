@@ -1,17 +1,17 @@
-//! What rules send out about new entries once they are stored.
+//! What rules send out about entries as they arrive or are collected.
 
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde_json::json;
 
-use super::EntrySettings;
+use super::{EntrySettings, Subject};
 use crate::{
     AppState,
-    entity::{entry, feed, messaging_token, subscription},
+    entity::{entry, feed, messaging_token},
     push::{Fcm, Notification},
     wire,
 };
 
-/// A new entry for a user's webhooks or devices.
+/// An entry for a user's webhooks or devices.
 pub struct Delivery {
     user_id: String,
     view: i16,
@@ -24,25 +24,25 @@ pub struct Delivery {
 }
 
 impl Delivery {
-    /// What `settings` send out about an entry arriving in `subscription`, if anything.
+    /// What `sent` sends out to the user about the subject's entry, rewritten as `shown` shows it, if anything.
     pub fn of(
-        settings: &EntrySettings,
-        feed: &feed::Model,
-        entry: &entry::Model,
-        subscription: &subscription::Model,
+        user_id: &str,
+        subject: &Subject,
+        sent: &EntrySettings,
+        shown: &EntrySettings,
     ) -> Option<Self> {
-        let webhooks = settings.webhooks.clone().unwrap_or_default();
-        let notify = settings.new_entry_notification == Some(true);
+        let webhooks = sent.webhooks.clone().unwrap_or_default();
+        let notify = sent.new_entry_notification == Some(true);
         if webhooks.is_empty() && !notify {
             return None;
         }
-        let mut entry = entry.clone();
-        settings.rewrite(&mut entry);
-        let title = subscription.title.as_ref().or(feed.title.as_ref());
+        let mut entry = subject.entry.clone();
+        shown.rewrite(&mut entry);
+        let title = subject.title.or(subject.feed.title.as_deref());
         Some(Self {
-            user_id: subscription.user_id.clone(),
-            view: subscription.view,
-            title: title.cloned().unwrap_or_default(),
+            user_id: user_id.to_string(),
+            view: subject.view.unwrap_or_default(),
+            title: title.unwrap_or_default().to_string(),
             entry,
             webhooks,
             notify,
@@ -72,8 +72,11 @@ async fn send(state: &AppState, feed: &feed::Model, delivery: Delivery) {
         entry_id: entry_id.to_string(),
         view: delivery.view,
     };
+    // Unlike the API's entries, a webhook's entry names its feed.
+    let mut entry = json!(wire::Entry::new(delivery.entry, true));
+    entry["feedId"] = json!(feed.id.to_string());
     let payload = json!({
-        "entry": wire::Entry::new(delivery.entry, true),
+        "entry": entry,
         "feed": wire::Feed::from(feed),
         "view": delivery.view,
     });

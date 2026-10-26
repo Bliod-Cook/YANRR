@@ -177,7 +177,7 @@ struct Item {
 
 /// What the user did with an entry: read it, follows its feed or collected it.
 #[derive(FromQueryResult)]
-struct Marks {
+pub(super) struct Marks {
     read: bool,
     view: Option<i16>,
     collected_at: Option<DateTime<Utc>>,
@@ -185,10 +185,45 @@ struct Marks {
     category: Option<String>,
 }
 
+impl Marks {
+    /// The entry as the user's rules see it.
+    pub(super) fn subject<'a>(
+        &'a self,
+        feed: &'a feed::Model,
+        entry: &'a entry::Model,
+    ) -> Subject<'a> {
+        Subject {
+            feed,
+            entry,
+            view: self.view,
+            title: self.subscription_title.as_deref(),
+            category: self.category.as_deref(),
+            read: self.read,
+            collected: self.collected_at.is_some(),
+        }
+    }
+}
+
 /// An entry and its marks from a row selecting [`MARKED`].
 fn marked(row: &QueryResult) -> Result<(entry::Model, Marks), DbErr> {
     let entry = entry::Model::from_query_result(row, "")?;
     Ok((entry, Marks::from_query_result(row, "")?))
+}
+
+/// The entry and what the user did with it, or `None` if there is no such entry.
+pub(super) async fn find_marked(
+    db: &impl ConnectionTrait,
+    user_id: &str,
+    id: i64,
+) -> Result<Option<(entry::Model, Marks)>, DbErr> {
+    let sql = format!("SELECT {MARKED} {TIMELINE} WHERE e.id = $2");
+    let values = [user_id.into(), id.into()];
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
+    db.query_one_raw(statement)
+        .await?
+        .as_ref()
+        .map(marked)
+        .transpose()
 }
 
 async fn feeds(
@@ -209,16 +244,7 @@ fn personalize(
     mut entry: entry::Model,
     marks: &Marks,
 ) -> (entry::Model, Option<EntrySettings>) {
-    let subject = Subject {
-        feed,
-        entry: &entry,
-        view: marks.view,
-        title: marks.subscription_title.as_deref(),
-        category: marks.category.as_deref(),
-        read: marks.read,
-        collected: marks.collected_at.is_some(),
-    };
-    let settings = rules.apply(&subject);
+    let settings = rules.apply(&marks.subject(feed, &entry));
     if let Some(settings) = &settings {
         settings.rewrite(&mut entry);
     }
@@ -353,13 +379,9 @@ pub async fn get(
     let Some(id) = id::parse(&query.id) else {
         return Ok(ok(Value::Null));
     };
-    let sql = format!("SELECT {MARKED} {TIMELINE} WHERE e.id = $2");
-    let values = [user.id.clone().into(), id.into()];
-    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
-    let Some(row) = state.db.query_one_raw(statement).await? else {
+    let Some((entry, marks)) = find_marked(&state.db, &user.id, id).await? else {
         return Ok(ok(Value::Null));
     };
-    let (entry, marks) = marked(&row)?;
     let Some(feed) = feed::Entity::find_by_id(entry.feed_id)
         .one(&state.db)
         .await?

@@ -398,7 +398,7 @@ async fn fan_out(
                     }),
                 });
             }
-            deliveries.extend(Delivery::of(&settings, feed, entry, subscription));
+            deliveries.extend(Delivery::of(user_id, &subject, &settings, &settings));
         }
         let Some(latest) = arrived.iter().map(|entry| entry.published_at).max() else {
             continue;

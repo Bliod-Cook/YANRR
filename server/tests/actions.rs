@@ -318,6 +318,7 @@ async fn new_entries_are_forwarded() {
     let hook: Value = serde_json::from_str(&hooks[0].body).unwrap();
     assert_eq!(hook["entry"]["guid"], "post-new");
     assert_eq!(hook["entry"]["title"], "Fresh post");
+    assert_eq!(hook["entry"]["feedId"], feed_id);
     assert_eq!(hook["feed"]["id"], feed_id);
     assert_eq!(hook["view"], 0);
     let message: Value = serde_json::from_str(&sent[0].body).unwrap();
@@ -331,4 +332,41 @@ async fn new_entries_are_forwarded() {
         "description": "Fresh post",
     });
     assert_eq!(message["message"]["data"], data);
+}
+
+#[tokio::test]
+async fn starred_entries_are_forwarded() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    fixtures.set("/live", Reply::Body(SINGLE_ITEM_RSS.into()));
+    fixtures.set("/all", Reply::Status(204));
+    fixtures.set("/starred", Reply::Status(204));
+    subscribe(&app, &fixtures.url("/live"), json!({})).await;
+    let starred = json!([[{ "field": "status", "operator": "eq", "value": "collected" }]]);
+    // The rule matching without the star goes first, so had it been sent, it would be by the time the other is.
+    let rules = json!([
+        {
+            "name": "All",
+            "condition": [],
+            "result": {
+                "webhooks": [fixtures.url("/all")],
+                "rewriteRules": [{ "from": "Earlier", "to": "Older" }],
+            },
+        },
+        { "name": "Starred", "condition": starred, "result": { "webhooks": [fixtures.url("/starred")] } },
+    ]);
+    app.put("/api/actions", json!({ "rules": rules })).await;
+    let entry_id = timeline(&app, json!({})).await[0]["entries"]["id"].clone();
+
+    app.post(
+        "/api/collections",
+        json!({ "entryId": entry_id, "view": 0 }),
+    )
+    .await;
+
+    let hooks = eventually(|| fixtures.requests("/starred")).await;
+    assert!(fixtures.requests("/all").is_empty());
+    let hook: Value = serde_json::from_str(&hooks[0].body).unwrap();
+    assert_eq!(hook["entry"]["id"], entry_id);
+    assert_eq!(hook["entry"]["title"], "Older post");
 }
