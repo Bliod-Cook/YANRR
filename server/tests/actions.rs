@@ -145,15 +145,16 @@ async fn unread_count(app: &TestApp) -> Value {
     json(app.get("/api/reads/total-count").await).await["data"]["count"].clone()
 }
 
-/// [`SINGLE_ITEM_RSS`] after two new posts.
-const THREE_ITEM_RSS: &str = r#"<rss version="2.0"><channel><title>Live</title>
+/// [`SINGLE_ITEM_RSS`] after three new posts.
+const FOUR_ITEM_RSS: &str = r#"<rss version="2.0"><channel><title>Live</title>
     <item><guid>blocked</guid><title>Blocked post</title><pubDate>Fri, 02 Oct 2026 10:00:00 GMT</pubDate></item>
     <item><guid>starred</guid><title>Starred post</title><pubDate>Fri, 02 Oct 2026 09:00:00 GMT</pubDate></item>
+    <item><guid>silenced</guid><title>Silenced post</title><pubDate>Fri, 02 Oct 2026 08:00:00 GMT</pubDate></item>
     <item><guid>post-0</guid><title>Earlier post</title><link>https://example.com/posts/0</link></item>
 </channel></rss>"#;
 
 #[tokio::test]
-async fn new_entries_are_blocked_or_starred() {
+async fn new_entries_are_blocked_starred_or_silenced() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
     fixtures.set("/live", Reply::Body(SINGLE_ITEM_RSS.into()));
     app.sign_up("alice@example.com").await;
@@ -162,16 +163,25 @@ async fn new_entries_are_blocked_or_starred() {
     let rules = json!([
         { "name": "Block", "condition": title_is("Blocked post"), "result": { "block": true, "star": true } },
         { "name": "Star", "condition": title_is("Starred post"), "result": { "star": true } },
+        { "name": "Silence", "condition": title_is("Silenced post"), "result": { "silence": true } },
     ]);
     app.put("/api/actions", json!({ "rules": rules })).await;
 
-    fixtures.set("/live", Reply::Body(THREE_ITEM_RSS.into()));
+    fixtures.set("/live", Reply::Body(FOUR_ITEM_RSS.into()));
     fetch::refresh_feed(&app.state, feed_id.parse().unwrap())
         .await
         .unwrap();
 
     let all = timeline(&app, json!({})).await;
-    assert_eq!(titles(&all), ["Earlier post", "Starred post"]);
+    assert_eq!(
+        titles(&all),
+        ["Earlier post", "Silenced post", "Starred post"]
+    );
+    let silenced = all
+        .iter()
+        .find(|item| item["entries"]["title"] == "Silenced post")
+        .unwrap();
+    assert_eq!(silenced["read"], true);
     assert_eq!(unread_count(&app).await, 2);
     let starred = timeline(&app, json!({ "isCollection": true })).await;
     assert_eq!(titles(&starred), ["Starred post"]);
@@ -181,7 +191,7 @@ async fn new_entries_are_blocked_or_starred() {
         .find(|action| action["model"] == "timeline" && action["action"] == "N")
         .unwrap();
     let counts = (&new["data"]["count"], &new["data"]["unread"]);
-    assert_eq!(counts, (&json!(1), &json!(1)));
+    assert_eq!(counts, (&json!(2), &json!(1)));
     assert_eq!(new["data"]["latestPublishedAt"], "2026-10-02T09:00:00.000Z");
     let collected = actions
         .iter()
@@ -194,13 +204,17 @@ async fn new_entries_are_blocked_or_starred() {
         json!({ "entryId": entry_id, "feedId": feed_id, "view": 1, "createdAt": created_at });
     assert_eq!(collected["data"], data);
 
-    // Following the feed again does not bring the blocked entry back.
+    // Following the feed again does not bring the blocked entry back, but the silenced one is unread again
+    // like every entry read before.
     app.delete("/api/subscriptions", json!({ "feedIdList": [feed_id] }))
         .await;
     subscribe(&app, &url, json!({})).await;
     let all = timeline(&app, json!({})).await;
-    assert_eq!(titles(&all), ["Earlier post", "Starred post"]);
-    assert_eq!(unread_count(&app).await, 2);
+    assert_eq!(
+        titles(&all),
+        ["Earlier post", "Silenced post", "Starred post"]
+    );
+    assert_eq!(unread_count(&app).await, 3);
 }
 
 #[tokio::test]

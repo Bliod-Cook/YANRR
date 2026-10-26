@@ -332,8 +332,8 @@ async fn store(db: &impl ConnectionTrait, feed_id: i64, update: Update) -> Resul
     })
 }
 
-/// Hands new entries to the feed's subscribers as their rules say: blocks them, or marks them unread and stars
-/// or forwards them. Each subscriber hears of what arrived with one `timeline N`.
+/// Hands new entries to the feed's subscribers as their rules say: blocks them, or marks them unread unless
+/// silenced and stars or forwards them. Each subscriber hears of what arrived with one `timeline N`.
 async fn fan_out(
     db: &impl ConnectionTrait,
     feed: &feed::Model,
@@ -356,7 +356,7 @@ async fn fan_out(
     let (mut actions, mut deliveries) = (Vec::new(), Vec::new());
     for subscription in &subscribers {
         let user_id = &subscription.user_id;
-        let mut arrived = Vec::new();
+        let (mut arrived, mut silenced) = (Vec::new(), 0);
         for entry in entries {
             let subject = Subject::arriving(feed, entry, subscription);
             let settings = rules.get(user_id).and_then(|rules| rules.apply(&subject));
@@ -369,11 +369,15 @@ async fn fan_out(
                 continue;
             }
             arrived.push(entry);
-            unread.push(unread::ActiveModel {
-                user_id: Set(user_id.clone()),
-                entry_id: Set(entry.id),
-                feed_id: Set(feed.id),
-            });
+            if settings.silence == Some(true) {
+                silenced += 1;
+            } else {
+                unread.push(unread::ActiveModel {
+                    user_id: Set(user_id.clone()),
+                    entry_id: Set(entry.id),
+                    feed_id: Set(feed.id),
+                });
+            }
             if settings.star == Some(true) {
                 collected.push(collection::ActiveModel {
                     user_id: Set(user_id.clone()),
@@ -407,7 +411,7 @@ async fn fan_out(
             data: json!({
                 "feedId": feed.id.to_string(),
                 "count": arrived.len(),
-                "unread": arrived.len(),
+                "unread": arrived.len() - silenced,
                 "latestPublishedAt": iso(latest),
                 "from": ["feed"],
             }),
