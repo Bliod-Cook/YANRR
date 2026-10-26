@@ -2,6 +2,7 @@
 
 use std::{
     collections::HashMap,
+    io::Write,
     sync::{
         Arc, Mutex,
         atomic::{AtomicUsize, Ordering},
@@ -20,8 +21,12 @@ use postgresql_embedded::{PostgreSQL, SettingsBuilder};
 use reqwest::{Client, Response, header};
 use sea_orm::ConnectionTrait;
 use serde_json::{Value, json};
+use tempfile::NamedTempFile;
 use tokio::net::TcpListener;
-use yanrr::{AppState, config::Config};
+use yanrr::{
+    AppState,
+    config::{Config, PushConfig},
+};
 
 pub const PASSWORD: &str = "correct-horse-battery";
 
@@ -338,6 +343,32 @@ async fn rsshub(Query(query): Query<HashMap<String, String>>) -> axum::response:
         Some("json") => JSON_FEED.into_response(),
         _ => StatusCode::NOT_FOUND.into_response(),
     }
+}
+
+/// Where [`fake_fcm`] takes messages.
+pub const FCM_SEND_PATH: &str = "/v1/projects/yanrr-test/messages:send";
+
+/// Push settings for an FCM that `fixtures` fakes, answering `/token` with an access token and taking messages at
+/// [`FCM_SEND_PATH`]. The service account file has to be kept until the app started.
+pub fn fake_fcm(fixtures: &Fixtures) -> (PushConfig, NamedTempFile) {
+    let token = json!({ "access_token": "fcm-access", "expires_in": 3599 });
+    fixtures.set("/token", Reply::Body(token.to_string()));
+    let sent = json!({ "name": "sent" });
+    fixtures.set(FCM_SEND_PATH, Reply::Body(sent.to_string()));
+    let account = json!({
+        "type": "service_account",
+        "project_id": "yanrr-test",
+        "client_email": "push@yanrr-test.iam.gserviceaccount.com",
+        "private_key": include_str!("../fixtures/push-key.pem"),
+        "token_uri": fixtures.url("/token"),
+    });
+    let mut key_file = NamedTempFile::new().unwrap();
+    key_file.write_all(account.to_string().as_bytes()).unwrap();
+    let push = PushConfig {
+        firebase_service_account: key_file.path().into(),
+        fcm_url: fixtures.url(""),
+    };
+    (push, key_file)
 }
 
 /// Creates an inbox for the signed-in user and returns its secret.

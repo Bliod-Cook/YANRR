@@ -1,12 +1,9 @@
 mod common;
 
-use std::io::Write;
-
-use common::{Fixtures, Reply, TestApp, assert_error, json};
+use common::{FCM_SEND_PATH, Fixtures, TestApp, assert_error, fake_fcm, json};
 use jsonwebtoken::{Algorithm, DecodingKey, Validation};
 use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use serde_json::{Value, json};
-use yanrr::config::PushConfig;
 
 #[tokio::test]
 async fn tokens_replace_per_channel() {
@@ -87,28 +84,7 @@ async fn tokens_replace_per_channel() {
 async fn test_push_sends_through_fcm() {
     let fixtures = Fixtures::spawn().await;
     let token_uri = fixtures.url("/token");
-    let send_path = "/v1/projects/yanrr-test/messages:send";
-    fixtures.set(
-        "/token",
-        Reply::Body(json!({ "access_token": "fcm-access", "expires_in": 3599 }).to_string()),
-    );
-    fixtures.set(
-        send_path,
-        Reply::Body(json!({ "name": "sent" }).to_string()),
-    );
-    let account = json!({
-        "type": "service_account",
-        "project_id": "yanrr-test",
-        "client_email": "push@yanrr-test.iam.gserviceaccount.com",
-        "private_key": include_str!("fixtures/push-key.pem"),
-        "token_uri": token_uri,
-    });
-    let mut key_file = tempfile::NamedTempFile::new().unwrap();
-    key_file.write_all(account.to_string().as_bytes()).unwrap();
-    let push = PushConfig {
-        firebase_service_account: key_file.path().into(),
-        fcm_url: fixtures.url(""),
-    };
+    let (push, _key_file) = fake_fcm(&fixtures);
     let app = TestApp::spawn_with(move |config| config.push = Some(push)).await;
     app.sign_up("alice@example.com").await;
     for (token, channel) in [("mac-token", "macos"), ("phone-token", "ios")] {
@@ -139,7 +115,7 @@ async fn test_push_sends_through_fcm() {
         "https://www.googleapis.com/auth/firebase.messaging"
     );
 
-    let sent = fixtures.requests(send_path);
+    let sent = fixtures.requests(FCM_SEND_PATH);
     assert_eq!(sent.len(), 1);
     assert_eq!(sent[0].authorization.as_deref(), Some("Bearer fcm-access"));
     let message: Value = serde_json::from_str(&sent[0].body).unwrap();
