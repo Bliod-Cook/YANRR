@@ -64,6 +64,8 @@ pub struct ApiError {
     pub code: ExceptionCode,
     pub message: String,
     pub data: Option<Value>,
+    /// Replaces the status of `code`.
+    status: Option<StatusCode>,
 }
 
 pub type ApiResult<T> = Result<T, ApiError>;
@@ -74,6 +76,7 @@ impl ApiError {
             code,
             message: message.into(),
             data: None,
+            status: None,
         }
     }
 
@@ -107,7 +110,8 @@ impl IntoResponse for ApiError {
         if let Some(data) = self.data {
             body["data"] = data;
         }
-        (self.code.status(), Json(body)).into_response()
+        let status = self.status.unwrap_or(self.code.status());
+        (status, Json(body)).into_response()
     }
 }
 
@@ -136,7 +140,12 @@ impl From<QueryRejection> for ApiError {
 
 impl From<JsonRejection> for ApiError {
     fn from(rejection: JsonRejection) -> Self {
-        Self::validation(rejection.body_text())
+        let status = rejection.status();
+        Self {
+            // Senders such as inbound mail services treat a 400 as a malformed request.
+            status: (status == StatusCode::PAYLOAD_TOO_LARGE).then_some(status),
+            ..Self::validation(rejection.body_text())
+        }
     }
 }
 

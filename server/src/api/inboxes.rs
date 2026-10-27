@@ -315,6 +315,9 @@ pub struct Recipient {
     address: String,
 }
 
+/// The largest email body accepted, against the default 2 MB that newsletters easily pass.
+pub const EMAIL_BODY_LIMIT: usize = 25 << 20;
+
 /// `POST /inboxes/email`: an email the inbound mail service received, sent with the configured secret. The local
 /// part of the recipient's address is the inbox handle; the domain is not checked.
 pub async fn email(

@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use axum::{
     Router,
+    extract::DefaultBodyLimit,
     routing::{get, patch, post},
 };
 use better_auth::integrations::axum::AxumIntegration;
@@ -60,7 +61,10 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
                 .put(inboxes::update)
                 .delete(inboxes::delete),
         )
-        .route("/inboxes/email", post(inboxes::email))
+        .route(
+            "/inboxes/email",
+            post(inboxes::email).layer(DefaultBodyLimit::max(inboxes::EMAIL_BODY_LIMIT)),
+        )
         .route("/inboxes/list", get(inboxes::list))
         .route("/inboxes/webhook", post(inboxes::webhook))
         .route(

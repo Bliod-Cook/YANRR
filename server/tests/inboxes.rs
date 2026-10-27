@@ -322,3 +322,57 @@ async fn inbox_entries_list_detail_delete() {
     let data = json!({ "inboxId": "news", "unread": true });
     assert_eq!(removals, [(json!("D"), json!(id), data)]);
 }
+
+#[tokio::test]
+async fn large_emails_fit_and_oversized_ones_get_413() {
+    let app =
+        TestApp::spawn_with(|config| config.inbox.email_secret = Some("mail-secret".into())).await;
+    app.sign_up("alice@example.com").await;
+    let secret = create_inbox(&app, "news").await;
+    let mail = async |body: String| {
+        app.client
+            .post(format!("{}/api/inboxes/email", app.url))
+            .bearer_auth("mail-secret")
+            .header("content-type", "application/json")
+            .body(body)
+            .send()
+            .await
+            .unwrap()
+    };
+    let email = |id: &str, html_size: usize| {
+        json!({
+            "from": { "address": "bob@example.com" },
+            "to": { "address": "news@example.com" },
+            "subject": "Big",
+            "messageId": id,
+            "date": "2026-10-03T08:00:00Z",
+            "html": "x".repeat(html_size),
+        })
+        .to_string()
+    };
+    let stored = async || {
+        inbox_entry::Entity::find()
+            .all(&app.state.db)
+            .await
+            .unwrap()
+            .len()
+    };
+
+    assert_eq!(
+        mail(email("<big@example.com>", 10 << 20)).await.status(),
+        200
+    );
+    assert_eq!(stored().await, 1);
+
+    let res = mail(email("<huge@example.com>", 26 << 20)).await;
+    assert_eq!(res.status(), 413);
+    assert_eq!(json(res).await["code"], 4);
+    assert_eq!(stored().await, 1);
+
+    assert_error(mail("{".into()).await, 400, 4).await;
+
+    // Other routes keep the default limit.
+    let hook = json!({ "guid": "w-1", "publishedAt": "2026-10-01T08:00:00Z", "content": "x".repeat(3 << 20) });
+    assert_eq!(deliver(&app, &secret, hook).await.status(), 413);
+    assert_eq!(stored().await, 1);
+}
