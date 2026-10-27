@@ -8,6 +8,8 @@ import { getUISettings } from "../atoms/settings/ui"
 import { setBadgeCountAsyncWithPermission } from "../lib/permission"
 
 const BACKGROUND_FETCH_TASK = "background-fetch"
+/** The system decides when the task actually runs, never sooner than this */
+const MINIMUM_INTERVAL_MINUTES = 15
 
 // defineTask must be called at module load time (top level), not inside an
 // async function, otherwise iOS may not find the handler when the background
@@ -31,7 +33,14 @@ TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
 })
 
 export async function initBackgroundTask() {
+  // Registering a registered task keeps its options, and older versions asked for 900 minutes
+  const registered = await TaskManager.getTaskOptionsAsync<{ minimumInterval?: number }>(
+    BACKGROUND_FETCH_TASK,
+  )
+  if (registered && registered.minimumInterval !== MINIMUM_INTERVAL_MINUTES) {
+    await BackgroundTask.unregisterTaskAsync(BACKGROUND_FETCH_TASK)
+  }
   return BackgroundTask.registerTaskAsync(BACKGROUND_FETCH_TASK, {
-    minimumInterval: 60 * 15, // 15 minutes
+    minimumInterval: MINIMUM_INTERVAL_MINUTES,
   })
 }
