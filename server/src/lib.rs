@@ -15,10 +15,11 @@ mod time;
 mod web;
 mod wire;
 
-use std::{error::Error, sync::Arc};
+use std::{error::Error, sync::Arc, time::Duration};
 
 use axum::{Router, extract::FromRef};
-use sea_orm::{Database, DatabaseConnection};
+use log::LevelFilter;
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 
 use crate::{auth::Auth, config::Config, migration::Migrator};
@@ -40,7 +41,13 @@ impl FromRef<AppState> for Arc<Auth> {
 }
 
 pub async fn init(config: Config) -> Result<AppState, Box<dyn Error + Send + Sync>> {
-    let db = Database::connect(&config.database.url).await?;
+    // Statements log at DEBUG, slow ones at WARN; a connection is pinged only after sitting idle.
+    let mut options = ConnectOptions::new(&config.database.url);
+    options
+        .sqlx_logging_level(LevelFilter::Debug)
+        .sqlx_slow_statements_logging_settings(LevelFilter::Warn, Duration::from_millis(500))
+        .test_before_acquire_if_idle_for(Duration::from_secs(30));
+    let db = Database::connect(options).await?;
     Migrator::up(&db, None).await?;
     let auth = Arc::new(auth::build(&config, db.clone()).await?);
     let push = config
