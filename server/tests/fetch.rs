@@ -1,6 +1,8 @@
 mod common;
 
-use common::{Fixtures, RSS2, Reply, SINGLE_ITEM_RSS, TWO_ITEM_RSS, TestApp, json};
+use common::{
+    Fixtures, RSS2, Reply, SINGLE_ITEM_RSS, TWO_ITEM_RSS, TestApp, json, json_feed, subscribe,
+};
 use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, QueryOrder};
 use serde_json::{Value, json};
 use yanrr::{
@@ -108,6 +110,43 @@ async fn fetch_error_is_recorded_then_cleared() {
     let recovered = reload(&app, feed.id).await;
     assert_eq!(recovered.error_message, None);
     assert_eq!(recovered.error_at, None);
+
+    // Failing to store is recorded too, or the scheduler would claim and download the feed again soon.
+    fixtures.set("/live", Reply::Body(UNSTORABLE.into()));
+    let result = fetch::refresh_feed(&app.state, feed.id).await;
+    assert!(matches!(result, Err(FetchError::Db(_))));
+    let unstored = reload(&app, feed.id).await;
+    assert_eq!(
+        unstored.error_message.as_deref(),
+        Some("Storing the feed failed")
+    );
+    assert!(unstored.checked_at > recovered.checked_at);
+    assert!(unstored.error_at.is_some());
+}
+
+/// A feed PostgreSQL cannot store: text cannot hold NUL.
+const UNSTORABLE: &str = r#"{"version": "https://jsonfeed.org/version/1.1", "title": "New",
+    "items": [{"id": "bad\u0000guid", "content_text": "text"}]}"#;
+
+#[tokio::test]
+async fn huge_feeds_are_stored_and_refreshes_add_only_new_entries() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    // More entries than one statement can bind parameters for.
+    let items: Vec<_> = (0..4000)
+        .map(|i| json!({ "id": format!("post-{i}"), "content_text": "text" }))
+        .collect();
+    fixtures.set("/huge", Reply::Body(json_feed(json!(items))));
+    let feed_id: i64 = subscribe(&app, &fixtures.url("/huge"), json!({}))
+        .await
+        .parse()
+        .unwrap();
+    assert_eq!(entries(&app, feed_id).await.len(), 4000);
+
+    let logged = app.actions().await.len();
+    fetch::refresh_feed(&app.state, feed_id).await.unwrap();
+    assert_eq!(entries(&app, feed_id).await.len(), 4000);
+    assert_eq!(app.actions().await.len(), logged);
 }
 
 #[tokio::test]

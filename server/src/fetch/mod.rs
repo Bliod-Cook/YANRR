@@ -5,13 +5,15 @@ pub mod parse;
 pub mod readability;
 pub mod scheduler;
 
+use std::collections::HashSet;
+
 use chrono::{DateTime, SubsecRound, Utc};
 use reqwest::Url;
 use sea_orm::{
     ActiveModelTrait,
     ActiveValue::{Set, Unchanged},
-    ColumnTrait, ConnectionTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
-    TransactionTrait,
+    ColumnTrait, ConnectionTrait, DbBackend, DbErr, EntityTrait, PaginatorTrait, QueryFilter,
+    Statement, TransactionTrait,
     prelude::Json,
     sea_query::OnConflict,
 };
@@ -36,6 +38,9 @@ use crate::{
 };
 
 pub use self::http::client as http_client;
+
+/// Rows per insert: 17 columns stay far below the 65535 parameters a statement can bind.
+const INSERT_CHUNK: usize = 500;
 
 #[derive(Debug)]
 pub enum FetchError {
@@ -149,12 +154,20 @@ pub async fn refresh_feed(state: &AppState, feed_id: i64) -> Result<(), FetchErr
         .await?
         .ok_or_else(|| DbErr::RecordNotFound(format!("feed {feed_id}")))?;
     let result = refresh(state, &feed).await;
-    if let Err(FetchError::Fetch(message) | FetchError::Parse(message)) = &result {
+    let message = match &result {
+        Ok(()) => None,
+        Err(FetchError::Fetch(message) | FetchError::Parse(message)) => Some(message.clone()),
+        Err(FetchError::Db(err)) => {
+            tracing::error!(feed = feed.id, "storing failed: {err}");
+            Some("Storing the feed failed".into())
+        }
+    };
+    if let Some(message) = message {
         let now = Utc::now();
         feed::ActiveModel {
             id: Unchanged(feed.id),
             checked_at: Set(now),
-            error_message: Set(Some(message.clone())),
+            error_message: Set(Some(message)),
             error_at: Set(feed.error_at.or(Some(now))),
             ..Default::default()
         }
@@ -309,21 +322,39 @@ async fn store(db: &impl ConnectionTrait, feed_id: i64, update: Update) -> Resul
     }
     .update(db)
     .await?;
+    // Entries are never updated once stored, so a changing feed does not churn the timeline; only new ones are sent.
+    let guids: Vec<_> = parsed
+        .entries
+        .iter()
+        .map(|entry| entry.guid.clone())
+        .collect();
+    let sql = "SELECT guid FROM entries WHERE feed_id = $1 AND guid = ANY($2)";
+    let statement =
+        Statement::from_sql_and_values(DbBackend::Postgres, sql, [feed_id.into(), guids.into()]);
+    let mut known = HashSet::new();
+    for row in db.query_all_raw(statement).await? {
+        known.insert(row.try_get::<String>("", "guid")?);
+    }
     // Clients send timestamps back as cursors with millisecond precision, so that is all that is stored.
     let now = Utc::now().trunc_subsecs(3);
-    let entries = parsed
+    let entries: Vec<_> = parsed
         .entries
         .into_iter()
-        .map(|entry| entry_model(feed_id, entry, now));
-    // Entries are never updated once stored, so a changing feed does not churn the timeline.
-    let new = entry::Entity::insert_many(entries)
-        .on_conflict(
-            OnConflict::columns([entry::Column::FeedId, entry::Column::Guid])
-                .do_nothing()
-                .to_owned(),
-        )
-        .exec_with_returning(db)
-        .await?;
+        .filter(|entry| known.insert(entry.guid.clone()))
+        .map(|entry| entry_model(feed_id, entry, now))
+        .collect();
+    let mut new = Vec::new();
+    for chunk in entries.chunks(INSERT_CHUNK) {
+        let inserted = entry::Entity::insert_many(chunk.to_vec())
+            .on_conflict(
+                OnConflict::columns([entry::Column::FeedId, entry::Column::Guid])
+                    .do_nothing()
+                    .to_owned(),
+            )
+            .exec_with_returning(db)
+            .await?;
+        new.extend(inserted);
+    }
     let (actions, deliveries) = fan_out(db, &feed, &new).await?;
     Ok(Stored {
         feed,
