@@ -68,7 +68,7 @@ export const FeedScreen: NavigationControllerView<{
 }
 
 function FeedScreenEntryList() {
-  const { entriesIds } = useEntries()
+  const entries = useEntries()
   const view = useSelectedView() ?? FeedViewType.Articles
-  return <EntryListSelector viewId={view} entryIds={entriesIds} />
+  return <EntryListSelector viewId={view} entries={entries} />
 }

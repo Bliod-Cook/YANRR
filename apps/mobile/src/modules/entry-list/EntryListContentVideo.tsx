@@ -1,6 +1,7 @@
 import type { FeedViewType } from "@follow/constants"
 import { useTypeScriptHappyCallback } from "@follow/hooks"
 import { shouldRenderScrollMarkReadEndSpacer } from "@follow/shared/scroll-mark-read"
+import type { UseEntriesReturn } from "@follow/store/entry/types"
 import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
 import type { FlashListProps, FlashListRef } from "@shopify/flash-list"
 import type { ElementRef } from "react"
@@ -11,7 +12,6 @@ import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/ge
 import { useBottomTabBarHeight } from "@/src/components/layouts/tabbar/hooks"
 import { Skeleton, SkeletonPulse } from "@/src/components/ui/skeleton/Skeleton"
 import { useIsTabletLayout } from "@/src/lib/responsive"
-import { useEntries } from "@/src/modules/screen/atoms"
 import { useHeaderHeight } from "@/src/modules/screen/hooks/useHeaderHeight"
 
 import { TimelineSelectorMasonryList } from "../screen/TimelineSelectorList"
@@ -28,14 +28,14 @@ const VIDEO_SKELETON_KEYS = ["video-skeleton-1", "video-skeleton-2", "video-skel
 
 export const EntryListContentVideo = ({
   ref: forwardRef,
-  entryIds,
+  entries,
   active,
   view,
   onResetScrollSignalConsumed,
   resetScrollSignal,
   suspendMarkRead,
   ...rest
-}: { entryIds: string[] | null; active?: boolean; view: FeedViewType } & Omit<
+}: { entries: UseEntriesReturn; active?: boolean; view: FeedViewType } & Omit<
   FlashListProps<string>,
   "data" | "renderItem"
 > & {
@@ -44,6 +44,7 @@ export const EntryListContentVideo = ({
     resetScrollSignal?: number
     suspendMarkRead?: boolean
   }) => {
+  const entryIds = entries.entriesIds
   const ref = useRef<FlashListRef<any>>(null)
   useImperativeHandle(forwardRef, () => ref.current!)
   const isTablet = useIsTabletLayout()
@@ -57,10 +58,7 @@ export const EntryListContentVideo = ({
     hasNextPage,
     isReady,
     fetchedTime,
-  } = useEntries({
-    viewId: view,
-    active,
-  })
+  } = entries
   const { onViewableItemsChanged, onScroll, viewableItems } = useOnViewableItemsChanged({
     // Loading the next page only appends entries, so the ones scrolled past meanwhile still count
     disabled: active === false || (isFetching && !isFetchingNextPage) || suspendMarkRead,

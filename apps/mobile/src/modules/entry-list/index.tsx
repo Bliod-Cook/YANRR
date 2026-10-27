@@ -36,11 +36,11 @@ export function EntryList() {
 }
 
 const ViewEntryList = memo(({ viewId, active }: { viewId: FeedViewType; active: boolean }) => {
-  const { entriesIds } = useEntries({ viewId, active })
-  return <EntryListSelector entryIds={entriesIds} viewId={viewId} active={active} />
+  const entries = useEntries({ viewId, active })
+  return <EntryListSelector entries={entries} viewId={viewId} active={active} />
 })
 
 const NormalEntryList = memo(({ viewId }: { viewId: FeedViewType }) => {
-  const { entriesIds } = useEntries()
-  return <EntryListSelector entryIds={entriesIds} viewId={viewId} />
+  const entries = useEntries()
+  return <EntryListSelector entries={entries} viewId={viewId} />
 })

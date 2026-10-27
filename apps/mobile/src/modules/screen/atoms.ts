@@ -323,10 +323,6 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
 
   const [page, setPage] = useState(0)
   const pageSize = 30
-  const totalPage = useMemo(
-    () => (allEntries ? Math.ceil(allEntries.length / pageSize) : 0),
-    [allEntries],
-  )
 
   const entries = useMemo(() => {
     return allEntries?.slice(0, (page + 1) * pageSize) || []
@@ -347,9 +343,11 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
     [page],
   )
 
+  // A category is a new list on every render, so its ids stand for it
+  const feedIdsKey = feedIdList?.join(",")
   useEffect(() => {
     setPage(0)
-  }, [view, feedId, sortOrder, unreadOnly])
+  }, [view, feedId, feedIdsKey, inboxId, isCollection, sortOrder, unreadOnly])
 
   return {
     entriesIds: entries,
@@ -361,7 +359,7 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
     isReady: true,
     isFetchingNextPage: false,
     isFetching: false,
-    hasNextPage: page < totalPage,
+    hasNextPage: hasNext,
     error: null,
   }
 }

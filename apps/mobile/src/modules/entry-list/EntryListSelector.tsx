@@ -1,4 +1,5 @@
 import { FeedViewType } from "@follow/constants"
+import type { UseEntriesReturn } from "@follow/store/entry/types"
 import { useWhoami } from "@follow/store/user/hooks"
 import type { FlashListRef } from "@shopify/flash-list"
 import type { RefObject } from "react"
@@ -13,7 +14,7 @@ import { useNavigation } from "@/src/lib/navigation/hooks"
 import { EntryListContentPicture } from "@/src/modules/entry-list/EntryListContentPicture"
 import { EntryDetailScreen } from "@/src/screens/(stack)/entries/[entryId]/EntryDetailScreen"
 
-import { useEntries, useEntryListContext, useIsTimelineEntrySource } from "../screen/atoms"
+import { useEntryListContext, useIsTimelineEntrySource } from "../screen/atoms"
 import { shouldSuspendMarkReadForScrollReset } from "../screen/scroll-reset"
 import { EntryListContentArticle } from "./EntryListContentArticle"
 import { EntryListContentSocial } from "./EntryListContentSocial"
@@ -31,12 +32,13 @@ const NoLoginGuard = ({ children }: { children: React.ReactNode }) => {
 }
 
 type EntryListSelectorProps = {
-  entryIds: string[] | null
+  entries: UseEntriesReturn
   viewId: FeedViewType
   active?: boolean
 }
 
-function EntryListSelectorImpl({ entryIds, viewId, active = true }: EntryListSelectorProps) {
+function EntryListSelectorImpl({ entries, viewId, active = true }: EntryListSelectorProps) {
+  const { entriesIds: entryIds, isReady } = entries
   const ref = useRegisterNavigationScrollView<FlashListRef<any>>(active)
   const [resetScrollSignal, setResetScrollSignal] = useState<number>()
   const [appliedResetScrollSignal, setAppliedResetScrollSignal] = useState<number>()
@@ -84,7 +86,6 @@ function EntryListSelectorImpl({ entryIds, viewId, active = true }: EntryListSel
     requestScrollToTop()
   }, [requestScrollToTop, sortOrder, unreadOnly])
 
-  const { isReady } = useEntries({ viewId, active })
   const hasResetAfterReadyRef = useRef(false)
   useEffect(() => {
     if (!active) return
@@ -104,7 +105,7 @@ function EntryListSelectorImpl({ entryIds, viewId, active = true }: EntryListSel
   return (
     <ContentComponent
       ref={ref}
-      entryIds={entryIds}
+      entries={entries}
       active={active}
       view={viewId}
       onResetScrollSignalConsumed={handleResetScrollSignalConsumed}
@@ -115,10 +116,10 @@ function EntryListSelectorImpl({ entryIds, viewId, active = true }: EntryListSel
 }
 
 export const EntryListSelector = withErrorBoundary(
-  ({ entryIds, viewId, active }: EntryListSelectorProps) => {
+  ({ entries, viewId, active }: EntryListSelectorProps) => {
     return (
       <NoLoginGuard>
-        <EntryListSelectorImpl entryIds={entryIds} viewId={viewId} active={active} />
+        <EntryListSelectorImpl entries={entries} viewId={viewId} active={active} />
       </NoLoginGuard>
     )
   },

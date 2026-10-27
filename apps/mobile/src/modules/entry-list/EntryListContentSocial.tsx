@@ -1,5 +1,6 @@
 import type { FeedViewType } from "@follow/constants"
 import { shouldRenderScrollMarkReadEndSpacer } from "@follow/shared/scroll-mark-read"
+import type { UseEntriesReturn } from "@follow/store/entry/types"
 import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
 import type { FlashListRef, ListRenderItemInfo } from "@shopify/flash-list"
 import type { ElementRef } from "react"
@@ -10,7 +11,6 @@ import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/ge
 import { Skeleton, SkeletonPulse } from "@/src/components/ui/skeleton/Skeleton"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
 
-import { useEntries } from "../screen/atoms"
 import { getResetScrollSignalForContent } from "../screen/scroll-reset"
 import { TimelineSelectorList } from "../screen/TimelineSelectorList"
 import { EntryListEndScrollSpacer } from "./EntryListEndScrollSpacer"
@@ -39,18 +39,18 @@ const ReadableItemSeparator = () => {
 
 export const EntryListContentSocial = ({
   ref: forwardRef,
-  entryIds,
+  entries,
   active,
-  view,
   onResetScrollSignalConsumed,
   resetScrollSignal,
   suspendMarkRead,
-}: { entryIds: string[] | null; active?: boolean; view: FeedViewType } & {
+}: { entries: UseEntriesReturn; active?: boolean; view: FeedViewType } & {
   ref?: React.Ref<ElementRef<typeof TimelineSelectorList> | null>
   onResetScrollSignalConsumed?: (signal: number) => void
   resetScrollSignal?: number
   suspendMarkRead?: boolean
 }) => {
+  const entryIds = entries.entriesIds
   const {
     error: entriesError,
     fetchNextPage,
@@ -61,10 +61,7 @@ export const EntryListContentSocial = ({
     hasNextPage,
     isReady,
     fetchedTime,
-  } = useEntries({
-    viewId: view,
-    active,
-  })
+  } = entries
   const extraData: EntryExtraData = useMemo(() => ({ entryIds }), [entryIds])
   const readableItemStyle = useReadableContainerStyle(READABLE_MAX_WIDTH, READABLE_GUTTER)
 
