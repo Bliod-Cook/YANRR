@@ -12,6 +12,7 @@ import WebView from "react-native-webview"
 import { openLink } from "@/src/lib/native"
 
 import { useLightboxControls } from "../../ui/lightbox/lightboxState"
+import { createBridgeQueue } from "./bridge-queue"
 import { htmlUrl } from "./constants"
 import { atEnd, atStart } from "./injected-js"
 
@@ -30,6 +31,22 @@ export const injectJavaScript = (js: string) => {
     return
   }
   return webview.injectJavaScript(js)
+}
+
+const bridgeQueue = createBridgeQueue((type, payload) => {
+  const payloadExpr = payload != null ? `JSON.parse(${JSON.stringify(payload)})` : "null"
+  injectJavaScript(
+    `;(function(){try{if(window.__FO_BRIDGE__&&typeof window.__FO_BRIDGE__.dispatch==='function'){window.__FO_BRIDGE__.dispatch(${JSON.stringify(
+      type,
+    )}, ${payloadExpr});}}catch(e){}})();`,
+  )
+})
+
+export const dispatchToPage = bridgeQueue.dispatch
+
+// A new or reloaded page installs its bridge again
+const onLoadStart = () => {
+  bridgeQueue.reset()
 }
 
 const onLoadEnd = () => {
@@ -73,12 +90,17 @@ export const NativeWebView: React.ComponentType<
         }
       }}
       onNavigationStateChange={onNavigationStateChange}
+      onLoadStart={onLoadStart}
       onLoadEnd={onLoadEnd}
       onMessage={useTypeScriptHappyCallback(
         (e) => {
           const message = e.nativeEvent.data
           const parsed = JSON.parse(message)
           switch (parsed.type) {
+            case "bridgeReady": {
+              bridgeQueue.ready()
+              return
+            }
             case "setContentHeight": {
               onContentHeightChange?.({
                 nativeEvent: { height: parsed.payload },

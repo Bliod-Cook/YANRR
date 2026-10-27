@@ -7,6 +7,8 @@ interface Bridge {
   setContentHeight: (height: number) => void
   previewImage: (data: { imageUrls: string[]; index: number }) => void
   seekAudio: (time: number) => void
+  /** Android only: tells the app the page takes messages now */
+  bridgeReady?: () => void
 }
 
 declare global {

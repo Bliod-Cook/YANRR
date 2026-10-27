@@ -4,6 +4,13 @@ import { beforeEach, describe, expect, test, vi } from "vitest"
 import type { EntryModel } from "../types"
 import { App } from "./App"
 
+// The app injects the bridge before the page loads
+const readySignals = vi.hoisted(() => {
+  const signals = { count: 0 }
+  vi.stubGlobal("bridge", { measure: vi.fn(), bridgeReady: () => signals.count++ })
+  return signals
+})
+
 const coverImageUrl = "https://example.com/images/cover.jpg"
 
 const renderEntry = (entry: EntryModel) => {
@@ -175,5 +182,11 @@ describe("embedded YouTube videos", () => {
     })
 
     expect(article?.querySelectorAll("iframe")).toHaveLength(2)
+  })
+})
+
+describe("bridge", () => {
+  test("tells the app once it takes messages", () => {
+    expect(readySignals.count).toBe(1)
   })
 })

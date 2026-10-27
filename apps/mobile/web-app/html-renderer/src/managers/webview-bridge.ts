@@ -148,6 +148,7 @@ export class WebViewBridgeManager {
           }
         },
       }
+      bridge.bridgeReady?.()
     }
   }
 }
