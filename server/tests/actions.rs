@@ -205,7 +205,7 @@ async fn new_entries_are_blocked_starred_or_silenced() {
     assert_eq!(collected["data"], data);
 
     // Following the feed again does not bring the blocked entry back, but the silenced one is unread again
-    // like every entry read before.
+    // like every entry read before among the latest 100.
     app.delete("/api/subscriptions", json!({ "feedIdList": [feed_id] }))
         .await;
     subscribe(&app, &url, json!({})).await;

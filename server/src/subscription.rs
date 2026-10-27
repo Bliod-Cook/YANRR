@@ -19,6 +19,9 @@ use crate::{
 /// How far [`resolve`] follows `migrate_to`; longer chains only come from redirect loops.
 const MAX_MIGRATIONS: usize = 5;
 
+/// How many of a feed's latest entries a new subscription marks unread; older ones count as read.
+const UNREAD_ON_FOLLOW: u64 = 100;
+
 /// What a new subscription is created with.
 pub struct Form {
     pub view: i16,
@@ -85,8 +88,8 @@ pub struct Subscribed {
     pub created: bool,
 }
 
-/// Subscribes `user_id` to `feed`, taken from [`resolve`] in the same transaction, and marks its stored entries
-/// unread.
+/// Subscribes `user_id` to `feed`, taken from [`resolve`] in the same transaction, and marks its latest stored
+/// entries unread.
 ///
 /// Subscribing again changes nothing but still logs the subscription: the client treats its own copy as
 /// confirmed up to the returned id and skips older rows of the feed, which could hide another device's change.
@@ -112,9 +115,12 @@ pub async fn subscribe(
         .await?
         == 1;
     if created {
-        let sql = "INSERT INTO unreads (user_id, entry_id, feed_id)
+        let sql = format!(
+            "INSERT INTO unreads (user_id, entry_id, feed_id)
             SELECT $1, id, feed_id FROM entries WHERE feed_id = $2
-                AND id NOT IN (SELECT entry_id FROM blocked_entries WHERE user_id = $1)";
+                AND id NOT IN (SELECT entry_id FROM blocked_entries WHERE user_id = $1)
+            ORDER BY published_at DESC, id DESC LIMIT {UNREAD_ON_FOLLOW}"
+        );
         txn.execute_raw(Statement::from_sql_and_values(
             DbBackend::Postgres,
             sql,

@@ -1,9 +1,9 @@
 mod common;
 
-use common::{Fixtures, TestApp, assert_error, json};
-use sea_orm::{EntityTrait, PaginatorTrait};
+use common::{Fixtures, Reply, TestApp, assert_error, json, json_feed};
+use sea_orm::{ConnectionTrait, DbBackend, EntityTrait, PaginatorTrait, Statement};
 use serde_json::{Value, json};
-use yanrr::entity::unread;
+use yanrr::{entity::unread, fetch};
 
 #[tokio::test]
 async fn subscription_lifecycle() {
@@ -143,4 +143,54 @@ async fn categories_rename_and_delete() {
             (&d, &social, &Value::Null),
         ]
     );
+}
+
+#[tokio::test]
+async fn following_marks_only_the_latest_100_unread() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    // Post 0 is the newest, one minute apart.
+    let post = |i: usize| {
+        let date = format!("2026-10-01T{:02}:{:02}:00Z", 10 - i / 60, 59 - i % 60);
+        json!({ "id": format!("post-{i}"), "title": format!("Post {i}"), "date_published": date })
+    };
+    let posts: Vec<_> = (0..150).map(post).collect();
+    fixtures.set("/big", Reply::Body(json_feed(json!(posts))));
+    let url = fixtures.url("/big");
+    let latest: Vec<_> = (0..100).map(|i| format!("post-{i}")).collect();
+
+    let created = json(app.post("/api/subscriptions", json!({ "url": url })).await).await;
+    let feed_id = created["feed"]["id"].as_str().unwrap().to_string();
+    assert_eq!(created["unread"][&feed_id], 100);
+    assert_eq!(unread_guids(&app).await, latest);
+
+    // A blocked entry stays read and leaves its place to the next one.
+    let rule = json!([[{ "field": "entry_title", "operator": "eq", "value": "Blocked" }]]);
+    let rules = json!([{ "name": "Block", "condition": rule, "result": { "block": true } }]);
+    app.put("/api/actions", json!({ "rules": rules })).await;
+    let blocked =
+        json!({ "id": "blocked", "title": "Blocked", "date_published": "2026-10-02T00:00:00Z" });
+    let mut posts = posts;
+    posts.insert(0, blocked);
+    fixtures.set("/big", Reply::Body(json_feed(json!(posts))));
+    fetch::refresh_feed(&app.state, feed_id.parse().unwrap())
+        .await
+        .unwrap();
+
+    app.delete("/api/subscriptions", json!({ "feedIdList": [feed_id] }))
+        .await;
+    let again = json(app.post("/api/subscriptions", json!({ "url": url })).await).await;
+    assert_eq!(again["unread"][&feed_id], 100);
+    assert_eq!(unread_guids(&app).await, latest);
+}
+
+/// Guids of the unread entries, newest first.
+async fn unread_guids(app: &TestApp) -> Vec<String> {
+    let sql = "SELECT e.guid FROM unreads u JOIN entries e ON e.id = u.entry_id
+        ORDER BY e.published_at DESC";
+    let statement = Statement::from_string(DbBackend::Postgres, sql);
+    let rows = app.state.db.query_all_raw(statement).await.unwrap();
+    rows.iter()
+        .map(|row| row.try_get("", "guid").unwrap())
+        .collect()
 }
