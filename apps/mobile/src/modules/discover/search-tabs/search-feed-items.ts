@@ -1,7 +1,9 @@
+import { normalizeFeedAddress } from "@follow/utils/feed-address"
+
 import type { SearchFeedCardItem } from "./SearchFeedCard"
 
 /** Discovery takes addresses only, such as feed and site URLs and RSSHub routes */
-export const isDirectFeedInput = (value: string) => value.includes("://")
+export const isDirectFeedInput = (value: string) => normalizeFeedAddress(value) !== null
 
 export const resolveSearchFeedItems = <T extends SearchFeedCardItem>(
   discoveredItems: readonly T[],
@@ -11,7 +13,8 @@ export const resolveSearchFeedItems = <T extends SearchFeedCardItem>(
     return discoveredItems
   }
 
-  if (!searchValue || !isDirectFeedInput(searchValue)) {
+  const url = normalizeFeedAddress(searchValue)
+  if (!url) {
     return []
   }
 
@@ -19,7 +22,7 @@ export const resolveSearchFeedItems = <T extends SearchFeedCardItem>(
     {
       feed: {
         title: searchValue,
-        url: searchValue,
+        url,
       },
     },
   ]

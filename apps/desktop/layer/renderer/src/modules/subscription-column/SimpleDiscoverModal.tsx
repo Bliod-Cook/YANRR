@@ -9,11 +9,12 @@ import {
 } from "@follow/components/ui/form/index.jsx"
 import { Input } from "@follow/components/ui/input/index.js"
 import { SegmentGroup, SegmentItem } from "@follow/components/ui/segment/index.js"
+import { normalizeFeedAddress } from "@follow/utils/feed-address"
 import type { DiscoveryItem } from "@follow-app/client-sdk"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
+import i18next from "i18next"
 import { atom, useAtomValue, useStore } from "jotai"
-import type { ChangeEvent } from "react"
 import { useCallback, useState } from "react"
 import { useForm } from "react-hook-form"
 import { Trans, useTranslation } from "react-i18next"
@@ -28,21 +29,27 @@ import { DiscoverFeedCard } from "../discover/DiscoverFeedCard"
 import { FeedForm } from "../discover/FeedForm"
 import { isDiscoveredFeedItself } from "../discover/utils"
 
-const formSchema = z.object({
-  keyword: z.string().min(1),
-  type: z.enum(["rss", "rsshub"]),
-})
+const formSchema = z
+  .object({
+    keyword: z.string(),
+    type: z.enum(["rss", "rsshub"]),
+  })
+  // A feed or site address may leave out `https://`; an RSSHub route names its scheme
+  .refine(
+    ({ keyword, type }) =>
+      normalizeFeedAddress(keyword) !== null &&
+      (type === "rss" || keyword.trim().startsWith("rsshub://")),
+    { path: ["keyword"], error: () => i18next.t("validation.invalid_url", { ns: "common" }) },
+  )
 
 const typeConfig = {
   rss: {
     label: "discover.rss_url",
-    placeholder: "https://example.com/feed.xml",
-    prefix: ["https://", "http://"],
+    placeholder: "example.com/feed.xml",
   },
   rsshub: {
     label: "discover.rss_hub_route",
     placeholder: "rsshub://github/issue/follow/follow",
-    prefix: ["rsshub://"],
   },
 } as const
 
@@ -54,7 +61,7 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      keyword: typeConfig.rss.prefix[0],
+      keyword: "",
       type: "rss",
     },
   })
@@ -81,7 +88,7 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
 
   const mutation = useMutation({
     mutationFn: async ({ keyword, type }: z.infer<typeof formSchema>) => {
-      const url = keyword.trim()
+      const url = normalizeFeedAddress(keyword)!
       if (type === "rsshub") {
         presentFeedForm(url)
         return
@@ -98,31 +105,9 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
     onError: createErrorToaster(t("discover.search_failed")),
   })
 
-  const handleKeywordChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const trimmedKeyword = event.target.value.trimStart()
-      const { prefix } = currentConfig
-      const isValidPrefix = prefix.find((p) => trimmedKeyword.startsWith(p))
-      if (!isValidPrefix) {
-        form.setValue("keyword", prefix[0]!)
-        return
-      }
-
-      if (trimmedKeyword.startsWith(`${isValidPrefix}${isValidPrefix}`)) {
-        form.setValue("keyword", trimmedKeyword.slice(isValidPrefix.length))
-        return
-      }
-
-      form.setValue("keyword", trimmedKeyword)
-    },
-    [form, currentConfig],
-  )
-
   const handleTypeChange = useCallback(
     (value: string) => {
-      const type = value as keyof typeof typeConfig
-      form.setValue("type", type)
-      form.setValue("keyword", typeConfig[type].prefix[0])
+      form.setValue("type", value as keyof typeof typeConfig)
     },
     [form],
   )
@@ -175,11 +160,7 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
               <FormItem>
                 <FormLabel>{t(currentConfig.label)}</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder={currentConfig.placeholder}
-                    {...field}
-                    onChange={handleKeywordChange}
-                  />
+                  <Input placeholder={currentConfig.placeholder} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

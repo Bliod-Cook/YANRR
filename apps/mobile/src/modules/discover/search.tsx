@@ -173,7 +173,7 @@ const SearchInput = () => {
             <Search2CuteReIcon color={placeholderTextColor} height={18} width={18} />
             {!searchValue && !tempSearchValue && (
               <Text className="ml-2 text-secondary-label" style={styles.searchPlaceholderText}>
-                {t("words.search")}
+                {t("discover.search.placeholder")}
               </Text>
             )}
           </Animated.View>
@@ -217,7 +217,7 @@ const SearchInput = () => {
             className="ml-1 text-secondary-label"
             style={styles.searchPlaceholderText}
           >
-            {t("words.search")}
+            {t("discover.search.placeholder")}
           </Text>
         </Animated.View>
       </View>

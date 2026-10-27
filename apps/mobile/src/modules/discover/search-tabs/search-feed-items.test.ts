@@ -37,3 +37,11 @@ describe("resolveSearchFeedItems", () => {
     )
   })
 })
+
+describe("resolveSearchFeedItems with an address without a scheme", () => {
+  test("adds the feed at the address with https", () => {
+    expect(resolveSearchFeedItems([], "example.com/feed.xml")).toEqual([
+      { feed: { title: "example.com/feed.xml", url: "https://example.com/feed.xml" } },
+    ])
+  })
+})

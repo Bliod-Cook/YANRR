@@ -8,6 +8,7 @@ import {
   FormMessage,
 } from "@follow/components/ui/form/index.jsx"
 import { Input } from "@follow/components/ui/input/index.js"
+import { normalizeFeedAddress } from "@follow/utils/feed-address"
 import { cn } from "@follow/utils/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
@@ -43,11 +44,11 @@ const rsshubRouteSchema = z.string().url().startsWith("rsshub://")
 const discoverSchema = z.object({
   url: z
     .string()
-    .trim()
     // Messages are resolved at validation time so they follow the current language
-    .refine(isFeedLikeUrl, {
+    .refine((url) => isFeedLikeUrl(normalizeFeedAddress(url) ?? ""), {
       error: () => i18next.t("validation.invalid_url", { ns: "common" }),
     })
+    .transform((url) => normalizeFeedAddress(url)!)
     .refine((url) => !isRSSHubRoute(url) || rsshubRouteSchema.safeParse(url).success, {
       error: () => i18next.t("discover.invalid_rsshub_route"),
     }),
