@@ -1,7 +1,7 @@
 import { FollowAPIError } from "@follow-app/client-sdk"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
-import { aiEnabledContext, apiContext } from "../../context"
+import { apiContext } from "../../context"
 import type { FollowAPI } from "../../types"
 import { useEntryStore } from "../entry/store"
 import type { EntryModel } from "../entry/types"
@@ -46,7 +46,6 @@ describe("summarySyncService", () => {
       data: {},
       generatingStatus: {},
     })
-    aiEnabledContext.provide(() => true)
     apiContext.provide({
       ai: {
         summary: summaryApiMock,
@@ -96,23 +95,5 @@ describe("summarySyncService", () => {
         getGenerateSummaryStatusId(entryId, actionLanguage, target)
       ],
     ).toBe(SummaryGeneratingStatus.Error)
-  })
-})
-
-describe("summarySyncService while the server has AI off", () => {
-  test("asks for nothing", async () => {
-    const summaryApiMock = vi.fn()
-    useEntryStore.setState({ data: { "entry-1": createEntry("entry-1") } })
-    apiContext.provide({ ai: { summary: summaryApiMock } } as unknown as FollowAPI)
-    aiEnabledContext.provide(() => false)
-
-    await expect(
-      summarySyncService.generateSummary({
-        entryId: "entry-1",
-        target: "content",
-        actionLanguage: "en",
-      }),
-    ).resolves.toBeNull()
-    expect(summaryApiMock).not.toHaveBeenCalled()
   })
 })

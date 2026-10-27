@@ -3,7 +3,7 @@ import { summaryService } from "@follow/database/services/summary"
 import type { SupportedActionLanguage } from "@follow/shared"
 import { toApiSupportedActionLanguage } from "@follow/shared"
 
-import { api, isAIEnabled } from "../../context"
+import { api } from "../../context"
 import type { Hydratable, Resetable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
 import { getEntry } from "../entry/getter"
@@ -111,8 +111,6 @@ class SummarySyncService {
     target: "content" | "readabilityContent"
     actionLanguage: SupportedActionLanguage
   }): Promise<string | null> {
-    // Rules and saved settings can ask for a summary the server cannot make.
-    if (!isAIEnabled()) return null
     const entry = getEntry(entryId)
     if (!entry) return null
 

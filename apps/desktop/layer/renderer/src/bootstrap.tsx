@@ -3,7 +3,6 @@ import "./lib/web-push-registration"
 
 import { IN_ELECTRON, WEB_BUILD } from "@follow/shared/constants"
 import {
-  aiEnabledContext,
   apiContext,
   authClientContext,
   queryClientContext,
@@ -17,7 +16,6 @@ import { RouterProvider } from "react-router/dom"
 import { authClient } from "~/lib/auth"
 
 import { setAppIsReady } from "./atoms/app"
-import { getFeature } from "./hooks/biz/useFeature"
 import { initializeApp } from "./initialize"
 import { registerAppGlobalShortcuts } from "./initialize/global-shortcuts"
 import { followApi } from "./lib/api-client"
@@ -28,7 +26,6 @@ authClientContext.provide(authClient)
 queryClientContext.provide(queryClient)
 apiContext.provide(followApi)
 syncApiContext.provide(followApi.sync)
-aiEnabledContext.provide(() => getFeature("ai"))
 
 initializeApp().finally(() => {
   import("./push-notification").then(({ registerWebPushNotifications }) => {
