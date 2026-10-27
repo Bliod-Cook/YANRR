@@ -1,6 +1,7 @@
 import { useEntry } from "@follow/store/entry/hooks"
 import { useQuery } from "@tanstack/react-query"
 
+import { useFeature } from "~/hooks/biz/useFeature"
 import { followClient } from "~/lib/api-client"
 
 export const useTranscription = (entryId: string) => {
@@ -10,19 +11,21 @@ export const useTranscription = (entryId: string) => {
       subtitleUrl: state.attachments?.find((att) => att.mime_type === "text/srt")?.url,
     }
   })
+  // Subtitles the feed attached are read as they are; transcribing audio takes the server's AI.
+  const aiEnabled = useFeature("ai")
+  const subtitleUrl = entry?.subtitleUrl
+  const audioUrl = aiEnabled ? entry?.audioUrl : undefined
 
   return useQuery({
     queryKey: ["transcription", entryId],
     queryFn: async () => {
-      if (entry?.subtitleUrl) {
-        return (await fetch(entry.subtitleUrl)).text()
+      if (subtitleUrl) {
+        return (await fetch(subtitleUrl)).text()
       }
 
-      if (entry?.audioUrl) {
-        const res = await followClient.api.entries.transcription({ url: entry.audioUrl })
-        return res.data?.srt || ""
-      }
-      return ""
+      const res = await followClient.api.entries.transcription({ url: audioUrl! })
+      return res.data?.srt || ""
     },
+    enabled: !!subtitleUrl || !!audioUrl,
   })
 }
