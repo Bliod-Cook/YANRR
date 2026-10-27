@@ -37,8 +37,17 @@ const answersAsServer = async (server: string) => {
   }
 }
 
+/**
+ * How long a renderer request may take at most, longer than any it times out itself: OPML imports
+ * and the AI-sorted timeline wait up to 3 minutes.
+ */
+const FETCH_DEADLINE_MS = 240_000
+
 export class AuthService extends IpcService {
   static override readonly groupName = "auth"
+
+  /** Requests of `fetchWithAuth` that have not finished, by the id the renderer gave them */
+  private readonly requestsInFlight = new Map<string, AbortController>()
 
   private async getManagedCookieHeader(): Promise<string> {
     const mainWindow = WindowManager.getMainWindow()
@@ -184,6 +193,8 @@ export class AuthService extends IpcService {
     headers?: Record<string, string>
     method: string
     url: string
+    /** Names the request for `cancelFetch` */
+    requestId: string
   }) {
     const requestURL = new URL(payload.url)
     const apiURL = new URL(getApiURL())
@@ -205,24 +216,43 @@ export class AuthService extends IpcService {
       }
     }
 
-    const response = await net.fetch(payload.url, {
-      method: payload.method,
-      credentials: "omit",
-      headers,
-      body:
-        payload.body !== undefined && payload.method !== "GET" && payload.method !== "HEAD"
-          ? payload.body
-          : undefined,
-    })
+    const controller = new AbortController()
+    this.requestsInFlight.set(payload.requestId, controller)
+    // A renderer that reloaded or crashed never cancels what it started.
+    const deadline = setTimeout(() => controller.abort(), FETCH_DEADLINE_MS)
+    try {
+      const response = await net.fetch(payload.url, {
+        method: payload.method,
+        credentials: "omit",
+        headers,
+        body:
+          payload.body !== undefined && payload.method !== "GET" && payload.method !== "HEAD"
+            ? payload.body
+            : undefined,
+        signal: controller.signal,
+      })
 
-    await this.persistAuthCookiesFromResponse(response)
+      await this.persistAuthCookiesFromResponse(response)
 
-    return {
-      body: await response.text(),
-      headers: Array.from(response.headers.entries()),
-      status: response.status,
-      statusText: response.statusText,
+      return {
+        body: await response.text(),
+        headers: Array.from(response.headers.entries()),
+        status: response.status,
+        statusText: response.statusText,
+      }
+    } finally {
+      clearTimeout(deadline)
+      this.requestsInFlight.delete(payload.requestId)
     }
+  }
+
+  /**
+   * Stops a request of `fetchWithAuth` that the renderer timed out or gave up on. Left running, it
+   * would hold one of the few connections Chromium opens to the server.
+   */
+  @IpcMethod()
+  cancelFetch(requestId: string): void {
+    this.requestsInFlight.get(requestId)?.abort()
   }
 
   @IpcMethod()

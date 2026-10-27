@@ -35,12 +35,14 @@ export const fetchWithElectronAuth = async (request: Request) => {
           headers?: Record<string, string>
           method: string
           url: string
+          requestId: string
         }) => Promise<{
           body: string
           headers: [string, string][]
           status: number
           statusText: string
         }>
+        cancelFetch?: (requestId: string) => Promise<void>
       })
     | undefined
 
@@ -48,20 +50,41 @@ export const fetchWithElectronAuth = async (request: Request) => {
     return fetch(request)
   }
 
-  const body =
-    request.method !== "GET" && request.method !== "HEAD" ? await request.clone().text() : undefined
-  const response = await authService.fetchWithAuth({
-    body,
-    headers: Object.fromEntries(request.headers.entries()),
-    method: request.method,
-    url: request.url,
+  // The request's signal cannot cross IPC: on abort, give up here and have the main process stop it.
+  const { signal } = request
+  signal.throwIfAborted()
+  const requestId = crypto.randomUUID()
+  let onAbort = () => {}
+  const aborted = new Promise<never>((_, reject) => {
+    onAbort = () => {
+      reject(signal.reason)
+      void authService.cancelFetch?.(requestId)
+    }
+    signal.addEventListener("abort", onAbort, { once: true })
   })
 
-  return new Response(NULL_BODY_STATUSES.has(response.status) ? null : response.body, {
-    headers: response.headers,
-    status: response.status,
-    statusText: response.statusText,
-  })
+  try {
+    const body =
+      request.method !== "GET" && request.method !== "HEAD"
+        ? await request.clone().text()
+        : undefined
+    const sent = authService.fetchWithAuth({
+      body,
+      headers: Object.fromEntries(request.headers.entries()),
+      method: request.method,
+      url: request.url,
+      requestId,
+    })
+    const response = await Promise.race([sent, aborted])
+
+    return new Response(NULL_BODY_STATUSES.has(response.status) ? null : response.body, {
+      headers: response.headers,
+      status: response.status,
+      statusText: response.statusText,
+    })
+  } finally {
+    signal.removeEventListener("abort", onAbort)
+  }
 }
 
 export const followClient = new FollowClient({

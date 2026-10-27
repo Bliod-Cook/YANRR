@@ -13,6 +13,10 @@ export default defineProject({
     environment: "node",
   },
 
+  define: {
+    ELECTRON: "true",
+  },
+
   plugins: [
     tsconfigPath({
       projects: ["./tsconfig.json"],
