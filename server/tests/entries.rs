@@ -3,7 +3,7 @@ mod common;
 use common::{
     Fixtures, Reply, SINGLE_ITEM_RSS, TestApp, create_inbox, deliver, json, json_feed, subscribe,
 };
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter};
 use serde_json::{Value, json};
 use yanrr::entity::unread;
 
@@ -135,6 +135,25 @@ async fn entry_detail_and_content_stream() {
     let unknown = json(app.get("/api/entries?id=1").await).await;
     assert_eq!(unknown, json!({ "code": 0, "data": null }));
 
+    // Inbox entries stream too, but only from the user's own inboxes.
+    let secret = create_inbox(&app, "news").await;
+    let mail =
+        json!({ "guid": "m-1", "publishedAt": "2026-10-01T08:00:00Z", "content": "<p>Mail</p>" });
+    deliver(&app, &secret, mail).await;
+    let inbox = json(
+        app.post("/api/entries/inbox", json!({ "inboxId": "news" }))
+            .await,
+    )
+    .await;
+    let mail_id = inbox["data"][0]["entries"]["id"].clone();
+    app.insert_user("bob").await;
+    let theirs = "INSERT INTO inboxes (handle, user_id, created_at) VALUES ('bob', 'bob', now());
+        INSERT INTO inbox_entries (id, inbox_handle, guid, content, read, published_at, inserted_at)
+        VALUES (42, 'bob', 'b-1', '<p>Not yours</p>', false, now(), now())";
+    app.state.db.execute_unprepared(theirs).await.unwrap();
+
+    let mut ids = ids;
+    ids.extend([mail_id.clone(), json!("42")]);
     let stream = app.post("/api/entries/stream", json!({ "ids": ids })).await;
     assert_eq!(stream.headers()["content-type"], "application/x-ndjson");
     let body = stream.text().await.unwrap();
@@ -142,9 +161,11 @@ async fn entry_detail_and_content_stream() {
         .lines()
         .map(|line| serde_json::from_str(line).unwrap())
         .collect();
-    assert_eq!(lines.len(), 2);
+    assert_eq!(lines.len(), 3);
     let line = lines.iter().find(|line| line["id"] == first_id).unwrap();
     assert_eq!(line["content"], content);
+    let line = lines.iter().find(|line| line["id"] == mail_id).unwrap();
+    assert_eq!(line["content"], "<p>Mail</p>");
 }
 
 #[tokio::test]

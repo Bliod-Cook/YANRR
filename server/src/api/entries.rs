@@ -403,7 +403,8 @@ pub struct StreamBody {
     ids: Vec<String>,
 }
 
-/// `POST /entries/stream`: the content of each entry that has one, as NDJSON lines of `{ id, content }`.
+/// `POST /entries/stream`: the content of each feed or inbox entry that has one, as NDJSON lines of
+/// `{ id, content }`.
 pub async fn stream(
     State(state): State<AppState>,
     user: AuthUser,
@@ -411,19 +412,34 @@ pub async fn stream(
 ) -> ApiResult<impl IntoResponse> {
     let ids: Vec<_> = body.ids.iter().filter_map(|id| id::parse(id)).collect();
     let sql = format!("SELECT {MARKED} {TIMELINE} WHERE e.id = ANY($2) AND e.content IS NOT NULL");
-    let values = [user.id.clone().into(), ids.into()];
+    let values = [user.id.clone().into(), ids.clone().into()];
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
     let rows = state.db.query_all_raw(statement).await?;
     let entries = rows.iter().map(marked).collect::<Result<Vec<_>, _>>()?;
     let feeds = feeds(&state.db, entries.iter().map(|(entry, _)| entry.feed_id)).await?;
     let rules = Rules::load(&state.db, &user.id).await?;
-    let lines: String = entries
+    let line = |id: i64, content: Option<String>| {
+        json!({ "id": id.to_string(), "content": content }).to_string() + "\n"
+    };
+    let mut lines: String = entries
         .into_iter()
         .map(|(entry, marks)| {
             let (entry, _) = personalize(&rules, &feeds[&entry.feed_id], entry, &marks);
-            json!({ "id": entry.id.to_string(), "content": entry.content }).to_string() + "\n"
+            line(entry.id, entry.content)
         })
         .collect();
+    // Rules do not apply to inbox entries.
+    let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = ANY($2) AND e.content IS NOT NULL");
+    let statement =
+        Statement::from_sql_and_values(DbBackend::Postgres, sql, [user.id.into(), ids.into()]);
+    let inbox_entries = inbox_entry::Model::find_by_statement(statement)
+        .all(&state.db)
+        .await?;
+    lines.extend(
+        inbox_entries
+            .into_iter()
+            .map(|entry| line(entry.id, entry.content)),
+    );
     Ok(([(header::CONTENT_TYPE, "application/x-ndjson")], lines))
 }
 
