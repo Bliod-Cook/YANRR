@@ -28,7 +28,8 @@ export const LoginModalContent = (props: LoginModalContentProps) => {
 
   const isMobile = useMobile()
 
-  const [isRegister, setIsRegister] = useState(true)
+  // Most who see it already have an account, and a server may not take new ones
+  const [isRegister, setIsRegister] = useState(false)
 
   const handleLoginStateChange = (state: "register" | "login") => {
     setIsRegister(state === "register")
