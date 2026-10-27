@@ -1,3 +1,4 @@
+import { FollowAPIError, FollowTimeoutError } from "@follow-app/client-sdk"
 import { dehydrate, MutationObserver, onlineManager } from "@tanstack/react-query"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -36,5 +37,21 @@ describe("queryClient while the browser is offline", () => {
     const persisted = dehydrate(queryClient, persistConfig.dehydrateOptions)
 
     expect(persisted.mutations).toEqual([])
+  })
+})
+
+describe("queryClient retries", () => {
+  const retry = queryClient.getDefaultOptions().queries!.retry as (
+    failureCount: number,
+    error: Error,
+  ) => boolean
+
+  it("does not retry a timeout, which already waited the whole time", () => {
+    expect(retry(0, new FollowTimeoutError())).toBe(false)
+  })
+
+  it("retries server errors", () => {
+    expect(retry(0, new FollowAPIError("Internal error", 500))).toBe(true)
+    expect(retry(3, new FollowAPIError("Internal error", 500))).toBe(false)
   })
 })
