@@ -84,18 +84,21 @@ class EntryServiceStatic implements Resetable {
   }
 
   /**
-   * Keep the newest entries of every subscription and clear the rest, including the entries of
-   * feeds that are no longer followed, such as previewed feeds or opened links.
+   * Keep the newest entries of every subscription and the starred ones, and clear the rest,
+   * including the entries of feeds that are no longer followed, such as previewed feeds or opened
+   * links.
    */
   async getEntriesToHydrate() {
-    const [candidates, subscriptions] = await Promise.all([
+    const [candidates, subscriptions, collections] = await Promise.all([
       // Only what decides which entries to keep, so the content of the cleared ones isn't read
       db.query.entriesTable.findMany({
         columns: { id: true, feedId: true, inboxHandle: true },
         orderBy: (t, { desc }) => desc(t.publishedAt),
       }),
       db.query.subscriptionsTable.findMany(),
+      db.query.collectionsTable.findMany({ columns: { entryId: true } }),
     ])
+    const starred = new Set(collections.map((collection) => collection.entryId))
 
     const entryIdCountMap = new Map<string, number>(
       subscriptions.map((s) => [s.inboxId || s.feedId || "", 0] as const),
@@ -108,7 +111,7 @@ class EntryServiceStatic implements Resetable {
       const possibleIdList = [entry.inboxHandle, entry.feedId].filter(Boolean) as string[]
 
       // An entry kept for one of its sources is kept even when another source is full
-      let isKept = false
+      let isKept = starred.has(entry.id)
       for (const id of possibleIdList) {
         const count = entryIdCountMap.get(id)
         if (count === undefined || count >= ENTRIES_KEPT_PER_SOURCE) continue
