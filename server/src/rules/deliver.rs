@@ -112,5 +112,6 @@ async fn notify(
     if tokens.is_empty() {
         return Ok(());
     }
-    fcm.send(&state.http, &tokens, notification).await
+    fcm.send(&state.db, &state.http, user_id, &tokens, notification)
+        .await
 }

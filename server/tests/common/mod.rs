@@ -15,7 +15,7 @@ use axum::{
     extract::{Query, State},
     http::{HeaderMap, StatusCode, Uri},
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
 };
 use postgresql_embedded::{PostgreSQL, SettingsBuilder};
 use reqwest::{Client, Response, header};
@@ -258,6 +258,7 @@ impl Fixtures {
             .route("/rss", get(|| async { RSS2 }))
             .route("/etag", get(etag))
             .route("/rsshub/{*route}", get(rsshub))
+            .route(FCM_SEND_PATH, post(fcm_send))
             .fallback(replied)
             .with_state(state.clone());
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -310,12 +311,7 @@ async fn etag(State(state): State<FixtureState>, headers: HeaderMap) -> axum::re
     ([(header::ETAG, "\"v1\"")], RSS2).into_response()
 }
 
-async fn replied(
-    State(state): State<FixtureState>,
-    uri: Uri,
-    headers: HeaderMap,
-    body: String,
-) -> axum::response::Response {
+fn record(state: &FixtureState, uri: &Uri, headers: &HeaderMap, body: String) {
     let authorization = headers
         .get(header::AUTHORIZATION)
         .map(|value| value.to_str().unwrap().to_string());
@@ -328,6 +324,15 @@ async fn replied(
         .lock()
         .unwrap()
         .push((uri.path().into(), request));
+}
+
+async fn replied(
+    State(state): State<FixtureState>,
+    uri: Uri,
+    headers: HeaderMap,
+    body: String,
+) -> axum::response::Response {
+    record(&state, &uri, &headers, body);
     let reply = state.replies.lock().unwrap().get(uri.path()).cloned();
     match reply.unwrap_or(Reply::Status(404)) {
         Reply::Body(body) => body.into_response(),
@@ -348,13 +353,39 @@ async fn rsshub(Query(query): Query<HashMap<String, String>>) -> axum::response:
 /// Where [`fake_fcm`] takes messages.
 pub const FCM_SEND_PATH: &str = "/v1/projects/yanrr-test/messages:send";
 
+/// Takes a message like FCM: a token starting with `gone` is no longer registered, one starting with `denied` is
+/// refused, and any other is sent.
+async fn fcm_send(
+    State(state): State<FixtureState>,
+    uri: Uri,
+    headers: HeaderMap,
+    body: String,
+) -> axum::response::Response {
+    let token = serde_json::from_str::<Value>(&body).unwrap()["message"]["token"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    record(&state, &uri, &headers, body);
+    let error = |status: StatusCode, code: &str| {
+        let details = json!([{ "@type": "type.googleapis.com/google.firebase.fcm.v1.FcmError", "errorCode": code }]);
+        let error =
+            json!({ "error": { "code": status.as_u16(), "status": code, "details": details } });
+        (status, error.to_string()).into_response()
+    };
+    if token.starts_with("gone") {
+        error(StatusCode::NOT_FOUND, "UNREGISTERED")
+    } else if token.starts_with("denied") {
+        error(StatusCode::FORBIDDEN, "PERMISSION_DENIED")
+    } else {
+        json!({ "name": "sent" }).to_string().into_response()
+    }
+}
+
 /// Push settings for an FCM that `fixtures` fakes, answering `/token` with an access token and taking messages at
 /// [`FCM_SEND_PATH`]. The service account file has to be kept until the app started.
 pub fn fake_fcm(fixtures: &Fixtures) -> (PushConfig, NamedTempFile) {
     let token = json!({ "access_token": "fcm-access", "expires_in": 3599 });
     fixtures.set("/token", Reply::Body(token.to_string()));
-    let sent = json!({ "name": "sent" });
-    fixtures.set(FCM_SEND_PATH, Reply::Body(sent.to_string()));
     let account = json!({
         "type": "service_account",
         "project_id": "yanrr-test",

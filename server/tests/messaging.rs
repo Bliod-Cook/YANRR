@@ -135,3 +135,49 @@ async fn test_push_sends_through_fcm() {
         }})
     );
 }
+
+#[tokio::test]
+async fn push_reaches_every_device_and_forgets_unregistered_ones() {
+    let fixtures = Fixtures::spawn().await;
+    let (push, _key_file) = fake_fcm(&fixtures);
+    let app = TestApp::spawn_with(move |config| config.push = Some(push)).await;
+    app.sign_up("alice@example.com").await;
+    for (token, channel) in [
+        ("gone-token", "macos"),
+        ("phone-token", "ios"),
+        ("denied-token", "android"),
+    ] {
+        let body = json!({ "token": token, "channel": channel });
+        app.post("/api/messaging", body).await;
+    }
+
+    // A refused device fails the test push, after every device was tried.
+    let tested = app.get("/api/messaging/test").await;
+    assert_eq!(tested.status(), 500);
+    assert!(
+        json(tested).await["message"]
+            .as_str()
+            .unwrap()
+            .contains("PERMISSION_DENIED")
+    );
+    let mut tried: Vec<_> = fixtures
+        .requests(FCM_SEND_PATH)
+        .iter()
+        .map(|sent| serde_json::from_str::<Value>(&sent.body).unwrap()["message"]["token"].clone())
+        .collect();
+    tried.sort_by_key(|token| token.to_string());
+    assert_eq!(tried, ["denied-token", "gone-token", "phone-token"]);
+    let mut kept: Vec<_> = json(app.get("/api/messaging").await).await["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|token| token["token"].clone())
+        .collect();
+    kept.sort_by_key(|token| token.to_string());
+    assert_eq!(kept, ["denied-token", "phone-token"]);
+
+    // The access token is kept for the next notification.
+    let tested = app.get("/api/messaging/test?channel=ios").await;
+    assert_eq!(json(tested).await, json!({ "code": 0 }));
+    assert_eq!(fixtures.requests("/token").len(), 1);
+}

@@ -142,8 +142,8 @@ pub async fn test(
             "Push notifications are not configured",
         )
     })?;
-    let mut select =
-        messaging_token::Entity::find().filter(messaging_token::Column::UserId.eq(user.id));
+    let mut select = messaging_token::Entity::find()
+        .filter(messaging_token::Column::UserId.eq(user.id.as_str()));
     if let Some(channel) = query.channel {
         select = select.filter(messaging_token::Column::Channel.eq(channel));
     }
@@ -160,7 +160,7 @@ pub async fn test(
         entry_id: String::new(),
         view: 0,
     };
-    fcm.send(&state.http, &tokens, &notification)
+    fcm.send(&state.db, &state.http, &user.id, &tokens, &notification)
         .await
         .map_err(|err| ApiError::new(ExceptionCode::InternalError, err))?;
     Ok(done())
