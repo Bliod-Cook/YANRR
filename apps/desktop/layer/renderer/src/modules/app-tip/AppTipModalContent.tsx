@@ -10,6 +10,7 @@ import { useNavigate } from "react-router"
 import { setAISetting, useAISettingKey } from "~/atoms/settings/ai"
 import { GlassButton } from "~/components/ui/button/GlassButton"
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
+import { useFeature } from "~/hooks/biz/useFeature"
 
 import { OpmlAbstractGraphic } from "../discover/OpmlAbstractGraphic"
 import { AICopilotMedia } from "./AICopilotMedia"
@@ -27,6 +28,7 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { persistDismissState } = useNewUserGuideState()
+  const aiEnabled = useFeature("ai")
 
   const [activeStep, setActiveStep] = useState(initialStep)
 
@@ -118,8 +120,8 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
         primaryActionLabel: t("new_user_dialog.import.primary"),
         onPrimaryAction: () => handleNavigateAndClose("/discover?type=import"),
       },
-    ]
-  }, [handleLaunchAiGuide, handleNavigateAndClose, t])
+    ].filter((step) => aiEnabled || step.id !== "ai")
+  }, [aiEnabled, handleLaunchAiGuide, handleNavigateAndClose, t])
 
   const activeStepData = steps[activeStep] ?? steps[0] ?? null
   const hasNextStep = activeStep < steps.length - 1

@@ -16,6 +16,7 @@ import { useGeneralSettingKey } from "~/atoms/settings/general"
 import { Focusable } from "~/components/common/Focusable"
 import { FeedNotFound } from "~/components/errors/FeedNotFound"
 import { FEED_COLLECTION_LIST, HotkeyScope, ROUTE_FEED_PENDING } from "~/constants"
+import { useFeature } from "~/hooks/biz/useFeature"
 import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { useRouteParams, useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { useFeedQuery } from "~/queries/feed"
@@ -210,7 +211,9 @@ function EntryColumnContent() {
   const navigate = useNavigateEntry()
 
   const aiTimelineEnabled = useAtomValue(aiTimelineEnabledAtom)
-  const showAiTimelineLoading = aiTimelineEnabled && state.isLoading && !state.isFetchingNextPage
+  const aiEnabled = useFeature("ai")
+  const showAiTimelineLoading =
+    aiEnabled && aiTimelineEnabled && state.isLoading && !state.isFetchingNextPage
   const renderAsRead = useGeneralSettingKey("renderMarkUnread")
   const handleRangeChange = useCallback(
     (e: Range) => {
