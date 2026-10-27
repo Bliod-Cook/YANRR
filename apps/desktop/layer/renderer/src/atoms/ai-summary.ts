@@ -1,6 +1,5 @@
 import { atom } from "jotai"
 
-import { useFeature } from "~/hooks/biz/useFeature"
 import { createAtomHooks } from "~/lib/jotai"
 
 import { useGeneralSettingKey } from "./settings/general"
@@ -17,8 +16,7 @@ export const useShowAISummaryAuto = (settings?: boolean | null) => {
 }
 
 export const useShowAISummary = (settings?: boolean | null) => {
-  const aiEnabled = useFeature("ai")
   const showAISummaryAuto = useShowAISummaryAuto(settings)
   const showAISummaryOnce = useShowAISummaryOnce()
-  return aiEnabled && (showAISummaryAuto || showAISummaryOnce || !!settings)
+  return showAISummaryAuto || showAISummaryOnce || !!settings
 }

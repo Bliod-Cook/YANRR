@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next"
 import type { MobileSupportedLanguages } from "@/src/@types/constants"
 import { currentSupportedLanguages } from "@/src/@types/constants"
 import { defaultResources } from "@/src/@types/default-resource"
-import { useAIEnabled } from "@/src/atoms/server-configs"
 import { setGeneralSetting, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import {
   NavigationBlurEffectHeaderView,
@@ -121,7 +120,6 @@ export const GeneralScreen: NavigationControllerView = () => {
 
   const translation = useGeneralSettingKey("translation")
   const summary = useGeneralSettingKey("summary")
-  const aiEnabled = useAIEnabled()
   const autoGroup = useGeneralSettingKey("autoGroup")
   const hideAllReadSubscriptions = useGeneralSettingKey("hideAllReadSubscriptions")
   const showUnreadOnLaunch = useGeneralSettingKey("unreadOnly")
@@ -144,40 +142,36 @@ export const GeneralScreen: NavigationControllerView = () => {
       </GroupedInsetListCard>
 
       {/* Content Behavior */}
-      {aiEnabled && (
-        <>
-          <GroupedInsetListSectionHeader label={t("general.action.title")} />
-          <GroupedInsetListCard>
-            <GroupedInsetListCell
-              label={t("general.action.summary.label")}
-              description={t("general.action.summary.description")}
-            >
-              <Switch
-                size="sm"
-                testID="general-ai-summary-switch"
-                value={summary}
-                onValueChange={(value) => {
-                  setGeneralSetting("summary", value)
-                }}
-              />
-            </GroupedInsetListCell>
-            <GroupedInsetListCell
-              label={t("general.action.translation.label")}
-              description={t("general.action.translation.description")}
-            >
-              <Switch
-                size="sm"
-                value={translation}
-                onValueChange={(value) => {
-                  setGeneralSetting("translation", value)
-                }}
-              />
-            </GroupedInsetListCell>
-            <TranslationModeSetting />
-            <LanguageSetting settingKey="actionLanguage" />
-          </GroupedInsetListCard>
-        </>
-      )}
+      <GroupedInsetListSectionHeader label={t("general.action.title")} />
+      <GroupedInsetListCard>
+        <GroupedInsetListCell
+          label={t("general.action.summary.label")}
+          description={t("general.action.summary.description")}
+        >
+          <Switch
+            size="sm"
+            testID="general-ai-summary-switch"
+            value={summary}
+            onValueChange={(value) => {
+              setGeneralSetting("summary", value)
+            }}
+          />
+        </GroupedInsetListCell>
+        <GroupedInsetListCell
+          label={t("general.action.translation.label")}
+          description={t("general.action.translation.description")}
+        >
+          <Switch
+            size="sm"
+            value={translation}
+            onValueChange={(value) => {
+              setGeneralSetting("translation", value)
+            }}
+          />
+        </GroupedInsetListCell>
+        <TranslationModeSetting />
+        <LanguageSetting settingKey="actionLanguage" />
+      </GroupedInsetListCard>
 
       {/* Subscriptions */}
 

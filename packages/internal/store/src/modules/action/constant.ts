@@ -132,9 +132,6 @@ export type ActionAction = {
   prefixElement?: React.ReactNode
 }
 
-/** Actions the server needs AI for; rules keep them, but they cannot be added while AI is off. */
-export const AI_ACTIONS: ReadonlySet<ActionId> = new Set(["summary", "translation"])
-
 export const availableActionMap: Record<ActionId, ActionAction> = {
   summary: {
     value: "summary",

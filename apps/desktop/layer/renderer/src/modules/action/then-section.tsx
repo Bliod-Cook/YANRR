@@ -1,7 +1,6 @@
 import { Button } from "@follow/components/ui/button/index.js"
 import { Input } from "@follow/components/ui/input/index.js"
 import type { ActionAction } from "@follow/store/action/constant"
-import { AI_ACTIONS } from "@follow/store/action/constant"
 import { useActionRule } from "@follow/store/action/hooks"
 import { actionActions } from "@follow/store/action/store"
 import { cn } from "@follow/utils/utils"
@@ -17,7 +16,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu/dropdown-menu.js"
-import { useFeature } from "~/hooks/biz/useFeature"
 
 import { useSettingModal } from "../settings/modal/useSettingModal"
 import { availableActionMap } from "./constants"
@@ -36,7 +34,6 @@ export const ThenSection = ({ index, variant: _variant = "detail" }: ThenSection
   const settingModalPresent = useSettingModal()
 
   const disabled = useActionRule(index, (a) => a.result.disabled)
-  const aiEnabled = useFeature("ai")
 
   const availableActions = useMemo(() => {
     const extendedAvailableActionMap: Record<
@@ -202,11 +199,8 @@ export const ThenSection = ({ index, variant: _variant = "detail" }: ThenSection
       .filter((action): action is NonNullable<typeof action> => !!action)
   }, [availableActions, result])
   const notEnabledActions = useMemo(
-    () =>
-      availableActions.filter(
-        (action) => !result?.[action.value] && (aiEnabled || !AI_ACTIONS.has(action.value)),
-      ),
-    [aiEnabled, availableActions, result],
+    () => availableActions.filter((action) => !result?.[action.value]),
+    [availableActions, result],
   )
 
   return (

@@ -21,7 +21,6 @@ import {
   useGeneralSettingValue,
 } from "~/atoms/settings/general"
 import { useDialog } from "~/components/ui/modal/stacked/hooks"
-import { useFeature } from "~/hooks/biz/useFeature"
 import { useProxyValue, useSetProxy } from "~/hooks/biz/useProxySetting"
 import { useMinimizeToTrayValue, useSetMinimizeToTray } from "~/hooks/biz/useTraySetting"
 import { fallbackLanguage } from "~/i18n"
@@ -76,7 +75,6 @@ export const SettingGeneral = () => {
 
   const { ask } = useDialog()
   const reRenderKey = useGeneralSettingKey("enhancedSettings")
-  const aiEnabled = useFeature("ai")
 
   return (
     <div className="mt-4">
@@ -98,24 +96,20 @@ export const SettingGeneral = () => {
           IN_ELECTRON && MinimizeToTraySetting,
           LanguageSelector,
 
-          ...(aiEnabled
-            ? [
-                {
-                  type: "title" as const,
-                  value: t("general.action.title"),
-                },
-                defineSettingItem("summary", {
-                  label: t("general.action.summary.label"),
-                  description: t("general.action.summary.description"),
-                }),
-                defineSettingItem("translation", {
-                  label: t("general.action.translation.label"),
-                  description: t("general.action.translation.description"),
-                }),
-                TranslationModeSelector,
-                ActionLanguageSelector,
-              ]
-            : []),
+          {
+            type: "title",
+            value: t("general.action.title"),
+          },
+          defineSettingItem("summary", {
+            label: t("general.action.summary.label"),
+            description: t("general.action.summary.description"),
+          }),
+          defineSettingItem("translation", {
+            label: t("general.action.translation.label"),
+            description: t("general.action.translation.description"),
+          }),
+          TranslationModeSelector,
+          ActionLanguageSelector,
 
           {
             type: "title",

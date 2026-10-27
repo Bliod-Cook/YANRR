@@ -6,7 +6,6 @@ import type { FC } from "react"
 import { useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useAIEnabled } from "@/src/atoms/server-configs"
 import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { ErrorBoundary } from "@/src/components/common/ErrorBoundary"
 import { Text } from "@/src/components/ui/typography/Text"
@@ -64,9 +63,7 @@ export const EntryAISummary: FC<{
   const ctx = useEntryContentContext()
   const showReadability = useAtomValue(ctx.showReadabilityAtom)
   const showAISummaryOnce = useAtomValue(ctx.showAISummaryAtom)
-  const aiEnabled = useAIEnabled()
-  const summarySetting = useGeneralSettingKey("summary")
-  const showAISummary = aiEnabled && (summarySetting || showAISummaryOnce)
+  const showAISummary = useGeneralSettingKey("summary") || showAISummaryOnce
   const entry = useEntry(
     entryId,
     useCallback(

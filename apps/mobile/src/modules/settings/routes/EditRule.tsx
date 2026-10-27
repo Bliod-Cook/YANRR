@@ -1,6 +1,5 @@
 import type { ActionAction } from "@follow/store/action/constant"
 import {
-  AI_ACTIONS,
   availableActionMap,
   filterFieldOptions,
   filterOperatorOptions,
@@ -14,7 +13,6 @@ import { useTranslation } from "react-i18next"
 import { View } from "react-native"
 import * as DropdownMenu from "zeego/dropdown-menu"
 
-import { useAIEnabled } from "@/src/atoms/server-configs"
 import { SwipeableItem } from "@/src/components/common/SwipeableItem"
 import {
   NavigationBlurEffectHeaderView,
@@ -289,11 +287,9 @@ const ActionSection: React.FC<{
     (action) =>
       (rule.result as Record<string, unknown>)[action.value as unknown as string] !== undefined,
   )
-  const aiEnabled = useAIEnabled()
   const notEnabledActions = extendedAvailableActionList.filter(
     (action) =>
-      (rule.result as Record<string, unknown>)[action.value as unknown as string] === undefined &&
-      (aiEnabled || !AI_ACTIONS.has(action.value)),
+      (rule.result as Record<string, unknown>)[action.value as unknown as string] === undefined,
   )
   const navigation = useNavigation()
   const colors = useColors()
