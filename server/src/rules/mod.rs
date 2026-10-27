@@ -48,19 +48,37 @@ impl<'a> Subject<'a> {
 #[derive(Default)]
 pub struct Rules {
     rules: Vec<Rule>,
-    /// Regex conditions by pattern; one that does not compile is missing and never matches.
+    /// Regex conditions and block rules by pattern; one that does not compile is missing and never matches.
     patterns: HashMap<String, Regex>,
 }
 
 impl Rules {
     pub fn new(rules: Vec<Rule>) -> Self {
-        let patterns = rules
+        let conditions = rules
             .iter()
             .flat_map(|rule| rule.condition.0.iter().flatten())
             .filter(|item| item.operator == Operator::Regex)
-            .filter_map(|item| Some((item.value.clone(), Regex::new(&item.value).ok()?)))
+            .map(|item| item.value.clone());
+        let block_rules = rules
+            .iter()
+            .flat_map(|rule| rule.result.block_rules.iter().flatten())
+            .filter(|rule| rule.operator == Operator::Regex)
+            .map(BlockRule::value);
+        let patterns = conditions
+            .chain(block_rules)
+            .filter_map(|pattern| Some((pattern.clone(), Regex::new(&pattern).ok()?)))
             .collect();
         Self { rules, patterns }
+    }
+
+    /// Whether `settings`, which these rules gave, hide the entry: blocked outright, or by a block rule.
+    pub fn blocks(&self, settings: &EntrySettings, entry: &entry::Model) -> bool {
+        settings.block == Some(true)
+            || settings
+                .block_rules
+                .iter()
+                .flatten()
+                .any(|rule| rule.holds(entry, &self.patterns))
     }
 
     /// The user's rules, none until they save some.
@@ -299,16 +317,6 @@ impl EntrySettings {
         extend(&mut self.webhooks, &other.webhooks);
     }
 
-    /// Whether the entry is to be hidden: blocked outright, or by a block rule.
-    pub fn blocks(&self, entry: &entry::Model) -> bool {
-        self.block == Some(true)
-            || self
-                .block_rules
-                .iter()
-                .flatten()
-                .any(|rule| rule.holds(entry))
-    }
-
     /// Replaces text in the entry's title, description and content, rule by rule.
     pub fn rewrite(&self, entry: &mut entry::Model) {
         let rules = self.rewrite_rules.iter().flatten();
@@ -373,7 +381,14 @@ pub enum BlockValue {
 }
 
 impl BlockRule {
-    fn holds(&self, entry: &entry::Model) -> bool {
+    fn value(&self) -> String {
+        match &self.value {
+            BlockValue::Text(text) => text.clone(),
+            BlockValue::Number(number) => number.to_string(),
+        }
+    }
+
+    fn holds(&self, entry: &entry::Model, patterns: &HashMap<String, Regex>) -> bool {
         let all;
         let text = match self.field {
             BlockField::Title => entry.title.as_deref(),
@@ -393,19 +408,9 @@ impl BlockRule {
             // What `order` refers to is unknown.
             BlockField::Order => return false,
         };
-        let value = match &self.value {
-            BlockValue::Text(text) => text.clone(),
-            BlockValue::Number(number) => number.to_string(),
-        };
-        let pattern = (self.operator == Operator::Regex)
-            .then(|| Regex::new(&value).ok())
-            .flatten();
-        matches_text(
-            self.operator,
-            &value,
-            pattern.as_ref(),
-            text.unwrap_or_default(),
-        )
+        let value = self.value();
+        let pattern = patterns.get(&value);
+        matches_text(self.operator, &value, pattern, text.unwrap_or_default())
     }
 }
 
@@ -632,8 +637,10 @@ mod tests {
     #[test]
     fn block_rules_hide_entries() {
         let blocks = |result: Value| {
-            let settings: EntrySettings = serde_json::from_value(result).unwrap();
-            settings.blocks(&entry())
+            let rules = rules(json!([rule(json!([]), result)]));
+            let entry = entry();
+            let settings = apply(&rules, &entry).unwrap();
+            rules.blocks(&settings, &entry)
         };
         let block_rule = |field: &str, operator: &str, value: Value| json!({ "blockRules": [{ "field": field, "operator": operator, "value": value }] });
 
@@ -642,6 +649,7 @@ mod tests {
         assert!(blocks(block_rule("all", "contains", json!("alice"))));
         assert!(!blocks(block_rule("all", "not_contains", json!("alice"))));
         assert!(blocks(block_rule("url", "regex", json!("/post$"))));
+        assert!(!blocks(block_rule("url", "regex", json!("("))));
         assert!(blocks(block_rule("title", "eq", json!("rust news"))));
         assert!(!blocks(block_rule("order", "gt", json!(0))));
     }

@@ -97,17 +97,28 @@ pub async fn discover(state: &AppState, keyword: &str) -> Result<Vec<feed::Model
         .await
         .map_err(FetchError::Fetch)?
         .ok_or(FetchError::Fetch("HTTP 304".into()))?;
-    if let Ok(parsed) = parse::parse(&fetched.body, &url) {
-        let update = Update {
-            feed: parsed,
-            validators: fetched.validators,
-            moved_to: fetched.moved_to,
-        };
-        return Ok(vec![insert(state, &url, update).await?]);
-    }
     let page = Url::parse(fetched.moved_to.as_deref().unwrap_or(&url)).expect("fetched URL");
+    let (body, base) = (fetched.body, url.clone());
+    // A feed itself, or else a page linking to feeds.
+    let found = blocking(move || {
+        parse::parse(&body, &base)
+            .map_err(|_| html::feed_links(&String::from_utf8_lossy(&body), &page))
+    })
+    .await
+    .map_err(FetchError::Parse)?;
+    let links = match found {
+        Ok(parsed) => {
+            let update = Update {
+                feed: parsed,
+                validators: fetched.validators,
+                moved_to: fetched.moved_to,
+            };
+            return Ok(vec![insert(state, &url, update).await?]);
+        }
+        Err(links) => links,
+    };
     let mut feeds: Vec<feed::Model> = Vec::new();
-    for link in html::feed_links(&String::from_utf8_lossy(&fetched.body), &page) {
+    for link in links {
         match add_feed(state, &link).await {
             Ok(feed) if feeds.iter().all(|found| found.id != feed.id) => feeds.push(feed),
             Ok(_) => {}
@@ -238,13 +249,26 @@ async fn fetch(
     let Some(fetched) = fetched else {
         return Ok(None);
     };
-    let feed = parse::parse(&fetched.body, &source).map_err(FetchError::Parse)?;
+    let (body, base) = (fetched.body, source);
+    let feed = blocking(move || parse::parse(&body, &base))
+        .await
+        .and_then(|parsed| parsed)
+        .map_err(FetchError::Parse)?;
     let moved_to = fetched.moved_to.filter(|_| !url.starts_with("rsshub://"));
     Ok(Some(Update {
         feed,
         validators: fetched.validators,
         moved_to,
     }))
+}
+
+/// Runs CPU-bound work, such as building a DOM for every entry, off the async workers.
+async fn blocking<T: Send + 'static>(
+    work: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, String> {
+    tokio::task::spawn_blocking(work)
+        .await
+        .map_err(|err| err.to_string())
 }
 
 /// Points `rsshub://` at the configured instance, asking for JSON Feed: only it carries avatars,
@@ -387,12 +411,13 @@ async fn fan_out(
     let (mut actions, mut deliveries) = (Vec::new(), Vec::new());
     for subscription in &subscribers {
         let user_id = &subscription.user_id;
+        let user_rules = rules.get(user_id);
         let (mut arrived, mut silenced) = (Vec::new(), 0);
         for entry in entries {
             let subject = Subject::arriving(feed, entry, subscription);
-            let settings = rules.get(user_id).and_then(|rules| rules.apply(&subject));
+            let settings = user_rules.and_then(|rules| rules.apply(&subject));
             let settings = settings.unwrap_or_default();
-            if settings.blocks(entry) {
+            if user_rules.is_some_and(|rules| rules.blocks(&settings, entry)) {
                 blocked.push(blocked_entry::ActiveModel {
                     user_id: Set(user_id.clone()),
                     entry_id: Set(entry.id),
