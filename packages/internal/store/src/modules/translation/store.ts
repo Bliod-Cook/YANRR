@@ -5,7 +5,7 @@ import { toApiSupportedActionLanguage } from "@follow/shared"
 import { checkLanguage } from "@follow/utils/language"
 import { create, indexedResolver, windowScheduler } from "@yornaath/batshit"
 
-import { api } from "../../context"
+import { api, isAIEnabled } from "../../context"
 import type { Hydratable, Resetable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
 import { readNdjsonStream } from "../../lib/stream"
@@ -228,6 +228,8 @@ class TranslationSyncService {
     target: "content" | "readabilityContent"
     mode?: TranslationMode
   }) {
+    // Rules and saved settings can ask for a translation the server cannot make.
+    if (!isAIEnabled()) return null
     const translationMode = mode ?? "bilingual"
     await this.ensureMode(translationMode)
 

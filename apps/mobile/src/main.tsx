@@ -4,6 +4,7 @@ import "./polyfill"
 import "./initialize/scheduled-local-data-reset"
 
 import {
+  aiEnabledContext,
   apiContext,
   authClientContext,
   queryClientContext,
@@ -18,6 +19,7 @@ import { RootSiblingParent } from "react-native-root-siblings"
 import { enableFreeze } from "react-native-screens"
 
 import { App } from "./App"
+import { getServerConfigs } from "./atoms/server-configs"
 import { BottomTabProvider } from "./components/layouts/tabbar/BottomTabProvider"
 import { ReactNativeTab } from "./components/layouts/tabbar/ReactNativeTab"
 import { Lightbox } from "./components/ui/lightbox/Lightbox"
@@ -44,6 +46,7 @@ authClientContext.provide(authClient)
 queryClientContext.provide(queryClient)
 apiContext.provide(followApi)
 syncApiContext.provide(followApi.sync)
+aiEnabledContext.provide(() => !!getServerConfigs()?.AI_CHAT_ENABLED)
 
 enableFreeze(true)
 ;[Image, LinearGradient].forEach((Component) => {

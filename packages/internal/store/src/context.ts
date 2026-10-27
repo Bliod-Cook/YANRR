@@ -36,3 +36,7 @@ export const api = apiContext.consumer
 export const syncApi = syncApiContext.consumer
 export const authClient = authClientContext.consumer
 export const queryClient = queryClientContext.consumer
+
+/** Tells whether the server offers AI, read when asked: requests to `/ai/*` are made only then. */
+export const aiEnabledContext = createJSContext<() => boolean>()
+export const isAIEnabled = () => aiEnabledContext.consumer()()
