@@ -373,6 +373,18 @@ class EntryActions implements Hydratable, Resetable {
     return affectedEntryIds
   }
 
+  /** Sets the read state of each entry, all in one store update */
+  setEntriesReadInSession(readByEntryId: Map<EntryId, boolean>) {
+    immerSet((draft) => {
+      for (const [entryId, read] of readByEntryId) {
+        const entry = draft.data[entryId]
+        if (entry) {
+          entry.read = read
+        }
+      }
+    })
+  }
+
   resetByView({ view, entries }: { view?: FeedViewType; entries: EntryModel[] }) {
     if (view === undefined) return
     immerSet((draft) => {

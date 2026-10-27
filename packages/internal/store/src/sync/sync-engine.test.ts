@@ -716,6 +716,100 @@ describe("syncEngine", () => {
     expect(invalidateEntriesQueryMock).not.toHaveBeenCalled()
   })
 
+  it("applies a run of read actions with one store update and one write per read state", async () => {
+    seedCursor(100)
+    unreadActions.upsertManyInSession([{ id: "feed-1", count: 1200 }])
+    const ids = Array.from({ length: 1200 }, (_, index) => `entry${index}`)
+    useEntryStore.setState((state) => ({
+      ...state,
+      data: Object.fromEntries(ids.map((id) => [id, createEntry(id, "feed-1")])),
+      entryIdSet: new Set(ids),
+    }))
+    // Read one by one on another device
+    deltaMock.mockResolvedValue(
+      deltaResponse(
+        ids.map((id, index) =>
+          createAction({
+            id: 101 + index,
+            data: { entryIds: [id], read: true, isInbox: false, feeds: { "feed-1": 1 } },
+          }),
+        ),
+      ),
+    )
+    let entryUpdates = 0
+    const unsubscribe = useEntryStore.subscribe(() => entryUpdates++)
+
+    await syncEngine.pull("interval")
+    unsubscribe()
+
+    expect(ids.every((id) => useEntryStore.getState().data[id]?.read)).toBe(true)
+    expect(entryUpdates).toBe(1)
+    const patches = entryPatchManyMock.mock.calls as unknown as [{ entryIds: string[] }][]
+    const written = patches.map(([patch]) => patch.entryIds)
+    expect(written.every((chunk) => chunk.length <= 500)).toBe(true)
+    expect(written.flat()).toEqual(ids)
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(0)
+    expect(unreadUpsertManyMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the last read state of an entry flipped back and forth", async () => {
+    seedCursor(110)
+    useEntryStore.setState((state) => ({
+      ...state,
+      data: { entry1: createEntry("entry1", "feed-1") },
+      entryIdSet: new Set(["entry1"]),
+    }))
+    const flip = (id: number, read: boolean) =>
+      createAction({ id, data: { entryIds: ["entry1"], read, isInbox: false } })
+    deltaMock.mockResolvedValue(
+      deltaResponse([flip(111, true), flip(112, false), flip(113, true), flip(114, false)]),
+    )
+
+    await syncEngine.pull("interval")
+
+    expect(useEntryStore.getState().data.entry1?.read).toBe(false)
+    expect(entryPatchManyMock).toHaveBeenCalledTimes(1)
+    expect(entryPatchManyMock).toHaveBeenCalledWith({
+      entry: { read: false },
+      entryIds: ["entry1"],
+    })
+  })
+
+  it("moves counters step by step, as each step stops at zero, around new entries", async () => {
+    seedCursor(120)
+    unreadActions.upsertManyInSession([
+      { id: "feed-1", count: 1 },
+      { id: "feed-2", count: 1 },
+    ])
+    const reads = (id: number, read: boolean, feeds: Record<string, number>) =>
+      createAction({ id, data: { entryIds: [], read, isInbox: false, feeds } })
+    deltaMock.mockResolvedValue(
+      deltaResponse([
+        // feed-1: 1 - 3 stops at 0, then + 2; summing the run would give 0
+        reads(121, true, { "feed-1": 3, "feed-2": 3 }),
+        reads(122, false, { "feed-1": 2 }),
+        createAction({
+          id: 123,
+          model: "timeline",
+          modelId: "feed-2",
+          action: "N",
+          data: {
+            feedId: "feed-2",
+            count: 2,
+            unread: 2,
+            latestPublishedAt: "2026-09-16T00:00:00.000Z",
+            from: ["feed"],
+          },
+        }),
+        // feed-2: 0 + 2 - 1; taken with the reads before the new entries it would give 2
+        reads(124, true, { "feed-2": 1 }),
+      ]),
+    )
+
+    await syncEngine.pull("interval")
+
+    expect(useUnreadStore.getState().data).toMatchObject({ "feed-1": 2, "feed-2": 1 })
+  })
   it("moves unread counters by what read actions report, without a recount", async () => {
     seedCursor(70)
     unreadActions.upsertManyInSession([
@@ -762,9 +856,12 @@ describe("syncEngine", () => {
     })
     expect(readsGetMock).not.toHaveBeenCalled()
     expect(subscriptionsGetMock).not.toHaveBeenCalled()
+    // One write for the whole run of read actions
+    expect(unreadUpsertManyMock).toHaveBeenCalledTimes(1)
     expect(unreadUpsertManyMock).toHaveBeenCalledWith([
       { id: "feed-1", count: 4 },
-      { id: "feed-2", count: 1 },
+      { id: "feed-2", count: 2 },
+      { id: "news", count: 0 },
     ])
   })
 

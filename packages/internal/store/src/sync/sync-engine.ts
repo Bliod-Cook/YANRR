@@ -72,6 +72,8 @@ const FRESH_PULL_WINDOW_MS = 5000
 /** The server hides actions younger than one second; wait a bit longer after an ack. */
 const ACK_PULL_DELAY_MS = 1500
 const MAX_PAGES_PER_PULL = 20
+// Below SQLite's oldest default limit of 999 bound variables
+const READS_PER_WRITE = 500
 
 export type SyncPullReason = "launch" | "resume" | "interval" | "ack" | "manual"
 
@@ -93,6 +95,13 @@ interface PullSummary {
   pendingUnreadDeltas: Record<string, number>
   /** Feeds of those actions whose unread entries need fetching again. */
   pendingDirtyFeedIds: Set<string>
+  /**
+   * The read state each entry ends with after consecutive read actions, applied together: a
+   * device catching up on another's reading gets hundreds of them.
+   */
+  pendingReads: Map<string, boolean>
+  /** The counter moves of those actions, in their order, since each stops at zero */
+  pendingReadDeltas: Record<string, number>[]
 }
 
 const createPullSummary = (): PullSummary => ({
@@ -102,10 +111,14 @@ const createPullSummary = (): PullSummary => ({
   newestEntryAt: 0,
   pendingUnreadDeltas: {},
   pendingDirtyFeedIds: new Set(),
+  pendingReads: new Map(),
+  pendingReadDeltas: [],
 })
 
 const isNewEntriesAction = (action: SyncAction) =>
   action.model === "timeline" && action.action === "N"
+
+const isReadAction = (action: SyncAction) => action.model === "timeline" && action.action === "U"
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
@@ -477,19 +490,78 @@ class SyncEngine implements Resetable {
   private async applyActions(actions: SyncAction[], summary: PullSummary) {
     for (const action of actions) {
       try {
+        if (!isReadAction(action)) {
+          await this.flushReads(summary)
+        }
         if (!isNewEntriesAction(action)) {
           await this.flushNewEntryCounters(summary)
         }
-        await this.applyAction(action, summary)
+        if (isReadAction(action)) {
+          this.collectReadAction(action, summary)
+        } else {
+          await this.applyAction(action, summary)
+        }
       } catch (error) {
         console.error(`[sync-engine] failed to apply ${action.model}/${action.action}`, error)
       }
     }
     try {
+      await this.flushReads(summary)
       await this.flushNewEntryCounters(summary)
     } catch (error) {
-      console.error("[sync-engine] failed to apply new entry counters", error)
+      console.error("[sync-engine] failed to apply read states and counters", error)
     }
+  }
+
+  /** Adds a read action to those applied together by `flushReads`. */
+  private collectReadAction(action: SyncAction, summary: PullSummary) {
+    if (!isRecord(action.data) || !Array.isArray(action.data.entryIds)) return
+    const data = action.data as unknown as TimelineReadActionData
+    // A pending local transaction on the same entry wins over the remote change.
+    const overlays = transactionQueue.getOverlays()
+    for (const entryId of data.entryIds) {
+      const override = overlays.get(entryReadOverlayKey(entryId))
+      if (typeof override !== "boolean" || override === data.read) {
+        // Map keeps the first position, but the last state
+        summary.pendingReads.set(entryId, data.read)
+      }
+    }
+
+    // The last snapshot already counted everything logged up to its id.
+    if (action.id <= this.unreadSnapshotSyncId) return
+
+    // The counters follow the server even when a local transaction keeps an entry's read
+    // state: that transaction is rebased on top of the confirmed counts.
+    if (isCountRecord(data.feeds)) {
+      const sign = data.read ? -1 : 1
+      summary.pendingReadDeltas.push(
+        Object.fromEntries(Object.entries(data.feeds).map(([id, count]) => [id, sign * count])),
+      )
+    } else {
+      summary.refreshUnread = true
+    }
+  }
+
+  /** One store update and one write per read state for the collected read actions */
+  private async flushReads(summary: PullSummary) {
+    const reads = summary.pendingReads
+    const deltas = summary.pendingReadDeltas
+    summary.pendingReads = new Map()
+    summary.pendingReadDeltas = []
+
+    if (reads.size > 0) {
+      entryActions.setEntriesReadInSession(reads)
+      for (const read of [true, false]) {
+        const entryIds = Array.from(reads.keys()).filter((entryId) => reads.get(entryId) === read)
+        for (let i = 0; i < entryIds.length; i += READS_PER_WRITE) {
+          await EntryService.patchMany({
+            entry: { read },
+            entryIds: entryIds.slice(i, i + READS_PER_WRITE),
+          })
+        }
+      }
+    }
+    await unreadActions.applyConfirmedDeltas(deltas)
   }
 
   /**
@@ -620,38 +692,7 @@ class SyncEngine implements Resetable {
   }
 
   private async applyTimelineAction(action: SyncAction, summary: PullSummary) {
-    // The last snapshot already counted everything logged up to its id.
-    const countersInSnapshot = action.id <= this.unreadSnapshotSyncId
-
-    if (action.action === "U") {
-      if (!isRecord(action.data) || !Array.isArray(action.data.entryIds)) return
-      const data = action.data as unknown as TimelineReadActionData
-      // A pending local transaction on the same entry wins over the remote change.
-      const overlays = transactionQueue.getOverlays()
-      const entryIds = data.entryIds.filter((entryId) => {
-        const override = overlays.get(entryReadOverlayKey(entryId))
-        return typeof override !== "boolean" || override === data.read
-      })
-      if (entryIds.length > 0) {
-        entryActions.markEntryReadStatusInSession({ entryIds, read: data.read })
-        await EntryService.patchMany({ entry: { read: data.read }, entryIds })
-      }
-
-      if (countersInSnapshot) return
-
-      // The counters follow the server even when a local transaction keeps an entry's read
-      // state: that transaction is rebased on top of the confirmed counts.
-      if (isCountRecord(data.feeds)) {
-        const sign = data.read ? -1 : 1
-        await unreadActions.applyConfirmedDelta(
-          Object.fromEntries(Object.entries(data.feeds).map(([id, count]) => [id, sign * count])),
-        )
-      } else {
-        summary.refreshUnread = true
-      }
-      return
-    }
-
+    // Read actions ("U") are collected by `applyActions`
     if (action.action === "N") {
       if (!isRecord(action.data)) return
       const data = action.data as unknown as TimelineNewEntriesActionData
@@ -669,7 +710,8 @@ class SyncEngine implements Resetable {
         summary.newestEntryAt = Math.max(summary.newestEntryAt, loggedAt)
       }
 
-      if (countersInSnapshot) return
+      // The last snapshot already counted everything logged up to its id.
+      if (action.id <= this.unreadSnapshotSyncId) return
       if (typeof data.unread === "number") {
         summary.pendingUnreadDeltas[id] = (summary.pendingUnreadDeltas[id] ?? 0) + data.unread
       } else {

@@ -605,12 +605,25 @@ class UnreadActions implements Hydratable, Resetable {
    * new unread entries. Increments commute, so the order of change-log pages does not matter.
    */
   async applyConfirmedDelta(deltas: UnreadStoreModel) {
-    const ids = Object.keys(deltas).filter((id) => !!id && !!deltas[id])
-    if (ids.length === 0) return
+    await this.applyConfirmedDeltas([deltas])
+  }
 
-    for (const id of ids) {
-      this.confirmed[id] = Math.max(0, (this.confirmed[id] ?? 0) + deltas[id]!)
+  /**
+   * Several deltas in their order, each stopping at zero as it would alone, with one store
+   * update and one database write for all of them.
+   */
+  async applyConfirmedDeltas(deltasInOrder: UnreadStoreModel[]) {
+    const changed = new Set<FeedIdOrInboxHandle>()
+    for (const deltas of deltasInOrder) {
+      for (const [id, delta] of Object.entries(deltas)) {
+        if (!id || !delta) continue
+        this.confirmed[id] = Math.max(0, (this.confirmed[id] ?? 0) + delta)
+        changed.add(id)
+      }
     }
+    if (changed.size === 0) return
+
+    const ids = Array.from(changed)
     this.syncDisplayedCounts(ids)
     await this.persistConfirmed(ids)
   }
