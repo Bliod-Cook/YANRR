@@ -8,6 +8,7 @@ pub mod scheduler;
 use std::collections::HashSet;
 
 use chrono::{DateTime, SubsecRound, Utc};
+use futures::{StreamExt, stream};
 use reqwest::Url;
 use sea_orm::{
     ActiveModelTrait,
@@ -41,6 +42,8 @@ pub use self::http::client as http_client;
 
 /// Rows per insert: 17 columns stay far below the 65535 parameters a statement can bind.
 const INSERT_CHUNK: usize = 500;
+/// How many feeds a page links to are fetched at once.
+const DISCOVER_CONCURRENCY: usize = 4;
 
 #[derive(Debug)]
 pub enum FetchError {
@@ -117,9 +120,20 @@ pub async fn discover(state: &AppState, keyword: &str) -> Result<Vec<feed::Model
         }
         Err(links) => links,
     };
+    let mut seen = HashSet::new();
+    let links: Vec<_> = links
+        .into_iter()
+        .filter(|link| seen.insert(link.clone()))
+        .collect();
+    // In the page's order; links redirecting to the same feed find it once.
+    let adds: Vec<_> = links
+        .iter()
+        .map(|link| async move { (link, add_feed(state, link).await) })
+        .collect();
+    let mut added = stream::iter(adds).buffered(DISCOVER_CONCURRENCY);
     let mut feeds: Vec<feed::Model> = Vec::new();
-    for link in links {
-        match add_feed(state, &link).await {
+    while let Some((link, added)) = added.next().await {
+        match added {
             Ok(feed) if feeds.iter().all(|found| found.id != feed.id) => feeds.push(feed),
             Ok(_) => {}
             Err(err) => tracing::debug!("discovered feed {link} failed: {err:?}"),

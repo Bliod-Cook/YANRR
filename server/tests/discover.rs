@@ -157,3 +157,56 @@ async fn feed_detail_with_entries() {
     assert_eq!(detail["data"]["feed"]["id"], id);
     assert_eq!(detail["data"].get("subscription"), None);
 }
+
+#[tokio::test]
+async fn discover_fetches_linked_feeds_concurrently_and_once() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    let page = |paths: &[&str]| {
+        let links: String = paths
+            .iter()
+            .map(|path| {
+                format!(r#"<link rel="alternate" type="application/rss+xml" href="{path}">"#)
+            })
+            .collect();
+        Reply::Body(format!(
+            "<html><head>{links}</head><body>Blog</body></html>"
+        ))
+    };
+    for path in ["/a", "/b"] {
+        fixtures.set(path, Reply::Body(SINGLE_ITEM_RSS.into()));
+    }
+    fixtures.set("/broken", Reply::Status(404));
+    fixtures.set("/site", page(&["/a", "/a", "/broken", "/b"]));
+    let body = json!({ "keyword": fixtures.url("/site"), "target": "feeds" });
+
+    let found = json(app.post("/api/discover", body).await).await["data"].clone();
+    let urls: Vec<_> = found
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|result| result["feed"]["url"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(urls, [fixtures.url("/a"), fixtures.url("/b")]);
+    assert_eq!(fixtures.requests("/a").len(), 1);
+
+    // A feed that does not answer holds up no other.
+    fixtures.set("/slow", Reply::Hang);
+    fixtures.set("/c", Reply::Body(SINGLE_ITEM_RSS.into()));
+    fixtures.set("/slow-site", page(&["/slow", "/c"]));
+    let body = json!({ "keyword": fixtures.url("/slow-site"), "target": "feeds" });
+    let request = app
+        .client
+        .post(format!("{}/api/discover", app.url))
+        .json(&body)
+        .send();
+    let pending = tokio::spawn(request);
+    for _ in 0..100 {
+        if !fixtures.requests("/c").is_empty() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    assert_eq!(fixtures.requests("/c").len(), 1);
+    pending.abort();
+}
