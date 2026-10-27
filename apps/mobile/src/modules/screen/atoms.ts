@@ -374,20 +374,8 @@ export function useEntries(props?: UseEntriesProps): UseEntriesReturn {
   const { viewId, active = true } = props || {}
   const remoteQuery = useRemoteEntries({ viewId, active })
   const localQuery = useLocalEntries({ viewId, active })
-  const entryListContext = useEntryListContext()
-  const selectedFeed = useSelectedFeed()
 
-  const isTimelineViewQuery = entryListContext.type === "timeline" && selectedFeed?.type === "view"
-
-  if (isTimelineViewQuery) {
-    return pickTimelineEntries(remoteQuery, localQuery)
-  }
-
-  const query = remoteQuery.isReady ? remoteQuery : localQuery
-  return {
-    ...query,
-    isReady: remoteQuery.isReady,
-  }
+  return pickTimelineEntries(remoteQuery, localQuery)
 }
 
 export const useSelectedFeedTitle = () => {

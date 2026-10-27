@@ -32,10 +32,11 @@ const reportFailedRefresh = (
   shown.entriesIds.length > 0 ? { ...shown, refetch: remote.refetchReportingFailure } : shown
 
 /**
- * What a view's timeline on Home shows. The server's first page wins once it is in. Until then
- * the entries stored on the device show, as they do when that page fails: a request can take
- * until it times out, and a refresh after a failed one starts over without its error, so waiting
- * for either would hide them behind placeholders. Without stored entries the placeholders show.
+ * What a list of entries shows, on Home or for a feed, category, inbox or the starred entries. The
+ * server's first page wins once it is in. Until then the entries stored on the device show, as
+ * they do when that page fails: a request can take until it times out, and a refresh after a
+ * failed one starts over without its error, so waiting for either would hide them behind
+ * placeholders. Without stored entries the placeholders show, until a failure ends them.
  */
 export const pickTimelineEntries = (
   remote: RemoteTimelineEntries,
