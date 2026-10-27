@@ -51,10 +51,12 @@ function EntryColumnContent() {
   const isInteracted = useRef(false)
   const scrollMarkReadAnchorIndexRef = useRef<number | null>(null)
   const latestRangeStartIndexRef = useRef<number | null>(null)
+  const latestRangeEndIndexRef = useRef<number | null>(null)
   const resetScrollInteractionState = useCallback(() => {
     isInteracted.current = false
     scrollMarkReadAnchorIndexRef.current = null
     latestRangeStartIndexRef.current = null
+    latestRangeEndIndexRef.current = null
   }, [])
 
   const actions = useEntriesActions()
@@ -214,19 +216,25 @@ function EntryColumnContent() {
   const renderAsRead = useGeneralSettingKey("renderMarkUnread")
   const handleRangeChange = useCallback(
     (e: Range) => {
-      if (latestRangeStartIndexRef.current === e.startIndex) {
+      const startChanged = latestRangeStartIndexRef.current !== e.startIndex
+      // Rows can come into view at the end while the first one stays
+      if (!startChanged && latestRangeEndIndexRef.current === e.endIndex) {
         return
       }
 
       latestRangeStartIndexRef.current = e.startIndex
+      latestRangeEndIndexRef.current = e.endIndex
       if (isScrollResetPending) {
         return
       }
 
-      if (scrollMarkReadAnchorIndexRef.current === null) {
-        scrollMarkReadAnchorIndexRef.current = e.startIndex
-      } else if (isInteracted.current) {
-        flushScrollMarkRead(e.startIndex)
+      // Scrolling marks entries read by where the list starts
+      if (startChanged) {
+        if (scrollMarkReadAnchorIndexRef.current === null) {
+          scrollMarkReadAnchorIndexRef.current = e.startIndex
+        } else if (isInteracted.current) {
+          flushScrollMarkRead(e.startIndex)
+        }
       }
 
       if (!renderAsRead) return

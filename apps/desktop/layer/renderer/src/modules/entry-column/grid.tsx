@@ -26,6 +26,7 @@ import { EntryItem } from "./item"
 import { PictureMasonry } from "./Items/picture-masonry"
 import type { EntryListProps } from "./list"
 import { getInitialScrollOffset, shouldApplyScrollResetSignal } from "./scroll-reset"
+import { gridVisibleRange } from "./visible-range"
 
 export const EntryColumnGrid: FC<EntryListProps> = (props) => {
   const { entriesIds, feedId, hasNextPage, view, fetchNextPage } = props
@@ -198,15 +199,10 @@ const VirtualGridImpl: FC<
 
         if (!virtualizer.range) return
 
-        const columnCount = columns.length
-        const realRange = {
-          startIndex: virtualizer.range.startIndex * columnCount,
-          endIndex: virtualizer.range.endIndex * columnCount,
-        }
-
-        onRangeChange?.(realRange as Range)
+        const range = gridVisibleRange(virtualizer.range, columns.length, entriesIds.length)
+        onRangeChange?.(range as Range)
       },
-      [rowCacheKey, columns.length, onRangeChange],
+      [rowCacheKey, columns.length, entriesIds.length, onRangeChange],
     ),
   })
 

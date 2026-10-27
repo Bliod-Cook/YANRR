@@ -22,6 +22,7 @@ import { EntryColumnShortcutHandler } from "./EntryColumnShortcutHandler"
 import { EntryItemSkeleton } from "./EntryItemSkeleton"
 import { useScrollMarkReadEndPadding } from "./hooks/useScrollMarkReadEndPadding"
 import { getInitialScrollOffset, shouldApplyScrollResetSignal } from "./scroll-reset"
+import { listVisibleRange } from "./visible-range"
 
 export const EntryEmptyList = ({
   ref,
@@ -172,7 +173,7 @@ export const EntryList: FC<EntryListProps> = memo(
             offsetCache.put(cacheKey, virtualizer.scrollOffset ?? 0)
           }
 
-          onRangeChange?.(virtualizer.range as Range)
+          if (virtualizer.range) onRangeChange?.(listVisibleRange(virtualizer.range) as Range)
         },
         [cacheKey, onRangeChange],
       ),
