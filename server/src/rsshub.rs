@@ -15,6 +15,8 @@ use crate::fetch::http::{self, Validators};
 
 /// How long a fetched catalog is served before the instance is asked again.
 const TTL: Duration = Duration::from_secs(60 * 60);
+/// How long the old catalog is served after fetching a new one failed.
+const RETRY: Duration = Duration::from_secs(60);
 
 /// Namespaces by their key, the first segment of their routes.
 pub type Namespaces = BTreeMap<String, Namespace>;
@@ -61,6 +63,7 @@ pub struct Route {
 /// The catalog, fetched when first asked for and again once it is older than [`TTL`].
 #[derive(Default)]
 pub struct Catalog {
+    /// The catalog and until when it is served without asking the instance.
     cached: Mutex<Option<(Instant, Arc<Namespaces>)>>,
 }
 
@@ -72,18 +75,30 @@ impl Catalog {
     ) -> Result<Arc<Namespaces>, String> {
         // Held while fetching, so concurrent requests wait for one fetch instead of each starting their own.
         let mut cached = self.cached.lock().await;
-        if let Some((fetched_at, namespaces)) = &*cached
-            && fetched_at.elapsed() < TTL
+        if let Some((fresh_until, namespaces)) = &*cached
+            && Instant::now() < *fresh_until
         {
             return Ok(namespaces.clone());
         }
         let url = format!("{}/api/namespace", instance.trim_end_matches('/'));
         let fetched = http::get(client, &url, &Validators::default())
-            .await?
-            .ok_or("HTTP 304")?;
-        let namespaces = Arc::new(parse(&fetched.body)?);
-        *cached = Some((Instant::now(), namespaces.clone()));
-        Ok(namespaces)
+            .await
+            .and_then(|fetched| fetched.ok_or("HTTP 304".into()))
+            .and_then(|fetched| parse(&fetched.body));
+        match (fetched, cached.take()) {
+            (Ok(namespaces), _) => {
+                let namespaces = Arc::new(namespaces);
+                *cached = Some((Instant::now() + TTL, namespaces.clone()));
+                Ok(namespaces)
+            }
+            // The old catalog beats none while the instance is down; it is asked again shortly.
+            (Err(err), Some((_, stale))) => {
+                tracing::warn!("RSSHub catalog refetch failed: {err}");
+                *cached = Some((Instant::now() + RETRY, stale.clone()));
+                Ok(stale)
+            }
+            (Err(err), None) => Err(err),
+        }
     }
 }
 
@@ -166,7 +181,11 @@ pub fn find<'a>(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use axum::{Router, http::StatusCode, routing::get};
     use serde_json::json;
+    use tokio::net::TcpListener;
 
     use super::*;
 
@@ -233,5 +252,32 @@ mod tests {
         );
         assert!(find(&catalog, "/github/issue/:user/:repo?").is_some());
         assert!(find(&catalog, "/github/nothing").is_none());
+    }
+
+    #[tokio::test]
+    async fn a_failed_refetch_serves_the_old_catalog_for_a_while() {
+        let requests = Arc::new(AtomicUsize::new(0));
+        let counter = requests.clone();
+        let router = Router::new().route(
+            "/api/namespace",
+            get(move || async move {
+                counter.fetch_add(1, Ordering::SeqCst);
+                StatusCode::SERVICE_UNAVAILABLE
+            }),
+        );
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let instance = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        let old =
+            Arc::new(parse(include_bytes!("../tests/fixtures/rsshub-namespaces.json")).unwrap());
+        let catalog = Catalog::default();
+        *catalog.cached.lock().await = Some((Instant::now(), old.clone()));
+        let client = Client::builder().no_proxy().build().unwrap();
+
+        for _ in 0..2 {
+            let served = catalog.namespaces(&client, &instance).await.unwrap();
+            assert!(Arc::ptr_eq(&served, &old));
+        }
+        assert_eq!(requests.load(Ordering::SeqCst), 1);
     }
 }
