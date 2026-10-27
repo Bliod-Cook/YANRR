@@ -64,6 +64,8 @@ pub async fn get(
                 .await?
                 .ok_or_else(ApiError::feed_not_found)?
         }
+        // Fetching stores the feed, which is not open to anyone without an account.
+        (None, Some(_)) if user.is_none() => return Err(ApiError::unauthorized()),
         (None, Some(url)) => fetch::add_feed(&state, &url).await?,
         (None, None) => return Err(ApiError::feed_missing_id()),
     };

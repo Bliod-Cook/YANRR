@@ -3,7 +3,9 @@ mod common;
 use std::collections::HashSet;
 
 use common::{Fixtures, Reply, SINGLE_ITEM_RSS, TWO_ITEM_RSS, TestApp, assert_error, json};
+use sea_orm::{EntityTrait, PaginatorTrait};
 use serde_json::{Value, json};
+use yanrr::entity::feed;
 
 #[tokio::test]
 async fn discover_resolves_feeds_and_html_links() {
@@ -101,7 +103,12 @@ async fn feed_detail_with_entries() {
     fixtures.set("/live", Reply::Body(SINGLE_ITEM_RSS.into()));
     let url = fixtures.url("/live");
 
-    // Signed out: feed pages are public.
+    // Looking a feed up by URL fetches and stores it, so it takes an account.
+    assert_error(app.get(&format!("/api/feeds?url={url}")).await, 401, 1000).await;
+    assert!(fixtures.requests("/live").is_empty());
+    assert_eq!(feed::Entity::find().count(&app.state.db).await.unwrap(), 0);
+
+    app.sign_up("alice@example.com").await;
     let detail = json(app.get(&format!("/api/feeds?url={url}")).await).await;
     let data = &detail["data"];
     assert_eq!(data["feed"]["url"], url);
@@ -133,7 +140,6 @@ async fn feed_detail_with_entries() {
         .await;
     assert_error(too_many, 422, 3).await;
 
-    app.sign_up("alice@example.com").await;
     let created = json(app.post("/api/subscriptions", json!({ "url": url })).await).await;
     let id = created["feed"]["id"].as_str().unwrap();
     let detail = json(app.get(&format!("/api/feeds?id={id}")).await).await;
@@ -142,4 +148,12 @@ async fn feed_detail_with_entries() {
     assert_error(app.get("/api/feeds?id=1").await, 404, 2001).await;
     let missing: Value = json(app.get("/api/feeds").await).await;
     assert_eq!(missing["code"], 2002);
+
+    // Stored feeds stay public by id.
+    let signed_out = reqwest::get(format!("{}/api/feeds?id={id}", app.url))
+        .await
+        .unwrap();
+    let detail = json(signed_out).await;
+    assert_eq!(detail["data"]["feed"]["id"], id);
+    assert_eq!(detail["data"].get("subscription"), None);
 }
