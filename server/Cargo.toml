@@ -20,7 +20,7 @@ log = "0.4"
 openssl = { version = "0.10", features = ["vendored"] }
 quick-xml = "0.42"
 regex = "1"
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "gzip", "brotli"] }
 scraper = "0.24"
 sea-orm = { version = "2.0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros", "with-chrono", "with-json", "postgres-array"] }
 sea-orm-migration = { version = "2.0", features = ["sqlx-postgres", "runtime-tokio-rustls"] }
@@ -36,6 +36,7 @@ whatlang = "0.18"
 
 [dev-dependencies]
 figment = { version = "0.10", features = ["test"] }
+flate2 = "1"
 postgresql_embedded = { version = "0.22", default-features = false, features = ["bundled", "tokio", "tls-rustls-ring"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "cookies", "multipart", "rustls-tls"] }
 tempfile = "3"
