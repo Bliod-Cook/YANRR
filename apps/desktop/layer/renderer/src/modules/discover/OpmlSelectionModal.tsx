@@ -4,6 +4,7 @@ import { Input } from "@follow/components/ui/input/index.js"
 import { ScrollArea } from "@follow/components/ui/scroll-area/index.js"
 import { getFeedById } from "@follow/store/feed/getter"
 import { getAllFeedSubscription } from "@follow/store/subscription/getter"
+import { importOpmlInBatches } from "@follow/store/subscription/opml-import"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
 import { cn } from "@follow/utils/utils"
 import type { ExtractResponseData, SubscriptionParseOpmlResponse } from "@follow-app/client-sdk"
@@ -14,7 +15,6 @@ import { Trans, useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
-import { followClient } from "~/lib/api-client"
 import { toastFetchError } from "~/lib/error-parser"
 
 import type { OpmlImportResult } from "./opml-import"
@@ -40,6 +40,7 @@ export const OpmlSelectionModal = ({
   file: File
 }) => {
   const { dismiss } = useCurrentModal()
+  const [progress, setProgress] = useState<{ done: number; total: number }>()
 
   const importMutation = useMutation({
     mutationFn: async (selectedItems: ParsedFeedItem[]): Promise<OpmlImportResult> => {
@@ -49,12 +50,13 @@ export const OpmlSelectionModal = ({
         return { successfulItems: [], conflictItems: followed, parsedErrorItems: [] }
       }
 
-      const formData = new FormData()
-
-      formData.append("file", file)
-      formData.append("items", JSON.stringify(selectedItems.map((i) => i.url)))
-
-      const { data } = await followClient.api.subscriptions.import(formData)
+      const total = rest.length
+      setProgress({ done: 0, total })
+      const data = await importOpmlInBatches(
+        file,
+        rest.map((item) => item.url),
+        (done) => setProgress({ done, total }),
+      )
 
       return addFollowedToImportResult(data, followed)
     },
@@ -277,7 +279,11 @@ export const OpmlSelectionModal = ({
           disabled={selectedItems.size === 0 || importMutation.isPending}
           isLoading={importMutation.isPending}
         >
-          {t("words.import")} ({selectedItems.size})
+          {t("words.import")} (
+          {importMutation.isPending && progress
+            ? `${progress.done}/${progress.total}`
+            : selectedItems.size}
+          )
         </Button>
       </div>
     </div>

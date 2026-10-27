@@ -1,4 +1,5 @@
 import { EXPORTED_DB_FILE_NAME } from "@follow/database/constant"
+import { importOpmlInBatches } from "@follow/store/subscription/opml-import"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
 import * as DocumentPicker from "expo-document-picker"
 import { File } from "expo-file-system"
@@ -20,7 +21,6 @@ export const importOpml = async () => {
   }
 
   try {
-    const formData = new FormData()
     const file = result.assets[0]
 
     if (!file) {
@@ -30,9 +30,12 @@ export const importOpml = async () => {
 
     // The API client sends requests with expo/fetch, which reads a file part through `bytes()`
     // and rejects React Native's `{ uri, name, type }` parts before sending anything.
-    formData.append("file", new File(file.uri))
-
-    const { data } = await followApi.subscriptions.import(formData)
+    const opml = new File(file.uri)
+    const { data: parsed } = await followApi.subscriptions.parseOpml(await opml.arrayBuffer())
+    const data = await importOpmlInBatches(
+      opml,
+      parsed.subscriptions.map((subscription) => subscription.url),
+    )
     // The import is logged per feed, so the delta feed delivers exactly what was added.
     void subscriptionSyncService.refresh(undefined, { afterServerChange: true })
 
