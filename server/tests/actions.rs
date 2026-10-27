@@ -311,9 +311,8 @@ async fn new_entries_are_forwarded() {
         .await
         .unwrap();
 
-    // Webhooks go first, so they are done once the notification is out.
     let sent = eventually(|| fixtures.requests(FCM_SEND_PATH)).await;
-    let hooks = fixtures.requests("/hook");
+    let hooks = eventually(|| fixtures.requests("/hook")).await;
     assert_eq!((sent.len(), hooks.len()), (1, 1));
     let hook: Value = serde_json::from_str(&hooks[0].body).unwrap();
     assert_eq!(hook["entry"]["guid"], "post-new");
@@ -335,6 +334,33 @@ async fn new_entries_are_forwarded() {
 }
 
 #[tokio::test]
+async fn a_slow_webhook_holds_up_nothing_else() {
+    let fixtures = Fixtures::spawn().await;
+    let (push, _key_file) = fake_fcm(&fixtures);
+    let app = TestApp::spawn_with(move |config| config.push = Some(push)).await;
+    app.sign_up("alice@example.com").await;
+    let device = json!({ "token": "phone-token", "channel": "ios" });
+    app.post("/api/messaging", device).await;
+    fixtures.set("/live", Reply::Body(SINGLE_ITEM_RSS.into()));
+    fixtures.set("/slow", Reply::Hang);
+    fixtures.set("/fast", Reply::Status(204));
+    let feed_id = subscribe(&app, &fixtures.url("/live"), json!({})).await;
+    let result = json!({
+        "webhooks": [fixtures.url("/slow"), fixtures.url("/fast")],
+        "newEntryNotification": true,
+    });
+    let rules = json!([{ "name": "Forward", "condition": [], "result": result }]);
+    app.put("/api/actions", json!({ "rules": rules })).await;
+
+    fixtures.set("/live", Reply::Body(TWO_ITEM_RSS.into()));
+    fetch::refresh_feed(&app.state, feed_id.parse().unwrap())
+        .await
+        .unwrap();
+
+    eventually(|| fixtures.requests("/fast")).await;
+    eventually(|| fixtures.requests(FCM_SEND_PATH)).await;
+}
+#[tokio::test]
 async fn starred_entries_are_forwarded() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
     app.sign_up("alice@example.com").await;
@@ -343,7 +369,6 @@ async fn starred_entries_are_forwarded() {
     fixtures.set("/starred", Reply::Status(204));
     subscribe(&app, &fixtures.url("/live"), json!({})).await;
     let starred = json!([[{ "field": "status", "operator": "eq", "value": "collected" }]]);
-    // The rule matching without the star goes first, so had it been sent, it would be by the time the other is.
     let rules = json!([
         {
             "name": "All",
@@ -365,6 +390,8 @@ async fn starred_entries_are_forwarded() {
     .await;
 
     let hooks = eventually(|| fixtures.requests("/starred")).await;
+    // Webhooks are called concurrently: a wrong call to the other would arrive about as soon.
+    tokio::time::sleep(Duration::from_millis(200)).await;
     assert!(fixtures.requests("/all").is_empty());
     let hook: Value = serde_json::from_str(&hooks[0].body).unwrap();
     assert_eq!(hook["entry"]["id"], entry_id);

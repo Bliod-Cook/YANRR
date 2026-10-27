@@ -232,6 +232,8 @@ pub enum Reply {
     Body(String),
     Status(u16),
     MovedTo(&'static str),
+    /// Never answers.
+    Hang,
 }
 
 #[derive(Clone)]
@@ -337,6 +339,7 @@ async fn replied(
     match reply.unwrap_or(Reply::Status(404)) {
         Reply::Body(body) => body.into_response(),
         Reply::Status(status) => StatusCode::from_u16(status).unwrap().into_response(),
+        Reply::Hang => std::future::pending().await,
         Reply::MovedTo(path) => {
             (StatusCode::MOVED_PERMANENTLY, [(header::LOCATION, path)]).into_response()
         }

@@ -1,5 +1,6 @@
 //! What rules send out about entries as they arrive or are collected.
 
+use futures::{FutureExt, StreamExt, future::BoxFuture, stream};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use serde_json::json;
 
@@ -50,20 +51,24 @@ impl Delivery {
     }
 }
 
-/// Sends the deliveries in the background, logging what fails; nothing is retried.
+/// How many webhook calls and pushes are sent at once.
+const CONCURRENCY: usize = 8;
+
+/// Sends the deliveries in the background, logging what fails; nothing is retried, and nothing waits for a slow
+/// webhook but its own call.
 pub fn spawn(state: &AppState, feed: &feed::Model, deliveries: Vec<Delivery>) {
-    if deliveries.is_empty() {
+    let sends: Vec<_> = deliveries
+        .into_iter()
+        .flat_map(|delivery| sends(state, feed, delivery))
+        .collect();
+    if sends.is_empty() {
         return;
     }
-    let (state, feed) = (state.clone(), feed.clone());
-    tokio::spawn(async move {
-        for delivery in deliveries {
-            send(&state, &feed, delivery).await;
-        }
-    });
+    tokio::spawn(stream::iter(sends).for_each_concurrent(CONCURRENCY, |send| send));
 }
 
-async fn send(state: &AppState, feed: &feed::Model, delivery: Delivery) {
+/// The webhook calls and the push of a delivery, each sent on its own.
+fn sends(state: &AppState, feed: &feed::Model, delivery: Delivery) -> Vec<BoxFuture<'static, ()>> {
     let entry_id = delivery.entry.id;
     let notification = Notification {
         title: delivery.title,
@@ -80,18 +85,34 @@ async fn send(state: &AppState, feed: &feed::Model, delivery: Delivery) {
         "feed": wire::Feed::from(feed),
         "view": delivery.view,
     });
-    for url in &delivery.webhooks {
-        let sent = state.http.post(url).json(&payload).send().await;
-        if let Err(err) = sent.and_then(|response| response.error_for_status()) {
-            tracing::warn!(entry = entry_id, "webhook {url} failed: {err}");
-        }
-    }
+    let mut sends: Vec<BoxFuture<'static, ()>> = delivery
+        .webhooks
+        .into_iter()
+        .map(|url| {
+            let (http, payload) = (state.http.clone(), payload.clone());
+            async move {
+                let sent = http.post(&url).json(&payload).send().await;
+                if let Err(err) = sent.and_then(|response| response.error_for_status()) {
+                    tracing::warn!(entry = entry_id, "webhook {url} failed: {err}");
+                }
+            }
+            .boxed()
+        })
+        .collect();
     if delivery.notify
-        && let Some(fcm) = &state.push
-        && let Err(err) = notify(state, fcm, &delivery.user_id, &notification).await
+        && let Some(fcm) = state.push.clone()
     {
-        tracing::warn!(entry = entry_id, "push notification failed: {err}");
+        let (state, user_id) = (state.clone(), delivery.user_id);
+        sends.push(
+            async move {
+                if let Err(err) = notify(&state, &fcm, &user_id, &notification).await {
+                    tracing::warn!(entry = entry_id, "push notification failed: {err}");
+                }
+            }
+            .boxed(),
+        );
     }
+    sends
 }
 
 /// Pushes the notification to each of the user's devices.
