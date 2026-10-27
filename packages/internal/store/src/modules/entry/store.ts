@@ -601,28 +601,25 @@ class EntrySyncServices {
     return entry
   }
 
+  /**
+   * Entries whose content was asked for this session. An entry the server has no content for
+   * would otherwise come first in every batch and keep the ones after it from ever being fetched;
+   * opening it still loads it in full.
+   */
+  private contentRequested = new Set<string>()
+
   async fetchEntryContentByStream(remoteEntryIds?: string[]) {
     if (!remoteEntryIds || remoteEntryIds.length === 0) return
 
-    const onlyNoStored = true
-
-    const nextIds = [] as string[]
-    if (onlyNoStored) {
-      for (const id of remoteEntryIds) {
-        const entry = getEntry(id)!
-        if (entry.content) {
-          continue
-        }
-
-        nextIds.push(id)
-      }
-    }
-
+    const nextIds = remoteEntryIds
+      .filter((id) => !getEntry(id)?.content && !this.contentRequested.has(id))
+      .slice(0, 30)
     if (nextIds.length === 0) return
+    for (const id of nextIds) this.contentRequested.add(id)
 
     const readStream = async () => {
       const response = await api().entries.stream({
-        ids: nextIds.slice(0, 30),
+        ids: nextIds,
       })
 
       if (!response.ok) {

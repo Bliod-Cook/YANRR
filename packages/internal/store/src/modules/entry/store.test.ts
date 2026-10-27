@@ -265,3 +265,45 @@ describe("entrySyncServices.fetchEntries", () => {
     expect(listEntriesMock.mock.calls[0]?.[0]).not.toHaveProperty("publishedBefore")
   })
 })
+
+describe("entrySyncServices.fetchEntryContentByStream", () => {
+  const entriesWithoutContent = (prefix: string, count: number) =>
+    Array.from({ length: count }, (_, index) => `${prefix}-${index}`)
+  const store = (ids: string[]) => {
+    useEntryStore.setState({
+      data: Object.fromEntries(
+        ids.map((id) => [id, { id, guid: id, insertedAt: new Date(), publishedAt: new Date() }]),
+      ),
+    })
+  }
+  const streamApi = () => {
+    // The server has no content for any of them, as for an entry that only has a title
+    const stream = vi.fn(async (_: { ids: string[] }) => new Response("", { status: 200 }))
+    apiContext.provide({ entries: { stream } } as unknown as FollowAPI)
+    return stream
+  }
+
+  it("moves on to later entries once the first ones came back without content", async () => {
+    const ids = entriesWithoutContent("title-only", 40)
+    store(ids)
+    const stream = streamApi()
+
+    await entrySyncServices.fetchEntryContentByStream(ids)
+    await entrySyncServices.fetchEntryContentByStream(ids)
+
+    expect(stream.mock.calls.map(([body]) => body.ids)).toEqual([ids.slice(0, 30), ids.slice(30)])
+  })
+
+  it("does not ask twice for entries a request in flight asks for", async () => {
+    const ids = entriesWithoutContent("in-flight", 10)
+    store(ids)
+    const stream = streamApi()
+
+    await Promise.all([
+      entrySyncServices.fetchEntryContentByStream(ids),
+      entrySyncServices.fetchEntryContentByStream(ids),
+    ])
+
+    expect(stream).toHaveBeenCalledTimes(1)
+  })
+})
