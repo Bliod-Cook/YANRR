@@ -14,7 +14,6 @@ import { AIChatPanelStyle, useAIChatPanelStyle, useAIPanelVisibility } from "~/a
 import { getUISettings, setUISetting, useUISettingKey } from "~/atoms/settings/ui"
 import { m } from "~/components/common/Motion"
 import { ROUTE_ENTRY_PENDING } from "~/constants"
-import { useFeature } from "~/hooks/biz/useFeature"
 import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { useShowEntryDetailsColumn } from "~/hooks/biz/useShowEntryDetailsColumn"
 import { AIChatRoot } from "~/modules/ai-chat/components/layouts/AIChatRoot"
@@ -43,7 +42,6 @@ const AIEnhancedTimelineLayoutImpl = () => {
   const isAIPanelVisible = useAIPanelVisibility()
   const hasSelectedEntry = Boolean(realEntryId)
   const isMobile = useMobile()
-  const aiEnabled = useFeature("ai")
 
   // Compute derived values first
   const showEntryContentOnRight = showEntryDetailsColumn && hasSelectedEntry
@@ -319,7 +317,7 @@ const AIEnhancedTimelineLayoutImpl = () => {
           </div>
         </AppLayoutGridContainerProvider>
       </div>
-      {aiEnabled && !shouldShowFixedAI && <AIIndicator />}
+      {!shouldShowFixedAI && <AIIndicator />}
     </div>
   )
 }

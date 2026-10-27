@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next"
 
 import { setAppSearchOpen } from "~/atoms/app"
 import { getAIPanelVisibility, setAIPanelVisibility } from "~/atoms/settings/ai"
-import { useFeature } from "~/hooks/biz/useFeature"
 import { useShortcutsModal } from "~/modules/modal/hooks/useShortcutsModal"
 
 import { useRegisterCommandEffect } from "../hooks/use-register-command"
@@ -21,77 +20,69 @@ const category: CommandCategory = "category.global"
 export const useRegisterGlobalCommands = () => {
   const showShortcuts = useShortcutsModal()
   const { t } = useTranslation("shortcuts")
-  const aiEnabled = useFeature("ai")
 
-  useRegisterCommandEffect(
-    [
-      {
-        id: COMMAND_ID.global.showShortcuts,
-        label: {
-          title: t("command.global.show_shortcuts.title"),
-          description: t("command.global.show_shortcuts.description"),
-        },
-
-        run: () => {
-          showShortcuts()
-        },
-        category,
-      },
-      {
-        id: COMMAND_ID.global.toggleCornerPlay,
-        label: {
-          title: t("command.global.toggle_corner_play.title"),
-          description: t("command.global.toggle_corner_play.description"),
-        },
-        run: () => {
-          EventBus.dispatch(COMMAND_ID.global.toggleCornerPlay)
-        },
-        category,
-      },
-      {
-        id: COMMAND_ID.global.quickAdd,
-        label: {
-          title: t("command.global.quick_add.title"),
-          description: t("command.global.quick_add.description"),
-        },
-        run: () => {
-          EventBus.dispatch(COMMAND_ID.global.quickAdd)
-        },
-        category,
+  useRegisterCommandEffect([
+    {
+      id: COMMAND_ID.global.showShortcuts,
+      label: {
+        title: t("command.global.show_shortcuts.title"),
+        description: t("command.global.show_shortcuts.description"),
       },
 
-      {
-        id: COMMAND_ID.global.quickSearch,
-        label: {
-          title: t("command.global.quick_search.title"),
-          description: t("command.global.quick_search.description"),
-        },
-        run: () => {
-          setAppSearchOpen(true)
-        },
-        category,
+      run: () => {
+        showShortcuts()
+      },
+      category,
+    },
+    {
+      id: COMMAND_ID.global.toggleCornerPlay,
+      label: {
+        title: t("command.global.toggle_corner_play.title"),
+        description: t("command.global.toggle_corner_play.description"),
+      },
+      run: () => {
+        EventBus.dispatch(COMMAND_ID.global.toggleCornerPlay)
+      },
+      category,
+    },
+    {
+      id: COMMAND_ID.global.quickAdd,
+      label: {
+        title: t("command.global.quick_add.title"),
+        description: t("command.global.quick_add.description"),
+      },
+      run: () => {
+        EventBus.dispatch(COMMAND_ID.global.quickAdd)
+      },
+      category,
+    },
+
+    {
+      id: COMMAND_ID.global.quickSearch,
+      label: {
+        title: t("command.global.quick_search.title"),
+        description: t("command.global.quick_search.description"),
+      },
+      run: () => {
+        setAppSearchOpen(true)
+      },
+      category,
+    },
+
+    {
+      id: COMMAND_ID.global.toggleAIChat,
+      label: {
+        title: t("command.global.toggle_ai_chat.title"),
+        description: t("command.global.toggle_ai_chat.description"),
+      },
+      run: () => {
+        const isVisible = getAIPanelVisibility()
+        setAIPanelVisibility(!isVisible)
       },
 
-      ...(aiEnabled
-        ? [
-            {
-              id: COMMAND_ID.global.toggleAIChat,
-              label: {
-                title: t("command.global.toggle_ai_chat.title"),
-                description: t("command.global.toggle_ai_chat.description"),
-              },
-              run: () => {
-                const isVisible = getAIPanelVisibility()
-                setAIPanelVisibility(!isVisible)
-              },
-
-              category,
-            },
-          ]
-        : []),
-    ],
-    { deps: [aiEnabled] },
-  )
+      category,
+    },
+  ])
 }
 
 export type ShowShortcutsCommand = Command<{
