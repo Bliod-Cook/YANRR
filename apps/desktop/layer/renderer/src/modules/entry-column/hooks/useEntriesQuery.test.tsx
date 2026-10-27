@@ -1,6 +1,10 @@
 import { FeedViewType } from "@follow/constants"
 import { queryClientContext } from "@follow/store/context"
-import { useEntriesQuery } from "@follow/store/entry/hooks"
+import {
+  invalidateEntriesQuery,
+  refreshEntriesHead,
+  useEntriesQuery,
+} from "@follow/store/entry/hooks"
 import { entrySyncServices } from "@follow/store/entry/store"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import * as React from "react"
@@ -177,6 +181,8 @@ describe("useEntriesQuery", () => {
       entriesQuery = useEntriesQuery({
         feedId: "feed-1",
         view: FeedViewType.Articles,
+        // A full page, so the list asks for the page after it
+        limit: 1,
       })
 
       return null
@@ -205,7 +211,7 @@ describe("useEntriesQuery", () => {
       expect(entriesQuery?.isSuccess).toBe(true)
     })
 
-    // A short list ends with an empty page
+    // A list whose last page is full ends with an empty page
     await act(async () => {
       await entriesQuery?.fetchNextPage()
     })
@@ -409,5 +415,181 @@ describe("useEntriesQuery", () => {
       expect(fetchEntriesSpy).toHaveBeenCalledTimes(2)
       expect(entriesQuery?.queryKey.at(-1)).toBe("asc")
     })
+  })
+})
+
+describe("useEntriesQuery paging and refetching", () => {
+  let root: Root | null = null
+  let client: QueryClient
+
+  beforeAll(() => {
+    ;(globalThis as typeof globalThis & { React: typeof React }).React = React
+    ;(
+      globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true
+  })
+
+  afterEach(async () => {
+    await act(async () => root?.unmount())
+    root = null
+    client.clear()
+    Reflect.deleteProperty(globalThis.history, "isPop")
+    vi.restoreAllMocks()
+  })
+
+  const page = (ids: string[]) =>
+    ({
+      data: ids.map((id) => ({
+        entries: {
+          id,
+          publishedAt: `2026-05-${String(30 - Number(id.slice(1))).padStart(2, "0")}T00:00:00.000Z`,
+        },
+      })),
+    }) as unknown as EntriesResponse
+
+  type Props = Parameters<typeof useEntriesQuery>[0]
+  let entriesQuery: ReturnType<typeof useEntriesQuery> | undefined
+  const Consumer = ({ props }: { props: Props }) => {
+    entriesQuery = useEntriesQuery(props)
+    return null
+  }
+
+  const render = async (props: Props) => {
+    root ??= createRoot(document.createElement("div"))
+    await act(async () =>
+      root?.render(
+        <QueryClientProvider client={client}>
+          <Consumer props={props} />
+        </QueryClientProvider>,
+      ),
+    )
+    await vi.waitFor(() => expect(entriesQuery?.isFetching).toBe(false))
+  }
+
+  const remount = async (props: Props) => {
+    await act(async () => root?.unmount())
+    root = null
+    await render(props)
+  }
+
+  /** Answers one entry per page: e0, e1, … */
+  const serveOneEntryPages = () =>
+    vi
+      .spyOn(entrySyncServices, "fetchEntries")
+      .mockImplementation(async ({ pageParam }) =>
+        page([pageParam ? `e${Number(pageParam.id.slice(1)) + 1}` : "e0"]),
+      )
+
+  const setup = () => {
+    client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    queryClientContext.provide(client)
+  }
+
+  const articles = { feedId: "feed-1", view: FeedViewType.Articles, limit: 1 }
+
+  const loadFivePages = async (props: Props) => {
+    await render(props)
+    for (let i = 1; i < 5; i++) {
+      await act(async () => {
+        await entriesQuery?.fetchNextPage()
+      })
+    }
+    await vi.waitFor(() => expect(entriesQuery?.entriesIds).toEqual(["e0", "e1", "e2", "e3", "e4"]))
+  }
+
+  test("ends a list at a short page without asking for an empty one", async () => {
+    setup()
+    const fetch = vi.spyOn(entrySyncServices, "fetchEntries").mockResolvedValue(page(["e0", "e1"]))
+
+    await render({ feedId: "feed-1", view: FeedViewType.Articles, limit: 3 })
+
+    expect(entriesQuery?.hasNextPage).toBe(false)
+    await render({ feedId: "feed-2", view: FeedViewType.Articles })
+    // Without a limit the server answers 20 per page
+    expect(entriesQuery?.hasNextPage).toBe(false)
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  test("leaves a list as it is when a sync invalidates it in the background", async () => {
+    setup()
+    const fetch = serveOneEntryPages()
+    await loadFivePages(articles)
+    fetch.mockClear()
+
+    await act(async () => {
+      await invalidateEntriesQuery({ views: [FeedViewType.Articles], refetch: false })
+    })
+
+    // Give a refetch, had one started, the time to reach the server
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)))
+    expect(fetch).not.toHaveBeenCalled()
+    expect(entriesQuery?.entriesIds).toHaveLength(5)
+  })
+
+  test("fetches only the first page of an invalidated list entered again", async () => {
+    setup()
+    const fetch = serveOneEntryPages()
+    await loadFivePages(articles)
+    await act(async () => {
+      await invalidateEntriesQuery({ views: [FeedViewType.Articles], refetch: false })
+    })
+    fetch.mockClear()
+
+    await remount(articles)
+
+    await vi.waitFor(() => expect(entriesQuery?.entriesIds).toEqual(["e0"]))
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetch.mock.calls[0]?.[0].pageParam).toBeUndefined()
+  })
+
+  test("fetches only the first page of a list seen over 10 minutes ago, when switched back to", async () => {
+    setup()
+    const fetch = serveOneEntryPages()
+    await loadFivePages(articles)
+    const other = { ...articles, feedId: "feed-2" }
+    await render(other)
+    const key = client.getQueryCache().findAll({ queryKey: ["entries", "feed-1"] })[0]!.queryKey
+    client.setQueryData(key, client.getQueryData(key), { updatedAt: Date.now() - 11 * 60_000 })
+    fetch.mockClear()
+
+    await render(articles)
+
+    await vi.waitFor(() => expect(entriesQuery?.entriesIds).toEqual(["e0"]))
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  test("keeps deep pages when going back", async () => {
+    setup()
+    const fetch = serveOneEntryPages()
+    await loadFivePages(articles)
+    await act(async () => {
+      await invalidateEntriesQuery({ views: [FeedViewType.Articles], refetch: false })
+    })
+    fetch.mockClear()
+    ;(globalThis.history as History & { isPop?: boolean }).isPop = true
+
+    await remount(articles)
+
+    // Give a refetch, had one started, the time to reach the server
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)))
+    expect(fetch).not.toHaveBeenCalled()
+    expect(entriesQuery?.entriesIds).toHaveLength(5)
+  })
+
+  test("asks an oldest-first list read to its end for entries that arrived since", async () => {
+    setup()
+    const unreadOldestFirst = { ...articles, limit: 2, unreadOnly: true, sortOrder: "asc" as const }
+    const fetch = vi
+      .spyOn(entrySyncServices, "fetchEntries")
+      .mockImplementation(async ({ pageParam }) => (pageParam ? page(["e1"]) : page(["e0"])))
+    await render(unreadOldestFirst)
+    expect(entriesQuery?.hasNextPage).toBe(false)
+
+    await act(async () => {
+      await refreshEntriesHead({ views: [FeedViewType.Articles] })
+    })
+
+    expect(fetch.mock.calls.at(-1)?.[0].pageParam?.id).toBe("e0")
+    await vi.waitFor(() => expect(entriesQuery?.entriesIds).toEqual(["e0", "e1"]))
   })
 })

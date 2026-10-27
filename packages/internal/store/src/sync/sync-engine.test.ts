@@ -435,6 +435,10 @@ describe("syncEngine", () => {
     expect(subscriptionDeleteMock).toHaveBeenCalledWith(["feed/feed-2"])
     expect(syncEngine.getLastSyncId()).toBe(12)
     expect(invalidateEntriesQueryMock).toHaveBeenCalledTimes(1)
+    // Marks the lists only; fetching every loaded page again would also jump them to the top
+    expect(invalidateEntriesQueryMock.mock.calls[0]).toEqual([
+      expect.objectContaining({ refetch: false }),
+    ])
   })
 
   it("keeps an unfollow and its undo against older rows that the delta still returns", async () => {
@@ -1390,6 +1394,94 @@ describe("syncEngine", () => {
     expect(refreshEntriesHeadMock).toHaveBeenCalledTimes(1)
   })
 
+  describe("on return to the app", () => {
+    const newEntries = (id: number) =>
+      createAction({
+        id,
+        model: "timeline",
+        modelId: "feed-1",
+        action: "N",
+        createdAt: "2026-09-18T09:00:00.000Z",
+        data: {
+          feedId: "feed-1",
+          count: 1,
+          unread: 1,
+          latestPublishedAt: "2026-09-18T09:00:00.000Z",
+          from: ["feed"],
+        },
+      })
+
+    beforeEach(() => {
+      useSubscriptionStore.setState((state) => ({
+        ...state,
+        data: {
+          ...state.data,
+          "feed-1": {
+            feedId: "feed-1",
+            type: "feed",
+            view: FeedViewType.Articles,
+            userId: "user-1",
+          } as never,
+        },
+      }))
+    })
+
+    it("brings lists up to date after a pull that is still running", async () => {
+      seedCursor(200)
+      let answer: (value: ReturnType<typeof deltaResponse>) => void = () => {}
+      deltaMock.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      const pulling = syncEngine.pull("interval")
+
+      syncEngine.resume()
+      answer(deltaResponse([newEntries(201)]))
+      await pulling
+      await vi.waitFor(() => expect(refreshEntriesHeadMock).toHaveBeenCalledTimes(1))
+    })
+
+    it("brings lists up to date right after a pull, without asking for the delta again", async () => {
+      seedCursor(210)
+      deltaMock.mockResolvedValueOnce(deltaResponse([newEntries(211)]))
+      await syncEngine.pull("ack")
+      expect(refreshEntriesHeadMock).not.toHaveBeenCalled()
+
+      syncEngine.resume()
+
+      await vi.waitFor(() => expect(refreshEntriesHeadMock).toHaveBeenCalledTimes(1))
+      expect(deltaMock).toHaveBeenCalledTimes(1)
+    })
+
+    it("keeps the views owed when fetching the new entries failed", async () => {
+      seedCursor(220)
+      deltaMock.mockResolvedValueOnce(deltaResponse([newEntries(221)]))
+      await syncEngine.pull("interval")
+      refreshEntriesHeadMock.mockRejectedValueOnce(new Error("offline"))
+
+      syncEngine.resume()
+      await vi.waitFor(() => expect(refreshEntriesHeadMock).toHaveBeenCalledTimes(1))
+      await Promise.resolve()
+      syncEngine.resume()
+
+      await vi.waitFor(() => expect(refreshEntriesHeadMock).toHaveBeenCalledTimes(2))
+      expect((refreshEntriesHeadMock.mock.calls as unknown as [unknown][])[1]?.[0]).toEqual(
+        expect.objectContaining({ views: expect.arrayContaining([FeedViewType.Articles]) }),
+      )
+    })
+
+    it("still fetches new entries for a view whose lists the same pull invalidated", async () => {
+      seedCursor(230)
+      deltaMock.mockResolvedValueOnce(
+        deltaResponse([
+          newEntries(231),
+          createAction({ id: 232, model: "subscription", modelId: "feed-1", action: "D" }),
+        ]),
+      )
+      await syncEngine.pull("interval")
+
+      syncEngine.resume()
+
+      await vi.waitFor(() => expect(refreshEntriesHeadMock).toHaveBeenCalledTimes(1))
+    })
+  })
   it("bootstraps again when the server asks for a reset", async () => {
     seedCursor(5)
     deltaMock.mockResolvedValue(deltaResponse([], { reset: true, lastSyncId: 5 }))

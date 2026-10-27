@@ -206,8 +206,16 @@ class SyncEngine implements Resetable {
 
   /** The network or the app came back: pull as soon as possible. */
   resume() {
-    // Coming back fires more than one event (focus, visibility); one pull covers them.
-    if (this.pulling || Date.now() - this.lastPullFinishedAt < FRESH_PULL_WINDOW_MS) return
+    // Coming back fires more than one event (focus, visibility); one pull covers them. A pull
+    // for another reason leaves the new entries it found to the lists, so they are owed now.
+    if (this.pulling) {
+      void this.pulling.then(() => this.flushPendingHead())
+      return
+    }
+    if (Date.now() - this.lastPullFinishedAt < FRESH_PULL_WINDOW_MS) {
+      void this.flushPendingHead()
+      return
+    }
     this.schedulePull("resume")
   }
 
@@ -460,31 +468,37 @@ class SyncEngine implements Resetable {
       await this.calibrateSubscriptions()
     }
 
+    // Lists whose subscriptions changed fetch their first page when they are entered next;
+    // fetching every loaded page now would also jump them to the top.
     if (summary.invalidateViews.size > 0) {
-      invalidateEntriesQuery({ views: Array.from(summary.invalidateViews) })
-      for (const view of summary.invalidateViews) {
-        this.pendingNewEntryViews.delete(view)
-      }
+      void invalidateEntriesQuery({ views: Array.from(summary.invalidateViews), refetch: false })
     }
 
     // New entries never rearrange what is already loaded, so only the edge of the lists on
     // screen is fetched. While the user is reading, the lists are left alone and the views
     // are remembered for the next return to the app.
     for (const view of summary.newEntryViews) {
-      if (!summary.invalidateViews.has(view)) this.pendingNewEntryViews.add(view)
+      this.pendingNewEntryViews.add(view)
     }
     this.pendingNewestEntryAt = Math.max(this.pendingNewestEntryAt, summary.newestEntryAt)
     if (reason === "interval" || reason === "ack") return
 
+    await this.flushPendingHead()
+  }
+
+  /** Fetches the new entries owed to the lists on screen, keeping them owed when that fails */
+  private async flushPendingHead() {
     const views = Array.from(this.pendingNewEntryViews)
     const since = this.pendingNewestEntryAt
     this.pendingNewEntryViews.clear()
     this.pendingNewestEntryAt = 0
-    if (views.length > 0) {
-      await refreshEntriesHead({ views, since }).catch((error) => {
-        console.error("[sync-engine] failed to fetch new entries", error)
-      })
-    }
+    if (views.length === 0) return
+
+    await refreshEntriesHead({ views, since }).catch((error) => {
+      console.error("[sync-engine] failed to fetch new entries", error)
+      for (const view of views) this.pendingNewEntryViews.add(view)
+      this.pendingNewestEntryAt = Math.max(this.pendingNewestEntryAt, since)
+    })
   }
 
   private async applyActions(actions: SyncAction[], summary: PullSummary) {

@@ -1,7 +1,7 @@
 import type { FeedViewType } from "@follow/constants"
-import type { InfiniteData, InfiniteQueryObserver, Query, QueryKey } from "@tanstack/react-query"
+import type { InfiniteData, Query, QueryKey } from "@tanstack/react-query"
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 
 import { FEED_COLLECTION_LIST } from "../../constants/app"
 import { queryClient } from "../../context"
@@ -26,41 +26,55 @@ import type {
   FetchEntriesPropsSettings,
 } from "./types"
 import {
+  ENTRIES_PAGE_SIZE,
   getEffectiveEntrySortOrder,
   isTimelineEntriesSource,
+  markPageEnd,
   mergeEntriesHead,
   trimTrailingEmptyPages,
 } from "./utils"
 
-export const invalidateEntriesQuery = ({
+/**
+ * Marks entry lists as out of date. A list fetches its first page again when it is entered next
+ * (see `useEntriesQuery`); with `refetch`, the lists on screen are fetched again right away.
+ */
+export const invalidateEntriesQuery = async ({
   views,
   collection,
+  refetch = true,
 }: {
   views?: FeedViewType[]
   collection?: true
+  refetch?: boolean
 }) => {
-  return queryClient().invalidateQueries({
-    predicate: (query) => {
-      const { queryKey } = query
-      if (Array.isArray(queryKey) && queryKey[0] === "entries") {
-        const feedId = queryKey[1]
-        const view = queryKey[3]
+  const predicate = (query: Query) => {
+    const { queryKey } = query
+    if (Array.isArray(queryKey) && queryKey[0] === "entries") {
+      const feedId = queryKey[1]
+      const view = queryKey[3]
 
-        const isCollection = queryKey[6]
-        if (views) {
-          return views.includes(view as FeedViewType)
-        }
-
-        if (collection) {
-          return isCollection === true || feedId === FEED_COLLECTION_LIST
-        }
+      const isCollection = queryKey[6]
+      if (views) {
+        return views.includes(view as FeedViewType)
       }
-      return false
-    },
-  })
+
+      if (collection) {
+        return isCollection === true || feedId === FEED_COLLECTION_LIST
+      }
+    }
+    return false
+  }
+  const client = queryClient()
+  await client.invalidateQueries({ predicate, refetchType: "none" })
+  if (!refetch) return
+  // TanStack does not refetch lists with a static `staleTime`, so they are fetched here
+  const active = client.getQueryCache().findAll({ predicate, type: "active" })
+  await Promise.all(active.map((query) => query.fetch().catch(() => {})))
 }
 
-type EntriesPage = Awaited<ReturnType<typeof entrySyncServices.fetchEntries>>
+type EntriesPage = Awaited<ReturnType<typeof entrySyncServices.fetchEntries>> & {
+  isEnd?: boolean
+}
 type EntriesQueryData = InfiniteData<EntriesPage, EntriesPageParam | undefined>
 
 const readEntriesQueryKey = (queryKey: QueryKey) => {
@@ -90,29 +104,51 @@ const readEntriesQueryKey = (queryKey: QueryKey) => {
   }
 }
 
-/**
- * An oldest-first list receives new entries at its end. When it was scrolled to the end, the
- * empty page that marked it is dropped and the page after the last entry is requested again.
- * A list that still has pages to load picks the new entries up when the user gets there.
- */
-const refreshEntriesTail = async (query: Query) => {
-  const observer = query.observers.find(
-    (candidate): candidate is InfiniteQueryObserver =>
-      typeof (candidate as InfiniteQueryObserver).fetchNextPage === "function",
-  )
-  if (!observer) return
+/** Where the page after `lastEntry` starts; collections page by when entries were collected */
+const pageParamAfter = (
+  lastEntry: NonNullable<EntriesPage["data"]>[number] | undefined,
+  isCollectionQuery: boolean,
+): EntriesPageParam | undefined => {
+  const time = isCollectionQuery
+    ? (toCursorTime(lastEntry?.collections?.createdAt) ??
+      toCursorTime(lastEntry?.entries.publishedAt))
+    : toCursorTime(lastEntry?.entries.publishedAt)
+  // The id places the cursor among the entries of its time
+  return lastEntry && time ? { time, id: lastEntry.entries.id } : undefined
+}
 
-  const current = query.state.data as EntriesQueryData | undefined
-  const trimmed = trimTrailingEmptyPages(current)
-  if (!trimmed || trimmed.pages.length === 0) return
-  if (trimmed === current && (current.pages.at(-1)?.data?.length ?? 0) > 0) {
-    // The end was never reached; the list still loads on scroll.
-    return
-  }
-  if (trimmed !== current) {
-    queryClient().setQueryData<EntriesQueryData>(query.queryKey, trimmed)
-  }
-  await observer.fetchNextPage({ cancelRefetch: false })
+/**
+ * An oldest-first list receives new entries at its end. When it was read to its end, the
+ * entries after its last one are fetched and added as a page. A list that still has pages to
+ * load picks the new entries up when the user gets there.
+ */
+const refreshEntriesTail = async (query: Query, params: ReturnType<typeof readEntriesQueryKey>) => {
+  const loaded = query.state.data as EntriesQueryData | undefined
+  if (!loaded?.pages.at(-1)?.isEnd) return
+  // The empty page a full last page was followed by goes, the new entries take its place
+  const current = trimTrailingEmptyPages(loaded)!
+
+  const pageParam = pageParamAfter(current.pages.at(-1)?.data?.at(-1), false)
+  if (!pageParam) return
+  const tail = await entrySyncServices.fetchEntries({
+    feedId: params.feedId,
+    inboxId: params.inboxId,
+    view: params.view,
+    limit: params.limit,
+    feedIdList: params.feedIdList,
+    isCollection: params.isCollection,
+    read: params.unreadOnly ? false : undefined,
+    sortOrder: params.sortOrder,
+    pageParam,
+  })
+  if (!tail.data?.length) return
+  const page = markPageEnd(tail, params.limit ?? ENTRIES_PAGE_SIZE)
+  queryClient().setQueryData<EntriesQueryData>(query.queryKey, (data) => {
+    const trimmed = trimTrailingEmptyPages(data)
+    return (
+      trimmed && { pages: [...trimmed.pages, page], pageParams: [...trimmed.pageParams, pageParam] }
+    )
+  })
 }
 
 // `since` is read from the server's clock and `dataUpdatedAt` from this device's, so a list only
@@ -159,7 +195,7 @@ export const refreshEntriesHead = async ({
       if (since !== undefined && query.state.dataUpdatedAt > since + CLOCK_SKEW_MARGIN_MS) return
 
       if (params.sortOrder === "asc") {
-        await refreshEntriesTail(query)
+        await refreshEntriesTail(query, params)
         return
       }
 
@@ -175,7 +211,7 @@ export const refreshEntriesHead = async ({
         pageParam: undefined,
       })
       client.setQueryData<EntriesQueryData>(query.queryKey, (current) =>
-        mergeEntriesHead(current, head),
+        mergeEntriesHead(current, markPageEnd(head, params.limit ?? ENTRIES_PAGE_SIZE)),
       )
     }),
   )
@@ -233,38 +269,32 @@ export const useEntriesQuery = (
     ],
   )
 
+  const pageSize = aiSort ? 100 : (limit ?? ENTRIES_PAGE_SIZE)
   const query = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam }) =>
-      entrySyncServices.fetchEntries({
-        ...props,
-        limit: aiSort ? 100 : limit,
-        pageParam,
-        read: unreadOnly ? false : undefined,
-        sortOrder: effectiveSortOrder,
-      }),
+    queryFn: async ({ pageParam }): Promise<EntriesPage> =>
+      markPageEnd(
+        await entrySyncServices.fetchEntries({
+          ...props,
+          limit: aiSort ? 100 : limit,
+          pageParam,
+          read: unreadOnly ? false : undefined,
+          sortOrder: effectiveSortOrder,
+        }),
+        pageSize,
+      ),
 
     getNextPageParam: (lastPage) => {
-      if (aiSort) return
-
-      const lastEntry = lastPage.data?.at(-1)
-      const time = isCollectionQuery
-        ? (toCursorTime(lastEntry?.collections?.createdAt) ??
-          toCursorTime(lastEntry?.entries.publishedAt))
-        : toCursorTime(lastEntry?.entries.publishedAt)
-      // The id places the cursor among the entries of its time
-      return lastEntry && time ? { time, id: lastEntry.entries.id } : undefined
+      if (aiSort || lastPage.isEnd) return
+      return pageParamAfter(lastPage.data?.at(-1), isCollectionQuery)
     },
     initialPageParam: undefined as undefined | EntriesPageParam,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    // DON'T refetch when the router is pop to previous page
-    refetchOnMount: fetchUnread && feedUnreadDirty && !isPop ? "always" : false,
-
-    staleTime:
-      // Force refetch unread entries when feed is dirty
-      // HACK: disable refetch when the router is pop to previous page
-      isPop ? Infinity : fetchUnread && feedUnreadDirty ? 0 : defaultStaleTime,
+    // TanStack would fetch every loaded page again on its own, after an invalidation or when
+    // the list is opened again; the effect below fetches its first page instead.
+    refetchOnMount: false,
+    staleTime: "static",
     enabled: !!props,
     subscribed: options?.subscribed,
   })
@@ -293,6 +323,21 @@ export const useEntriesQuery = (
     },
     [queryKey, queryRefetch],
   )
+
+  // Entering a list, by opening it, switching to it or showing it again, fetches its first page
+  // when it is out of date. Going back keeps it as it was, with its deep pages and position.
+  const isShown = !!props && options?.subscribed !== false
+  useEffect(() => {
+    if (!isShown || isPop) return
+    const state = reactQueryClient.getQueryState(queryKey)
+    if (!state?.data) return
+    const isOutdated =
+      state.isInvalidated ||
+      Date.now() - state.dataUpdatedAt > defaultStaleTime ||
+      (fetchUnread && feedUnreadDirty)
+    if (isOutdated) void refetch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the list is entered
+  }, [queryKey, isShown])
 
   const entriesIds = useMemo(() => {
     if (!query.data || query.isLoading || query.isError) {

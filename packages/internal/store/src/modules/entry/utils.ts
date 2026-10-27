@@ -121,7 +121,24 @@ export const fallbackReturn: UseEntriesReturn = {
 
 interface EntriesPageLike {
   data?: Array<{ entries: { id: string } }> | null
+  /** The server had no entries after this page, judged by what it answered, see `markPageEnd` */
+  isEnd?: boolean
 }
+
+/** The server's page size when no limit is asked for */
+export const ENTRIES_PAGE_SIZE = 20
+
+/**
+ * Marks a page as the end of its list when the server answered fewer entries than asked for.
+ * Pages are trimmed when a fresh head is merged in, so their length later says nothing.
+ */
+export const markPageEnd = <TPage extends EntriesPageLike>(
+  page: TPage,
+  pageSize: number,
+): TPage => ({
+  ...page,
+  isEnd: (page.data?.length ?? 0) < pageSize,
+})
 
 interface LoadedEntriesPages<TPage, TParam> {
   pages: TPage[]
@@ -174,7 +191,9 @@ export const mergeEntriesHead = <TPage extends EntriesPageLike, TParam>(
       (item) => !covered.has(item.entries.id) && !headIdSet.has(item.entries.id),
     )
     if (index === 0) {
-      pages.push({ ...head, data: [...(head.data ?? []), ...rest] })
+      // Ends where the loaded page ends when some of it is kept
+      const isEnd = rest.length > 0 ? page.isEnd : head.isEnd
+      pages.push({ ...head, data: [...(head.data ?? []), ...rest], isEnd })
       pageParams.push(firstPageParam)
     } else if (rest.length > 0) {
       pages.push({ ...page, data: rest })
