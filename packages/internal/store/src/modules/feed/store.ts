@@ -1,7 +1,7 @@
 import type { FeedSchema } from "@follow/database/schemas/types"
 import { FEED_EXTRA_DATA_KEYS, FeedService } from "@follow/database/services/feed"
 import { SyncMetaService } from "@follow/database/services/sync-meta"
-import { getDateISOString, isBizId } from "@follow/utils"
+import { isBizId } from "@follow/utils"
 
 import { api } from "../../context"
 import type { Hydratable, Resetable } from "../../lib/base"
@@ -243,28 +243,6 @@ class FeedSyncServices {
       responseData: res.data,
       feed: finalData,
     }
-  }
-
-  async fetchAnalytics(feedId: string | string[]) {
-    const feedIds = Array.isArray(feedId) ? feedId : [feedId]
-    const res = await api().feeds.analytics({
-      id: feedIds,
-    })
-
-    const { analytics } = res.data
-
-    for (const id of feedIds) {
-      const feedAnalytics = analytics[id]
-      if (feedAnalytics) {
-        await feedActions.patch(id, {
-          subscriptionCount: feedAnalytics.subscriptionCount,
-          updatesPerWeek: feedAnalytics.updatesPerWeek,
-          latestEntryPublishedAt: getDateISOString(feedAnalytics.latestEntryPublishedAt),
-        })
-      }
-    }
-
-    return analytics
   }
 }
 export const feedSyncServices = new FeedSyncServices()

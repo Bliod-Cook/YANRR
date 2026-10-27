@@ -13,13 +13,13 @@ import {
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/index.js"
 import { getView, getViewList } from "@follow/constants"
 import { getFeedById } from "@follow/store/feed/getter"
-import { useFeedById, usePrefetchFeedAnalytics } from "@follow/store/feed/hooks"
+import { useFeedById } from "@follow/store/feed/hooks"
 import { getSubscriptionByFeedId } from "@follow/store/subscription/getter"
 import {
   useAllFeedSubscriptionIds,
   useSubscriptionByFeedId,
 } from "@follow/store/subscription/hooks"
-import { clsx, formatNumber, sortByAlphabet } from "@follow/utils/utils"
+import { clsx, sortByAlphabet } from "@follow/utils/utils"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { AnimatePresence, m } from "motion/react"
 import type { FC } from "react"
@@ -39,7 +39,7 @@ import { FeedIcon } from "~/modules/feed/feed-icon"
 import { useConfirmUnsubscribeSubscriptionModal } from "~/modules/modal/hooks/useConfirmUnsubscribeSubscriptionModal"
 import { SettingModalContentPortal } from "~/modules/settings/modal/layout"
 
-type SortField = "name" | "view" | "date" | "subscriptionCount" | "updatesPerWeek"
+type SortField = "name" | "view" | "date"
 type SortDirection = "asc" | "desc"
 type FeedFilter = "all" | "rsshub"
 
@@ -53,7 +53,7 @@ export const SettingFeeds = () => {
 
 // In a narrow table the subscription date gives up its column so the names stay readable
 const GRID_COLS_CLASSNAME =
-  "grid-cols-[30px_auto_100px_150px_60px_60px] @max-[640px]:grid-cols-[30px_auto_100px_60px_60px]"
+  "grid-cols-[30px_auto_100px_150px] @max-[640px]:grid-cols-[30px_auto_100px]"
 const DATE_COLUMN_CLASSNAME = "@max-[640px]:hidden"
 
 const SubscriptionFeedsSection = () => {
@@ -211,26 +211,6 @@ const SubscriptionFeedsSection = () => {
                 <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
               )}
             </button>
-            <button
-              className="text-nowrap text-center transition-colors hover:text-text"
-              onClick={() => handleSort("subscriptionCount")}
-              type="button"
-            >
-              {t("feeds.tableHeaders.followers")}
-              {sortField === "subscriptionCount" && (
-                <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
-              )}
-            </button>
-            <button
-              className="text-nowrap text-center transition-colors hover:text-text"
-              onClick={() => handleSort("updatesPerWeek")}
-              type="button"
-            >
-              {t("feeds.tableHeaders.updatesPerWeek")}
-              {sortField === "updatesPerWeek" && (
-                <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
-              )}
-            </button>
           </div>
 
           {/* Feed List */}
@@ -383,32 +363,6 @@ const SortedFeedsList: FC<{
             : sortByAlphabet(bCompareTitle, aCompareTitle)
         })
       }
-      case "updatesPerWeek": {
-        return feeds.sort((a, b) => {
-          const aSubscription = getSubscriptionByFeedId(a)
-          const bSubscription = getSubscriptionByFeedId(b)
-          if (!aSubscription || !bSubscription) return 0
-          const aFeed = getFeedById(a)
-          const bFeed = getFeedById(b)
-          if (!aFeed || !bFeed) return 0
-          return sortDirection === "asc"
-            ? (aFeed.updatesPerWeek || 0) - (bFeed.updatesPerWeek || 0)
-            : (bFeed.updatesPerWeek || 0) - (aFeed.updatesPerWeek || 0)
-        })
-      }
-      case "subscriptionCount": {
-        return feeds.sort((a, b) => {
-          const aSubscription = getSubscriptionByFeedId(a)
-          const bSubscription = getSubscriptionByFeedId(b)
-          if (!aSubscription || !bSubscription) return 0
-          const aFeed = getFeedById(a)
-          const bFeed = getFeedById(b)
-          if (!aFeed || !bFeed) return 0
-          return sortDirection === "asc"
-            ? (aFeed.subscriptionCount || 0) - (bFeed.subscriptionCount || 0)
-            : (bFeed.subscriptionCount || 0) - (aFeed.subscriptionCount || 0)
-        })
-      }
     }
   }, [feeds, sortDirection, sortField])
 
@@ -419,20 +373,7 @@ const SortedFeedsList: FC<{
     overscan: 5,
   })
 
-  // Track visible feeds for analytics prefetching
   const virtualItems = rowVirtualizer.getVirtualItems()
-  const visibleFeedIds = useMemo(() => {
-    const feedIds: string[] = []
-    virtualItems.forEach((item) => {
-      const feedId = sortedFeedIds[item.index]
-      if (feedId) {
-        feedIds.push(feedId)
-      }
-    })
-    return feedIds
-  }, [virtualItems, sortedFeedIds])
-
-  usePrefetchFeedAnalytics(visibleFeedIds)
 
   return (
     <div
@@ -594,59 +535,6 @@ const FeedListItem = memo(
             <RelativeDay date={new Date(subscription.createdAt)} />
           </div>
         )}
-        <div className="text-center text-xs">
-          {feed?.subscriptionCount ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center justify-center gap-0.5 text-text-secondary">
-                  <i className="i-mgc-user-3-cute-re text-[10px]" />
-                  <span className="text-[11px] tabular-nums">
-                    {formatNumber(feed.subscriptionCount)}
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipPortal>
-                <TooltipContent>{t("feeds.tableRow.subscriptionCount")}</TooltipContent>
-              </TooltipPortal>
-            </Tooltip>
-          ) : (
-            <div className="text-[11px] text-text-secondary">--</div>
-          )}
-        </div>
-        <div className="text-center text-xs">
-          {feed?.updatesPerWeek ? (
-            <div className="flex justify-center gap-0.5">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="flex items-center justify-center gap-0.5 text-text-secondary">
-                    <i className="i-mgc-safety-certificate-cute-re text-[10px]" />
-                    <span className="text-[11px] tabular-nums">
-                      {t("feeds.tableRow.updatesPerWeekValue", {
-                        value: Math.round(feed.updatesPerWeek),
-                      })}
-                    </span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipPortal>
-                  <TooltipContent>{t("feeds.tableRow.updatesPerWeek")}</TooltipContent>
-                </TooltipPortal>
-              </Tooltip>
-              {feed.latestEntryPublishedAt && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="text-[10px] text-text-secondary">
-                      <i className="i-mgc-calendar-time-add-cute-re" />
-                      <RelativeDay date={new Date(feed.latestEntryPublishedAt)} />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>{t("feeds.tableRow.latestEntryPublished")}</TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-          ) : (
-            <div className="text-[11px] text-text-secondary">--</div>
-          )}
-        </div>
       </div>
     )
   },
