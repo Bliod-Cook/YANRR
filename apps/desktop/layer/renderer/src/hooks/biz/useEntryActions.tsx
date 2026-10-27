@@ -29,6 +29,7 @@ import { isMutationCommandId } from "~/modules/command/mutation-command-ids"
 import type { FollowCommandId, UnknownCommand } from "~/modules/command/types"
 import { useToolbarOrderMap } from "~/modules/customize-toolbar/hooks"
 
+import { useFeature } from "./useFeature"
 import { useRouteParams } from "./useRouteParams"
 
 export const enableEntryReadability = async ({ id, url }: { id: string; url: string }) => {
@@ -254,6 +255,7 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
   const isShowSourceContent = useShowSourceContent()
 
   const isShowAITranslationAuto = useShowAITranslationAuto(!!entry?.translation)
+  const aiEnabled = useFeature("ai")
   const isShowAITranslationOnce = useShowAITranslationOnce()
 
   const runCmdFn = useRunCommandFn()
@@ -374,6 +376,7 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
         id: COMMAND_ID.entry.toggleAITranslation,
         onClick: runCmdFn(COMMAND_ID.entry.toggleAITranslation, []),
         hide:
+          !aiEnabled ||
           isShowAITranslationAuto ||
           ([FeedViewType.SocialMedia, FeedViewType.Videos] as (number | undefined)[]).includes(
             view,
@@ -482,6 +485,7 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
     isInCollection,
     isCurrentVisitEntry,
     isShowSourceContent,
+    aiEnabled,
     isShowAITranslationAuto,
     isShowAITranslationOnce,
     isCollection,

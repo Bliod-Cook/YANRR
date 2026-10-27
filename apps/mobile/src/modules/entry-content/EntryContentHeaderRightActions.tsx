@@ -17,6 +17,7 @@ import Animated, { interpolate, useAnimatedStyle } from "react-native-reanimated
 import { useColor } from "react-native-uikit-colors"
 import type { MenuItemIconProps } from "zeego/lib/typescript/menu"
 
+import { useAIEnabled } from "@/src/atoms/server-configs"
 import { getActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { ActionBarItem } from "@/src/components/ui/action-bar/ActionBarItem"
 import { DropdownMenu } from "@/src/components/ui/context-menu"
@@ -88,6 +89,7 @@ const HeaderRightActionsImpl = ({
   const showAITranslationSetting =
     useGeneralSettingKey("translation") || !!entry?.settings?.translation
   const translationMode = useGeneralSettingKey("translationMode")
+  const aiEnabled = useAIEnabled()
   const showReadabilitySetting = !!entry?.settings?.readability
 
   const feed = useFeedById(entry?.feedId as string, (feed) => feed && { feedId: feed.id })
@@ -175,6 +177,7 @@ const HeaderRightActionsImpl = ({
       // inMenu: true,
     },
     isLoggedIn &&
+      aiEnabled &&
       !showAITranslationSetting && {
         key: "ShowTranslation",
         title: t("entry_content.header.show_translation"),
