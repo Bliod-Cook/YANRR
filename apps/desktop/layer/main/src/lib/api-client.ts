@@ -70,12 +70,6 @@ const createApiClient = () => {
       logger.warn("Authentication failed in main process")
     }
 
-    try {
-      await response.clone().json()
-    } catch (error) {
-      logger.error("API Error details:", error)
-    }
-
     return response
   })
 

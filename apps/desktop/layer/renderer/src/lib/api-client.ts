@@ -118,16 +118,6 @@ followClient.addResponseInterceptor(async ({ response }) => {
     setLoginModalShow(true)
     userActions.removeCurrentUser()
   }
-  try {
-    const isJSON = response.headers.get("content-type")?.includes("application/json")
-    if (!isJSON) return response
-    const _json = await response.clone().json()
-
-    const isError = response.status >= 400
-    if (!isError) return response
-  } catch {
-    // ignore
-  }
 
   return response
 })
