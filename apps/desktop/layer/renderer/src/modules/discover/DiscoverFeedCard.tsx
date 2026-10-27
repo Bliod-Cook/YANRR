@@ -14,7 +14,6 @@ import { useLocation } from "react-router"
 import { Media } from "~/components/ui/media/Media"
 import { useFollow } from "~/hooks/biz/useFollow"
 import { navigateEntry } from "~/hooks/biz/useNavigateEntry"
-import { useFeedSafeUrl } from "~/hooks/common/useFeedSafeUrl"
 
 import { FollowSummary } from "../feed/feed-summary"
 
@@ -145,14 +144,14 @@ export const SearchResultContent: FC<{
   entry: NonUndefined<DiscoveryItem["entries"]>[number]
 }> = memo(({ entry }) => {
   const { t } = useTranslation()
-  const safeUrl = useFeedSafeUrl(entry.id)
+  // Found entries are not stored; the server already made their addresses absolute
+  const href = entry.url && /^https?:\/\//.test(entry.url) ? entry.url : undefined
+  const Container = href ? "a" : "div"
   return (
-    <a
+    <Container
       key={entry.id}
-      href={safeUrl ?? "#"}
-      target="_blank"
+      {...(href && { href, target: "_blank", rel: "noreferrer" })}
       className="group relative flex flex-col overflow-hidden rounded-lg bg-zinc-50/50 shadow-zinc-100 transition-all duration-200 hover:-translate-y-px hover:shadow-md dark:bg-zinc-800/50 dark:shadow-neutral-700/50"
-      rel="noreferrer"
     >
       <div className="aspect-[3/2] w-full overflow-hidden">
         <FeedCardMediaThumbnail entry={entry} />
@@ -174,7 +173,7 @@ export const SearchResultContent: FC<{
           <RelativeTime date={entry.publishedAt} displayAbsoluteTimeAfterDay={Infinity} />
         </div>
       </div>
-    </a>
+    </Container>
   )
 })
 
