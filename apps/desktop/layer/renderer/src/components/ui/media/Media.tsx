@@ -156,6 +156,8 @@ const MediaImpl: FC<MediaProps> = ({
           <img
             height={finalHeight}
             width={finalWidth}
+            // Decodes off the main thread, so a large photo does not hold up scrolling
+            decoding="async"
             {...(props as ImgHTMLAttributes<HTMLImageElement>)}
             onError={errorHandle}
             className={cn(
