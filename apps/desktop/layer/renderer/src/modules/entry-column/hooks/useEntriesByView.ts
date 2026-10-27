@@ -111,11 +111,14 @@ const useRemoteEntries = (): RemoteEntriesReturn => {
   }
 }
 
+const NO_ENTRY_IDS: string[] = []
+
 function getEntryIdsFromMultiplePlace(...entryIds: Array<string[] | undefined | null>) {
   return entryIds.find((ids) => ids?.length) ?? []
 }
 
-const useLocalEntries = (): UseEntriesReturn => {
+/** The stored entries, shown until the server's list is in; computes nothing unless `enabled` */
+const useLocalEntries = (enabled: boolean): UseEntriesReturn => {
   const { feedId, view, inboxId, isCollection } = useRouteParams()
   const isPreview = useIsPreviewFeed()
   const unreadOnly = useGeneralSettingKey("unreadOnly")
@@ -134,11 +137,11 @@ const useLocalEntries = (): UseEntriesReturn => {
     feedId,
     view,
   })
-  const entryIdsByView = useEntryIdsByView(view)
-  const entryIdsByCollections = useCollectionEntryList(view)
-  const entryIdsByFeedId = useEntryIdsByFeedId(feedId)
-  const entryIdsByCategory = useEntryIdsByFeedIds(folderIds)
-  const entryIdsByInboxId = useEntryIdsByInboxId(inboxId)
+  const entryIdsByView = useEntryIdsByView(view, enabled)
+  const entryIdsByCollections = useCollectionEntryList(view, enabled)
+  const entryIdsByFeedId = useEntryIdsByFeedId(feedId, enabled)
+  const entryIdsByCategory = useEntryIdsByFeedIds(folderIds, enabled)
+  const entryIdsByInboxId = useEntryIdsByInboxId(inboxId, enabled)
 
   const showEntriesByView =
     (!feedId || feedId === ROUTE_FEED_PENDING) &&
@@ -162,6 +165,7 @@ const useLocalEntries = (): UseEntriesReturn => {
   const allEntries = useEntryStore(
     useCallback(
       (state) => {
+        if (!enabled) return NO_ENTRY_IDS
         const ids = isCollection
           ? entryIdsByCollections
           : showEntriesByView
@@ -195,6 +199,7 @@ const useLocalEntries = (): UseEntriesReturn => {
         showEntriesByView,
         effectiveSortOrder,
         effectiveUnreadOnly,
+        enabled,
       ],
     ),
   )
@@ -250,7 +255,7 @@ export const useEntriesByView = ({ onReset }: { onReset?: () => void }) => {
   const { view } = useRouteParams()
 
   const remoteQuery = useRemoteEntries()
-  const localQuery = useLocalEntries()
+  const localQuery = useLocalEntries(!remoteQuery.isReady)
 
   useFetchEntryContentByStream(remoteQuery.entriesIds)
 

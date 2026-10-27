@@ -378,23 +378,43 @@ export function useEntryList(
   })
 }
 
-export const useEntryIdsByView = (view: FeedViewType) => {
-  return useEntryStore(useCallback((state) => getEntryIdsByViewSelector(state)(view), [view]))
-}
+// The `enabled` flag lets a list hook stay in place, as hooks must, while selecting nothing: the
+// stored entries are only shown until the server's list is in, and sorting them on every store
+// change would cost the same either way.
 
-export const useEntryIdsByFeedId = (feedId: string | undefined | null) => {
-  return useEntryStore(useCallback((state) => getEntryIdsByFeedIdSelector(state)(feedId), [feedId]))
-}
-
-export const useEntryIdsByFeedIds = (feedIds: string[] | undefined) => {
+export const useEntryIdsByView = (view: FeedViewType, enabled = true) => {
   return useEntryStore(
-    useCallback((state) => getEntryIdsByFeedIdsSelector(state)(feedIds), [feedIds?.toString()]),
+    useCallback(
+      (state) => (enabled ? getEntryIdsByViewSelector(state)(view) : null),
+      [enabled, view],
+    ),
   )
 }
 
-export const useEntryIdsByInboxId = (inboxId: string | undefined) => {
+export const useEntryIdsByFeedId = (feedId: string | undefined | null, enabled = true) => {
   return useEntryStore(
-    useCallback((state) => getEntryIdsByInboxIdSelector(state)(inboxId), [inboxId]),
+    useCallback(
+      (state) => (enabled ? getEntryIdsByFeedIdSelector(state)(feedId) : null),
+      [enabled, feedId],
+    ),
+  )
+}
+
+export const useEntryIdsByFeedIds = (feedIds: string[] | undefined, enabled = true) => {
+  return useEntryStore(
+    useCallback(
+      (state) => (enabled ? getEntryIdsByFeedIdsSelector(state)(feedIds) : null),
+      [enabled, feedIds?.toString()],
+    ),
+  )
+}
+
+export const useEntryIdsByInboxId = (inboxId: string | undefined, enabled = true) => {
+  return useEntryStore(
+    useCallback(
+      (state) => (enabled ? getEntryIdsByInboxIdSelector(state)(inboxId) : null),
+      [enabled, inboxId],
+    ),
   )
 }
 

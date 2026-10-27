@@ -249,7 +249,10 @@ function useRemoteEntries(props?: UseEntriesProps): RemoteTimelineEntries {
   }
 }
 
-function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
+const NO_ENTRY_IDS: string[] = []
+
+/** The stored entries, shown until the server's list is in; computes nothing unless `enabled` */
+function useLocalEntries(props: UseEntriesProps | undefined, enabled: boolean): UseEntriesReturn {
   const entryListContext = useEntryListContext()
   const selectedFeed = useSelectedFeed()
   const selectedView = useSelectedView()
@@ -272,11 +275,11 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
   const { feedId, feedIdList, inboxId, isCollection } = payload || {}
   const { sortOrder, unreadOnly } = options
 
-  const entryIdsByView = useEntryIdsByView(view)
-  const entryIdsByCollections = useCollectionEntryList(view)
-  const entryIdsByFeedId = useEntryIdsByFeedId(feedId)
-  const entryIdsByCategory = useEntryIdsByFeedIds(feedIdList)
-  const entryIdsByInboxId = useEntryIdsByInboxId(inboxId)
+  const entryIdsByView = useEntryIdsByView(view, enabled)
+  const entryIdsByCollections = useCollectionEntryList(view, enabled)
+  const entryIdsByFeedId = useEntryIdsByFeedId(feedId, enabled)
+  const entryIdsByCategory = useEntryIdsByFeedIds(feedIdList, enabled)
+  const entryIdsByInboxId = useEntryIdsByInboxId(inboxId, enabled)
 
   const showEntriesByView =
     !feedId && (!feedIdList || feedIdList?.length === 0) && !isCollection && !inboxId
@@ -284,6 +287,7 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
   const allEntries = useEntryStore(
     useCallback(
       (state) => {
+        if (!enabled) return NO_ENTRY_IDS
         const ids = isCollection
           ? entryIdsByCollections
           : showEntriesByView
@@ -315,6 +319,7 @@ function useLocalEntries(props?: UseEntriesProps): UseEntriesReturn {
         entryIdsByView,
         isCollection,
         showEntriesByView,
+        enabled,
         sortOrder,
         unreadOnly,
       ],
@@ -371,7 +376,7 @@ function getEntryIdsFromMultiplePlace(...entryIds: Array<string[] | undefined | 
 export function useEntries(props?: UseEntriesProps): UseEntriesReturn {
   const { viewId, active = true } = props || {}
   const remoteQuery = useRemoteEntries({ viewId, active })
-  const localQuery = useLocalEntries({ viewId, active })
+  const localQuery = useLocalEntries({ viewId, active }, !remoteQuery.isReady)
 
   return pickTimelineEntries(remoteQuery, localQuery)
 }
