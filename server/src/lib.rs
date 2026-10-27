@@ -21,6 +21,7 @@ use axum::{Router, extract::FromRef};
 use log::LevelFilter;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
+use tower_http::compression::CompressionLayer;
 
 use crate::{auth::Auth, config::Config, migration::Migrator};
 
@@ -71,5 +72,6 @@ pub fn router(state: AppState) -> Router {
     if let Some(dir) = &state.config.server.web_dir {
         app = app.fallback_service(web::service(dir));
     }
-    app.with_state(state)
+    // Leaves out images, event streams and tiny bodies.
+    app.with_state(state).layer(CompressionLayer::new())
 }

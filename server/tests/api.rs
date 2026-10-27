@@ -1,6 +1,10 @@
 mod common;
 
+use std::io::Read;
+
 use common::TestApp;
+use flate2::read::GzDecoder;
+use reqwest::header;
 use sea_orm::ConnectionTrait;
 use serde_json::{Value, json};
 
@@ -43,19 +47,41 @@ async fn web_build_served_with_spa_fallback() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("index.html"), "<html>app</html>").unwrap();
     std::fs::create_dir(dir.path().join("assets")).unwrap();
-    std::fs::write(dir.path().join("assets/app.js"), "run()").unwrap();
+    let script = "run();\n".repeat(100);
+    std::fs::write(dir.path().join("assets/app.js"), &script).unwrap();
     let web_dir = dir.path().to_path_buf();
     let app = TestApp::spawn_with(|config| config.server.web_dir = Some(web_dir)).await;
+    let cache_control = |res: &reqwest::Response| res.headers()[header::CACHE_CONTROL].clone();
 
-    assert_eq!(
-        app.get("/settings/general").await.text().await.unwrap(),
-        "<html>app</html>"
-    );
-    assert_eq!(
-        app.get("/assets/app.js").await.text().await.unwrap(),
-        "run()"
-    );
+    let page = app.get("/settings/general").await;
+    assert_eq!(cache_control(&page), "no-cache");
+    assert_eq!(page.text().await.unwrap(), "<html>app</html>");
+    let res = app.get("/favicon.ico").await;
+    assert_eq!(res.text().await.unwrap(), "<html>app</html>");
+
+    let asset = app.get("/assets/app.js").await;
+    assert_eq!(cache_control(&asset), "public, max-age=31536000, immutable");
+    assert_eq!(asset.text().await.unwrap(), script);
+    // A chunk an old page asks for after an upgrade is missing, not the page.
+    let missing = app.get("/assets/gone.js").await;
+    assert_eq!(missing.status(), 404);
+    assert_eq!(missing.headers().get(header::CACHE_CONTROL), None);
+
     let res = app.get("/api/unknown").await;
     assert_eq!(res.status(), 404);
     assert_eq!(res.json::<Value>().await.unwrap()["code"], 6);
+
+    let raw = reqwest::Client::builder().no_gzip().build().unwrap();
+    let res = raw
+        .get(format!("{}/assets/app.js", app.url))
+        .header(header::ACCEPT_ENCODING, "gzip")
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(res.headers()[header::CONTENT_ENCODING], "gzip");
+    let mut decoded = String::new();
+    GzDecoder::new(&res.bytes().await.unwrap()[..])
+        .read_to_string(&mut decoded)
+        .unwrap();
+    assert_eq!(decoded, script);
 }
