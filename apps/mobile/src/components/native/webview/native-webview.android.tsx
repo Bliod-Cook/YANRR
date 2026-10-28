@@ -44,11 +44,6 @@ const bridgeQueue = createBridgeQueue((type, payload) => {
 
 export const dispatchToPage = bridgeQueue.dispatch
 
-// A new or reloaded page installs its bridge again
-const onLoadStart = () => {
-  bridgeQueue.reset()
-}
-
 const onLoadEnd = () => {
   injectJavaScript(atEnd)
 }
@@ -90,7 +85,6 @@ export const NativeWebView: React.ComponentType<
         }
       }}
       onNavigationStateChange={onNavigationStateChange}
-      onLoadStart={onLoadStart}
       onLoadEnd={onLoadEnd}
       onMessage={useTypeScriptHappyCallback(
         (e) => {

@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, test, vi } from "vitest"
 import type { EntryModel } from "../types"
 import { App } from "./App"
 
-// The app injects the bridge before the page loads
-const readySignals = vi.hoisted(() => {
-  const signals = { count: 0 }
-  vi.stubGlobal("bridge", { measure: vi.fn(), bridgeReady: () => signals.count++ })
-  return signals
+// On Android the app may inject its `bridge` only after the page script ran
+const postedMessages = vi.hoisted(() => {
+  const messages: string[] = []
+  vi.stubGlobal("ReactNativeWebView", { postMessage: (message: string) => messages.push(message) })
+  return messages
 })
 
 const coverImageUrl = "https://example.com/images/cover.jpg"
@@ -186,7 +186,7 @@ describe("embedded YouTube videos", () => {
 })
 
 describe("bridge", () => {
-  test("tells the app once it takes messages", () => {
-    expect(readySignals.count).toBe(1)
+  test("tells the app once it takes messages, before the app injected its bridge", () => {
+    expect(postedMessages).toEqual([JSON.stringify({ type: "bridgeReady" })])
   })
 })

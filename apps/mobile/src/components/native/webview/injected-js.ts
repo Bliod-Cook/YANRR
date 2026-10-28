@@ -48,10 +48,6 @@ export const atStart = `
         },
       })
     },
-    // The page installed window.__FO_BRIDGE__ and takes messages from now on
-    bridgeReady: () => {
-      send({ type: "bridgeReady" })
-    },
   }
 
   // Signal readiness once DOM is interactive/loaded (guard to send once)

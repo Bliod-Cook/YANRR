@@ -148,7 +148,9 @@ export class WebViewBridgeManager {
           }
         },
       }
-      bridge.bridgeReady?.()
+      // Android only: tells the app the page takes messages now. The app's injected `bridge` may
+      // not exist yet there, while the WebView's own interface always does.
+      window.ReactNativeWebView?.postMessage(JSON.stringify({ type: "bridgeReady" }))
     }
   }
 }

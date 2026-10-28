@@ -30,16 +30,18 @@ describe("createBridgeQueue", () => {
     expect(sent).toEqual(["setNoMedia:true"])
   })
 
-  it("holds settings again for a reloaded page and sends them all once it is ready", () => {
+  it("sends the latest of each again when another page says it is ready", () => {
     const { queue, sent } = setup()
     queue.ready()
     queue.dispatch("setCodeTheme", "{}")
-
-    queue.reset()
     queue.dispatch("setRootFontSize", "18")
-    expect(sent).toEqual(["setCodeTheme:{}"])
 
     queue.ready()
-    expect(sent).toEqual(["setCodeTheme:{}", "setCodeTheme:{}", "setRootFontSize:18"])
+    expect(sent).toEqual([
+      "setCodeTheme:{}",
+      "setRootFontSize:18",
+      "setCodeTheme:{}",
+      "setRootFontSize:18",
+    ])
   })
 })

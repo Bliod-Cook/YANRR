@@ -7,12 +7,15 @@ interface Bridge {
   setContentHeight: (height: number) => void
   previewImage: (data: { imageUrls: string[]; index: number }) => void
   seekAudio: (time: number) => void
-  /** Android only: tells the app the page takes messages now */
-  bridgeReady?: () => void
 }
 
 declare global {
   export const bridge: Bridge
+
+  interface Window {
+    /** Android only: the WebView's own interface to the app */
+    ReactNativeWebView?: { postMessage: (message: string) => void }
+  }
 }
 
 export {}
