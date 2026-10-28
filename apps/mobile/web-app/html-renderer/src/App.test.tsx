@@ -1,3 +1,5 @@
+import { act, useLayoutEffect } from "react"
+import { createRoot } from "react-dom/client"
 import { renderToStaticMarkup } from "react-dom/server"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
@@ -186,7 +188,39 @@ describe("embedded YouTube videos", () => {
 })
 
 describe("bridge", () => {
+  beforeEach(() => {
+    vi.stubGlobal("bridge", { measure: vi.fn() })
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true)
+  })
+
   test("tells the app once it takes messages, before the app injected its bridge", () => {
     expect(postedMessages).toEqual([JSON.stringify({ type: "bridgeReady" })])
+  })
+
+  test("shows an entry the app sends while the page mounts", async () => {
+    // Lands after the page rendered and before it subscribed, as a message from the app can
+    const SendEntry = () => {
+      useLayoutEffect(() => {
+        window.__FO_BRIDGE__.dispatch(
+          "setEntry",
+          JSON.stringify({ content: "<p>Sent on mount</p>" }),
+        )
+      }, [])
+      return null
+    }
+    const container = document.createElement("div")
+    const root = createRoot(container)
+
+    await act(async () =>
+      root.render(
+        <>
+          <App />
+          <SendEntry />
+        </>,
+      ),
+    )
+
+    expect(container.textContent).toContain("Sent on mount")
+    await act(async () => root.unmount())
   })
 })

@@ -1,5 +1,5 @@
 import { parseMarkdown } from "@follow/components/utils/parse-markdown.js"
-import { createStore, Provider, useAtomValue } from "jotai"
+import { createStore, Provider, useAtomValueRawSync } from "jotai"
 import { useMemo } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 
@@ -21,11 +21,13 @@ const bridgeManager = new WebViewBridgeManager(store)
 bridgeManager.exposeToWindow()
 
 export const App = () => {
-  const entry = useAtomValue(entryAtom, { store })
-  const readerRenderInlineStyle = useAtomValue(readerRenderInlineStyleAtom, { store })
-  const noMedia = useAtomValue(noMediaAtom, { store })
-  const spotlightRules = useAtomValue(spotlightAtom, { store })
-  const readerStyle = useAtomValue(readerStyleAtom, { store })
+  // The app may send these while the page mounts, before useAtomValue would subscribe and so
+  // keep the earlier value
+  const entry = useAtomValueRawSync(entryAtom, { store })
+  const readerRenderInlineStyle = useAtomValueRawSync(readerRenderInlineStyleAtom, { store })
+  const noMedia = useAtomValueRawSync(noMediaAtom, { store })
+  const spotlightRules = useAtomValueRawSync(spotlightAtom, { store })
+  const readerStyle = useAtomValueRawSync(readerStyleAtom, { store })
   const coverMedia = entry?.media?.[0]
   const articleStyle = useMemo(() => getReaderArticleStyle(readerStyle), [readerStyle])
   // Onboarding entries contain Markdown, as in the desktop reader. Pass the
