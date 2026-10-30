@@ -7,13 +7,13 @@ use std::{
 
 use chrono::Utc;
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
-use reqwest::{Client, Response};
+use reqwest::Client;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-use crate::{config::PushConfig, entity::messaging_token};
+use crate::{config::PushConfig, entity::messaging_token, fetch::http::successful};
 
 const SCOPE: &str = "https://www.googleapis.com/auth/firebase.messaging";
 const JWT_BEARER: &str = "urn:ietf:params:oauth:grant-type:jwt-bearer";
@@ -176,14 +176,4 @@ impl Fcm {
         *cached = Some((token.access_token.clone(), expires));
         Ok(token.access_token)
     }
-}
-
-/// The response, or Google's explanation of why it failed.
-async fn successful(response: Response) -> Result<Response, String> {
-    let status = response.status();
-    if status.is_success() {
-        return Ok(response);
-    }
-    let body = response.text().await.unwrap_or_default();
-    Err(format!("HTTP {}: {body}", status.as_u16()))
 }

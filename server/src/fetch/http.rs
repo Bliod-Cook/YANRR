@@ -1,6 +1,6 @@
 use std::{error::Error, time::Duration};
 
-use reqwest::{Client, StatusCode, Url, header, redirect};
+use reqwest::{Client, Response, StatusCode, Url, header, redirect};
 
 const MAX_REDIRECTS: usize = 5;
 /// Bounds every redirect and the body together.
@@ -115,7 +115,7 @@ async fn follow(
 }
 
 /// The error with its causes, which reqwest leaves out of its message: DNS, TLS, refused connections.
-fn describe(err: reqwest::Error) -> String {
+pub(crate) fn describe(err: reqwest::Error) -> String {
     if err.is_timeout() {
         return "Timed out".into();
     }
@@ -126,6 +126,16 @@ fn describe(err: reqwest::Error) -> String {
         source = cause.source();
     }
     message
+}
+
+/// The response, or the service's explanation of why it failed.
+pub(crate) async fn successful(response: Response) -> Result<Response, String> {
+    let status = response.status();
+    if status.is_success() {
+        return Ok(response);
+    }
+    let body = response.text().await.unwrap_or_default();
+    Err(format!("HTTP {}: {body}", status.as_u16()))
 }
 
 #[cfg(test)]
