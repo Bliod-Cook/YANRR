@@ -171,18 +171,8 @@ async fn entry_detail_and_content_stream() {
 #[tokio::test]
 async fn readability_extracts_article() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
-    let paragraph = "The reader keeps every subscription in sync across devices, and this sentence is \
-        long enough to look like the body of an article rather than a navigation label. ";
-    let page = format!(
-        "<html><head><title>Article</title></head><body>
-            <nav><a href='/'>Home</a> <a href='/about'>About this site</a></nav>
-            <article><h1>Article</h1><p>{0}{0}</p><p>{0}{0}</p><p>{0}{0}</p></article>
-        </body></html>",
-        paragraph
-    );
-    fixtures.set("/article", Reply::Body(page));
     let item =
-        json!([{ "id": "article", "url": fixtures.url("/article"), "content_text": "summary" }]);
+        json!([{ "id": "article", "url": common::article(&fixtures), "content_text": "summary" }]);
     fixtures.set("/feed.json", Reply::Body(json_feed(item)));
     app.sign_up("alice@example.com").await;
     subscribe(&app, &fixtures.url("/feed.json"), json!({})).await;

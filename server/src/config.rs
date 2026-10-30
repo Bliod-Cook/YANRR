@@ -21,6 +21,8 @@ pub struct Config {
     pub inbox: InboxConfig,
     /// Push notifications are sent only when configured.
     pub push: Option<PushConfig>,
+    /// AI summaries and translations are offered only when configured.
+    pub ai: Option<AiConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -70,6 +72,16 @@ pub struct PushConfig {
     /// Where the FCM API is; only tests change it.
     #[serde(default = "fcm_url")]
     pub fcm_url: String,
+}
+
+/// A model behind an OpenAI-compatible Chat Completions API.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AiConfig {
+    /// Where the API is, e.g. `https://api.openai.com/v1`.
+    pub base_url: String,
+    /// Sent as a bearer token; servers such as Ollama need none.
+    pub api_key: Option<String>,
+    pub model: String,
 }
 
 fn fcm_url() -> String {

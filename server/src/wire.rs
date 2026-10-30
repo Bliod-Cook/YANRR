@@ -74,7 +74,7 @@ pub struct Entry {
     description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<Option<String>>,
-    /// AI summaries are not stored.
+    /// AI summaries come from `GET /ai/summary`, in the language each client asks for.
     summary: (),
     author: Option<String>,
     author_url: Option<String>,

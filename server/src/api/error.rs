@@ -9,7 +9,7 @@ use axum::{
 };
 use serde_json::{Value, json};
 
-use crate::fetch::FetchError;
+use crate::{ai::AiError, fetch::FetchError};
 
 /// Error codes from the Folo API contract; add variants as features need them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -128,6 +128,15 @@ impl From<FetchError> for ApiError {
             FetchError::Fetch(message) => Self::new(ExceptionCode::FeedFetchError, message),
             FetchError::Parse(message) => Self::new(ExceptionCode::FeedParseError, message),
             FetchError::Db(err) => err.into(),
+        }
+    }
+}
+
+impl From<AiError> for ApiError {
+    fn from(err: AiError) -> Self {
+        match err {
+            AiError::Model(message) => Self::new(ExceptionCode::InternalError, message),
+            AiError::Db(err) => err.into(),
         }
     }
 }

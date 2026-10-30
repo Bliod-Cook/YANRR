@@ -6404,6 +6404,7 @@ dependencies = [
  "axum",
  "better-auth",
  "chrono",
+ "dom_query",
  "dom_smoothie",
  "feed-rs",
  "figment",

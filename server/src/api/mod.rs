@@ -1,4 +1,5 @@
 mod actions;
+mod ai;
 mod categories;
 mod collections;
 mod discover;
@@ -32,6 +33,8 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
     Router::new()
         .route("/status/configs", get(status::configs))
         .route("/actions", get(actions::get).put(actions::put))
+        .route("/ai/summary", get(ai::summary))
+        .route("/ai/translation/batch", post(ai::translate_batch))
         .route(
             "/categories",
             patch(categories::update).delete(categories::delete),

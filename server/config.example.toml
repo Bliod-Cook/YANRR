@@ -29,3 +29,10 @@ url = "https://rsshub.app"
 # Service account key of the Firebase project the clients are built with
 # (VITE_FIREBASE_CONFIG on desktop and web, GOOGLE_SERVICES_JSON / GOOGLE_SERVICE_INFO_PLIST on mobile).
 # firebase_service_account = "firebase-service-account.json"
+
+# AI summaries and translations (optional), by a model behind an OpenAI-compatible Chat Completions API.
+# [ai]
+# base_url = "https://api.openai.com/v1"
+# Leave out for servers that need none, such as Ollama at http://localhost:11434/v1.
+# api_key = ""
+# model = "gpt-5-mini"

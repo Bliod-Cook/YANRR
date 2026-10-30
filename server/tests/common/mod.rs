@@ -25,7 +25,7 @@ use tempfile::NamedTempFile;
 use tokio::net::TcpListener;
 use yanrr::{
     AppState,
-    config::{Config, PushConfig},
+    config::{AiConfig, Config, PushConfig},
 };
 
 pub const PASSWORD: &str = "correct-horse-battery";
@@ -261,6 +261,7 @@ impl Fixtures {
             .route("/etag", get(etag))
             .route("/rsshub/{*route}", get(rsshub))
             .route(FCM_SEND_PATH, post(fcm_send))
+            .route(AI_PATH, post(chat))
             .fallback(replied)
             .with_state(state.clone());
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -403,6 +404,63 @@ pub fn fake_fcm(fixtures: &Fixtures) -> (PushConfig, NamedTempFile) {
         fcm_url: fixtures.url(""),
     };
     (push, key_file)
+}
+
+/// Where [`fake_ai`] takes chat completions.
+pub const AI_PATH: &str = "/v1/chat/completions";
+
+/// Answers like a model: a user message mentioning `fail` fails, a JSON array of strings comes back translated as
+/// `T: …` in a Markdown code block, and anything else is summarized as `Summary: …`.
+async fn chat(
+    State(state): State<FixtureState>,
+    uri: Uri,
+    headers: HeaderMap,
+    body: String,
+) -> axum::response::Response {
+    let request: Value = serde_json::from_str(&body).unwrap();
+    let content = request["messages"][1]["content"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    record(&state, &uri, &headers, body);
+    if content.contains("fail") {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+    let answer = match serde_json::from_str::<Vec<String>>(&content) {
+        Ok(texts) => {
+            let translations: Vec<_> = texts.iter().map(|text| format!("T: {text}")).collect();
+            format!("```json\n{}\n```", json!(translations))
+        }
+        Err(_) => format!("Summary: {content}"),
+    };
+    json!({ "choices": [{ "message": { "role": "assistant", "content": answer } }] })
+        .to_string()
+        .into_response()
+}
+
+/// AI settings for a model that `fixtures` fakes at [`AI_PATH`].
+pub fn fake_ai(fixtures: &Fixtures) -> AiConfig {
+    AiConfig {
+        base_url: fixtures.url("/v1"),
+        api_key: Some("ai-key".into()),
+        model: "test-model".into(),
+    }
+}
+
+/// Serves an article at `/article` and returns its address: its readable part says "keeps every subscription in
+/// sync", its navigation "About this site".
+pub fn article(fixtures: &Fixtures) -> String {
+    let paragraph = "The reader keeps every subscription in sync across devices, and this sentence is \
+        long enough to look like the body of an article rather than a navigation label. ";
+    let page = format!(
+        "<html><head><title>Article</title></head><body>
+            <nav><a href='/'>Home</a> <a href='/about'>About this site</a></nav>
+            <article><h1>Article</h1><p>{0}{0}</p><p>{0}{0}</p><p>{0}{0}</p></article>
+        </body></html>",
+        paragraph
+    );
+    fixtures.set("/article", Reply::Body(page));
+    fixtures.url("/article")
 }
 
 /// Creates an inbox for the signed-in user and returns its secret.

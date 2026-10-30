@@ -403,6 +403,69 @@ pub struct StreamBody {
     ids: Vec<String>,
 }
 
+/// The text of a feed or inbox entry.
+pub(super) struct EntryText {
+    pub id: i64,
+    pub title: Option<String>,
+    pub url: Option<String>,
+    pub description: Option<String>,
+    pub content: Option<String>,
+}
+
+impl From<entry::Model> for EntryText {
+    fn from(entry: entry::Model) -> Self {
+        Self {
+            id: entry.id,
+            title: entry.title,
+            url: entry.url,
+            description: entry.description,
+            content: entry.content,
+        }
+    }
+}
+
+impl From<inbox_entry::Model> for EntryText {
+    fn from(entry: inbox_entry::Model) -> Self {
+        Self {
+            id: entry.id,
+            title: entry.title,
+            url: entry.url,
+            description: entry.description,
+            content: entry.content,
+        }
+    }
+}
+
+/// The feed and inbox entries among `ids` as the user reads them: feed entries rewritten by the user's rules, and
+/// only the user's own inbox entries.
+pub(super) async fn texts(
+    db: &DatabaseConnection,
+    user_id: &str,
+    ids: &[i64],
+) -> Result<Vec<EntryText>, DbErr> {
+    let sql = format!("SELECT {MARKED} {TIMELINE} WHERE e.id = ANY($2)");
+    let values = [user_id.into(), ids.to_vec().into()];
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
+    let rows = db.query_all_raw(statement).await?;
+    let entries = rows.iter().map(marked).collect::<Result<Vec<_>, _>>()?;
+    let feeds = feeds(db, entries.iter().map(|(entry, _)| entry.feed_id)).await?;
+    let rules = Rules::load(db, user_id).await?;
+    let mut texts: Vec<EntryText> = entries
+        .into_iter()
+        .map(|(entry, marks)| personalize(&rules, &feeds[&entry.feed_id], entry, &marks).0)
+        .map(EntryText::from)
+        .collect();
+    // Rules do not apply to inbox entries.
+    let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = ANY($2)");
+    let values = [user_id.into(), ids.to_vec().into()];
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
+    let inbox_entries = inbox_entry::Model::find_by_statement(statement)
+        .all(db)
+        .await?;
+    texts.extend(inbox_entries.into_iter().map(EntryText::from));
+    Ok(texts)
+}
+
 /// `POST /entries/stream`: the content of each feed or inbox entry that has one, as NDJSON lines of
 /// `{ id, content }`.
 pub async fn stream(
@@ -411,35 +474,14 @@ pub async fn stream(
     ApiJson(body): ApiJson<StreamBody>,
 ) -> ApiResult<impl IntoResponse> {
     let ids: Vec<_> = body.ids.iter().filter_map(|id| id::parse(id)).collect();
-    let sql = format!("SELECT {MARKED} {TIMELINE} WHERE e.id = ANY($2) AND e.content IS NOT NULL");
-    let values = [user.id.clone().into(), ids.clone().into()];
-    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
-    let rows = state.db.query_all_raw(statement).await?;
-    let entries = rows.iter().map(marked).collect::<Result<Vec<_>, _>>()?;
-    let feeds = feeds(&state.db, entries.iter().map(|(entry, _)| entry.feed_id)).await?;
-    let rules = Rules::load(&state.db, &user.id).await?;
-    let line = |id: i64, content: Option<String>| {
-        json!({ "id": id.to_string(), "content": content }).to_string() + "\n"
-    };
-    let mut lines: String = entries
+    let lines: String = texts(&state.db, &user.id, &ids)
+        .await?
         .into_iter()
-        .map(|(entry, marks)| {
-            let (entry, _) = personalize(&rules, &feeds[&entry.feed_id], entry, &marks);
-            line(entry.id, entry.content)
+        .filter_map(|entry| {
+            let line = json!({ "id": entry.id.to_string(), "content": entry.content? });
+            Some(line.to_string() + "\n")
         })
         .collect();
-    // Rules do not apply to inbox entries.
-    let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = ANY($2) AND e.content IS NOT NULL");
-    let statement =
-        Statement::from_sql_and_values(DbBackend::Postgres, sql, [user.id.into(), ids.into()]);
-    let inbox_entries = inbox_entry::Model::find_by_statement(statement)
-        .all(&state.db)
-        .await?;
-    lines.extend(
-        inbox_entries
-            .into_iter()
-            .map(|entry| line(entry.id, entry.content)),
-    );
     Ok(([(header::CONTENT_TYPE, "application/x-ndjson")], lines))
 }
 

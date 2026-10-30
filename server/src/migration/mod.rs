@@ -6,6 +6,7 @@ mod m20261023_000002_inboxes;
 mod m20261026_000001_orphaned_unreads;
 mod m20261026_000002_actions;
 mod m20261027_000001_timeline_index;
+mod m20261030_000001_ai_cache;
 
 use sea_orm_migration::prelude::*;
 
@@ -23,6 +24,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261026_000001_orphaned_unreads::Migration),
             Box::new(m20261026_000002_actions::Migration),
             Box::new(m20261027_000001_timeline_index::Migration),
+            Box::new(m20261030_000001_ai_cache::Migration),
         ]
     }
 }

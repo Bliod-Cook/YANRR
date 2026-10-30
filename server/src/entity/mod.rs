@@ -1,4 +1,5 @@
 pub mod action_rule;
+pub mod ai_cache;
 pub mod blocked_entry;
 pub mod collection;
 pub mod entry;
