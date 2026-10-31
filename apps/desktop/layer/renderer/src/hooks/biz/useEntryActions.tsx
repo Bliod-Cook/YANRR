@@ -11,6 +11,7 @@ import { useIsInbox } from "@follow/store/inbox/hooks"
 import { doesTextContainHTML } from "@follow/utils/utils"
 import { useMemo } from "react"
 
+import { useShowAISummaryAuto, useShowAISummaryOnce } from "~/atoms/ai-summary"
 import { useShowAITranslationAuto, useShowAITranslationOnce } from "~/atoms/ai-translation"
 import { MENU_ITEM_SEPARATOR, MenuItemSeparator, MenuItemText } from "~/atoms/context-menu"
 import {
@@ -224,6 +225,7 @@ export const HIDE_ACTIONS_IN_ENTRY_CONTEXT_MENU: FollowCommandId[] = [
   COMMAND_ID.entry.copyLink,
   COMMAND_ID.entry.exportAsPDF,
   COMMAND_ID.entry.imageGallery,
+  COMMAND_ID.entry.toggleAISummary,
   COMMAND_ID.entry.toggleAITranslation,
   COMMAND_ID.entry.share,
 
@@ -253,6 +255,8 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
   const isInbox = useIsInbox(entry?.inboxId)
   const isShowSourceContent = useShowSourceContent()
 
+  const isShowAISummaryAuto = useShowAISummaryAuto(entry?.summary)
+  const isShowAISummaryOnce = useShowAISummaryOnce()
   const isShowAITranslationAuto = useShowAITranslationAuto(!!entry?.translation)
   const isShowAITranslationOnce = useShowAITranslationOnce()
 
@@ -371,6 +375,17 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
         entryId,
       }),
       new EntryActionMenuItem({
+        id: COMMAND_ID.entry.toggleAISummary,
+        onClick: runCmdFn(COMMAND_ID.entry.toggleAISummary, []),
+        hide:
+          isShowAISummaryAuto ||
+          ([FeedViewType.SocialMedia, FeedViewType.Videos] as (number | undefined)[]).includes(
+            view,
+          ),
+        active: isShowAISummaryOnce,
+        entryId,
+      }),
+      new EntryActionMenuItem({
         id: COMMAND_ID.entry.toggleAITranslation,
         onClick: runCmdFn(COMMAND_ID.entry.toggleAITranslation, []),
         hide:
@@ -482,6 +497,8 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
     isInCollection,
     isCurrentVisitEntry,
     isShowSourceContent,
+    isShowAISummaryAuto,
+    isShowAISummaryOnce,
     isShowAITranslationAuto,
     isShowAITranslationOnce,
     isCollection,

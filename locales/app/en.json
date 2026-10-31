@@ -155,6 +155,8 @@
   "entry_actions.share": "Share",
   "entry_actions.star": "Star / UnStar",
   "entry_actions.starred": "Starred.",
+  "entry_actions.toggle_ai_summary": "AI Summary",
+  "entry_actions.toggle_ai_translation": "AI Translation",
   "entry_actions.unavailable.copy_link": "Failed to copy link: entry is not available",
   "entry_actions.unavailable.copy_title": "Failed to copy title: entry is not available",
   "entry_actions.unavailable.delete": "Failed to delete: entry is not available",

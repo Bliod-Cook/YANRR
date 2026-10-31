@@ -3,6 +3,7 @@ import type { FollowCommandId } from "./types"
 
 const MUTATION_COMMAND_IDS = new Set<FollowCommandId>([
   COMMAND_ID.entry.star,
+  COMMAND_ID.entry.toggleAISummary,
   COMMAND_ID.entry.toggleAITranslation,
   COMMAND_ID.entry.read,
   COMMAND_ID.entry.readAbove,

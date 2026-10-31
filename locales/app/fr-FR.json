@@ -155,6 +155,8 @@
   "entry_actions.share": "Partager",
   "entry_actions.star": "Favori / Non favori",
   "entry_actions.starred": "Favori.",
+  "entry_actions.toggle_ai_summary": "Résumé IA",
+  "entry_actions.toggle_ai_translation": "Traduction IA",
   "entry_actions.unavailable.copy_link": "Échec de la copie du lien : l'entrée n'est pas disponible",
   "entry_actions.unavailable.copy_title": "Échec de la copie du titre : l'entrée n'est pas disponible",
   "entry_actions.unavailable.delete": "Échec de la suppression : l'entrée n'est pas disponible",

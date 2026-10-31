@@ -13,6 +13,8 @@ import { useMutation } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
+import { toggleShowAISummaryOnce } from "~/atoms/ai-summary"
+import { toggleShowAITranslationOnce } from "~/atoms/ai-translation"
 import { showPopover } from "~/atoms/popover"
 import { getGeneralSettings } from "~/atoms/settings/general"
 import {
@@ -381,6 +383,20 @@ export const useRegisterEntryCommands = () => {
           })
         },
       },
+      {
+        id: COMMAND_ID.entry.toggleAISummary,
+        label: t("entry_actions.toggle_ai_summary"),
+        icon: <i className="i-mgc-ai-cute-re" />,
+        category,
+        run: toggleShowAISummaryOnce,
+      },
+      {
+        id: COMMAND_ID.entry.toggleAITranslation,
+        label: t("entry_actions.toggle_ai_translation"),
+        icon: <i className="i-mgc-translate-2-ai-cute-re" />,
+        category,
+        run: toggleShowAITranslationOnce,
+      },
     ],
     {},
   )
@@ -441,6 +457,11 @@ export type ReadBelowCommand = Command<{
   fn: (data: { publishedAt: string }) => void
 }>
 
+export type ToggleAISummaryCommand = Command<{
+  id: typeof COMMAND_ID.entry.toggleAISummary
+  fn: () => void
+}>
+
 export type ToggleAITranslationCommand = Command<{
   id: typeof COMMAND_ID.entry.toggleAITranslation
   fn: () => void
@@ -468,6 +489,7 @@ export type EntryCommand =
   | ReadCommand
   | ReadAboveCommand
   | ReadBelowCommand
+  | ToggleAISummaryCommand
   | ToggleAITranslationCommand
   | ImageGalleryCommand
   | ReadabilityCommand

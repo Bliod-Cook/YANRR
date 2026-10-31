@@ -155,6 +155,8 @@
   "entry_actions.share": "分享",
   "entry_actions.star": "收藏",
   "entry_actions.starred": "已收藏",
+  "entry_actions.toggle_ai_summary": "切換 AI 總結",
+  "entry_actions.toggle_ai_translation": "切換 AI 翻譯",
   "entry_actions.unavailable.copy_link": "複製連結失敗：條目無法使用",
   "entry_actions.unavailable.copy_title": "複製標題失敗：條目無法使用",
   "entry_actions.unavailable.delete": "刪除失敗：條目無法使用",
