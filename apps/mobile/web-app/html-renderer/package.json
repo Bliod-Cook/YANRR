@@ -17,28 +17,28 @@
     "@follow/shared": "workspace:*",
     "@follow/types": "workspace:*",
     "@follow/utils": "workspace:*",
-    "@shikijs/transformers": "4.4.3",
+    "@shikijs/transformers": "4.5.0",
     "clsx": "2.1.1",
     "foxact": "0.3.12",
-    "jotai": "3.0.0",
-    "katex": "0.18.7",
+    "jotai": "3.0.1",
+    "katex": "0.19.1",
     "motion": "13.4.0",
-    "react": "19.2.8",
+    "react": "19.3.1",
     "react-blurhash": "0.3.0",
-    "react-dom": "19.2.8",
-    "shiki": "4.4.3",
+    "react-dom": "19.3.1",
+    "shiki": "4.5.0",
     "usehooks-ts": "3.1.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
     "@types/hast": "3.0.5",
     "@vitejs/plugin-react": "6.1.1",
-    "autoprefixer": "10.6.1",
+    "autoprefixer": "10.6.2",
     "hast-util-to-jsx-runtime": "2.3.6",
     "pathe": "2.0.3",
     "tailwindcss": "4.3.3",
     "typescript": "catalog:",
     "vite": "8.3.0",
-    "vitest": "5.0.1"
+    "vitest": "5.0.5"
   }
 }
