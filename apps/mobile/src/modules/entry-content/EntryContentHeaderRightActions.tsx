@@ -20,6 +20,7 @@ import type { MenuItemIconProps } from "zeego/lib/typescript/menu"
 import { getActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { ActionBarItem } from "@/src/components/ui/action-bar/ActionBarItem"
 import { DropdownMenu } from "@/src/components/ui/context-menu"
+import { AiCuteReIcon } from "@/src/icons/ai_cute_re"
 import { DocmentCuteReIcon } from "@/src/icons/docment_cute_re"
 import { More1CuteReIcon } from "@/src/icons/more_1_cute_re"
 import { ShareForwardCuteReIcon } from "@/src/icons/share_forward_cute_re"
@@ -82,9 +83,11 @@ const HeaderRightActionsImpl = ({
   // Onboarding entries have no link outside the app, and relative links resolve first
   const externalUrl = useEntryExternalUrl(entryId)
 
-  const { showReadabilityAtom, showAITranslationAtom } = useEntryContentContext()
+  const { showAISummaryAtom, showReadabilityAtom, showAITranslationAtom } = useEntryContentContext()
+  const [showAISummary, setShowAISummary] = useAtom(showAISummaryAtom)
   const [showTranslation, setShowTranslation] = useAtom(showAITranslationAtom)
   const [showReadability, setShowReadability] = useAtom(showReadabilityAtom)
+  const showAISummarySetting = useGeneralSettingKey("summary") || !!entry?.settings?.summary
   const showAITranslationSetting =
     useGeneralSettingKey("translation") || !!entry?.settings?.translation
   const translationMode = useGeneralSettingKey("translationMode")
@@ -174,6 +177,18 @@ const HeaderRightActionsImpl = ({
       isCheckbox: true,
       // inMenu: true,
     },
+    isLoggedIn &&
+      !showAISummarySetting && {
+        key: "ShowSummary",
+        title: t("entry_content.header.show_summary"),
+        icon: <AiCuteReIcon />,
+        iconIOS: { name: "sparkles" },
+        // The summary card fetches the summary once it is shown
+        onPress: () => setShowAISummary((prev) => !prev),
+        active: showAISummary,
+        isCheckbox: true,
+        inMenu: true,
+      },
     isLoggedIn &&
       !showAITranslationSetting && {
         key: "ShowTranslation",

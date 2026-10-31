@@ -9,6 +9,7 @@
   "entry_content.header.open_in_browser": "ブラウザで開く",
   "entry_content.header.reading_settings": "読書設定",
   "entry_content.header.show_readability": "リーダーモード",
+  "entry_content.header.show_summary": "要約を表示",
   "entry_content.header.show_translation": "翻訳を表示",
   "entry_content.no_content": "コンテンツがありません",
   "entry_content.no_video_url": "動画 URL が見つかりません",
