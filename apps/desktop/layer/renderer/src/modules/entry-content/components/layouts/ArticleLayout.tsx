@@ -1,5 +1,5 @@
 import { MemoedDangerousHTMLStyle } from "@follow/components/common/MemoedDangerousHTMLStyle.js"
-import { FeedViewType } from "@follow/constants"
+import type { FeedViewType } from "@follow/constants"
 import { isOnboardingEntry } from "@follow/store/constants/onboarding"
 import { useEntry } from "@follow/store/entry/hooks"
 import { useFeedById } from "@follow/store/feed/hooks"
@@ -35,6 +35,7 @@ import type { EntryLayoutProps } from "./types"
 
 export const ArticleLayout: React.FC<EntryLayoutProps> = ({
   entryId,
+  view,
   compact = false,
   noMedia = false,
   translation,
@@ -95,7 +96,7 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
 
                 <Renderer
                   entryId={entryId}
-                  view={FeedViewType.Articles}
+                  view={view}
                   feedId={feed?.id || ""}
                   noMedia={noMedia}
                   content={content}

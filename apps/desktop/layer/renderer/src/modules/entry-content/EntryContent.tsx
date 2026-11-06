@@ -307,6 +307,7 @@ const AdaptiveContentRenderer: React.FC<{
   return (
     <LayoutComponent
       entryId={entryId}
+      view={view}
       compact={compact}
       noMedia={noMedia}
       translation={translation}
