@@ -9,13 +9,13 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu/dropdown-menu"
 import { useSortedEntryActions } from "~/hooks/biz/useEntryActions"
-import { getRouteParams } from "~/hooks/biz/useRouteParams"
+import { useEntryView } from "~/hooks/biz/useEntryView"
 import { COMMAND_ID } from "~/modules/command/commands/id"
 import { hasCommand } from "~/modules/command/hooks/use-command"
 import { CommandDropdownMenuItem } from "~/modules/entry-content/actions/more-actions"
 
 export const EntryMoreActions: FC<{ entryId: string }> = ({ entryId }) => {
-  const { view } = getRouteParams()
+  const view = useEntryView(entryId)
   const { moreAction, mainAction } = useSortedEntryActions({ entryId, view })
 
   const actionConfigs = useMemo(

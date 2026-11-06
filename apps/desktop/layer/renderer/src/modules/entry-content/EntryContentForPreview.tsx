@@ -14,8 +14,8 @@ import { useEntryIsInReadability } from "~/atoms/readability"
 import { useUISettingKey } from "~/atoms/settings/ui"
 import { ErrorBoundary } from "~/components/common/ErrorBoundary"
 import { ShadowDOM } from "~/components/common/ShadowDOM"
+import { useEntryView } from "~/hooks/biz/useEntryView"
 import { useRenderStyle } from "~/hooks/biz/useRenderStyle"
-import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { EntryContentHTMLRenderer } from "~/modules/renderer/html"
 import { WrappedElementProvider } from "~/providers/wrapped-element-provider"
 
@@ -50,7 +50,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
 
   const { error, content, isPending } = useEntryContent(entryId)
 
-  const view = useRouteParamsSelector((route) => route.view)
+  const view = useEntryView(entryId)
 
   return (
     <div className="relative flex size-full flex-col @container print:size-auto print:overflow-visible">

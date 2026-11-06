@@ -7,7 +7,6 @@ import { useEntry } from "@follow/store/entry/hooks"
 import { useFeedById } from "@follow/store/feed/hooks"
 import type { FeedModel } from "@follow/store/feed/types"
 import { useIsInbox } from "@follow/store/inbox/hooks"
-import { useSubscriptionByFeedId } from "@follow/store/subscription/hooks"
 import { useEntryTranslation } from "@follow/store/translation/hooks"
 import { thenable } from "@follow/utils"
 import { stopPropagation } from "@follow/utils/dom"
@@ -28,7 +27,7 @@ import { m } from "~/components/common/Motion"
 import { ErrorComponentType } from "~/components/errors/enum"
 import { GlassButton } from "~/components/ui/button/GlassButton"
 import { HotkeyScope } from "~/constants"
-import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
+import { useEntryView } from "~/hooks/biz/useEntryView"
 import { useFeedSafeUrl } from "~/hooks/common/useFeedSafeUrl"
 import { useBlockActions } from "~/modules/ai-chat/store/hooks"
 import { BlockSliceAction } from "~/modules/ai-chat/store/slices/block.slice"
@@ -72,7 +71,6 @@ const EntryContentImpl: Component<EntryContentProps> = ({
 
   useTitle(entry.title)
   const feed = useFeedById(entry.feedId)
-  const subscription = useSubscriptionByFeedId(entry.feedId)
 
   const isInbox = useIsInbox(entry.inboxId)
   const isInReadabilityMode = useEntryIsInReadability(entryId)
@@ -86,9 +84,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
     enabled: enableTranslation,
   })
 
-  const routeView = useRouteParamsSelector((route) => route.view)
-  const subscriptionView = subscription?.view
-  const view = typeof subscriptionView === "number" ? subscriptionView : routeView
+  const view = useEntryView(entryId)
   const [scrollerRef, setScrollerRef] = useState<HTMLDivElement | null>(null)
   const safeUrl = useFeedSafeUrl(entryId)
 
