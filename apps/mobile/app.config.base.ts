@@ -72,7 +72,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       adaptiveIcon: {
         foregroundImage: adaptiveIconPath,
         monochromeImage: adaptiveIconPath,
-        backgroundColor: "#1F2937",
+        backgroundColor: "#FF5C00",
       },
       ...(googleServicesJson && { googleServicesFile: googleServicesJson }),
     },
