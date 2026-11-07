@@ -1,4 +1,5 @@
 import { Skeleton } from "@follow/components/ui/skeleton/index.jsx"
+import { cn } from "@follow/utils/utils"
 
 import { ListItem } from "~/modules/entry-column/templates/list-item-template"
 
@@ -9,10 +10,10 @@ export function AudioItem({ entryId, translation }: UniversalItemProps) {
   return <ListItem entryId={entryId} translation={translation} />
 }
 
-AudioItem.wrapperClassName = readableContentMaxWidth
+AudioItem.wrapperClassName = cn(readableContentMaxWidth, "pl-7")
 
 export const AudioItemSkeleton = (
-  <div className={`relative mx-auto w-full select-none rounded-md ${readableContentMaxWidth}`}>
+  <div className={cn("relative w-full select-none rounded-md", AudioItem.wrapperClassName)}>
     <div className="relative">
       <div className="group relative flex py-4">
         <div className="-mt-0.5 line-clamp-4 flex-1 text-sm leading-tight">

@@ -221,7 +221,7 @@ export function AllItem({ entryId, translation, currentFeedTitle }: UniversalIte
   )
 }
 
-AllItem.wrapperClassName = "pl-5 pr-4 @[700px]:pl-6 @[1024px]:pr-5"
+AllItem.wrapperClassName = "pl-8 pr-4 @[1024px]:pr-5"
 
 export function AllItemStateLess({ entry, feed }: EntryItemStatelessProps) {
   const spotlightRules = useSpotlightSettingKey("spotlights")

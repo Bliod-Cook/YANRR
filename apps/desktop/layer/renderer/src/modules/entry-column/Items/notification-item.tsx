@@ -1,4 +1,5 @@
 import { Skeleton } from "@follow/components/ui/skeleton/index.jsx"
+import { cn } from "@follow/utils/utils"
 
 import { RelativeTime } from "~/components/ui/datetime"
 import { ListItem } from "~/modules/entry-column/templates/list-item-template"
@@ -12,7 +13,7 @@ export function NotificationItem({ entryId, translation }: UniversalItemProps) {
   return <ListItem entryId={entryId} translation={translation} simple />
 }
 
-NotificationItem.wrapperClassName = readableContentMaxWidth
+NotificationItem.wrapperClassName = cn(readableContentMaxWidth, "pl-7")
 
 export function NotificationItemStateLess({ entry, feed }: EntryItemStatelessProps) {
   return (
@@ -33,7 +34,7 @@ export function NotificationItemStateLess({ entry, feed }: EntryItemStatelessPro
 }
 
 export const NotificationItemSkeleton = (
-  <div className={`relative w-full select-none ${readableContentMaxWidth}`}>
+  <div className={cn("relative w-full select-none", NotificationItem.wrapperClassName)}>
     <div className="group relative flex py-4">
       <Skeleton className="mr-2 size-5 shrink-0 overflow-hidden rounded-sm" />
       <div className="-mt-0.5 line-clamp-4 flex-1 text-sm leading-tight">

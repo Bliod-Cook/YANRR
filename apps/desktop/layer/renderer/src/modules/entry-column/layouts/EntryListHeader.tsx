@@ -100,16 +100,6 @@ export const EntryListHeader: FC<{
 
   const feed = useFeedById(feedId)
 
-  const titleStyleBasedView = {
-    [FeedViewType.All]: "pl-7",
-    [FeedViewType.Articles]: "pl-7",
-    [FeedViewType.Pictures]: "pl-7",
-    [FeedViewType.Videos]: "pl-7",
-    [FeedViewType.SocialMedia]: "px-5",
-    [FeedViewType.Audios]: "pl-6",
-    [FeedViewType.Notifications]: "pl-6",
-  }
-
   const feedColumnShow = useSubscriptionColumnShow()
   const toggleUnreadOnlyShortcut = useCommandShortcut(COMMAND_ID.timeline.unreadOnly)
   const runCmdFn = useRunCommandFn()
@@ -177,9 +167,9 @@ export const EntryListHeader: FC<{
   return (
     <div
       className={cn(
-        "flex w-full flex-col pr-2.5 pt-2 @[700px]:pr-3 @[1024px]:pr-4",
+        "flex w-full flex-col pl-8 pr-2.5 pt-2 @[700px]:pr-3 @[1024px]:pr-4",
         !feedColumnShow && "macos:mt-4 macos:pt-margin-macos-traffic-light-y",
-        titleStyleBasedView[view],
+        view === FeedViewType.SocialMedia && "pr-5",
         isPreview
           ? "h-top-header-in-preview-with-border-b px-2.5 @[700px]:px-3 @[1024px]:px-4"
           : "h-top-header-with-border-b",

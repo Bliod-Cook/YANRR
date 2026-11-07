@@ -157,10 +157,7 @@ export const SocialMediaItem: EntryListItemFC = ({ entryId, translation }) => {
   )
 }
 
-SocialMediaItem.wrapperClassName = cn(
-  readableContentMaxWidth,
-  "pl-4 pr-3 @[700px]:pl-6 @[1024px]:pr-4",
-)
+SocialMediaItem.wrapperClassName = cn(readableContentMaxWidth, "pl-7 pr-3 @[1024px]:pr-4")
 
 export function SocialMediaItemStateLess({ entry, feed }: EntryItemStatelessProps) {
   return (
@@ -208,7 +205,7 @@ export function SocialMediaItemStateLess({ entry, feed }: EntryItemStatelessProp
 }
 
 export const SocialMediaItemSkeleton = (
-  <div className={`relative m-auto rounded-md ${readableContentMaxWidth}`}>
+  <div className={cn("relative m-auto rounded-md", SocialMediaItem.wrapperClassName)}>
     <div className="relative">
       <div className="group relative flex py-6">
         <Skeleton className="mr-2 size-9" />
