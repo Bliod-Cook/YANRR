@@ -1,5 +1,6 @@
 import { Spring } from "@follow/components/constants/spring.js"
 import { useMobile } from "@follow/components/hooks/useMobile.js"
+import { Logo } from "@follow/components/icons/logo.jsx"
 import { PanelSplitter } from "@follow/components/ui/divider/index.js"
 import { FeedViewType } from "@follow/constants"
 import { defaultUISettings } from "@follow/shared/settings/defaults"
@@ -305,7 +306,11 @@ const AIEnhancedTimelineLayoutImpl = () => {
                         }
                       />
                     </div>
-                  ) : null}
+                  ) : (
+                    <div data-hide-in-print className="flex flex-1 items-center justify-center">
+                      <Logo aria-hidden className="size-16 opacity-40 grayscale" />
+                    </div>
+                  )}
                 </div>
               </>
             )}
