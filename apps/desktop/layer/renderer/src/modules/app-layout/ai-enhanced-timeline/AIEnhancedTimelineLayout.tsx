@@ -19,7 +19,6 @@ import { useShowEntryDetailsColumn } from "~/hooks/biz/useShowEntryDetailsColumn
 import { AIChatRoot } from "~/modules/ai-chat/components/layouts/AIChatRoot"
 import { AIChatFixedPanel } from "~/modules/app-layout/ai/AIChatFixedPanel"
 import { AIIndicator } from "~/modules/app-layout/ai/AISplineButton"
-import { EntryContentPlaceholder } from "~/modules/app-layout/entry-content/EntryContentPlaceholder"
 import { EntryColumn } from "~/modules/entry-column"
 import { EntryContent } from "~/modules/entry-content/components/entry-content"
 import { AIEntryHeader } from "~/modules/entry-content/components/entry-header"
@@ -306,11 +305,7 @@ const AIEnhancedTimelineLayoutImpl = () => {
                         }
                       />
                     </div>
-                  ) : (
-                    <div className="flex flex-1 items-center justify-center px-8">
-                      <EntryContentPlaceholder />
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               </>
             )}
