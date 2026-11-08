@@ -29,6 +29,8 @@ import { MainViewHotkeysProvider } from "~/providers/main-view-hotkeys-provider"
 import { MobileTimelineLayout } from "./MobileTimelineLayout"
 
 const MIN_ENTRY_WIDTH = isSafari() ? 356 : 300
+const splitterTitlebarExtension =
+  "before:pointer-events-none before:absolute before:bottom-full before:left-0 before:h-[max(0px,calc(var(--fo-window-padding-top,0px)_-_10px))] before:w-px before:bg-border"
 
 const AIEnhancedTimelineLayoutImpl = () => {
   const { view, entryId } = useRouteParamsSelector((state) => ({
@@ -183,6 +185,7 @@ const AIEnhancedTimelineLayoutImpl = () => {
     shouldRenderRightColumn && showEntryDetailsColumn ? (
       <PanelSplitter
         {...timelineSeparatorProps}
+        className={splitterTitlebarExtension}
         cursor={timelineSeparatorCursor}
         isDragging={isTimelineDragging}
         onDoubleClick={resetTimelineWidth}
@@ -190,6 +193,7 @@ const AIEnhancedTimelineLayoutImpl = () => {
     ) : shouldShowFixedAI ? (
       <PanelSplitter
         {...aiSeparatorProps}
+        className={splitterTitlebarExtension}
         cursor={aiSeparatorCursor}
         isDragging={isAiPanelDragging}
         onDoubleClick={resetAiWidth}
