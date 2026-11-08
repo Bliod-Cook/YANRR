@@ -7,7 +7,7 @@ import { useIsOnline } from "@follow/hooks"
 import { DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID } from "@follow/shared/settings/defaults"
 import { getFeedById } from "@follow/store/feed/getter"
 import { useFeedById } from "@follow/store/feed/hooks"
-import { useIsLoggedIn, useWhoami } from "@follow/store/user/hooks"
+import { useIsLoggedIn } from "@follow/store/user/hooks"
 import { stopPropagation } from "@follow/utils/dom"
 import { clsx, cn, isBizId } from "@follow/utils/utils"
 import { useAtom, useAtomValue } from "jotai"
@@ -95,7 +95,6 @@ export const EntryListHeader: FC<{
   )
   const { mutateAsync: refreshFeed, isPending } = useRefreshFeedMutation(feedId)
 
-  const user = useWhoami()
   const isOnline = useIsOnline()
 
   const feed = useFeedById(feedId)
@@ -211,9 +210,7 @@ export const EntryListHeader: FC<{
             </AppendTaildingDivider>
 
             {isOnline &&
-              (feed?.ownerUserId === user?.id &&
-              isBizId(routerParams.feedId!) &&
-              feed?.type === "feed" ? (
+              (isBizId(routerParams.feedId!) && feed?.type === "feed" ? (
                 <ActionButton
                   tooltip={t("entry_list_header.refresh")}
                   onClick={() => {
