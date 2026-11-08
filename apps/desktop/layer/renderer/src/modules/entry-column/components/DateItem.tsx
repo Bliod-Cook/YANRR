@@ -78,7 +78,7 @@ const DateItemInner: FC<DateItemInnerProps> = ({ date, className, Wrapper, isSti
     <div
       className={cn(
         className,
-        "border-b border-transparent bg-background pl-7",
+        "border-b border-transparent bg-background pl-6",
         isSticky && "border-border",
       )}
       onClick={stopPropagation}

@@ -157,7 +157,7 @@ export const SocialMediaItem: EntryListItemFC = ({ entryId, translation }) => {
   )
 }
 
-SocialMediaItem.wrapperClassName = cn(readableContentMaxWidth, "pl-7 pr-3 @[1024px]:pr-4")
+SocialMediaItem.wrapperClassName = cn(readableContentMaxWidth, "pl-6 pr-3 @[1024px]:pr-4")
 
 export function SocialMediaItemStateLess({ entry, feed }: EntryItemStatelessProps) {
   return (

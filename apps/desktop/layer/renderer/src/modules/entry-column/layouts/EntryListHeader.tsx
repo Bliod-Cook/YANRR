@@ -166,7 +166,7 @@ export const EntryListHeader: FC<{
   return (
     <div
       className={cn(
-        "flex w-full flex-col pl-8 pr-2.5 pt-2 @[700px]:pr-3 @[1024px]:pr-4",
+        "flex w-full flex-col pl-7 pr-2.5 pt-2 @[700px]:pr-3 @[1024px]:pr-4",
         !feedColumnShow && "macos:mt-4 macos:pt-margin-macos-traffic-light-y",
         view === FeedViewType.SocialMedia && "pr-5",
         isPreview

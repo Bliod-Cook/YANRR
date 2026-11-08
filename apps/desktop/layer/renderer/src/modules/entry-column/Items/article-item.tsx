@@ -14,7 +14,7 @@ export function ArticleItem({ entryId, translation }: UniversalItemProps) {
   return <ListItem entryId={entryId} translation={translation} />
 }
 
-ArticleItem.wrapperClassName = cn(readableContentMaxWidth, "pl-7 pr-3")
+ArticleItem.wrapperClassName = cn(readableContentMaxWidth, "pl-6 pr-3")
 
 export function ArticleItemStateLess({ entry, feed }: EntryItemStatelessProps) {
   return (

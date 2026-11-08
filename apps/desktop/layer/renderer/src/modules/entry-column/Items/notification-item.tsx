@@ -13,7 +13,7 @@ export function NotificationItem({ entryId, translation }: UniversalItemProps) {
   return <ListItem entryId={entryId} translation={translation} simple />
 }
 
-NotificationItem.wrapperClassName = cn(readableContentMaxWidth, "pl-7")
+NotificationItem.wrapperClassName = cn(readableContentMaxWidth, "pl-6")
 
 export function NotificationItemStateLess({ entry, feed }: EntryItemStatelessProps) {
   return (

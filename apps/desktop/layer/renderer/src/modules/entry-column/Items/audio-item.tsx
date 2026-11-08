@@ -10,7 +10,7 @@ export function AudioItem({ entryId, translation }: UniversalItemProps) {
   return <ListItem entryId={entryId} translation={translation} />
 }
 
-AudioItem.wrapperClassName = cn(readableContentMaxWidth, "pl-7")
+AudioItem.wrapperClassName = cn(readableContentMaxWidth, "pl-6")
 
 export const AudioItemSkeleton = (
   <div className={cn("relative w-full select-none rounded-md", AudioItem.wrapperClassName)}>
