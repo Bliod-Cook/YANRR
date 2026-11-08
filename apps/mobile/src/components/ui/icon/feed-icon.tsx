@@ -42,9 +42,7 @@ export function FeedIcon({
   ...props
 }: FeedIconProps & ImageProps) {
   const [isError, setIsError] = useState(false)
-  const src = useMemo(() => {
-    return getFeedIconSource(feed, siteUrl, fallback)
-  }, [fallback, feed, siteUrl])
+  const src = useMemo(() => getFeedIconSource(feed, siteUrl), [feed, siteUrl])
 
   const handleError = useCallback(() => setIsError(true), [])
 

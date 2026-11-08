@@ -1,8 +1,9 @@
 // import { Avatar, AvatarFallback, AvatarImage } from "@follow/components/ui/avatar/index.jsx"
 import { PlatformIcon } from "@follow/components/ui/platform-icon/index.jsx"
-import { getFeedIconSrc } from "@follow/components/utils/icon.js"
+import { env } from "@follow/shared/env.desktop"
 import type { FeedModel } from "@follow/store/feed/types"
 import { getBackgroundGradient } from "@follow/utils/color"
+import { getSiteIconUrl } from "@follow/utils/server-url"
 import { cn } from "@follow/utils/utils"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 import { m } from "motion/react"
@@ -25,45 +26,32 @@ type GetIconPropsProps = {
   useMedia?: boolean
   siteUrl?: string
   fallbackUrl?: string
-  fallback?: boolean
 }
+
+const getSiteIconProps = (siteUrl: string) => {
+  const src = getSiteIconUrl(env.VITE_API_URL, siteUrl)
+  return src ? { type: "image" as const, src, platformUrl: siteUrl } : { type: "text" as const }
+}
+
 function getIconProps(props: GetIconPropsProps) {
-  const { target, entry, useMedia, siteUrl: propSiteUrl, fallbackUrl, fallback } = props
+  const { target, entry, useMedia, siteUrl: propSiteUrl, fallbackUrl } = props
   const image =
     (useMedia ? entry?.firstPhotoUrl || entry?.authorAvatar : entry?.authorAvatar) || target?.image
   const siteUrl = (target as FeedModel)?.siteUrl || fallbackUrl
 
   if (propSiteUrl && !target) {
-    const [src] = getFeedIconSrc({
-      siteUrl: propSiteUrl,
-    })
-    return {
-      type: "image" as const,
-      src,
-      platformUrl: propSiteUrl,
-      fallbackSrc: "",
-    }
+    return getSiteIconProps(propSiteUrl)
   }
   if (image) {
     return {
       type: "image" as const,
       src: image,
       platformUrl: image,
-      fallbackSrc: "",
     }
   }
 
   if (siteUrl) {
-    const [src, fallbackSrc] = getFeedIconSrc({
-      siteUrl,
-      fallback,
-    })
-    return {
-      type: "image" as const,
-      src,
-      platformUrl: siteUrl,
-      fallbackSrc,
-    }
+    return getSiteIconProps(siteUrl)
   }
   if (target?.type === "inbox") {
     return {
@@ -82,31 +70,13 @@ function getIconProps(props: GetIconPropsProps) {
   }
 }
 
-const FallbackableImage = function FallbackableImage({
-  ref,
-  fallbackUrl,
-  ...rest
-}: {
-  fallbackUrl: string
-} & React.ImgHTMLAttributes<HTMLImageElement> & {
-    ref?: React.Ref<HTMLImageElement | null>
-  }) {
-  return (
-    <img
-      onError={(e) => {
-        if (fallbackUrl && e.currentTarget.src !== fallbackUrl) {
-          e.currentTarget.src = fallbackUrl
-        } else {
-          rest.onError?.(e)
-          // Empty svg
-          e.currentTarget.src =
-            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3C/svg%3E"
-        }
-      }}
-      {...rest}
-      ref={ref}
-    />
-  )
+/** The first letter of the site's domain, for sites known only by their address */
+const getSiteInitial = (siteUrl: string) => {
+  try {
+    return new URL(siteUrl).hostname.replace(/^www\./, "")[0]?.toUpperCase()
+  } catch {
+    return undefined
+  }
 }
 
 type IconTarget = {
@@ -165,7 +135,6 @@ export function FeedIcon({
     useMedia,
     siteUrl,
     fallbackUrl,
-    fallback,
   })
 
   const colors = useMemo(
@@ -203,7 +172,7 @@ export function FeedIcon({
           fontSize: size / 2,
         }}
       >
-        {!!target?.title && target.title[0]}
+        {target?.title ? target.title[0] : siteUrl && getSiteInitial(siteUrl)}
       </span>
     </span>
   )
@@ -213,26 +182,17 @@ export function FeedIcon({
 
   switch (iconProps.type) {
     case "image": {
-      finalSrc = iconProps.src!
+      finalSrc = iconProps.src
       const isIconLoaded = isIconLoadedSet.has(finalSrc)
       isIconLoadedSet.add(finalSrc)
-      const { fallbackSrc } = iconProps
 
       imageElement = (
-        <PlatformIcon url={iconProps.platformUrl!} style={sizeStyle} className={className}>
-          {fallbackSrc ? (
-            <FallbackableImage
-              className={marginClassName}
-              style={sizeStyle}
-              fallbackUrl={fallbackSrc}
-            />
-          ) : (
-            <m.img
-              className={marginClassName}
-              style={sizeStyle}
-              {...(disableFadeIn || isIconLoaded ? {} : fadeInVariant)}
-            />
-          )}
+        <PlatformIcon url={iconProps.platformUrl} style={sizeStyle} className={className}>
+          <m.img
+            className={marginClassName}
+            style={sizeStyle}
+            {...(disableFadeIn || isIconLoaded ? {} : fadeInVariant)}
+          />
         </PlatformIcon>
       )
       break

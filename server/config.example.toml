@@ -19,6 +19,11 @@ registration = true
 [rsshub]
 url = "https://rsshub.app"
 
+[icons]
+# Where icons of sites whose feeds have none come from: "google" (Google's favicon service), "google-cn" (the same
+# service on Google's mainland China domain, for servers that cannot reach Google) or "direct" (the sites themselves).
+provider = "google"
+
 [inbox]
 # Bearer token your inbound mail service posts emails to /api/inboxes/email with (optional; emails are refused
 # without it). Mail to <handle>@<any domain> goes to the inbox with that handle.

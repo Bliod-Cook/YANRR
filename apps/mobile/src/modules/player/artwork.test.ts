@@ -1,15 +1,12 @@
 import { FeedViewType } from "@follow/constants"
-import { beforeAll, describe, expect, it, vi } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import type { FeedIconFeed } from "../../components/ui/icon/feed-icon"
+import { getEntryArtwork } from "./artwork"
 
-let getEntryArtwork: typeof import("./artwork").getEntryArtwork
-
-beforeAll(async () => {
-  // The site icon helper reads the build flags of the shared constants
-  vi.stubGlobal("ELECTRON", false)
-  ;({ getEntryArtwork } = await import("./artwork"))
-})
+vi.mock("../../lib/server-env", () => ({
+  serverEnv: { API_URL: "https://rss.example.com/api" },
+}))
 
 const createFeed = (overrides?: Partial<FeedIconFeed>): FeedIconFeed => ({
   id: "feed-1",
@@ -35,7 +32,7 @@ describe("getEntryArtwork", () => {
 
   it("falls back to the site icon when the feed has no image either", () => {
     expect(getEntryArtwork(undefined, createFeed({ image: null }))).toBe(
-      "https://www.npr.org/favicon.ico",
+      "https://rss.example.com/api/icons/www.npr.org",
     )
   })
 

@@ -80,6 +80,7 @@ Any key in [`config.example.toml`](../server/config.example.toml) can go in `.en
 | `YANRR_AUTH__SECRET` | | Signs sessions; changing it signs everyone out |
 | `YANRR_AUTH__REGISTRATION` | `true` | Whether new accounts can sign up |
 | `YANRR_RSSHUB__URL` | `https://rsshub.app` | RSSHub instance for `rsshub://` feeds and route discovery |
+| `YANRR_ICONS__PROVIDER` | `google` | Where icons of sites without a feed image come from: `google`, `google-cn` (reachable from mainland China) or `direct` (the sites themselves) |
 | `RUST_LOG` | `info` | Log level, e.g. `debug` |
 | `HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY` | | HTTP proxy for outgoing requests |
 

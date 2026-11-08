@@ -19,3 +19,12 @@ export const normalizeServerUrl = (input: string): string | null => {
 
 /** The server serves its API under `/api` */
 export const getApiUrl = (server: string) => `${server}/api`
+
+/** Where the server looks up the icon of the site at `siteUrl`; an empty 404 means the site has none */
+export const getSiteIconUrl = (apiUrl: string, siteUrl: string): string | undefined => {
+  try {
+    return `${apiUrl}/icons/${new URL(siteUrl).hostname}`
+  } catch {
+    return undefined
+  }
+}

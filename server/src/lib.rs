@@ -4,6 +4,7 @@ pub mod auth;
 pub mod config;
 pub mod entity;
 pub mod fetch;
+mod icons;
 mod id;
 mod migration;
 pub mod opml;

@@ -3,10 +3,17 @@ use std::{error::Error, time::Duration};
 use reqwest::{Client, Response, StatusCode, Url, header, redirect};
 
 const MAX_REDIRECTS: usize = 5;
-/// Bounds every redirect and the body together.
-const TIMEOUT: Duration = Duration::from_secs(60);
-/// Counted after decompression; large podcast feeds and the RSSHub catalog stay well below it.
-const MAX_BODY: usize = 32 << 20;
+/// Large podcast feeds and the RSSHub catalog stay well below its body size.
+const LIMITS: Limits = Limits {
+    timeout: Duration::from_secs(60),
+    max_body: 32 << 20,
+};
+
+/// Bounds of a GET: the time for every redirect and the body together, and the body size once decoded.
+pub(crate) struct Limits {
+    pub timeout: Duration,
+    pub max_body: usize,
+}
 
 #[derive(Default)]
 pub struct Validators {
@@ -37,16 +44,17 @@ pub async fn get(
     url: &str,
     validators: &Validators,
 ) -> Result<Option<Fetched>, String> {
-    get_within(client, url, validators, TIMEOUT).await
+    get_within(client, url, validators, &LIMITS).await
 }
 
-async fn get_within(
+pub(crate) async fn get_within(
     client: &Client,
     url: &str,
     validators: &Validators,
-    timeout: Duration,
+    limits: &Limits,
 ) -> Result<Option<Fetched>, String> {
-    tokio::time::timeout(timeout, follow(client, url, validators, timeout))
+    let timeout = limits.timeout;
+    tokio::time::timeout(timeout, follow(client, url, validators, limits))
         .await
         .map_err(|_| format!("Timed out after {timeout:?}"))?
 }
@@ -55,13 +63,13 @@ async fn follow(
     client: &Client,
     url: &str,
     validators: &Validators,
-    timeout: Duration,
+    limits: &Limits,
 ) -> Result<Option<Fetched>, String> {
     let mut url = Url::parse(url).map_err(|err| err.to_string())?;
     let mut permanent = None;
     for _ in 0..=MAX_REDIRECTS {
         // Lifts the client's 30 s, which would otherwise cut a slow body short.
-        let mut request = client.get(url.clone()).timeout(timeout);
+        let mut request = client.get(url.clone()).timeout(limits.timeout);
         if let Some(etag) = &validators.etag {
             request = request.header(header::IF_NONE_MATCH, etag);
         }
@@ -99,8 +107,9 @@ async fn follow(
         };
         let mut body = Vec::new();
         while let Some(chunk) = response.chunk().await.map_err(describe)? {
-            if body.len() + chunk.len() > MAX_BODY {
-                return Err(format!("Response is larger than {} MiB", MAX_BODY >> 20));
+            if body.len() + chunk.len() > limits.max_body {
+                let mib = limits.max_body >> 20;
+                return Err(format!("Response is larger than {mib} MiB"));
             }
             body.extend_from_slice(&chunk);
         }
@@ -186,7 +195,7 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_bodies_over_the_limit_once_decoded() {
-        let oversized = vec![b' '; MAX_BODY + 1];
+        let oversized = vec![b' '; LIMITS.max_body + 1];
         let compressed = gzip(&oversized);
         let router = Router::new()
             .route(
@@ -197,7 +206,7 @@ mod tests {
             .route(
                 "/chunked",
                 route(|| async {
-                    let chunks = (0..=MAX_BODY / (1 << 20))
+                    let chunks = (0..=LIMITS.max_body / (1 << 20))
                         .map(|_| Ok::<_, std::io::Error>(vec![b' '; 1 << 20]));
                     Body::from_stream(stream::iter(chunks))
                 }),
@@ -223,7 +232,10 @@ mod tests {
             &client(),
             &format!("{url}/hop/0"),
             &Validators::default(),
-            Duration::from_millis(500),
+            &Limits {
+                timeout: Duration::from_millis(500),
+                ..LIMITS
+            },
         )
         .await
         .err()

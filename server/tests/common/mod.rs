@@ -260,6 +260,7 @@ impl Fixtures {
             .route("/rss", get(|| async { RSS2 }))
             .route("/etag", get(etag))
             .route("/rsshub/{*route}", get(rsshub))
+            .route("/faviconV2", get(favicon_v2))
             .route(FCM_SEND_PATH, post(fcm_send))
             .route(AI_PATH, post(chat))
             .fallback(replied)
@@ -351,6 +352,34 @@ async fn rsshub(Query(query): Query<HashMap<String, String>>) -> axum::response:
     match query.get("format").map(String::as_str) {
         Some("json") => JSON_FEED.into_response(),
         _ => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+/// A site icon, as far as its leading bytes tell.
+pub const ICON_PNG: &[u8] = b"\x89PNG\r\n\x1a\nsite icon";
+
+/// Answers like Google's favicon service: the icon of `known.example`, a failure for `broken.example`, and a 404
+/// with a globe placeholder for any other site or when an option is missing.
+async fn favicon_v2(Query(query): Query<HashMap<String, String>>) -> axum::response::Response {
+    let options = [
+        ("client", "SOCIAL"),
+        ("type", "FAVICON"),
+        ("fallback_opts", "TYPE,SIZE,URL"),
+        ("size", "64"),
+    ];
+    let complete = options
+        .iter()
+        .all(|(key, value)| query.get(*key).is_some_and(|given| given == value));
+    let png = [(header::CONTENT_TYPE, "image/png")];
+    match query.get("url").map(String::as_str) {
+        Some("https://known.example") if complete => (png, ICON_PNG).into_response(),
+        Some("https://broken.example") => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        _ => (
+            StatusCode::NOT_FOUND,
+            png,
+            b"\x89PNG\r\n\x1a\nglobe".as_slice(),
+        )
+            .into_response(),
     }
 }
 

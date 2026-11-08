@@ -1,34 +1,15 @@
-import { getUrlIcon } from "@follow/utils/utils"
+import { getSiteIconUrl } from "@follow/utils/server-url"
 
 import type { FeedIconFeed } from "../components/ui/icon/feed-icon"
+import { serverEnv } from "./server-env"
 
-/**
- * get feed icon source
- */
-export const getFeedIconSource = (
-  feed?: FeedIconFeed,
-  siteUrl?: string,
-  fallback = false,
-): string | undefined => {
-  switch (true) {
-    case !feed && !!siteUrl: {
-      const [src] = getFeedIconSrc(siteUrl, fallback)
-      return src
-    }
-    case !!feed && !!feed.image: {
-      return feed.image
-    }
-    case !!feed && !feed.image && !!feed.siteUrl: {
-      const [src] = getFeedIconSrc(feed.siteUrl, fallback)
-      return src
-    }
-    default: {
-      return undefined
-    }
-  }
+/** The feed's image, else the icon of its site, or of `siteUrl` without a feed */
+export const getFeedIconSource = (feed?: FeedIconFeed, siteUrl?: string): string | undefined => {
+  if (feed?.image) return feed.image
+  const site = feed ? feed.siteUrl : siteUrl
+  return site ? getSiteIconUrl(serverEnv.API_URL, site) : undefined
 }
-const getFeedIconSrc = (siteUrl: string, fallback: boolean) => {
-  const ret = getUrlIcon(siteUrl, fallback)
 
-  return [ret.src, ret.fallbackUrl]
-}
+/** Images load over HTTPS, except the server's own, which a home network serves without it */
+export const toSecureImageUrl = (url: string) =>
+  serverEnv.API_URL && url.startsWith(serverEnv.API_URL) ? url : url.replace("http://", "https://")

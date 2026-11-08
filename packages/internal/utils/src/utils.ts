@@ -2,7 +2,6 @@ import type { ClassValue } from "clsx"
 import { clsx } from "clsx"
 import dayjs from "dayjs"
 import { extendTailwindMerge } from "tailwind-merge"
-import { parse } from "tldts"
 
 type Nullable<T> = T | null | undefined
 
@@ -197,29 +196,6 @@ export const resolveUrlWithBase = (url: string, baseUrl: string) => {
   } catch {
     return url
   }
-}
-
-export const getUrlIcon = (url: string, _fallback?: boolean | undefined) => {
-  let src: string
-  let fallbackUrl = ""
-
-  try {
-    const { host } = new URL(url)
-    const pureDomain = parse(host).domainWithoutSuffix
-    fallbackUrl = `https://avatar.vercel.sh/${pureDomain}.svg?text=${pureDomain
-      ?.slice(0, 2)
-      .toUpperCase()}`
-    src = `https://${host}/favicon.ico`
-  } catch {
-    const pureDomain = parse(url).domainWithoutSuffix
-    src = `https://avatar.vercel.sh/${pureDomain}.svg?text=${pureDomain?.slice(0, 2).toUpperCase()}`
-  }
-  const ret = {
-    src,
-    fallbackUrl,
-  }
-
-  return ret
 }
 
 export const getAvatarUrl = (user?: {

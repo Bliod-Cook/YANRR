@@ -19,6 +19,8 @@ pub struct Config {
     pub rsshub: RsshubConfig,
     #[serde(default)]
     pub inbox: InboxConfig,
+    #[serde(default)]
+    pub icons: IconsConfig,
     /// Push notifications are sent only when configured.
     pub push: Option<PushConfig>,
     /// AI summaries and translations are offered only when configured.
@@ -63,6 +65,27 @@ impl Default for RsshubConfig {
 pub struct InboxConfig {
     /// Bearer token the inbound mail service posts emails with; emails are refused without one.
     pub email_secret: Option<String>,
+}
+
+/// Icons of the sites whose feeds declare no image, which the server looks up for the clients.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct IconsConfig {
+    #[serde(default)]
+    pub provider: IconProvider,
+    /// Where the Google providers' favicon service is; only tests change it.
+    pub google_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum IconProvider {
+    /// Google's favicon service.
+    #[default]
+    Google,
+    /// The same service on Google's mainland China domain, for servers that cannot reach Google.
+    GoogleCn,
+    /// The site itself: the icons its home page links to, else its `/favicon.ico`.
+    Direct,
 }
 
 #[derive(Debug, Clone, Deserialize)]

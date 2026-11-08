@@ -8,6 +8,7 @@ import { t } from "i18next"
 import { useCallback } from "react"
 import { Image } from "react-native"
 
+import { toSecureImageUrl } from "@/src/lib/image"
 import { isAndroid, isNative } from "@/src/lib/platform"
 import { serverEnv } from "@/src/lib/server-env"
 import { toast } from "@/src/lib/toast"
@@ -33,8 +34,7 @@ export const getSafeSource = (source: ImageProps["source"]) => {
     return
   }
 
-  // Now TypeScript knows source has a uri property
-  source.uri = source.uri.replace("http://", "https://")
+  source.uri = toSecureImageUrl(source.uri)
 
   return {
     ...source,
