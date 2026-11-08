@@ -6399,7 +6399,7 @@ dependencies = [
 
 [[package]]
 name = "yanrr"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "axum",
  "better-auth",
