@@ -2,7 +2,6 @@ import type { DragEndEvent } from "@dnd-kit/core"
 import { DndContext, PointerSensor, pointerWithin, useSensor, useSensors } from "@dnd-kit/core"
 import { useGlobalFocusableScopeSelector } from "@follow/components/common/Focusable/hooks.js"
 import { PanelSplitter } from "@follow/components/ui/divider/PanelSplitter.js"
-import { Kbd } from "@follow/components/ui/kbd/Kbd.js"
 import { FeedViewType } from "@follow/constants"
 import { defaultUISettings } from "@follow/shared/settings/defaults"
 import { getSubscriptionByFeedId } from "@follow/store/subscription/getter"
@@ -222,15 +221,12 @@ const FeedResponsiveResizerContainer = ({
                   {/* <b>Drag</b> to resize */}
                   <Trans t={t} i18nKey="resize.tooltip.drag_to_resize" components={{ b: <b /> }} />
                 </div>
-                <div className="center">
-                  <span>
-                    <Trans
-                      t={t}
-                      i18nKey="resize.tooltip.double_click_to_collapse"
-                      components={{ b: <b /> }}
-                    />
-                  </span>{" "}
-                  <Kbd className="ml-1">{"["}</Kbd>
+                <div>
+                  <Trans
+                    t={t}
+                    i18nKey="resize.tooltip.double_click_to_collapse"
+                    components={{ b: <b /> }}
+                  />
                 </div>
               </>
             )
