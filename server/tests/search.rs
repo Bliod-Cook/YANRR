@@ -195,6 +195,46 @@ async fn pages_of_entries_published_at_once_neither_repeat_nor_skip() {
 }
 
 #[tokio::test]
+async fn entries_with_the_terms_in_their_title_come_first_across_pages() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    let dated = |id: String, title: String, body: &str, day: u32| {
+        let published = format!("2026-10-{day:02}T08:00:00Z");
+        json!({ "id": id, "title": title, "content_html": body, "date_published": published })
+    };
+    // Newest first, as feeds list them: the entries with the term in their body alone are the newer ones.
+    let mut items: Vec<_> = (0..25)
+        .map(|i| dated(format!("body{i}"), format!("Notes {i}"), "on rust", 28))
+        .collect();
+    items.extend((0..5).map(|i| dated(format!("title{i}"), format!("Rust {i}"), "", 1)));
+    fixtures.set("/feed", feed(items));
+    subscribe(&app, &fixtures.url("/feed"), json!({})).await;
+    search::index_pending(&app.state).await.unwrap();
+
+    let first = search(&app, json!({ "keyword": "rust", "limit": 20 })).await;
+    let title = |item: &Value| item["entries"]["title"].as_str().unwrap().to_owned();
+    let starts: Vec<_> = first
+        .iter()
+        .map(|item| title(item)[..4].to_owned())
+        .collect();
+    assert_eq!(
+        starts[..6],
+        ["Rust", "Rust", "Rust", "Rust", "Rust", "Note"]
+    );
+    let last = &first[19]["entries"];
+    let body = json!({
+        "keyword": "rust",
+        "limit": 20,
+        "publishedAfter": last["publishedAt"],
+        "cursorId": last["id"],
+    });
+    let rest = search(&app, body).await;
+    assert_eq!(rest.len(), 10);
+    let all: BTreeSet<_> = first.iter().chain(&rest).map(title).collect();
+    assert_eq!(all.len(), 30);
+}
+
+#[tokio::test]
 async fn a_new_index_is_built_from_the_stored_entries() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
     app.sign_up("alice@example.com").await;

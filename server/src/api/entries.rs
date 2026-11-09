@@ -20,7 +20,7 @@ use crate::{
     entity::{entry, feed, inbox, inbox_entry},
     fetch, id,
     rules::{EntrySettings, Rules, Subject},
-    search::{self, Key},
+    search,
     sync::{self, Action},
     time::iso,
     wire,
@@ -139,7 +139,8 @@ pub struct TimelineBody {
     sort_order: Option<String>,
     #[serde(default)]
     with_content: bool,
-    /// Searches every entry the user may read instead of the scope, newest first.
+    /// Searches every entry the user may read instead of the scope, most terms in the title first, then newest.
+    /// Pages by `cursorId` alone.
     keyword: Option<String>,
 }
 
@@ -289,17 +290,13 @@ async fn found(
     keyword: &str,
     limit: u64,
 ) -> ApiResult<Json<Value>> {
-    // Without an id the cursor skips every entry of its time, as on the timeline.
-    let before = body.published_after.map(|time| Key {
-        published: time.timestamp_micros(),
-        id: body.cursor_id.as_deref().and_then(id::parse).unwrap_or(0) as u64,
-    });
+    let after = body.cursor_id.as_deref().and_then(id::parse);
     let find = search::find(
         &state.db,
         &state.search,
         user_id,
         keyword,
-        before,
+        after,
         limit as usize,
     );
     let ids = find.await.map_err(|err| {
@@ -313,8 +310,9 @@ async fn found(
     let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = ANY($2)");
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values());
     items.extend(inbox_items_from(&state.db, user_id, statement, body.with_content).await?);
-    items.sort_by_key(|item| (item.time, item.id));
-    let data: Vec<_> = items.into_iter().rev().map(|item| item.data).collect();
+    let order: HashMap<i64, usize> = ids.iter().enumerate().map(|(i, id)| (*id, i)).collect();
+    items.sort_by_key(|item| order[&item.id]);
+    let data: Vec<_> = items.into_iter().map(|item| item.data).collect();
     Ok(ok(data))
 }
 

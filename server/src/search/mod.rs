@@ -17,12 +17,11 @@ use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, DbErr, FromQueryRe
 use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, indexer::IndexWriterOptions};
 use tokio::sync::Notify;
 
-pub use self::index::Key;
 use self::index::{Entry, Fields, Plan};
 use crate::AppState;
 
 /// The index format; an index of another one is built anew from the database.
-const VERSION: &str = "v1";
+const VERSION: &str = "v2";
 /// Entries read from the database at a time.
 const BATCH: usize = 1000;
 /// Queued entries indexed at a time.
@@ -86,13 +85,14 @@ impl Search {
     }
 }
 
-/// The ids of up to `limit` entries the user may read that match `keyword`, newest first, sorting after `before`.
+/// The ids of up to `limit` entries the user may read that match `keyword`, in order: most terms in their title
+/// first, then newest. They sort after the entry `after`; none do once it is gone.
 pub async fn find(
     db: &DatabaseConnection,
     search: &Search,
     user_id: &str,
     keyword: &str,
-    before: Option<Key>,
+    after: Option<i64>,
     limit: usize,
 ) -> Result<Vec<i64>, Box<dyn Error + Send + Sync>> {
     let tokens = text::query(keyword);
@@ -105,7 +105,15 @@ pub async fn find(
         &sources(db, user_id).await?,
     ));
     let searcher = search.reader.searcher();
-    let (mut found, mut cursor) = (Vec::new(), before);
+    let mut cursor = None;
+    if let Some(id) = after {
+        let (query, searcher) = (plan.clone(), searcher.clone());
+        cursor = tokio::task::spawn_blocking(move || query.key(&searcher, id as u64)).await??;
+        if cursor.is_none() {
+            return Ok(Vec::new());
+        }
+    }
+    let mut found = Vec::new();
     loop {
         let (query, searcher) = (plan.clone(), searcher.clone());
         let keys =
@@ -332,10 +340,9 @@ impl Row {
 
     fn entry(self) -> Entry {
         Entry {
-            key: Key {
-                published: self.published_at.timestamp_micros(),
-                id: self.id as u64,
-            },
+            id: self.id as u64,
+            published: self.published_at.timestamp_micros(),
+            title: text::document(self.title.as_deref(), None, None),
             document: self.document(),
             source: self.source,
         }

@@ -1,20 +1,26 @@
-//! The search index: candidate terms of each entry, newest first, with nothing stored.
+//! The search index: candidate terms of each entry and of its title, with nothing stored.
 
 use std::{collections::BTreeSet, ops::Bound};
 
 use tantivy::{
-    DocId, IndexWriter, Searcher, SegmentReader, TantivyDocument, Term,
+    DocId, IndexWriter, Score, Searcher, SegmentReader, TantivyDocument, Term,
     collector::TopDocs,
     columnar::ColumnValues,
-    query::{BooleanQuery, EmptyQuery, Occur, Query, RangeQuery, TermQuery, TermSetQuery},
+    query::{
+        BooleanQuery, ConstScoreQuery, EmptyQuery, Occur, Query, RangeQuery, TermQuery,
+        TermSetQuery,
+    },
     schema::{Field, IndexRecordOption, NumericOptions, Schema, TextFieldIndexing, TextOptions},
 };
 
 use super::text::{Document, Token};
 
-/// Where an entry sorts: newest first, then by id.
+/// Where an entry sorts among the results, first to last: most terms of the query in its title, then newest, then
+/// by id.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Key {
+    /// How many terms of the query its title has.
+    pub title: u32,
     /// Microseconds since the epoch.
     pub published: i64,
     pub id: u64,
@@ -22,18 +28,65 @@ pub struct Key {
 
 /// An entry as the index takes it.
 pub struct Entry {
-    pub key: Key,
+    pub id: u64,
+    /// Microseconds since the epoch.
+    pub published: i64,
     /// `f<feed id>` or `i<inbox handle>`.
     pub source: String,
+    /// Of the title alone.
+    pub title: Document,
+    /// Of the title, description and content.
     pub document: Document,
+}
+
+/// The fields holding the terms of a text.
+struct Terms {
+    cjk: Field,
+    word: Field,
+}
+
+impl Terms {
+    fn new(schema: &Schema, prefix: &str) -> Self {
+        Self {
+            cjk: field(schema, &format!("{prefix}cjk")),
+            word: field(schema, &format!("{prefix}word")),
+        }
+    }
+
+    fn add(&self, target: &mut TantivyDocument, document: &Document) {
+        target.add_text(self.cjk, grams(&document.runs));
+        target.add_text(self.word, joined(document.words.iter().cloned()));
+    }
+
+    /// The texts that may have `token`, and whether one must still be checked: the index can't tell where terms
+    /// are.
+    fn query(&self, token: &Token) -> (Box<dyn Query>, bool) {
+        match token {
+            Token::Cjk(run) => {
+                let chars: Vec<char> = run.chars().collect();
+                match chars.len() {
+                    1 | 3 => (term(self.cjk, run), false),
+                    2 => (prefix(self.cjk, run), false),
+                    _ => {
+                        let trigrams = chars.windows(3).map(String::from_iter);
+                        let terms = trigrams.map(|trigram| term(self.cjk, &trigram)).collect();
+                        (Box::new(all(terms)), true)
+                    }
+                }
+            }
+            Token::Word(word) if word.chars().count() < 3 => (term(self.word, word), false),
+            Token::Word(word) => (prefix(self.word, word), false),
+        }
+    }
 }
 
 pub struct Fields {
     id: Field,
     published: Field,
     source: Field,
-    cjk: Field,
-    word: Field,
+    /// Of the title, description and content.
+    text: Terms,
+    title: Terms,
 }
 
 pub fn schema() -> Schema {
@@ -41,9 +94,16 @@ pub fn schema() -> Schema {
     builder.add_u64_field("id", NumericOptions::default().set_indexed().set_fast());
     builder.add_i64_field("published", NumericOptions::default().set_fast());
     builder.add_text_field("source", terms("raw"));
-    builder.add_text_field("cjk", terms("whitespace"));
-    builder.add_text_field("word", terms("whitespace"));
+    for name in ["cjk", "word", "title_cjk", "title_word"] {
+        builder.add_text_field(name, terms("whitespace"));
+    }
     builder.build()
+}
+
+fn field(schema: &Schema, name: &str) -> Field {
+    schema
+        .get_field(name)
+        .expect("the search schema has the field")
 }
 
 /// A field of terms that are only looked up: no positions, frequencies or norms, nothing stored.
@@ -57,29 +117,24 @@ fn terms(tokenizer: &str) -> TextOptions {
 
 impl Fields {
     pub fn new(schema: &Schema) -> Self {
-        let field = |name| {
-            schema
-                .get_field(name)
-                .expect("the search schema has the field")
-        };
         Self {
-            id: field("id"),
-            published: field("published"),
-            source: field("source"),
-            cjk: field("cjk"),
-            word: field("word"),
+            id: field(schema, "id"),
+            published: field(schema, "published"),
+            source: field(schema, "source"),
+            text: Terms::new(schema, ""),
+            title: Terms::new(schema, "title_"),
         }
     }
 
     /// Replaces the entry's document, if any, with this one.
     pub fn add(&self, writer: &IndexWriter, entry: &Entry) -> tantivy::Result<()> {
-        self.delete(writer, entry.key.id);
+        self.delete(writer, entry.id);
         let mut document = TantivyDocument::default();
-        document.add_u64(self.id, entry.key.id);
-        document.add_i64(self.published, entry.key.published);
+        document.add_u64(self.id, entry.id);
+        document.add_i64(self.published, entry.published);
         document.add_text(self.source, &entry.source);
-        document.add_text(self.cjk, grams(&entry.document.runs));
-        document.add_text(self.word, joined(entry.document.words.iter().cloned()));
+        self.text.add(&mut document, &entry.document);
+        self.title.add(&mut document, &entry.title);
         writer.add_document(document)?;
         Ok(())
     }
@@ -110,11 +165,12 @@ fn joined(terms: impl IntoIterator<Item = String>) -> String {
     distinct.into_iter().collect::<Vec<_>>().join(" ")
 }
 
-/// A query on the index: entries of `sources` that may match `tokens`.
+/// A query on the index: entries of `sources` that may match `tokens`, ranked by the terms in their title.
 pub struct Plan {
     query: Box<dyn Query>,
+    /// For each term, the entries whose title may have it.
+    title: Vec<Box<dyn Query>>,
     id: Field,
-    published: Field,
     /// Whether a candidate must still be checked against its text: the index can't tell where terms are.
     pub verify: bool,
 }
@@ -124,24 +180,9 @@ impl Plan {
         let mut verify = false;
         let mut clauses = Vec::new();
         for token in tokens {
-            match token {
-                Token::Cjk(run) => {
-                    let chars: Vec<char> = run.chars().collect();
-                    match chars.len() {
-                        1 | 3 => clauses.push(term(fields.cjk, run)),
-                        2 => clauses.push(prefix(fields.cjk, run)),
-                        _ => {
-                            verify = true;
-                            let trigrams = chars.windows(3).map(String::from_iter);
-                            clauses.extend(trigrams.map(|trigram| term(fields.cjk, &trigram)));
-                        }
-                    }
-                }
-                Token::Word(word) if word.chars().count() < 3 => {
-                    clauses.push(term(fields.word, word))
-                }
-                Token::Word(word) => clauses.push(prefix(fields.word, word)),
-            }
+            let (clause, check) = fields.text.query(token);
+            clauses.push(clause);
+            verify |= check;
         }
         let query: Box<dyn Query> = if clauses.is_empty() {
             Box::new(EmptyQuery)
@@ -154,56 +195,66 @@ impl Plan {
         };
         Self {
             query,
+            title: tokens
+                .iter()
+                .map(|token| fields.title.query(token).0)
+                .collect(),
             id: fields.id,
-            published: fields.published,
             verify,
         }
     }
 
-    /// The keys of up to `limit` candidates, newest first, sorting after `before`.
+    /// The keys of up to `limit` candidates, in order, sorting after `before`.
     pub fn top(
         &self,
         searcher: &Searcher,
         before: Option<Key>,
         limit: usize,
     ) -> tantivy::Result<Vec<Key>> {
-        let query = match before {
-            Some(key) => Box::new(all(vec![self.query.box_clone(), self.before(key)])),
-            None => self.query.box_clone(),
+        self.ranked(searcher, self.query.box_clone(), before, limit)
+    }
+
+    /// Where the entry `id` sorts, whether it matches or not; `None` if the index doesn't have it.
+    pub fn key(&self, searcher: &Searcher, id: u64) -> tantivy::Result<Option<Key>> {
+        let entry = TermQuery::new(Term::from_field_u64(self.id, id), IndexRecordOption::Basic);
+        Ok(self.ranked(searcher, Box::new(entry), None, 1)?.pop())
+    }
+
+    /// The keys of up to `limit` entries of `query`, in order, sorting after `before`. Each title query an entry
+    /// matches scores one.
+    fn ranked(
+        &self,
+        searcher: &Searcher,
+        query: Box<dyn Query>,
+        before: Option<Key>,
+        limit: usize,
+    ) -> tantivy::Result<Vec<Key>> {
+        let scored = |query: Box<dyn Query>, score| -> Box<dyn Query> {
+            Box::new(ConstScoreQuery::new(query, score))
         };
-        let newest = TopDocs::with_limit(limit).custom_score(|segment: &SegmentReader| {
+        let mut clauses = vec![(Occur::Must, scored(query, 0.0))];
+        for title in &self.title {
+            clauses.push((Occur::Should, scored(title.box_clone(), 1.0)));
+        }
+        let keys = TopDocs::with_limit(limit).tweak_score(move |segment: &SegmentReader| {
             let fast = segment.fast_fields();
             let published = fast
                 .i64("published")
                 .expect("published is fast")
                 .first_or_default_col(0);
             let id = fast.u64("id").expect("id is fast").first_or_default_col(0);
-            move |doc: DocId| Key {
-                published: published.get_val(doc),
-                id: id.get_val(doc),
+            move |doc: DocId, score: Score| {
+                let key = Key {
+                    title: score as u32,
+                    published: published.get_val(doc),
+                    id: id.get_val(doc),
+                };
+                // Entries up to `before` score lowest, and are dropped below.
+                before.is_none_or(|before| key < before).then_some(key)
             }
         });
-        let hits = searcher.search(&query, &newest)?;
-        Ok(hits.into_iter().map(|(key, _)| key).collect())
-    }
-
-    /// Entries that sort after `key`: published earlier, or at the same time with a lower id.
-    fn before(&self, key: Key) -> Box<dyn Query> {
-        let published = Term::from_field_i64(self.published, key.published);
-        let earlier = RangeQuery::new(Bound::Unbounded, Bound::Excluded(published.clone()));
-        let same_time = RangeQuery::new(
-            Bound::Included(published.clone()),
-            Bound::Included(published),
-        );
-        let lower_id = RangeQuery::new(
-            Bound::Unbounded,
-            Bound::Excluded(Term::from_field_u64(self.id, key.id)),
-        );
-        let tie: Box<dyn Query> = Box::new(all(vec![Box::new(same_time), Box::new(lower_id)]));
-        Box::new(BooleanQuery::new(vec![
-            (Occur::Should, Box::new(earlier)),
-            (Occur::Should, tie),
-        ]))
+        let hits = searcher.search(&BooleanQuery::new(clauses), &keys)?;
+        Ok(hits.into_iter().filter_map(|(key, _)| key).collect())
     }
 }
 
@@ -257,6 +308,15 @@ mod tests {
             Self { index, fields }
         }
 
+        fn plan(&self, text: &str, sources: &[&str]) -> Plan {
+            let sources: Vec<_> = sources.iter().map(|source| source.to_string()).collect();
+            Plan::new(&self.fields, &query(text), &sources)
+        }
+
+        fn searcher(&self) -> Searcher {
+            self.index.reader().unwrap().searcher()
+        }
+
         fn top(
             &self,
             text: &str,
@@ -264,19 +324,38 @@ mod tests {
             before: Option<Key>,
             limit: usize,
         ) -> (Vec<Key>, bool) {
-            let sources: Vec<_> = sources.iter().map(|source| source.to_string()).collect();
-            let plan = Plan::new(&self.fields, &query(text), &sources);
-            let searcher = self.index.reader().unwrap().searcher();
-            (plan.top(&searcher, before, limit).unwrap(), plan.verify)
+            let plan = self.plan(text, sources);
+            (
+                plan.top(&self.searcher(), before, limit).unwrap(),
+                plan.verify,
+            )
+        }
+
+        fn key(&self, text: &str, id: u64) -> Option<Key> {
+            self.plan(text, &["f1"]).key(&self.searcher(), id).unwrap()
         }
     }
 
     fn entry(id: u64, published: i64, source: &str, content: &str) -> Entry {
         Entry {
-            key: Key { published, id },
+            id,
+            published,
             source: source.into(),
+            title: Document::default(),
             document: document(None, None, Some(content)),
         }
+    }
+
+    fn titled(id: u64, published: i64, title: &str, content: &str) -> Entry {
+        Entry {
+            title: document(Some(title), None, None),
+            document: document(Some(title), None, Some(content)),
+            ..entry(id, published, "f1", "")
+        }
+    }
+
+    fn ids(keys: &[Key]) -> Vec<u64> {
+        keys.iter().map(|key| key.id).collect()
     }
 
     /// Bodies that look alike in their characters but not in their order, so that terms often meet by chance.
@@ -357,7 +436,7 @@ mod tests {
             let expected: BTreeSet<u64> = entries
                 .iter()
                 .filter(|entry| matches(&entry.document, &terms))
-                .map(|entry| entry.key.id)
+                .map(|entry| entry.id)
                 .collect();
             assert_eq!(found, expected, "{text:?}");
             if !verify {
@@ -382,10 +461,30 @@ mod tests {
             entry(4, 300, "ihome", "rust"),
             entry(5, 400, "f2", "rust"),
         ]);
-        let key = |published, id| Key { published, id };
         let (first, _) = fixture.top("rust", &["f1", "ihome"], None, 2);
-        assert_eq!(first, [key(300, 4), key(200, 3)]);
-        let (rest, _) = fixture.top("rust", &["f1", "ihome"], Some(key(200, 3)), 10);
-        assert_eq!(rest, [key(200, 2), key(100, 1)]);
+        assert_eq!(ids(&first), [4, 3]);
+        let (rest, _) = fixture.top("rust", &["f1", "ihome"], Some(first[1]), 10);
+        assert_eq!(ids(&rest), [2, 1]);
+    }
+
+    #[test]
+    fn entries_with_more_terms_in_their_title_come_first() {
+        let fixture = Fixture::new(&[
+            titled(1, 100, "Rust async", ""),
+            titled(2, 400, "Notes", "rust async"),
+            titled(3, 200, "Rust", "async"),
+            titled(4, 300, "Async", "rust"),
+            titled(5, 50, "Rust async runtimes", ""),
+            titled(6, 500, "Rust", ""),
+        ]);
+        let (first, _) = fixture.top("rust async", &["f1"], None, 3);
+        assert_eq!(ids(&first), [1, 5, 4]);
+        // A page goes on from where the entry it ended at sorts.
+        let after = fixture.key("rust async", 4).unwrap();
+        let (rest, _) = fixture.top("rust async", &["f1"], Some(after), 10);
+        assert_eq!(ids(&rest), [3, 2]);
+        // Entries sort where they would whether they match or not; the index may not have them.
+        assert_eq!(fixture.key("rust async", 6).map(|key| key.title), Some(1));
+        assert_eq!(fixture.key("rust async", 7), None);
     }
 }
