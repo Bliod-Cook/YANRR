@@ -1,6 +1,7 @@
 import { FeedViewType } from "@follow/constants"
 import { EntryService } from "@follow/database/services/entry"
 import { isBizId } from "@follow/utils"
+import type { EntryWithFeed } from "@follow-app/client-sdk"
 import { cloneDeep } from "es-toolkit"
 import { debounce } from "es-toolkit/compat"
 
@@ -446,10 +447,13 @@ class EntryActions implements Hydratable, Resetable {
 
 export const SEARCH_PAGE_SIZE = 20
 
+/** Where a search found its terms in an entry: texts cut into pieces, every other one from the second a term */
+export type EntryHighlight = NonNullable<EntryWithFeed["highlight"]>
+
 class EntrySyncServices {
   /**
-   * A page of the entries the user may read that match `keyword`, newest first. They stay out of the store, so
-   * that old results don't show up in the local timelines.
+   * A page of the entries the user may read that match `keyword`, most terms in the title first, then newest, with
+   * where they matched. They stay out of the store, so that old results don't show up in the local timelines.
    */
   async searchEntries({ keyword, pageParam }: { keyword: string; pageParam?: EntriesPageParam }) {
     const res = await api().entries.list({
@@ -458,7 +462,10 @@ class EntrySyncServices {
       publishedAfter: pageParam?.time,
       cursorId: pageParam?.id,
     })
-    return apiMorph.toEntryList(res.data)
+    return apiMorph.toEntryList(res.data).map((entry, index) => ({
+      entry,
+      highlight: res.data[index]?.highlight ?? { title: [entry.title ?? ""], snippet: null },
+    }))
   }
 
   async fetchEntries(props: FetchEntriesProps) {

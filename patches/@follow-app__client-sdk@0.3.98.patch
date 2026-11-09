@@ -12,10 +12,23 @@ index bf5fb898c888a9050c7309b2368bf6286796af15..bb6f9724e742a143602c9e27727229eb
  			if (value !== void 0 && value !== null) {
  				if (Array.isArray(value)) value.forEach((v) => {
 diff --git a/dist/index.d.cts b/dist/index.d.cts
-index 150eabbe515f64183661c7b00befe8bc0caf2e25..6b904a337a31107b746db55044eab4fe0a44a872 100644
+index 150eabbe515f64183661c7b00befe8bc0caf2e25..761cbf49d69531bb990229ec0332b70f0bfc66f5 100644
 --- a/dist/index.d.cts
 +++ b/dist/index.d.cts
-@@ -1691,6 +1691,10 @@ type EntryListRequest = {
+@@ -1682,6 +1682,12 @@ interface EntryWithFeed extends EntryExtraResponse {
+   entries: Prettify<Omit<EntryOpenAPISchema, "content" | "feedId">> & {
+     tags?: EntryTagSummary;
+   };
++  /** With a `keyword`, where its terms are: texts cut into pieces, every other one from the second a term */
++  highlight?: {
++    title: string[];
++    /** Where the description or content has a term the title lacks */
++    snippet: string[] | null;
++  };
+ }
+ type EntryListRequest = {
+   view?: FeedViewType$1;
+@@ -1691,6 +1697,10 @@ type EntryListRequest = {
    limit?: number;
    publishedAfter?: DateISOString;
    publishedBefore?: DateISOString;
@@ -26,7 +39,7 @@ index 150eabbe515f64183661c7b00befe8bc0caf2e25..6b904a337a31107b746db55044eab4fe
    sortOrder?: "asc" | "desc";
    isCollection?: boolean;
    isArchived?: boolean;
-@@ -1762,6 +1766,8 @@ interface InboxListEntryRequestInput {
+@@ -1762,6 +1772,8 @@ interface InboxListEntryRequestInput {
    limit?: number;
    publishedAfter?: string;
    publishedBefore?: string;
@@ -36,10 +49,23 @@ index 150eabbe515f64183661c7b00befe8bc0caf2e25..6b904a337a31107b746db55044eab4fe
  type EntrySettings = SettingsModel$1;
  interface EntryExtraResponse {
 diff --git a/dist/index.d.mts b/dist/index.d.mts
-index 153849fbca63dc7828fc14b90aa177b87a8f4490..d343a6c7be2277064102520f26fa38a5095c9587 100644
+index 153849fbca63dc7828fc14b90aa177b87a8f4490..98b86569d0233fe3df76e4668c464e5b07024cd6 100644
 --- a/dist/index.d.mts
 +++ b/dist/index.d.mts
-@@ -1691,6 +1691,10 @@ type EntryListRequest = {
+@@ -1682,6 +1682,12 @@ interface EntryWithFeed extends EntryExtraResponse {
+   entries: Prettify<Omit<EntryOpenAPISchema, "content" | "feedId">> & {
+     tags?: EntryTagSummary;
+   };
++  /** With a `keyword`, where its terms are: texts cut into pieces, every other one from the second a term */
++  highlight?: {
++    title: string[];
++    /** Where the description or content has a term the title lacks */
++    snippet: string[] | null;
++  };
+ }
+ type EntryListRequest = {
+   view?: FeedViewType$1;
+@@ -1691,6 +1697,10 @@ type EntryListRequest = {
    limit?: number;
    publishedAfter?: DateISOString;
    publishedBefore?: DateISOString;
@@ -50,7 +76,7 @@ index 153849fbca63dc7828fc14b90aa177b87a8f4490..d343a6c7be2277064102520f26fa38a5
    sortOrder?: "asc" | "desc";
    isCollection?: boolean;
    isArchived?: boolean;
-@@ -1762,6 +1766,8 @@ interface InboxListEntryRequestInput {
+@@ -1762,6 +1772,8 @@ interface InboxListEntryRequestInput {
    limit?: number;
    publishedAfter?: string;
    publishedBefore?: string;
@@ -87,10 +113,23 @@ index 229e77843ea2c63338db920b9e74a1826e2a4976..fabd642a4b699186daeef5ca0a31d2a2
      if (query) {
        Object.entries(query).forEach(([key, value]) => {
 diff --git a/src/modules/entries/types.ts b/src/modules/entries/types.ts
-index c5c2de5d4ae23b27b83804032ae6c7490b513f02..77c8439be50529577361ed15912eed784e8cce5a 100644
+index c5c2de5d4ae23b27b83804032ae6c7490b513f02..d9d5ad5b1f638665e1601caea46fe60fe95a8e38 100644
 --- a/src/modules/entries/types.ts
 +++ b/src/modules/entries/types.ts
-@@ -90,6 +90,10 @@ export type EntryListRequest = {
+@@ -80,6 +80,12 @@ export interface EntryWithFeed extends EntryExtraResponse {
+   entries: Prettify<Omit<EntryOpenAPISchema, "content" | "feedId">> & {
+     tags?: EntryTagSummary
+   }
++  /** With a `keyword`, where its terms are: texts cut into pieces, every other one from the second a term */
++  highlight?: {
++    title: string[]
++    /** Where the description or content has a term the title lacks */
++    snippet: string[] | null
++  }
+ }
+ 
+ export type EntryListRequest = {
+@@ -90,6 +96,10 @@ export type EntryListRequest = {
    limit?: number
    publishedAfter?: DateISOString
    publishedBefore?: DateISOString
@@ -101,7 +140,7 @@ index c5c2de5d4ae23b27b83804032ae6c7490b513f02..77c8439be50529577361ed15912eed78
    sortOrder?: "asc" | "desc"
    isCollection?: boolean
    isArchived?: boolean
-@@ -181,6 +185,8 @@ export interface InboxListEntryRequestInput {
+@@ -181,6 +191,8 @@ export interface InboxListEntryRequestInput {
    limit?: number
    publishedAfter?: string
    publishedBefore?: string

@@ -318,14 +318,15 @@ describe("entrySyncServices.searchEntries", () => {
   })
 
   it("asks the server for a page of matches without touching the store", async () => {
-    const feedItem = createCollectionResponseItem(1)
+    const highlight = { title: ["", "Rust", " news"], snippet: ["On ", "async", ""] }
+    const feedItem = { ...createCollectionResponseItem(1), highlight }
     const inboxItem = {
       ...createCollectionResponseItem(2),
       feeds: { type: "inbox", id: "news", title: "News" },
     }
     listEntriesMock.mockResolvedValue({ data: [feedItem, inboxItem] })
 
-    const entries = await entrySyncServices.searchEntries({
+    const results = await entrySyncServices.searchEntries({
       keyword: "rust",
       pageParam: { time: "2026-03-01T00:00:00.000Z", id: "entry-0" },
     })
@@ -336,9 +337,13 @@ describe("entrySyncServices.searchEntries", () => {
       publishedAfter: "2026-03-01T00:00:00.000Z",
       cursorId: "entry-0",
     })
-    expect(entries.map((entry) => [entry.id, entry.feedId, entry.inboxHandle])).toEqual([
+    expect(results.map(({ entry }) => [entry.id, entry.feedId, entry.inboxHandle])).toEqual([
       ["entry-1", "feed-1", null],
       ["entry-2", "news", "news"],
+    ])
+    expect(results.map((result) => result.highlight)).toEqual([
+      highlight,
+      { title: [results[1]?.entry.title], snippet: null },
     ])
     expect(useEntryStore.getState().data).toEqual({})
   })
