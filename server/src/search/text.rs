@@ -4,7 +4,7 @@
 use std::{iter, ops::Range, sync::LazyLock};
 
 use dom_query::{Document as Html, NodeRef};
-use regex::Regex;
+use regex::{Match, Regex};
 use serde::Serialize;
 use unicode_normalization::{
     IsNormalized, UnicodeNormalization,
@@ -110,14 +110,14 @@ fn visible(html: &str) -> String {
     text
 }
 
+/// The characters of CJK runs.
+const CJK: &str = r"\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}\x{30FC}";
 /// A run of CJK characters, or a word of other letters, numbers and marks; everything else separates them.
 static TERM: LazyLock<Regex> = LazyLock::new(|| {
-    let cjk = r"\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}\x{30FC}";
-    Regex::new(&format!(
-        r"(?<cjk>[{cjk}]+)|[[\p{{L}}\p{{N}}\p{{M}}]--[{cjk}]]+"
-    ))
-    .unwrap()
+    Regex::new(&format!(r"[{CJK}]+|[[\p{{L}}\p{{N}}\p{{M}}]--[{CJK}]]+")).unwrap()
 });
+/// Whether a term is a CJK run, as its first character tells.
+static CJK_RUN: LazyLock<Regex> = LazyLock::new(|| Regex::new(&format!(r"\A[{CJK}]")).unwrap());
 
 /// Text in NFKC and lower case that knows where each part of it comes from.
 struct Folded {
@@ -181,12 +181,23 @@ fn stands_alone(c: char) -> bool {
     first.is_some_and(inert)
 }
 
+/// The terms of folded `text` in order, each with whether it is a CJK run. Telling them apart after finding them
+/// is much faster than capturing which part of [`TERM`] matched.
+fn terms(text: &str) -> impl Iterator<Item = (Match<'_>, bool)> {
+    TERM.find_iter(text)
+        .map(|term| (term, CJK_RUN.is_match(term.as_str())))
+}
+
 /// The terms of `text`, compared in NFKC and lower case.
 fn tokens(text: &str) -> Vec<Token> {
-    TERM.captures_iter(&Folded::new(text).text)
-        .map(|term| match term.name("cjk") {
-            Some(run) => Token::Cjk(run.as_str().into()),
-            None => Token::Word(term[0].into()),
+    terms(&Folded::new(text).text)
+        .map(|(term, cjk)| {
+            let term = term.as_str().into();
+            if cjk {
+                Token::Cjk(term)
+            } else {
+                Token::Word(term)
+            }
         })
         .collect()
 }
@@ -205,16 +216,15 @@ fn has_word(found: &str, word: &str) -> bool {
 fn hits<'a>(text: &str, query: &'a [Token]) -> Vec<(Range<usize>, &'a Token)> {
     let folded = Folded::new(text);
     let mut hits = Vec::new();
-    for found in TERM.captures_iter(&folded.text) {
-        let whole = found.get(0).expect("a match has a whole");
+    for (whole, cjk) in terms(&folded.text) {
         for token in query {
-            let ranges = match (token, found.name("cjk")) {
-                (Token::Cjk(run), Some(_)) => whole
+            let ranges = match (token, cjk) {
+                (Token::Cjk(run), true) => whole
                     .as_str()
                     .match_indices(run.as_str())
                     .map(|(at, _)| at..at + run.len())
                     .collect(),
-                (Token::Word(word), None) if has_word(whole.as_str(), word) => {
+                (Token::Word(word), false) if has_word(whole.as_str(), word) => {
                     iter::once(0..word.len()).collect()
                 }
                 _ => Vec::new(),
