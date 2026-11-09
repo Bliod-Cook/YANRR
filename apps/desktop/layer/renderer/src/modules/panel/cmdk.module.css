@@ -1,7 +1,7 @@
 @reference "../../styles/main.css";
 
 .status-bar {
-  @apply relative z-10 h-px w-full shrink-0 scale-y-75 transform;
+  @apply relative z-10 h-px w-full shrink-0 scale-y-75 transform overflow-hidden;
 
   &.loading::before {
     @apply absolute bottom-0 left-0 top-0 z-10 h-px w-full scale-y-75 transform;
@@ -10,6 +10,16 @@
     content: "";
     background: linear-gradient(90deg, transparent, #bbb, transparent);
     animation: move 2s steps(60) infinite;
+  }
+}
+
+@keyframes move {
+  from {
+    translate: -100% 0;
+  }
+
+  to {
+    translate: 100% 0;
   }
 }
 
