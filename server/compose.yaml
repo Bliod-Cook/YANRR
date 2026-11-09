@@ -26,6 +26,9 @@ services:
     env_file: .env
     environment:
       YANRR_DATABASE__URL: postgres://yanrr:yanrr@postgres/yanrr
+    # The search index, rebuilt from the database when missing
+    volumes:
+      - data:/data
     # For a reverse proxy on this host
     ports:
       - "127.0.0.1:3000:3000"
@@ -44,4 +47,5 @@ services:
 
 volumes:
   postgres:
+  data:
   caddy:

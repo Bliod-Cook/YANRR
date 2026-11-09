@@ -24,6 +24,10 @@ url = "https://rsshub.app"
 # service on Google's mainland China domain, for servers that cannot reach Google) or "direct" (the sites themselves).
 provider = "google"
 
+[search]
+# Directory of the search index. It is built from the database when missing, so it needs no backup.
+dir = "data/search"
+
 [inbox]
 # Bearer token your inbound mail service posts emails to /api/inboxes/email with (optional; emails are refused
 # without it). Mail to <handle>@<any domain> goes to the inbox with that handle.

@@ -55,3 +55,4 @@ apps/mobile/build-*.tar.gz
 # Server
 server/target/
 server/config.toml
+server/data/

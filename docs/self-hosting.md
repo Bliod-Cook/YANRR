@@ -107,9 +107,11 @@ docker compose up -d
 
 Database migrations run on start. To stay on one release line, change the image tag in `compose.yaml` from `latest` to, e.g., `0.1`. Don't raise the `postgres` major version in place; that needs a dump and restore.
 
+The first start with article search builds the search index, which takes a few minutes per 100,000 articles. The index lives in the `data` volume; if the `yanrr` service in your `compose.yaml` has no `data:/data` volume, download `compose.yaml` again, or the index is rebuilt whenever the container is recreated.
+
 ## Back up and restore
 
-Everything lives in PostgreSQL. Keep `.env` too.
+Everything lives in PostgreSQL; the search index is built from it, so it needs no backup. Keep `.env` too.
 
 ```sh
 docker compose exec -T postgres pg_dump -U yanrr yanrr > yanrr.sql

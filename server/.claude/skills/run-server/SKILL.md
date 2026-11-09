@@ -26,7 +26,8 @@ cargo test --test api
 ```
 
 - `start.sh` reads `PORT` (3100), `PG_PORT` (54329) and `YANRR_RUN_DIR` (`${TMPDIR:-$TEMP}/yanrr-run`, which holds the
-  database, `server.log`, `build.log` and `smoke.sh`'s `cookies.txt`). Without `--clean`, the next start keeps the data.
+  database, the search index, `server.log`, `build.log` and `smoke.sh`'s `cookies.txt`). Without `--clean`, the next
+  start keeps the data.
 - `smoke.sh [feed-url]` follows `https://blog.rust-lang.org/feed.xml` by default, as `run@example.com` /
   `correct-horse-battery`.
 - Any other setting goes in as `YANRR_<SECTION>__<KEY>`, exported before `start.sh`. For AI (any OpenAI-compatible API;

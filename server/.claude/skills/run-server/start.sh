@@ -27,6 +27,7 @@ export YANRR_SERVER__LISTEN=127.0.0.1:$PORT
 export YANRR_SERVER__PUBLIC_URL=http://127.0.0.1:$PORT
 export YANRR_DATABASE__URL=postgres://yanrr@127.0.0.1:$PG_PORT/yanrr
 export YANRR_AUTH__SECRET=run-skill-secret-that-is-at-least-32-characters
+export YANRR_SEARCH__DIR=$STATE/search
 # A config path that does not exist, so a developer's config.toml is left out.
 nohup ./target/debug/yanrr "$STATE/none.toml" > "$STATE/server.log" 2>&1 &
 echo $! > "$STATE/server.pid"
