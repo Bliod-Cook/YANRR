@@ -307,3 +307,39 @@ describe("entrySyncServices.fetchEntryContentByStream", () => {
     expect(stream).toHaveBeenCalledTimes(1)
   })
 })
+
+describe("entrySyncServices.searchEntries", () => {
+  const listEntriesMock = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useEntryStore.setState({ data: {}, entryIdSet: new Set() })
+    apiContext.provide({ entries: { list: listEntriesMock } } as unknown as FollowAPI)
+  })
+
+  it("asks the server for a page of matches without touching the store", async () => {
+    const feedItem = createCollectionResponseItem(1)
+    const inboxItem = {
+      ...createCollectionResponseItem(2),
+      feeds: { type: "inbox", id: "news", title: "News" },
+    }
+    listEntriesMock.mockResolvedValue({ data: [feedItem, inboxItem] })
+
+    const entries = await entrySyncServices.searchEntries({
+      keyword: "rust",
+      pageParam: { time: "2026-03-01T00:00:00.000Z", id: "entry-0" },
+    })
+
+    expect(listEntriesMock).toHaveBeenCalledWith({
+      keyword: "rust",
+      limit: 20,
+      publishedAfter: "2026-03-01T00:00:00.000Z",
+      cursorId: "entry-0",
+    })
+    expect(entries.map((entry) => [entry.id, entry.feedId, entry.inboxHandle])).toEqual([
+      ["entry-1", "feed-1", null],
+      ["entry-2", "news", "news"],
+    ])
+    expect(useEntryStore.getState().data).toEqual({})
+  })
+})

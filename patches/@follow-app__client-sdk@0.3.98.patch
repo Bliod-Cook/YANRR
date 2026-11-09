@@ -15,16 +15,18 @@ diff --git a/dist/index.d.cts b/dist/index.d.cts
 index 150eabbe515f64183661c7b00befe8bc0caf2e25..6b904a337a31107b746db55044eab4fe0a44a872 100644
 --- a/dist/index.d.cts
 +++ b/dist/index.d.cts
-@@ -1691,6 +1691,8 @@ type EntryListRequest = {
+@@ -1691,6 +1691,10 @@ type EntryListRequest = {
    limit?: number;
    publishedAfter?: DateISOString;
    publishedBefore?: DateISOString;
 +  /** The entry at the cursor, which places it among the entries of its time */
 +  cursorId?: string;
++  /** Searches every entry the user may read for these words instead of the timeline */
++  keyword?: string;
    sortOrder?: "asc" | "desc";
    isCollection?: boolean;
    isArchived?: boolean;
-@@ -1762,6 +1764,8 @@ interface InboxListEntryRequestInput {
+@@ -1762,6 +1766,8 @@ interface InboxListEntryRequestInput {
    limit?: number;
    publishedAfter?: string;
    publishedBefore?: string;
@@ -37,16 +39,18 @@ diff --git a/dist/index.d.mts b/dist/index.d.mts
 index 153849fbca63dc7828fc14b90aa177b87a8f4490..d343a6c7be2277064102520f26fa38a5095c9587 100644
 --- a/dist/index.d.mts
 +++ b/dist/index.d.mts
-@@ -1691,6 +1691,8 @@ type EntryListRequest = {
+@@ -1691,6 +1691,10 @@ type EntryListRequest = {
    limit?: number;
    publishedAfter?: DateISOString;
    publishedBefore?: DateISOString;
 +  /** The entry at the cursor, which places it among the entries of its time */
 +  cursorId?: string;
++  /** Searches every entry the user may read for these words instead of the timeline */
++  keyword?: string;
    sortOrder?: "asc" | "desc";
    isCollection?: boolean;
    isArchived?: boolean;
-@@ -1762,6 +1764,8 @@ interface InboxListEntryRequestInput {
+@@ -1762,6 +1766,8 @@ interface InboxListEntryRequestInput {
    limit?: number;
    publishedAfter?: string;
    publishedBefore?: string;
@@ -86,16 +90,18 @@ diff --git a/src/modules/entries/types.ts b/src/modules/entries/types.ts
 index c5c2de5d4ae23b27b83804032ae6c7490b513f02..77c8439be50529577361ed15912eed784e8cce5a 100644
 --- a/src/modules/entries/types.ts
 +++ b/src/modules/entries/types.ts
-@@ -90,6 +90,8 @@ export type EntryListRequest = {
+@@ -90,6 +90,10 @@ export type EntryListRequest = {
    limit?: number
    publishedAfter?: DateISOString
    publishedBefore?: DateISOString
 +  /** The entry at the cursor, which places it among the entries of its time */
 +  cursorId?: string
++  /** Searches every entry the user may read for these words instead of the timeline */
++  keyword?: string
    sortOrder?: "asc" | "desc"
    isCollection?: boolean
    isArchived?: boolean
-@@ -181,6 +183,8 @@ export interface InboxListEntryRequestInput {
+@@ -181,6 +185,8 @@ export interface InboxListEntryRequestInput {
    limit?: number
    publishedAfter?: string
    publishedBefore?: string

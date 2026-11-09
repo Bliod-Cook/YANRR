@@ -24,7 +24,12 @@ import type {
   PublishAtTimeRangeFilter,
 } from "../unread/types"
 import { getEntry } from "./getter"
-import type { EntryModel, FetchEntriesProps, FetchEntriesPropsSettings } from "./types"
+import type {
+  EntriesPageParam,
+  EntryModel,
+  FetchEntriesProps,
+  FetchEntriesPropsSettings,
+} from "./types"
 import { getEffectiveEntrySortOrder, getEntriesParams, isTimelineEntriesSource } from "./utils"
 
 type EntryId = string
@@ -439,7 +444,23 @@ class EntryActions implements Hydratable, Resetable {
   }
 }
 
+export const SEARCH_PAGE_SIZE = 20
+
 class EntrySyncServices {
+  /**
+   * A page of the entries the user may read that match `keyword`, newest first. They stay out of the store, so
+   * that old results don't show up in the local timelines.
+   */
+  async searchEntries({ keyword, pageParam }: { keyword: string; pageParam?: EntriesPageParam }) {
+    const res = await api().entries.list({
+      keyword,
+      limit: SEARCH_PAGE_SIZE,
+      publishedAfter: pageParam?.time,
+      cursorId: pageParam?.id,
+    })
+    return apiMorph.toEntryList(res.data)
+  }
+
   async fetchEntries(props: FetchEntriesProps) {
     const {
       feedId,
