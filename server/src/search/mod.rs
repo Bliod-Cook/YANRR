@@ -8,7 +8,7 @@ use std::{
     error::Error,
     fs,
     path::Path,
-    sync::{Mutex, PoisonError},
+    sync::{Arc, Mutex, PoisonError},
     time::Duration,
 };
 
@@ -17,7 +17,8 @@ use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, DbErr, FromQueryRe
 use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, indexer::IndexWriterOptions};
 use tokio::sync::Notify;
 
-use self::index::{Entry, Fields, Key};
+pub use self::index::Key;
+use self::index::{Entry, Fields, Plan};
 use crate::AppState;
 
 /// The index format; an index of another one is built anew from the database.
@@ -28,6 +29,8 @@ const BATCH: usize = 1000;
 const QUEUE_BATCH: usize = 500;
 /// How long the indexer waits for news before looking at the queue anyway, e.g. after a crash.
 const IDLE: Duration = Duration::from_secs(30);
+/// Candidates taken from the index at a time.
+const CANDIDATES: usize = 64;
 
 pub struct Search {
     fields: Fields,
@@ -81,6 +84,117 @@ impl Search {
         writer.commit()?;
         self.reader.reload()
     }
+}
+
+/// The ids of up to `limit` entries the user may read that match `keyword`, newest first, sorting after `before`.
+pub async fn find(
+    db: &DatabaseConnection,
+    search: &Search,
+    user_id: &str,
+    keyword: &str,
+    before: Option<Key>,
+    limit: usize,
+) -> Result<Vec<i64>, Box<dyn Error + Send + Sync>> {
+    let tokens = text::query(keyword);
+    if tokens.is_empty() {
+        return Ok(Vec::new());
+    }
+    let plan = Arc::new(Plan::new(
+        &search.fields,
+        &tokens,
+        &sources(db, user_id).await?,
+    ));
+    let searcher = search.reader.searcher();
+    let (mut found, mut cursor) = (Vec::new(), before);
+    loop {
+        let (query, searcher) = (plan.clone(), searcher.clone());
+        let keys =
+            tokio::task::spawn_blocking(move || query.top(&searcher, cursor, CANDIDATES)).await??;
+        let Some(last) = keys.last() else { break };
+        cursor = Some(*last);
+        let ids: Vec<i64> = keys.iter().map(|key| key.id as i64).collect();
+        let readable = readable(db, user_id, &ids).await?;
+        let candidates: Vec<i64> = ids.into_iter().filter(|id| readable.contains(id)).collect();
+        if plan.verify {
+            // Only as many texts as could still fill the page are read at a time.
+            let mut rest = candidates.as_slice();
+            while !rest.is_empty() && found.len() < limit {
+                let (next, after) = rest.split_at((limit - found.len()).min(rest.len()));
+                found.extend(matching(db, next, &tokens).await?);
+                rest = after;
+            }
+        } else {
+            found.extend(candidates);
+        }
+        if found.len() >= limit || keys.len() < CANDIDATES {
+            break;
+        }
+    }
+    found.truncate(limit);
+    Ok(found)
+}
+
+/// Of `ids`, in their order, the entries whose text has every term of `tokens`.
+async fn matching(
+    db: &DatabaseConnection,
+    ids: &[i64],
+    tokens: &[text::Token],
+) -> Result<Vec<i64>, Box<dyn Error + Send + Sync>> {
+    let statement = Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        rows("id = ANY($1)"),
+        [ids.to_vec().into()],
+    );
+    let rows = Row::find_by_statement(statement).all(db).await?;
+    let tokens = tokens.to_vec();
+    let matched: HashSet<i64> = tokio::task::spawn_blocking(move || {
+        rows.iter()
+            .filter(|row| text::matches(&row.document(), &tokens))
+            .map(|row| row.id)
+            .collect()
+    })
+    .await?;
+    Ok(ids
+        .iter()
+        .copied()
+        .filter(|id| matched.contains(id))
+        .collect())
+}
+
+/// Where the user's entries come from, as the index names them: the feeds they follow and their inboxes.
+async fn sources(db: &DatabaseConnection, user_id: &str) -> Result<Vec<String>, DbErr> {
+    let sql = "SELECT 'f' || feed_id AS source FROM subscriptions WHERE user_id = $1
+        UNION ALL
+        SELECT 'i' || handle FROM inboxes WHERE user_id = $1";
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, [user_id.into()]);
+    db.query_all_raw(statement)
+        .await?
+        .iter()
+        .map(|row| row.try_get("", "source"))
+        .collect()
+}
+
+/// Of `ids`, the entries a search finds for the user: of a feed they follow and not blocked for them, or of
+/// their inbox.
+async fn readable(
+    db: &DatabaseConnection,
+    user_id: &str,
+    ids: &[i64],
+) -> Result<HashSet<i64>, DbErr> {
+    let sql = "SELECT e.id FROM entries e
+            JOIN subscriptions s ON s.user_id = $1 AND s.feed_id = e.feed_id
+        WHERE e.id = ANY($2)
+            AND NOT EXISTS (SELECT 1 FROM blocked_entries b WHERE b.user_id = $1 AND b.entry_id = e.id)
+        UNION ALL
+        SELECT e.id FROM inbox_entries e JOIN inboxes i ON i.handle = e.inbox_handle AND i.user_id = $1
+        WHERE e.id = ANY($2)";
+    let values = [user_id.into(), ids.to_vec().into()];
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
+    db.query_all_raw(statement)
+        .await?
+        .iter()
+        .map(|row| row.try_get("", "id"))
+        .collect()
 }
 
 /// Queues entries for the index; call it in the transaction storing them.

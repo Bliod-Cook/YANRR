@@ -92,6 +92,14 @@ impl ApiError {
         Self::new(ExceptionCode::FeedMissingId, "feedId or url required")
     }
 
+    /// The work took longer than a request may; the client can try again.
+    pub fn timeout() -> Self {
+        Self {
+            status: Some(StatusCode::SERVICE_UNAVAILABLE),
+            ..Self::new(ExceptionCode::InternalError, "Took too long")
+        }
+    }
+
     pub fn entry_not_found() -> Self {
         Self::new(ExceptionCode::EntryNoFound, "Entry not found")
     }

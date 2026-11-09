@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use axum::{Json, extract::State, http::header, response::IntoResponse};
 use chrono::{DateTime, Utc};
@@ -20,6 +20,7 @@ use crate::{
     entity::{entry, feed, inbox, inbox_entry},
     fetch, id,
     rules::{EntrySettings, Rules, Subject},
+    search::{self, Key},
     sync::{self, Action},
     time::iso,
     wire,
@@ -27,6 +28,8 @@ use crate::{
 
 const PAGE_SIZE: u64 = 20;
 const MAX_PAGE_SIZE: u64 = 100;
+/// How long a search may take before the client is told to try again.
+const SEARCH_TIME: Duration = Duration::from_secs(1);
 
 /// The user's view of entries: `e` is the entry, `s` the user's subscription to its feed, `c` the user's
 /// collection of it, `u` its unread mark and `b` its block by the user's rules; `$1` is the user id.
@@ -136,6 +139,8 @@ pub struct TimelineBody {
     sort_order: Option<String>,
     #[serde(default)]
     with_content: bool,
+    /// Searches every entry the user may read instead of the scope, newest first.
+    keyword: Option<String>,
 }
 
 impl TimelineBody {
@@ -252,13 +257,19 @@ fn personalize(
 }
 
 /// `POST /entries`, and `POST /entries/inbox` with an `inboxId`: a page of the timeline. Feed entries and inbox
-/// entries are each paged on their own, then merged.
+/// entries are each paged on their own, then merged. With a `keyword`, a page of the entries matching it.
 pub async fn timeline(
     State(state): State<AppState>,
     user: AuthUser,
     ApiJson(body): ApiJson<TimelineBody>,
 ) -> ApiResult<Json<Value>> {
     let limit = body.limit.unwrap_or(PAGE_SIZE).clamp(1, MAX_PAGE_SIZE);
+    if let Some(keyword) = &body.keyword {
+        let found = found(&state, &user.id, &body, keyword, limit);
+        return tokio::time::timeout(SEARCH_TIME, found)
+            .await
+            .map_err(|_| ApiError::timeout())?;
+    }
     let mut items = feed_items(&state.db, &user.id, &body, limit).await?;
     items.extend(inbox_items(&state.db, &user.id, &body, limit).await?);
     items.sort_by_key(|item| (item.time, item.id));
@@ -267,6 +278,43 @@ pub async fn timeline(
     }
     items.truncate(limit as usize);
     let data: Vec<_> = items.into_iter().map(|item| item.data).collect();
+    Ok(ok(data))
+}
+
+/// The entries matching `keyword` that come after the body's cursor, as timeline items.
+async fn found(
+    state: &AppState,
+    user_id: &str,
+    body: &TimelineBody,
+    keyword: &str,
+    limit: u64,
+) -> ApiResult<Json<Value>> {
+    // Without an id the cursor skips every entry of its time, as on the timeline.
+    let before = body.published_after.map(|time| Key {
+        published: time.timestamp_micros(),
+        id: body.cursor_id.as_deref().and_then(id::parse).unwrap_or(0) as u64,
+    });
+    let find = search::find(
+        &state.db,
+        &state.search,
+        user_id,
+        keyword,
+        before,
+        limit as usize,
+    );
+    let ids = find.await.map_err(|err| {
+        tracing::error!("search failed: {err}");
+        ApiError::new(ExceptionCode::InternalError, "Internal error")
+    })?;
+    let values = || [user_id.into(), ids.clone().into()];
+    let sql = format!("SELECT {MARKED}, e.published_at AS time {TIMELINE} WHERE e.id = ANY($2)");
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values());
+    let mut items = feed_items_from(&state.db, user_id, statement, None, body.with_content).await?;
+    let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = ANY($2)");
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values());
+    items.extend(inbox_items_from(&state.db, user_id, statement, body.with_content).await?);
+    items.sort_by_key(|item| (item.time, item.id));
+    let data: Vec<_> = items.into_iter().rev().map(|item| item.data).collect();
     Ok(ok(data))
 }
 
