@@ -21,7 +21,7 @@ use postgresql_embedded::{PostgreSQL, SettingsBuilder};
 use reqwest::{Client, Response, header};
 use sea_orm::ConnectionTrait;
 use serde_json::{Value, json};
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 use tokio::net::TcpListener;
 use yanrr::{
     AppState,
@@ -36,6 +36,7 @@ pub struct TestApp {
     pub client: Client,
     pub state: AppState,
     _postgres: PostgreSQL,
+    _search: TempDir,
 }
 
 impl TestApp {
@@ -69,6 +70,9 @@ impl TestApp {
             database = postgres.settings().url("yanrr"),
         ))
         .unwrap();
+        // Each server writes its own index; tests running at once would otherwise fight over its lock.
+        let search = TempDir::new().unwrap();
+        config.search.dir = search.path().into();
         customize(&mut config);
 
         let state = yanrr::init(config).await.unwrap();
@@ -87,6 +91,7 @@ impl TestApp {
             client,
             state,
             _postgres: postgres,
+            _search: search,
         }
     }
 

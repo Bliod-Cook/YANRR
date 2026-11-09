@@ -21,6 +21,8 @@ pub struct Config {
     pub inbox: InboxConfig,
     #[serde(default)]
     pub icons: IconsConfig,
+    #[serde(default)]
+    pub search: SearchConfig,
     /// Push notifications are sent only when configured.
     pub push: Option<PushConfig>,
     /// AI summaries and translations are offered only when configured.
@@ -57,6 +59,20 @@ impl Default for RsshubConfig {
     fn default() -> Self {
         Self {
             url: "https://rsshub.app".into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SearchConfig {
+    /// Directory of the search index, which is built from the database when missing.
+    pub dir: PathBuf,
+}
+
+impl Default for SearchConfig {
+    fn default() -> Self {
+        Self {
+            dir: "data/search".into(),
         }
     }
 }

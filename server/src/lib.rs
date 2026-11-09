@@ -36,6 +36,7 @@ pub struct AppState {
     pub http: reqwest::Client,
     pub rsshub: Arc<rsshub::Catalog>,
     pub push: Option<Arc<push::Fcm>>,
+    pub search: Arc<search::Search>,
 }
 
 impl FromRef<AppState> for Arc<Auth> {
@@ -60,6 +61,7 @@ pub async fn init(config: Config) -> Result<AppState, Box<dyn Error + Send + Syn
         .map(push::Fcm::load)
         .transpose()?
         .map(Arc::new);
+    let search = Arc::new(search::Search::open(&config.search.dir, &db).await?);
     Ok(AppState {
         db,
         auth,
@@ -67,6 +69,7 @@ pub async fn init(config: Config) -> Result<AppState, Box<dyn Error + Send + Syn
         http: fetch::http_client(),
         rsshub: Arc::default(),
         push,
+        search,
     })
 }
 
