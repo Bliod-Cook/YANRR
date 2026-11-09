@@ -24,6 +24,7 @@ use crate::{
     entity::{inbox, inbox_entry},
     fetch::{html, language, parse},
     id::next_id,
+    search,
     subscription::blank_to_none,
     sync::{self, Action},
     time::iso,
@@ -224,8 +225,9 @@ async fn deliver(state: &AppState, inbox: &inbox::Model, entry: NewEntry) -> Api
     });
     // Clients send timestamps back as cursors with millisecond precision.
     let published_at = entry.published_at.trunc_subsecs(3);
+    let id = next_id();
     let row = inbox_entry::ActiveModel {
-        id: Set(next_id()),
+        id: Set(id),
         inbox_handle: Set(inbox.handle.clone()),
         guid: Set(entry.guid),
         title: Set(entry.title),
@@ -250,6 +252,9 @@ async fn deliver(state: &AppState, inbox: &inbox::Model, entry: NewEntry) -> Api
         .on_conflict(OnConflict::columns(key).do_nothing().to_owned())
         .exec_without_returning(&txn)
         .await?;
+    if inserted == 1 {
+        search::enqueue(&txn, &[id]).await?;
+    }
     let actions = (inserted == 1).then(|| Action {
         user_id: inbox.user_id.clone(),
         model: "timeline",
@@ -266,6 +271,7 @@ async fn deliver(state: &AppState, inbox: &inbox::Model, entry: NewEntry) -> Api
     });
     sync::record(&txn, actions.into_iter().collect()).await?;
     txn.commit().await?;
+    state.search.wake();
     Ok(())
 }
 

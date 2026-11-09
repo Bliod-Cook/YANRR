@@ -7,6 +7,7 @@ mod m20261026_000001_orphaned_unreads;
 mod m20261026_000002_actions;
 mod m20261027_000001_timeline_index;
 mod m20261030_000001_ai_cache;
+mod m20261109_000001_search_queue;
 
 use sea_orm_migration::prelude::*;
 
@@ -25,6 +26,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20261026_000002_actions::Migration),
             Box::new(m20261027_000001_timeline_index::Migration),
             Box::new(m20261030_000001_ai_cache::Migration),
+            Box::new(m20261109_000001_search_queue::Migration),
         ]
     }
 }

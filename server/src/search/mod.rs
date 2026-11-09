@@ -3,23 +3,37 @@
 pub(crate) mod index;
 pub(crate) mod text;
 
-use std::{error::Error, fs, path::Path, sync::Mutex};
+use std::{
+    collections::HashSet,
+    error::Error,
+    fs,
+    path::Path,
+    sync::{Mutex, PoisonError},
+    time::Duration,
+};
 
 use chrono::{DateTime, Utc};
-use sea_orm::{DatabaseConnection, DbBackend, FromQueryResult, Statement};
+use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, DbErr, FromQueryResult, Statement};
 use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, indexer::IndexWriterOptions};
+use tokio::sync::Notify;
 
 use self::index::{Entry, Fields, Key};
+use crate::AppState;
 
 /// The index format; an index of another one is built anew from the database.
 const VERSION: &str = "v1";
 /// Entries read from the database at a time.
 const BATCH: usize = 1000;
+/// Queued entries indexed at a time.
+const QUEUE_BATCH: usize = 500;
+/// How long the indexer waits for news before looking at the queue anyway, e.g. after a crash.
+const IDLE: Duration = Duration::from_secs(30);
 
 pub struct Search {
     fields: Fields,
     reader: IndexReader,
     writer: Mutex<IndexWriter>,
+    queued: Notify,
 }
 
 impl Search {
@@ -44,8 +58,90 @@ impl Search {
                 .reload_policy(ReloadPolicy::Manual)
                 .try_into()?,
             writer: Mutex::new(index.writer_with_options(options)?),
+            queued: Notify::new(),
         })
     }
+
+    /// Has the indexer index what was queued; call it once the transaction queuing entries is committed.
+    pub fn wake(&self) {
+        self.queued.notify_one();
+    }
+
+    /// Replaces the documents of `ids` with those of `rows`, dropping the ones whose entry is gone, and makes
+    /// them searchable.
+    fn index(&self, ids: &[i64], rows: Vec<Row>) -> tantivy::Result<()> {
+        let mut writer = self.writer.lock().unwrap_or_else(PoisonError::into_inner);
+        let found: HashSet<i64> = rows.iter().map(|row| row.id).collect();
+        for id in ids.iter().filter(|id| !found.contains(id)) {
+            self.fields.delete(&writer, *id as u64);
+        }
+        for row in rows {
+            self.fields.add(&writer, &row.entry())?;
+        }
+        writer.commit()?;
+        self.reader.reload()
+    }
+}
+
+/// Queues entries for the index; call it in the transaction storing them.
+pub(crate) async fn enqueue(db: &impl ConnectionTrait, ids: &[i64]) -> Result<(), DbErr> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let sql = "INSERT INTO search_queue SELECT unnest($1::bigint[]) ON CONFLICT DO NOTHING";
+    db.execute_raw(Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        sql,
+        [ids.to_vec().into()],
+    ))
+    .await?;
+    Ok(())
+}
+
+/// Indexes the queued entries. An entry leaves the queue only once it is searchable, so that one indexed again
+/// after a failure is merely replaced.
+pub async fn index_pending(state: &AppState) -> Result<(), Box<dyn Error + Send + Sync>> {
+    let claim = format!("SELECT entry_id FROM search_queue ORDER BY entry_id LIMIT {QUEUE_BATCH}");
+    let select = rows("id = ANY($1)");
+    loop {
+        let statement = Statement::from_string(DbBackend::Postgres, &claim);
+        let ids = state
+            .db
+            .query_all_raw(statement)
+            .await?
+            .iter()
+            .map(|row| row.try_get::<i64>("", "entry_id"))
+            .collect::<Result<Vec<_>, _>>()?;
+        if ids.is_empty() {
+            return Ok(());
+        }
+        let statement =
+            Statement::from_sql_and_values(DbBackend::Postgres, &select, [ids.clone().into()]);
+        let rows = Row::find_by_statement(statement).all(&state.db).await?;
+        let (search, indexed) = (state.search.clone(), ids.clone());
+        tokio::task::spawn_blocking(move || search.index(&indexed, rows)).await??;
+        let sql = "DELETE FROM search_queue WHERE entry_id = ANY($1)";
+        state
+            .db
+            .execute_raw(Statement::from_sql_and_values(
+                DbBackend::Postgres,
+                sql,
+                [ids.into()],
+            ))
+            .await?;
+    }
+}
+
+/// Indexes queued entries as they are stored.
+pub fn spawn_indexer(state: AppState) {
+    tokio::spawn(async move {
+        loop {
+            if let Err(err) = index_pending(&state).await {
+                tracing::error!("indexing entries failed: {err}");
+            }
+            let _ = tokio::time::timeout(IDLE, state.search.queued.notified()).await;
+        }
+    });
 }
 
 /// Builds the index of every entry in `path`, next to it first so that an interrupted build is started over.

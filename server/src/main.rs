@@ -18,6 +18,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     yanrr::fetch::scheduler::spawn(state.clone());
     yanrr::sync::spawn_cleaner(state.db.clone());
+    yanrr::search::spawn_indexer(state.clone());
     tracing::info!("listening on {}", listener.local_addr()?);
     axum::serve(listener, yanrr::router(state)).await?;
     Ok(())

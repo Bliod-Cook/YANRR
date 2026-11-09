@@ -33,7 +33,7 @@ use crate::{
         Rules, Subject,
         deliver::{self, Delivery},
     },
-    subscription as subscriptions,
+    search, subscription as subscriptions,
     sync::{self, Action},
     time::iso,
 };
@@ -168,6 +168,7 @@ async fn insert(state: &AppState, url: &str, update: Update) -> Result<feed::Mod
     let stored = store(&txn, feed.id, update).await?;
     sync::record(&txn, stored.actions).await?;
     txn.commit().await?;
+    state.search.wake();
     deliver::spawn(state, &stored.feed, stored.deliveries);
     Ok(stored.feed)
 }
@@ -238,6 +239,7 @@ async fn refresh(state: &AppState, feed: &feed::Model) -> Result<(), FetchError>
     };
     sync::record(&txn, stored.actions).await?;
     txn.commit().await?;
+    state.search.wake();
     deliver::spawn(state, &stored.feed, stored.deliveries);
     Ok(())
 }
@@ -393,6 +395,7 @@ async fn store(db: &impl ConnectionTrait, feed_id: i64, update: Update) -> Resul
             .await?;
         new.extend(inserted);
     }
+    search::enqueue(db, &new.iter().map(|entry| entry.id).collect::<Vec<_>>()).await?;
     let (actions, deliveries) = fan_out(db, &feed, &new).await?;
     Ok(Stored {
         feed,
