@@ -3,6 +3,7 @@ import { Logo } from "@follow/components/icons/logo.jsx"
 import { ScrollArea } from "@follow/components/ui/scroll-area/index.js"
 import { useInputComposition } from "@follow/hooks"
 import { getEntry } from "@follow/store/entry/getter"
+import type { EntryHighlight } from "@follow/store/entry/store"
 import { entryActions, entrySyncServices, SEARCH_PAGE_SIZE } from "@follow/store/entry/store"
 import type { EntriesPageParam, EntryModel } from "@follow/store/entry/types"
 import { getFeedById } from "@follow/store/feed/getter"
@@ -109,7 +110,7 @@ export const SearchCmdK: React.FC = () => {
     queryFn: ({ pageParam }) => entrySyncServices.searchEntries({ keyword, pageParam }),
     initialPageParam: undefined as EntriesPageParam | undefined,
     getNextPageParam: (page) => {
-      const last = page.at(-1)
+      const last = page.at(-1)?.entry
       if (page.length < SEARCH_PAGE_SIZE || !last) return
       return { time: last.publishedAt.toISOString(), id: last.id }
     },
@@ -201,8 +202,8 @@ export const SearchCmdK: React.FC = () => {
                 }
                 className="flex w-full min-w-0 flex-col py-2"
               >
-                {found.map((entry) => (
-                  <EntryItem key={entry.id} entry={entry} />
+                {found.map(({ entry, highlight }) => (
+                  <EntryItem key={entry.id} entry={entry} highlight={highlight} />
                 ))}
               </Command.Group>
             )}
@@ -238,14 +239,21 @@ const FeedItem = memo(function FeedItem({ feedId }: { feedId: string }) {
   )
 })
 
-const EntryItem = memo(function EntryItem({ entry }: { entry: EntryModel }) {
+const EntryItem = memo(function EntryItem({
+  entry,
+  highlight,
+}: {
+  entry: EntryModel
+  highlight: EntryHighlight
+}) {
   const navigateEntry = useNavigateEntry()
   const inbox = useInboxById(entry.inboxHandle)
   const source = inbox ?? getFeedById(entry.feedId)
   return (
     <SearchItem
       value={`entry-${entry.id}`}
-      title={entry.title ?? ""}
+      title={<Marked pieces={highlight.title} />}
+      snippet={highlight.snippet && <Marked pieces={highlight.snippet} />}
       subtitle={source?.title}
       icon={source && <FeedIcon className="mr-2 size-5 shrink-0 rounded" target={source} />}
       onSelect={() => {
@@ -267,11 +275,13 @@ const EntryItem = memo(function EntryItem({ entry }: { entry: EntryModel }) {
 
 const SearchItem: FC<{
   value: string
-  title: string
+  title: ReactNode
+  /** Under the title, e.g. where an entry matched */
+  snippet?: ReactNode
   subtitle?: Nullable<string>
   icon?: ReactNode
   onSelect: () => void
-}> = ({ value, title, subtitle, icon, onSelect }) => (
+}> = ({ value, title, snippet, subtitle, icon, onSelect }) => (
   <Command.Item
     className={clsx(
       "relative flex w-full justify-between px-1 text-[0.9rem]",
@@ -284,15 +294,34 @@ const SearchItem: FC<{
     value={value}
     onSelect={onSelect}
   >
-    <div className="relative flex w-full items-center justify-between px-1 py-2">
+    <div className="relative flex w-full items-start px-1 py-2">
       {icon}
-      <span className="block min-w-0 flex-1 shrink-0 truncate">{title}</span>
-      <span className="block min-w-0 shrink-0 grow-0 text-xs font-medium text-zinc-800 opacity-60 dark:text-slate-200/80">
-        {subtitle}
-      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between">
+          <span className="block min-w-0 flex-1 truncate">{title}</span>
+          <span className="block min-w-0 shrink-0 grow-0 text-xs font-medium text-zinc-800 opacity-60 dark:text-slate-200/80">
+            {subtitle}
+          </span>
+        </div>
+        {snippet && (
+          <p className="mt-0.5 line-clamp-2 break-words text-xs text-text-secondary">{snippet}</p>
+        )}
+      </div>
     </div>
   </Command.Item>
 )
+
+/** Text cut into pieces, every other one from the second a match */
+const Marked: FC<{ pieces: string[] }> = ({ pieces }) =>
+  pieces.map((piece, index) =>
+    index % 2 === 1 ? (
+      <mark key={index} className="bg-transparent font-semibold text-accent">
+        {piece}
+      </mark>
+    ) : (
+      piece
+    ),
+  )
 
 const SearchGroupHeading: FC<{ icon: string; title: string }> = ({ icon, title }) => (
   <div className="mb-2 flex items-center gap-2">
