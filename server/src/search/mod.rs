@@ -13,6 +13,7 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
+use rayon::prelude::*;
 use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, DbErr, FromQueryResult, Statement};
 use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, indexer::IndexWriterOptions};
 use tokio::sync::Notify;
@@ -189,8 +190,9 @@ async fn highlighted(
 ) -> Result<Vec<Found>, Box<dyn Error + Send + Sync>> {
     let rows = texts(db, &ids).await?;
     let tokens = tokens.to_vec();
+    // Entries in parallel: some have long content to read.
     let mut highlights: HashMap<i64, Highlight> = tokio::task::spawn_blocking(move || {
-        rows.into_iter()
+        rows.into_par_iter()
             .map(|row| {
                 let (title, description) = (row.title.as_deref(), row.description.as_deref());
                 let highlight =
