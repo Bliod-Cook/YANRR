@@ -4,7 +4,7 @@ pub(crate) mod index;
 pub(crate) mod text;
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     error::Error,
     fs,
     path::Path,
@@ -18,6 +18,7 @@ use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, indexer::IndexWrite
 use tokio::sync::Notify;
 
 use self::index::{Entry, Fields, Plan};
+pub use self::text::Highlight;
 use crate::AppState;
 
 /// The index format; an index of another one is built anew from the database.
@@ -85,8 +86,14 @@ impl Search {
     }
 }
 
-/// The ids of up to `limit` entries the user may read that match `keyword`, in order: most terms in their title
-/// first, then newest. They sort after the entry `after`; none do once it is gone.
+/// An entry a search found, and what it shows of where.
+pub struct Found {
+    pub id: i64,
+    pub highlight: Highlight,
+}
+
+/// Up to `limit` entries the user may read that match `keyword`, in order: most terms in their title first, then
+/// newest. They sort after the entry `after`; none do once it is gone.
 pub async fn find(
     db: &DatabaseConnection,
     search: &Search,
@@ -94,7 +101,7 @@ pub async fn find(
     keyword: &str,
     after: Option<i64>,
     limit: usize,
-) -> Result<Vec<i64>, Box<dyn Error + Send + Sync>> {
+) -> Result<Vec<Found>, Box<dyn Error + Send + Sync>> {
     let tokens = text::query(keyword);
     if tokens.is_empty() {
         return Ok(Vec::new());
@@ -139,7 +146,17 @@ pub async fn find(
         }
     }
     found.truncate(limit);
-    Ok(found)
+    highlighted(db, found, &tokens).await
+}
+
+/// The texts of the entries `ids`, those still there.
+async fn texts(db: &DatabaseConnection, ids: &[i64]) -> Result<Vec<Row>, DbErr> {
+    let statement = Statement::from_sql_and_values(
+        DbBackend::Postgres,
+        rows("id = ANY($1)"),
+        [ids.to_vec().into()],
+    );
+    Row::find_by_statement(statement).all(db).await
 }
 
 /// Of `ids`, in their order, the entries whose text has every term of `tokens`.
@@ -148,12 +165,7 @@ async fn matching(
     ids: &[i64],
     tokens: &[text::Token],
 ) -> Result<Vec<i64>, Box<dyn Error + Send + Sync>> {
-    let statement = Statement::from_sql_and_values(
-        DbBackend::Postgres,
-        rows("id = ANY($1)"),
-        [ids.to_vec().into()],
-    );
-    let rows = Row::find_by_statement(statement).all(db).await?;
+    let rows = texts(db, ids).await?;
     let tokens = tokens.to_vec();
     let matched: HashSet<i64> = tokio::task::spawn_blocking(move || {
         rows.iter()
@@ -166,6 +178,36 @@ async fn matching(
         .iter()
         .copied()
         .filter(|id| matched.contains(id))
+        .collect())
+}
+
+/// Of `ids`, in their order, the entries still there with where `tokens` are in them.
+async fn highlighted(
+    db: &DatabaseConnection,
+    ids: Vec<i64>,
+    tokens: &[text::Token],
+) -> Result<Vec<Found>, Box<dyn Error + Send + Sync>> {
+    let rows = texts(db, &ids).await?;
+    let tokens = tokens.to_vec();
+    let mut highlights: HashMap<i64, Highlight> = tokio::task::spawn_blocking(move || {
+        rows.into_iter()
+            .map(|row| {
+                let (title, description) = (row.title.as_deref(), row.description.as_deref());
+                let highlight =
+                    text::highlight(title, description, row.content.as_deref(), &tokens);
+                (row.id, highlight)
+            })
+            .collect()
+    })
+    .await?;
+    Ok(ids
+        .into_iter()
+        .filter_map(|id| {
+            Some(Found {
+                id,
+                highlight: highlights.remove(&id)?,
+            })
+        })
         .collect())
 }
 
@@ -224,7 +266,6 @@ pub(crate) async fn enqueue(db: &impl ConnectionTrait, ids: &[i64]) -> Result<()
 /// after a failure is merely replaced.
 pub async fn index_pending(state: &AppState) -> Result<(), Box<dyn Error + Send + Sync>> {
     let claim = format!("SELECT entry_id FROM search_queue ORDER BY entry_id LIMIT {QUEUE_BATCH}");
-    let select = rows("id = ANY($1)");
     loop {
         let statement = Statement::from_string(DbBackend::Postgres, &claim);
         let ids = state
@@ -237,9 +278,7 @@ pub async fn index_pending(state: &AppState) -> Result<(), Box<dyn Error + Send 
         if ids.is_empty() {
             return Ok(());
         }
-        let statement =
-            Statement::from_sql_and_values(DbBackend::Postgres, &select, [ids.clone().into()]);
-        let rows = Row::find_by_statement(statement).all(&state.db).await?;
+        let rows = texts(&state.db, &ids).await?;
         let (search, indexed) = (state.search.clone(), ids.clone());
         tokio::task::spawn_blocking(move || search.index(&indexed, rows)).await??;
         let sql = "DELETE FROM search_queue WHERE entry_id = ANY($1)";

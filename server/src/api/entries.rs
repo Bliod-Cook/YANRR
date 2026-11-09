@@ -282,7 +282,7 @@ pub async fn timeline(
     Ok(ok(data))
 }
 
-/// The entries matching `keyword` that come after the body's cursor, as timeline items.
+/// The entries matching `keyword` that come after the body's cursor, as timeline items with where they matched.
 async fn found(
     state: &AppState,
     user_id: &str,
@@ -299,10 +299,11 @@ async fn found(
         after,
         limit as usize,
     );
-    let ids = find.await.map_err(|err| {
+    let found = find.await.map_err(|err| {
         tracing::error!("search failed: {err}");
         ApiError::new(ExceptionCode::InternalError, "Internal error")
     })?;
+    let ids: Vec<i64> = found.iter().map(|found| found.id).collect();
     let values = || [user_id.into(), ids.clone().into()];
     let sql = format!("SELECT {MARKED}, e.published_at AS time {TIMELINE} WHERE e.id = ANY($2)");
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values());
@@ -310,9 +311,21 @@ async fn found(
     let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = ANY($2)");
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values());
     items.extend(inbox_items_from(&state.db, user_id, statement, body.with_content).await?);
-    let order: HashMap<i64, usize> = ids.iter().enumerate().map(|(i, id)| (*id, i)).collect();
-    items.sort_by_key(|item| order[&item.id]);
-    let data: Vec<_> = items.into_iter().map(|item| item.data).collect();
+    let mut places: HashMap<i64, (usize, search::Highlight)> = found
+        .into_iter()
+        .enumerate()
+        .map(|(place, found)| (found.id, (place, found.highlight)))
+        .collect();
+    let mut placed: Vec<(usize, Value)> = items
+        .into_iter()
+        .map(|mut item| {
+            let (place, highlight) = places.remove(&item.id).expect("the item was found");
+            item.data["highlight"] = json!(highlight);
+            (place, item.data)
+        })
+        .collect();
+    placed.sort_by_key(|(place, _)| *place);
+    let data: Vec<_> = placed.into_iter().map(|(_, data)| data).collect();
     Ok(ok(data))
 }
 

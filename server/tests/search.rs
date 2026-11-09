@@ -134,7 +134,7 @@ async fn a_search_covers_what_the_user_may_read() {
 }
 
 #[tokio::test]
-async fn terms_are_anded_across_fields_into_timeline_items() {
+async fn terms_are_anded_across_fields_into_timeline_items_showing_where() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
     app.sign_up("alice@example.com").await;
     fixtures.set(
@@ -148,7 +148,10 @@ async fn terms_are_anded_across_fields_into_timeline_items() {
     subscribe(&app, &fixtures.url("/feed"), json!({})).await;
     search::index_pending(&app.state).await.unwrap();
 
-    let found = search(&app, json!({ "keyword": "rust 量子计算" })).await;
+    let mut found = search(&app, json!({ "keyword": "rust 量子计算" })).await;
+    let highlight = found[0].as_object_mut().unwrap().remove("highlight");
+    let pieces = json!({ "title": ["", "Rust", " news"], "snippet": ["今天", "量子计算", ""] });
+    assert_eq!(highlight, Some(pieces));
     let timeline = json(app.post("/api/entries", json!({})).await).await;
     assert_eq!(found, timeline["data"].as_array().unwrap().clone());
     assert!(
@@ -221,6 +224,7 @@ async fn entries_with_the_terms_in_their_title_come_first_across_pages() {
         starts[..6],
         ["Rust", "Rust", "Rust", "Rust", "Rust", "Note"]
     );
+    assert_eq!(first[0]["highlight"]["snippet"], Value::Null);
     let last = &first[19]["entries"];
     let body = json!({
         "keyword": "rust",
