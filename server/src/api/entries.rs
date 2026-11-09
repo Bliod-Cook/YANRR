@@ -287,8 +287,19 @@ async fn feed_items(
     };
     let mut sql = format!("SELECT {MARKED}, {time} AS time {TIMELINE} WHERE {scope}");
     body.paginate(&mut sql, &mut params, time, "u.entry_id IS NULL", limit);
-
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
+    feed_items_from(db, user_id, statement, body.scope.view, body.with_content).await
+}
+
+/// Items of the feed entries `statement` selects with [`MARKED`] and the `time` they are ordered by; `view` is
+/// the one of entries the user neither follows nor collected.
+async fn feed_items_from(
+    db: &DatabaseConnection,
+    user_id: &str,
+    statement: Statement,
+    view: Option<i16>,
+    with_content: bool,
+) -> Result<Vec<Item>, DbErr> {
     let rows = db.query_all_raw(statement).await?;
     let mut entries = Vec::new();
     for row in &rows {
@@ -305,10 +316,10 @@ async fn feed_items(
             let id = entry.id;
             let mut data = json!({
                 "read": marks.read,
-                "view": marks.view.or(body.scope.view).unwrap_or(0),
+                "view": marks.view.or(view).unwrap_or(0),
                 "from": ["feed"],
                 "feeds": wire::Feed::from(feed),
-                "entries": wire::Entry::new(entry, body.with_content),
+                "entries": wire::Entry::new(entry, with_content),
             });
             // Clients drop their star when the key is missing; `null` would keep it.
             if let Some(collected_at) = marks.collected_at {
@@ -336,8 +347,17 @@ async fn inbox_items(
     };
     let mut sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE {scope}");
     body.paginate(&mut sql, &mut params, "e.published_at", "e.read", limit);
-
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
+    inbox_items_from(db, user_id, statement, body.with_content).await
+}
+
+/// Items of the user's inbox entries `statement` selects.
+async fn inbox_items_from(
+    db: &DatabaseConnection,
+    user_id: &str,
+    statement: Statement,
+    with_content: bool,
+) -> Result<Vec<Item>, DbErr> {
     let entries = inbox_entry::Model::find_by_statement(statement)
         .all(db)
         .await?;
@@ -358,7 +378,7 @@ async fn inbox_items(
                 "view": 0,
                 "from": ["inbox"],
                 "feeds": wire::Inbox::from(&inboxes[&entry.inbox_handle]),
-                "entries": wire::InboxEntry::new(entry, body.with_content),
+                "entries": wire::InboxEntry::new(entry, with_content),
             }),
         })
         .collect();
