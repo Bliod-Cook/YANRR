@@ -11,6 +11,7 @@ pub mod opml;
 mod push;
 mod rsshub;
 mod rules;
+pub mod search;
 mod subscription;
 pub mod sync;
 mod time;
