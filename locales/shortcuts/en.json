@@ -19,6 +19,8 @@
   "command.global.quick_add.title": "Quick Add",
   "command.global.quick_search.description": "Open the quick search panel.",
   "command.global.quick_search.title": "Quick Search",
+  "command.global.quick_search_in_view.description": "Open quick search narrowed to the current feed, folder or view.",
+  "command.global.quick_search_in_view.title": "Search in Current View",
   "command.global.show_shortcuts.description": "Show the shortcuts guideline modal.",
   "command.global.show_shortcuts.title": "Show Shortcuts",
   "command.global.toggle_ai_chat.description": "Toggle the AI chat panel.",

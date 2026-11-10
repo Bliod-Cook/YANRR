@@ -1,3 +1,4 @@
+import type { FeedViewType } from "@follow/constants"
 import { getView } from "@follow/constants"
 import type { EntryModel } from "@follow/store/entry/types"
 import { useFeedById, usePrefetchFeed } from "@follow/store/feed/hooks"
@@ -37,15 +38,15 @@ export const getPreferredTitle = (
   return subscription?.title || target.title
 }
 
-export const useFeedHeaderTitle = () => {
+/** The title of a timeline, as the route names it */
+export const useTimelineTitle = (feedId: string | undefined, view: FeedViewType) => {
   const { t } = useTranslation()
-  const { feedId: currentFeedId, view } = useRouteParams()
 
-  const feedTitle = useFeedById(currentFeedId, getPreferredTitle)
+  const feedTitle = useFeedById(feedId, getPreferredTitle)
 
-  usePrefetchFeed(currentFeedId, { enabled: !feedTitle })
+  usePrefetchFeed(feedId, { enabled: !feedTitle })
 
-  switch (currentFeedId) {
+  switch (feedId) {
     case ROUTE_FEED_PENDING: {
       return t(getView(view).name, {
         ns: "common",
@@ -55,15 +56,20 @@ export const useFeedHeaderTitle = () => {
       return t("words.starred")
     }
     default: {
-      if (currentFeedId?.startsWith(ROUTE_FEED_IN_FOLDER)) {
-        return currentFeedId.replace(ROUTE_FEED_IN_FOLDER, "")
+      if (feedId?.startsWith(ROUTE_FEED_IN_FOLDER)) {
+        return feedId.replace(ROUTE_FEED_IN_FOLDER, "")
       }
-      if (currentFeedId?.startsWith(ROUTE_FEED_IN_INBOX)) {
-        return currentFeedId.replace(ROUTE_FEED_IN_INBOX, "")
+      if (feedId?.startsWith(ROUTE_FEED_IN_INBOX)) {
+        return feedId.replace(ROUTE_FEED_IN_INBOX, "")
       }
       return feedTitle
     }
   }
+}
+
+export const useFeedHeaderTitle = () => {
+  const { feedId, view } = useRouteParams()
+  return useTimelineTitle(feedId, view)
 }
 
 export const useFeedHeaderIcon = () => {

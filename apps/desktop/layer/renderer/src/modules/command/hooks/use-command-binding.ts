@@ -50,6 +50,7 @@ export const defaultCommandShortcuts = {
   [COMMAND_ID.global.showShortcuts]: "?",
   [COMMAND_ID.global.toggleAIChat]: transformShortcut("$mod+I"),
   [COMMAND_ID.global.quickSearch]: transformShortcut("$mod+K"),
+  [COMMAND_ID.global.quickSearchInView]: transformShortcut("Shift+$mod+K"),
 } as const
 
 const overrideCommandShortcutsAtom = atomWithStorage<

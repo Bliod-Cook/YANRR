@@ -41,6 +41,7 @@ export const COMMAND_ID = {
     quickAdd: "global:quick-add",
     toggleAIChat: "global:toggle-ai-chat",
     quickSearch: "global:quick-search",
+    quickSearchInView: "global:quick-search-in-view",
   },
   layout: {
     toggleSubscriptionColumn: "layout:toggle-subscription-column",

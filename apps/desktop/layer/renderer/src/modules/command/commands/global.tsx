@@ -1,9 +1,11 @@
 import { EventBus } from "@follow/utils/event-bus"
 import { useTranslation } from "react-i18next"
 
-import { setAppSearchOpen } from "~/atoms/app"
+import { setAppSearchOpen, setAppSearchScope } from "~/atoms/app"
 import { getAIPanelVisibility, setAIPanelVisibility } from "~/atoms/settings/ai"
+import { getRouteParams } from "~/hooks/biz/useRouteParams"
 import { useShortcutsModal } from "~/modules/modal/hooks/useShortcutsModal"
+import { routeSearchScope } from "~/modules/panel/search-scope"
 
 import { useRegisterCommandEffect } from "../hooks/use-register-command"
 import type { Command, CommandCategory } from "../types"
@@ -64,6 +66,19 @@ export const useRegisterGlobalCommands = () => {
         description: t("command.global.quick_search.description"),
       },
       run: () => {
+        setAppSearchScope(null)
+        setAppSearchOpen(true)
+      },
+      category,
+    },
+    {
+      id: COMMAND_ID.global.quickSearchInView,
+      label: {
+        title: t("command.global.quick_search_in_view.title"),
+        description: t("command.global.quick_search_in_view.description"),
+      },
+      run: () => {
+        setAppSearchScope(routeSearchScope(getRouteParams()))
         setAppSearchOpen(true)
       },
       category,
@@ -110,9 +125,15 @@ export type QuickSearchCommand = Command<{
   fn: () => void
 }>
 
+export type QuickSearchInViewCommand = Command<{
+  id: typeof COMMAND_ID.global.quickSearchInView
+  fn: () => void
+}>
+
 export type GlobalCommand =
   | ShowShortcutsCommand
   | ToggleCornerPlayCommand
   | QuickAddCommand
   | ToggleAIChatCommand
   | QuickSearchCommand
+  | QuickSearchInViewCommand

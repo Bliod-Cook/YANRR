@@ -19,6 +19,8 @@
   "command.global.quick_add.title": "快速添加",
   "command.global.quick_search.description": "打开快速搜索面板。",
   "command.global.quick_search.title": "快速搜索",
+  "command.global.quick_search_in_view.description": "打开快速搜索，只搜当前的订阅源、文件夹或视图。",
+  "command.global.quick_search_in_view.title": "在当前视图中搜索",
   "command.global.show_shortcuts.description": "显示快捷键指南。",
   "command.global.show_shortcuts.title": "显示快捷键",
   "command.global.toggle_ai_chat.description": "切换 AI 聊天面板。",

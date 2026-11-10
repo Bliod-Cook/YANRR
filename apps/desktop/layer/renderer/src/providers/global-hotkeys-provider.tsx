@@ -38,6 +38,11 @@ const useRegisterAppGlobalHotkeys = () => {
     commandId: COMMAND_ID.global.quickSearch,
     when: notInFloatingLayerScope,
   })
+
+  useCommandBinding({
+    commandId: COMMAND_ID.global.quickSearchInView,
+    when: notInFloatingLayerScope,
+  })
 }
 export const GlobalHotkeysProvider = () => {
   useRegisterAppGlobalHotkeys()

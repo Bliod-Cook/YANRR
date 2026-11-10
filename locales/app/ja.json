@@ -387,6 +387,8 @@
   "search.group.entries": "エントリー",
   "search.group.feeds": "フィード",
   "search.placeholder": "検索...",
+  "search.scope.clear": "すべてを検索",
+  "search.scope.in_feed": "このフィードで検索",
   "server.address": "サーバーのアドレス",
   "server.change": "変更",
   "server.connect": "接続",

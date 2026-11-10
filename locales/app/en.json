@@ -387,6 +387,8 @@
   "search.group.entries": "Entries",
   "search.group.feeds": "Feeds",
   "search.placeholder": "Search...",
+  "search.scope.clear": "Search everything",
+  "search.scope.in_feed": "Search in this feed",
   "server.address": "Server address",
   "server.change": "Change",
   "server.connect": "Connect",

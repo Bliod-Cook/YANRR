@@ -387,6 +387,8 @@
   "search.group.entries": "条目",
   "search.group.feeds": "订阅源",
   "search.placeholder": "搜索...",
+  "search.scope.clear": "搜索全部",
+  "search.scope.in_feed": "在此订阅源中搜索",
   "server.address": "服务器地址",
   "server.change": "更改",
   "server.connect": "连接",
