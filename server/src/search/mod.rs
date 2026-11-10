@@ -94,7 +94,7 @@ pub struct Found {
 }
 
 /// Up to `limit` entries the user may read that match `keyword`, in order: most terms in their title first, then
-/// newest. They sort after the entry `after`; none do once it is gone.
+/// newest. They sort after the entry `after`; none do once it is gone or of a source not the user's.
 pub async fn find(
     db: &DatabaseConnection,
     search: &Search,

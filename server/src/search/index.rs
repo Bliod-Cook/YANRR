@@ -168,6 +168,8 @@ fn joined(terms: impl IntoIterator<Item = String>) -> String {
 /// A query on the index: entries of `sources` that may match `tokens`, ranked by the terms in their title.
 pub struct Plan {
     query: Box<dyn Query>,
+    /// The entries of the sources searched.
+    sources: Box<dyn Query>,
     /// For each term, the entries whose title may have it.
     title: Vec<Box<dyn Query>>,
     id: Field,
@@ -184,17 +186,20 @@ impl Plan {
             clauses.push(clause);
             verify |= check;
         }
+        let sources: Box<dyn Query> = Box::new(TermSetQuery::new(
+            sources
+                .iter()
+                .map(|source| Term::from_field_text(fields.source, source)),
+        ));
         let query: Box<dyn Query> = if clauses.is_empty() {
             Box::new(EmptyQuery)
         } else {
-            let sources = sources
-                .iter()
-                .map(|source| Term::from_field_text(fields.source, source));
-            clauses.push(Box::new(TermSetQuery::new(sources)));
+            clauses.push(sources.box_clone());
             Box::new(all(clauses))
         };
         Self {
             query,
+            sources,
             title: tokens
                 .iter()
                 .map(|token| fields.title.query(token).0)
@@ -214,9 +219,11 @@ impl Plan {
         self.ranked(searcher, self.query.box_clone(), before, limit)
     }
 
-    /// Where the entry `id` sorts, whether it matches or not; `None` if the index doesn't have it.
+    /// Where the entry `id` sorts, whether it matches or not; `None` if the index doesn't have it among the
+    /// sources.
     pub fn key(&self, searcher: &Searcher, id: u64) -> tantivy::Result<Option<Key>> {
         let entry = TermQuery::new(Term::from_field_u64(self.id, id), IndexRecordOption::Basic);
+        let entry = all(vec![Box::new(entry), self.sources.box_clone()]);
         Ok(self.ranked(searcher, Box::new(entry), None, 1)?.pop())
     }
 
@@ -486,5 +493,13 @@ mod tests {
         // Entries sort where they would whether they match or not; the index may not have them.
         assert_eq!(fixture.key("rust async", 6).map(|key| key.title), Some(1));
         assert_eq!(fixture.key("rust async", 7), None);
+    }
+
+    #[test]
+    fn entries_of_other_sources_have_no_place() {
+        let fixture = Fixture::new(&[titled(1, 100, "Rust", ""), entry(2, 200, "iother", "rust")]);
+        assert!(fixture.key("rust", 1).is_some());
+        // Where someone else's inbox entry sorts would tell what its title has.
+        assert_eq!(fixture.key("rust", 2), None);
     }
 }
