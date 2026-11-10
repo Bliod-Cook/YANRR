@@ -26,6 +26,14 @@ pub struct Key {
     pub id: u64,
 }
 
+/// The entries a search looks among.
+pub enum Within {
+    /// Those of these sources, `f<feed id>` or `i<inbox handle>`.
+    Sources(Vec<String>),
+    /// These.
+    Entries(Vec<u64>),
+}
+
 /// An entry as the index takes it.
 pub struct Entry {
     pub id: u64,
@@ -165,11 +173,11 @@ fn joined(terms: impl IntoIterator<Item = String>) -> String {
     distinct.into_iter().collect::<Vec<_>>().join(" ")
 }
 
-/// A query on the index: entries of `sources` that may match `tokens`, ranked by the terms in their title.
+/// A query on the index: entries it looks among that may match `tokens`, ranked by the terms in their title.
 pub struct Plan {
     query: Box<dyn Query>,
-    /// The entries of the sources searched.
-    sources: Box<dyn Query>,
+    /// The entries looked among.
+    within: Box<dyn Query>,
     /// For each term, the entries whose title may have it.
     title: Vec<Box<dyn Query>>,
     id: Field,
@@ -178,7 +186,7 @@ pub struct Plan {
 }
 
 impl Plan {
-    pub fn new(fields: &Fields, tokens: &[Token], sources: &[String]) -> Self {
+    pub fn new(fields: &Fields, tokens: &[Token], within: &Within) -> Self {
         let mut verify = false;
         let mut clauses = Vec::new();
         for token in tokens {
@@ -186,20 +194,25 @@ impl Plan {
             clauses.push(clause);
             verify |= check;
         }
-        let sources: Box<dyn Query> = Box::new(TermSetQuery::new(
-            sources
+        let within: Box<dyn Query> = Box::new(TermSetQuery::new(match within {
+            Within::Sources(sources) => sources
                 .iter()
-                .map(|source| Term::from_field_text(fields.source, source)),
-        ));
+                .map(|source| Term::from_field_text(fields.source, source))
+                .collect::<Vec<_>>(),
+            Within::Entries(ids) => ids
+                .iter()
+                .map(|id| Term::from_field_u64(fields.id, *id))
+                .collect(),
+        }));
         let query: Box<dyn Query> = if clauses.is_empty() {
             Box::new(EmptyQuery)
         } else {
-            clauses.push(sources.box_clone());
+            clauses.push(within.box_clone());
             Box::new(all(clauses))
         };
         Self {
             query,
-            sources,
+            within,
             title: tokens
                 .iter()
                 .map(|token| fields.title.query(token).0)
@@ -220,10 +233,10 @@ impl Plan {
     }
 
     /// Where the entry `id` sorts, whether it matches or not; `None` if the index doesn't have it among the
-    /// sources.
+    /// entries looked among.
     pub fn key(&self, searcher: &Searcher, id: u64) -> tantivy::Result<Option<Key>> {
         let entry = TermQuery::new(Term::from_field_u64(self.id, id), IndexRecordOption::Basic);
-        let entry = all(vec![Box::new(entry), self.sources.box_clone()]);
+        let entry = all(vec![Box::new(entry), self.within.box_clone()]);
         Ok(self.ranked(searcher, Box::new(entry), None, 1)?.pop())
     }
 
@@ -316,8 +329,8 @@ mod tests {
         }
 
         fn plan(&self, text: &str, sources: &[&str]) -> Plan {
-            let sources: Vec<_> = sources.iter().map(|source| source.to_string()).collect();
-            Plan::new(&self.fields, &query(text), &sources)
+            let sources = sources.iter().map(|source| source.to_string()).collect();
+            Plan::new(&self.fields, &query(text), &Within::Sources(sources))
         }
 
         fn searcher(&self) -> Searcher {
@@ -501,5 +514,22 @@ mod tests {
         assert!(fixture.key("rust", 1).is_some());
         // Where someone else's inbox entry sorts would tell what its title has.
         assert_eq!(fixture.key("rust", 2), None);
+    }
+
+    #[test]
+    fn a_search_can_look_among_given_entries() {
+        let fixture = Fixture::new(&[
+            entry(1, 100, "f1", "rust"),
+            entry(2, 200, "f2", "rust"),
+            entry(3, 300, "f1", "rust"),
+        ]);
+        let plan = Plan::new(
+            &fixture.fields,
+            &query("rust"),
+            &Within::Entries(vec![1, 2]),
+        );
+        let searcher = fixture.searcher();
+        assert_eq!(ids(&plan.top(&searcher, None, 10).unwrap()), [2, 1]);
+        assert_eq!(plan.key(&searcher, 3).unwrap(), None);
     }
 }

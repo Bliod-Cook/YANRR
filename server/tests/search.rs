@@ -6,7 +6,7 @@ use common::{Fixtures, Reply, TestApp, create_inbox, deliver, json, json_feed, s
 use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use serde_json::{Value, json};
 use tempfile::TempDir;
-use yanrr::{fetch, search};
+use yanrr::{api::entries::Scope, fetch, search};
 
 const TIME: &str = "2026-10-01T08:00:00Z";
 
@@ -80,32 +80,39 @@ async fn an_inbox_delivery_is_queued_once() {
     assert_eq!(queued(&app).await, 1);
 }
 
-#[tokio::test]
-async fn a_search_covers_what_the_user_may_read() {
-    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+/// Feeds of [`readers`].
+struct Readers {
+    bob: String,
+    mine: String,
+    hidden: String,
+}
+
+/// Bob with a feed and an inbox, then Alice, signed in, with a feed, one hidden from her timeline, an inbox, an
+/// entry starred of a feed she left and one her rules block; every entry is about Rust, and indexed.
+async fn readers(app: &TestApp, fixtures: &Fixtures) -> Readers {
     app.sign_up("bob@example.com").await;
     fixtures.set("/bob", feed(vec![item("bob", "Rust of Bob", "")]));
-    subscribe(&app, &fixtures.url("/bob"), json!({})).await;
-    let secret = create_inbox(&app, "bob").await;
+    let bob = subscribe(app, &fixtures.url("/bob"), json!({})).await;
+    let secret = create_inbox(app, "bob").await;
     let entry = json!({ "guid": "b", "publishedAt": TIME, "title": "Rust in Bob's inbox" });
-    deliver(&app, &secret, entry).await;
+    deliver(app, &secret, entry).await;
 
     app.sign_up("alice@example.com").await;
     fixtures.set("/mine", feed(vec![item("mine", "Rust mine", "")]));
-    let mine = subscribe(&app, &fixtures.url("/mine"), json!({})).await;
+    let mine = subscribe(app, &fixtures.url("/mine"), json!({})).await;
     fixtures.set("/hidden", feed(vec![item("hidden", "Rust hidden", "")]));
-    subscribe(
-        &app,
+    let hidden = subscribe(
+        app,
         &fixtures.url("/hidden"),
         json!({ "hideFromTimeline": true }),
     )
     .await;
-    let secret = create_inbox(&app, "alice").await;
+    let secret = create_inbox(app, "alice").await;
     let entry = json!({ "guid": "a", "publishedAt": TIME, "title": "Rust in my inbox" });
-    deliver(&app, &secret, entry).await;
+    deliver(app, &secret, entry).await;
     // Starred, then unsubscribed from
     fixtures.set("/gone", feed(vec![item("gone", "Rust gone", "")]));
-    let gone = subscribe(&app, &fixtures.url("/gone"), json!({})).await;
+    let gone = subscribe(app, &fixtures.url("/gone"), json!({})).await;
     let listed = json(app.post("/api/entries", json!({ "feedId": gone })).await).await;
     let starred = listed["data"][0]["entries"]["id"].clone();
     app.post("/api/collections", json!({ "entryId": starred }))
@@ -126,11 +133,42 @@ async fn a_search_covers_what_the_user_may_read() {
         .unwrap();
 
     search::index_pending(&app.state).await.unwrap();
+    Readers { bob, mine, hidden }
+}
+
+#[tokio::test]
+async fn a_search_covers_what_the_user_may_read() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    readers(&app, &fixtures).await;
     let found = search(&app, json!({ "keyword": "rust" })).await;
     assert_eq!(
         titles(&found),
         BTreeSet::from(["Rust hidden", "Rust in my inbox", "Rust mine"])
     );
+}
+
+#[tokio::test]
+async fn a_scoped_search_finds_what_its_timeline_lists() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    let Readers { bob, mine, hidden } = readers(&app, &fixtures).await;
+    let scopes = [
+        json!({ "view": 0 }),
+        json!({ "feedId": hidden }),
+        json!({ "feedId": bob }),
+        json!({ "feedIdList": [mine, hidden] }),
+        json!({ "isCollection": true }),
+        json!({ "inboxId": "alice" }),
+        json!({ "inboxId": "bob" }),
+    ];
+    for scope in scopes {
+        // Without a keyword, the timeline
+        let listed = search(&app, scope.clone()).await;
+        assert_eq!(listed.is_empty(), scope["inboxId"] == "bob", "{scope}");
+        let mut body = scope.clone();
+        body["keyword"] = json!("rust");
+        let found = search(&app, body).await;
+        assert_eq!(titles(&found), titles(&listed), "{scope}");
+    }
 }
 
 #[tokio::test]
@@ -261,6 +299,7 @@ async fn a_new_index_is_built_from_the_stored_entries() {
         &rebuilt,
         &app.user_id().await,
         "rust",
+        &Scope::default(),
         None,
         20,
     )

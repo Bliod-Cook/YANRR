@@ -3,7 +3,7 @@ mod ai;
 mod categories;
 mod collections;
 mod discover;
-mod entries;
+pub mod entries;
 mod error;
 mod feeds;
 mod icons;

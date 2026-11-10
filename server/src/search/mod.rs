@@ -19,8 +19,8 @@ use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, indexer::IndexWrite
 use tokio::sync::Notify;
 
 use self::index::{Entry, Fields, Plan};
-pub use self::text::Highlight;
-use crate::AppState;
+pub use self::{index::Within, text::Highlight};
+use crate::{AppState, api::entries::Scope};
 
 /// The index format; an index of another one is built anew from the database.
 const VERSION: &str = "v2";
@@ -93,13 +93,14 @@ pub struct Found {
     pub highlight: Highlight,
 }
 
-/// Up to `limit` entries the user may read that match `keyword`, in order: most terms in their title first, then
-/// newest. They sort after the entry `after`; none do once it is gone or of a source not the user's.
+/// Up to `limit` entries a search of `scope` finds for the user that match `keyword`, in order: most terms in their
+/// title first, then newest. They sort after the entry `after`; none do once it is gone or out of the scope.
 pub async fn find(
     db: &DatabaseConnection,
     search: &Search,
     user_id: &str,
     keyword: &str,
+    scope: &Scope,
     after: Option<i64>,
     limit: usize,
 ) -> Result<Vec<Found>, Box<dyn Error + Send + Sync>> {
@@ -107,11 +108,10 @@ pub async fn find(
     if tokens.is_empty() {
         return Ok(Vec::new());
     }
-    let plan = Arc::new(Plan::new(
-        &search.fields,
-        &tokens,
-        &sources(db, user_id).await?,
-    ));
+    let Some(within) = scope.within(db, user_id).await? else {
+        return Ok(Vec::new());
+    };
+    let plan = Arc::new(Plan::new(&search.fields, &tokens, &within));
     let searcher = search.reader.searcher();
     let mut cursor = None;
     if let Some(id) = after {
@@ -129,7 +129,7 @@ pub async fn find(
         let Some(last) = keys.last() else { break };
         cursor = Some(*last);
         let ids: Vec<i64> = keys.iter().map(|key| key.id as i64).collect();
-        let readable = readable(db, user_id, &ids).await?;
+        let readable = scope.readable(db, user_id, &ids).await?;
         let candidates: Vec<i64> = ids.into_iter().filter(|id| readable.contains(id)).collect();
         if plan.verify {
             // Only as many texts as could still fill the page are read at a time.
@@ -211,42 +211,6 @@ async fn highlighted(
             })
         })
         .collect())
-}
-
-/// Where the user's entries come from, as the index names them: the feeds they follow and their inboxes.
-async fn sources(db: &DatabaseConnection, user_id: &str) -> Result<Vec<String>, DbErr> {
-    let sql = "SELECT 'f' || feed_id AS source FROM subscriptions WHERE user_id = $1
-        UNION ALL
-        SELECT 'i' || handle FROM inboxes WHERE user_id = $1";
-    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, [user_id.into()]);
-    db.query_all_raw(statement)
-        .await?
-        .iter()
-        .map(|row| row.try_get("", "source"))
-        .collect()
-}
-
-/// Of `ids`, the entries a search finds for the user: of a feed they follow and not blocked for them, or of
-/// their inbox.
-async fn readable(
-    db: &DatabaseConnection,
-    user_id: &str,
-    ids: &[i64],
-) -> Result<HashSet<i64>, DbErr> {
-    let sql = "SELECT e.id FROM entries e
-            JOIN subscriptions s ON s.user_id = $1 AND s.feed_id = e.feed_id
-        WHERE e.id = ANY($2)
-            AND NOT EXISTS (SELECT 1 FROM blocked_entries b WHERE b.user_id = $1 AND b.entry_id = e.id)
-        UNION ALL
-        SELECT e.id FROM inbox_entries e JOIN inboxes i ON i.handle = e.inbox_handle AND i.user_id = $1
-        WHERE e.id = ANY($2)";
-    let values = [user_id.into(), ids.to_vec().into()];
-    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
-    db.query_all_raw(statement)
-        .await?
-        .iter()
-        .map(|row| row.try_get("", "id"))
-        .collect()
 }
 
 /// Queues entries for the index; call it in the transaction storing them.

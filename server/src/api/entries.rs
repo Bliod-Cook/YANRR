@@ -1,10 +1,14 @@
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 
 use axum::{Json, extract::State, http::header, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use sea_orm::{
     ColumnTrait, ConnectionTrait, DatabaseConnection, DbBackend, DbErr, EntityTrait,
-    FromQueryResult, QueryFilter, QueryResult, Statement, TransactionTrait, Value as SqlValue,
+    FromQueryResult, QueryFilter, QueryResult, Statement, TransactionTrait, TryGetable,
+    Value as SqlValue,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -58,8 +62,8 @@ impl Params {
     }
 }
 
-/// The entries a timeline, or marking it all read, covers.
-#[derive(Deserialize)]
+/// The entries a timeline, or marking it all read, covers; none is no scope at all.
+#[derive(Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Scope {
     view: Option<i16>,
@@ -123,6 +127,112 @@ impl Scope {
             None => (self.is_subscriptions() && inboxes::in_view(self.view)).then(|| "TRUE".into()),
         }
     }
+
+    /// No scope at all: a search then covers every entry the user may read, of hidden feeds too.
+    fn is_everything(&self) -> bool {
+        self.is_subscriptions() && self.view.is_none()
+    }
+
+    /// Where a search of the scope looks in the index for what [`Self::readable`] keeps, or `None` when nowhere;
+    /// it follows [`Self::condition`] and then [`Self::inbox_condition`].
+    pub(crate) async fn within(
+        &self,
+        db: &impl ConnectionTrait,
+        user_id: &str,
+    ) -> Result<Option<search::Within>, DbErr> {
+        let view = self.view.filter(|view| *view != -1);
+        let mut params = Params(vec![user_id.into()]);
+        let mut sources = Vec::new();
+        if self.list_id.is_none() && self.inbox_id.is_none() {
+            if self.is_collection() {
+                let mut sql = "SELECT entry_id FROM collections WHERE user_id = $1".to_string();
+                if let Some(view) = view {
+                    sql += &format!(" AND view = {}", params.bind(view));
+                }
+                let ids: Vec<i64> = column(db, sql, params, "entry_id").await?;
+                let ids = ids.into_iter().map(|id| id as u64).collect();
+                return Ok(Some(search::Within::Entries(ids)));
+            }
+            let feed_ids = self.feed_ids();
+            if !feed_ids.is_empty() {
+                let feeds = feed_ids.into_iter().filter_map(|id| id::parse(id));
+                let sources = feeds.map(|id| format!("f{id}")).collect();
+                return Ok(Some(search::Within::Sources(sources)));
+            }
+            let mut sql =
+                "SELECT 'f' || feed_id AS source FROM subscriptions WHERE user_id = $1".to_string();
+            if !self.is_everything() {
+                sql += " AND hide_from_timeline IS NOT TRUE";
+            }
+            if let Some(view) = view {
+                sql += &format!(" AND view = {}", params.bind(view));
+            }
+            sources.push(sql);
+        }
+        let own_inboxes = "SELECT 'i' || handle AS source FROM inboxes WHERE user_id = $1";
+        match &self.inbox_id {
+            Some(handle) => sources.push(format!(
+                "{own_inboxes} AND handle = {}",
+                params.bind(handle.clone())
+            )),
+            None if self.is_subscriptions() && inboxes::in_view(self.view) => {
+                sources.push(own_inboxes.into())
+            }
+            None => {}
+        }
+        if sources.is_empty() {
+            return Ok(None);
+        }
+        let sources = column(db, sources.join(" UNION ALL "), params, "source").await?;
+        Ok(Some(search::Within::Sources(sources)))
+    }
+
+    /// Of `ids`, the entries a search of the scope finds: those its timeline lists, or without a scope those of
+    /// a feed the user follows and not blocked for them, and of their inboxes.
+    pub(crate) async fn readable(
+        &self,
+        db: &impl ConnectionTrait,
+        user_id: &str,
+        ids: &[i64],
+    ) -> Result<HashSet<i64>, DbErr> {
+        let mut params = Params(vec![user_id.into(), ids.to_vec().into()]);
+        let (feeds, inboxes) = match self.is_everything() {
+            true => (
+                Some("s.feed_id IS NOT NULL AND b.entry_id IS NULL".into()),
+                Some("TRUE".into()),
+            ),
+            false => (
+                self.condition(&mut params),
+                self.inbox_condition(&mut params),
+            ),
+        };
+        let selects: Vec<String> = [(TIMELINE, feeds), (INBOX_TIMELINE, inboxes)]
+            .into_iter()
+            .filter_map(|(from, condition)| {
+                Some(format!(
+                    "SELECT e.id {from} WHERE e.id = ANY($2) AND {}",
+                    condition?
+                ))
+            })
+            .collect();
+        let ids: Vec<i64> = column(db, selects.join(" UNION ALL "), params, "id").await?;
+        Ok(ids.into_iter().collect())
+    }
+}
+
+/// The column `name` of the rows `sql` selects.
+async fn column<T: TryGetable>(
+    db: &impl ConnectionTrait,
+    sql: String,
+    params: Params,
+    name: &str,
+) -> Result<Vec<T>, DbErr> {
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
+    db.query_all_raw(statement)
+        .await?
+        .iter()
+        .map(|row| row.try_get("", name))
+        .collect()
 }
 
 #[derive(Deserialize)]
@@ -139,8 +249,8 @@ pub struct TimelineBody {
     sort_order: Option<String>,
     #[serde(default)]
     with_content: bool,
-    /// Searches every entry the user may read instead of the scope, most terms in the title first, then newest.
-    /// Pages by `cursorId` alone.
+    /// Searches the entries the scope's timeline lists, or without a scope every entry the user may read; most
+    /// terms in the title first, then newest. Pages by `cursorId` alone.
     keyword: Option<String>,
 }
 
@@ -296,6 +406,7 @@ async fn found(
         &state.search,
         user_id,
         keyword,
+        &body.scope,
         after,
         limit as usize,
     );
@@ -307,7 +418,8 @@ async fn found(
     let values = || [user_id.into(), ids.clone().into()];
     let sql = format!("SELECT {MARKED}, e.published_at AS time {TIMELINE} WHERE e.id = ANY($2)");
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values());
-    let mut items = feed_items_from(&state.db, user_id, statement, None, body.with_content).await?;
+    let view = body.scope.view;
+    let mut items = feed_items_from(&state.db, user_id, statement, view, body.with_content).await?;
     let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = ANY($2)");
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values());
     items.extend(inbox_items_from(&state.db, user_id, statement, body.with_content).await?);
