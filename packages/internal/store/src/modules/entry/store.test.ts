@@ -317,7 +317,7 @@ describe("entrySyncServices.searchEntries", () => {
     apiContext.provide({ entries: { list: listEntriesMock } } as unknown as FollowAPI)
   })
 
-  it("asks the server for a page of matches without touching the store", async () => {
+  it("asks the server for a page of matches in a timeline without touching the store", async () => {
     const highlight = { title: ["", "Rust", " news"], snippet: ["On ", "async", ""] }
     const feedItem = { ...createCollectionResponseItem(1), highlight }
     const inboxItem = {
@@ -329,6 +329,7 @@ describe("entrySyncServices.searchEntries", () => {
     const results = await entrySyncServices.searchEntries({
       keyword: "rust",
       pageParam: { time: "2026-03-01T00:00:00.000Z", id: "entry-0" },
+      scope: { view: FeedViewType.Articles, feedIdList: ["feed-1", "feed-2"] },
     })
 
     expect(listEntriesMock).toHaveBeenCalledWith({
@@ -336,11 +337,15 @@ describe("entrySyncServices.searchEntries", () => {
       limit: 20,
       publishedAfter: "2026-03-01T00:00:00.000Z",
       cursorId: "entry-0",
+      view: FeedViewType.Articles,
+      feedIdList: ["feed-1", "feed-2"],
     })
     expect(results.map(({ entry }) => [entry.id, entry.feedId, entry.inboxHandle])).toEqual([
       ["entry-1", "feed-1", null],
       ["entry-2", "news", "news"],
     ])
+    // Where they come from, followed or not
+    expect(results.map(({ source }) => source?.title)).toEqual(["Feed", "News"])
     expect(results.map((result) => result.highlight)).toEqual([
       highlight,
       { title: [results[1]?.entry.title], snippet: null },

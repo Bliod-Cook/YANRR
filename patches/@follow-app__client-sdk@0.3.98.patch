@@ -28,18 +28,20 @@ index 150eabbe515f64183661c7b00befe8bc0caf2e25..761cbf49d69531bb990229ec0332b70f
  }
  type EntryListRequest = {
    view?: FeedViewType$1;
-@@ -1691,6 +1697,10 @@ type EntryListRequest = {
+@@ -1691,6 +1697,12 @@ type EntryListRequest = {
    limit?: number;
    publishedAfter?: DateISOString;
    publishedBefore?: DateISOString;
 +  /** The entry at the cursor, which places it among the entries of its time */
 +  cursorId?: string;
-+  /** Searches every entry the user may read for these words instead of the timeline */
++  /** Searches the timeline for these words, or every entry the user may read when it names none */
 +  keyword?: string;
++  /** The timeline of this inbox */
++  inboxId?: string;
    sortOrder?: "asc" | "desc";
    isCollection?: boolean;
    isArchived?: boolean;
-@@ -1762,6 +1772,8 @@ interface InboxListEntryRequestInput {
+@@ -1762,6 +1774,8 @@ interface InboxListEntryRequestInput {
    limit?: number;
    publishedAfter?: string;
    publishedBefore?: string;
@@ -65,18 +67,20 @@ index 153849fbca63dc7828fc14b90aa177b87a8f4490..98b86569d0233fe3df76e4668c464e5b
  }
  type EntryListRequest = {
    view?: FeedViewType$1;
-@@ -1691,6 +1697,10 @@ type EntryListRequest = {
+@@ -1691,6 +1697,12 @@ type EntryListRequest = {
    limit?: number;
    publishedAfter?: DateISOString;
    publishedBefore?: DateISOString;
 +  /** The entry at the cursor, which places it among the entries of its time */
 +  cursorId?: string;
-+  /** Searches every entry the user may read for these words instead of the timeline */
++  /** Searches the timeline for these words, or every entry the user may read when it names none */
 +  keyword?: string;
++  /** The timeline of this inbox */
++  inboxId?: string;
    sortOrder?: "asc" | "desc";
    isCollection?: boolean;
    isArchived?: boolean;
-@@ -1762,6 +1772,8 @@ interface InboxListEntryRequestInput {
+@@ -1762,6 +1774,8 @@ interface InboxListEntryRequestInput {
    limit?: number;
    publishedAfter?: string;
    publishedBefore?: string;
@@ -129,18 +133,20 @@ index c5c2de5d4ae23b27b83804032ae6c7490b513f02..d9d5ad5b1f638665e1601caea46fe60f
  }
  
  export type EntryListRequest = {
-@@ -90,6 +96,10 @@ export type EntryListRequest = {
+@@ -90,6 +96,12 @@ export type EntryListRequest = {
    limit?: number
    publishedAfter?: DateISOString
    publishedBefore?: DateISOString
 +  /** The entry at the cursor, which places it among the entries of its time */
 +  cursorId?: string
-+  /** Searches every entry the user may read for these words instead of the timeline */
++  /** Searches the timeline for these words, or every entry the user may read when it names none */
 +  keyword?: string
++  /** The timeline of this inbox */
++  inboxId?: string
    sortOrder?: "asc" | "desc"
    isCollection?: boolean
    isArchived?: boolean
-@@ -181,6 +191,8 @@ export interface InboxListEntryRequestInput {
+@@ -181,6 +193,8 @@ export interface InboxListEntryRequestInput {
    limit?: number
    publishedAfter?: string
    publishedBefore?: string
