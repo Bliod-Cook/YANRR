@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm"
 
 import { db } from "../db"
 import { syncMetaTable } from "../schemas"
+import type { DB } from "../types"
 import type { Resetable } from "./internal/base"
 
 class SyncMetaServiceStatic implements Resetable {
@@ -14,8 +15,9 @@ class SyncMetaServiceStatic implements Resetable {
     return row?.value ?? null
   }
 
-  async set(key: string, value: string) {
-    await db
+  /** Pass `tx` to write in that transaction */
+  async set(key: string, value: string, tx: DB = db) {
+    await tx
       .insert(syncMetaTable)
       .values({ key, value })
       .onConflictDoUpdate({ target: [syncMetaTable.key], set: { value } })

@@ -1,8 +1,10 @@
+import type { FeedViewType } from "@follow/constants"
 import { eq, inArray } from "drizzle-orm"
 
-import { db } from "../db"
+import { db, withTransaction } from "../db"
 import { feedsTable, inboxesTable, subscriptionsTable } from "../schemas"
 import type { SubscriptionSchema } from "../schemas/types"
+import type { DB } from "../types"
 import type { Resetable } from "./internal/base"
 import { conflictUpdateAllExcept } from "./internal/utils"
 
@@ -14,9 +16,26 @@ class SubscriptionServiceStatic implements Resetable {
   async reset() {
     await db.delete(subscriptionsTable).execute()
   }
-  async upsertMany(subscriptions: SubscriptionSchema[]) {
+  /** With `reset`, they replace every stored subscription, or those of one view */
+  async upsertMany(
+    subscriptions: SubscriptionSchema[],
+    { reset }: { reset?: true | FeedViewType } = {},
+  ) {
+    if (reset === undefined) {
+      await this.insert(db, subscriptions)
+      return
+    }
+    await withTransaction(async (tx) => {
+      await tx
+        .delete(subscriptionsTable)
+        .where(reset === true ? undefined : eq(subscriptionsTable.view, reset))
+      await this.insert(tx, subscriptions)
+    })
+  }
+
+  private async insert(tx: DB, subscriptions: SubscriptionSchema[]) {
     if (subscriptions.length === 0) return
-    await db
+    await tx
       .insert(subscriptionsTable)
       .values(subscriptions)
       .onConflictDoUpdate({
