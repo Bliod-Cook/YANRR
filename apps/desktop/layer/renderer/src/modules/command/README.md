@@ -1,6 +1,6 @@
 # Command Abstractions
 
-This module encapsulates the command abstractions used through CMD-K.
+This module holds the commands that keyboard shortcuts, the entry toolbar and the context menus run.
 
 The architectural design of the API takes inspiration from the [VSCode Command Abstractions](https://code.visualstudio.com/api/references/contribution-points#contributes.commands).
 

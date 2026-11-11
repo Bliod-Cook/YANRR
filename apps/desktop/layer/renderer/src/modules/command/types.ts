@@ -48,8 +48,6 @@ export interface CommandOptions<
   icon?: string | ReactNode | ((props?: { isActive?: boolean }) => ReactNode)
   category?: CommandCategory
   run: T["fn"]
-
-  when?: boolean
 }
 
 export type FollowCommandMap = {

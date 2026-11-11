@@ -1,6 +1,12 @@
-import { afterEach, describe, expect, it } from "vitest"
+import * as React from "react"
+import { act, createElement } from "react"
+import type { Root } from "react-dom/client"
+import { createRoot } from "react-dom/client"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { isKeyForFocusedControl } from "./use-register-hotkey"
+import { COMMAND_ID } from "../commands/id"
+import { registerCommand } from "../registry/registry"
+import { isKeyForFocusedControl, useCommandHotkey } from "./use-register-hotkey"
 
 const pressOn = (element: Element, init: KeyboardEventInit) => {
   let result: boolean | undefined
@@ -89,5 +95,55 @@ describe("isKeyForFocusedControl", () => {
     const button = create("<button>Options</button>")
     expect(pressOn(button, { key: "j" })).toBe(false)
     expect(pressOn(button, { key: "Enter", metaKey: true })).toBe(false)
+  })
+})
+
+describe("useCommandHotkey", () => {
+  const run = vi.fn()
+  let unregister = () => {}
+  let root: Root | null = null
+
+  const bind = async (shortcut: string) => {
+    const Binding = () => {
+      useCommandHotkey({ shortcut, commandId: COMMAND_ID.global.showShortcuts, when: true })
+      return null
+    }
+    root = createRoot(document.createElement("div"))
+    await act(async () => {
+      root?.render(createElement(Binding))
+    })
+  }
+
+  const press = (target: Element, init: KeyboardEventInit) =>
+    target.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, cancelable: true, ...init }))
+
+  beforeAll(() => {
+    ;(globalThis as typeof globalThis & { React: typeof React }).React = React
+    ;(
+      globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true
+  })
+
+  beforeEach(() => {
+    unregister = registerCommand({ id: COMMAND_ID.global.showShortcuts, label: "Shortcuts", run })
+  })
+
+  afterEach(async () => {
+    await act(async () => {
+      root?.unmount()
+    })
+    unregister()
+    run.mockClear()
+    document.body.innerHTML = ""
+  })
+
+  it("runs the ? shortcut whichever key the keyboard layout types ? with", async () => {
+    await bind("?")
+    // US layout: Shift and the slash key
+    press(document.body, { key: "?", code: "Slash", shiftKey: true })
+    // German layout: Shift and the key right of 0, whose code is the US minus key
+    press(document.body, { key: "?", code: "Minus", shiftKey: true })
+
+    expect(run).toHaveBeenCalledTimes(2)
   })
 })

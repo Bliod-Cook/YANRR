@@ -30,9 +30,6 @@ export const COMMAND_ID = {
     custom: "integration:custom",
   },
   settings: {
-    changeThemeToAuto: "follow:change-color-mode-to-auto",
-    changeThemeToDark: "follow:change-color-mode-to-dark",
-    changeThemeToLight: "follow:change-color-mode-to-light",
     customizeToolbar: "follow:customize-toolbar",
   },
   global: {
@@ -64,12 +61,6 @@ export const COMMAND_ID = {
   subscription: {
     switchTabToNext: "subscription:switch-tab-to-next",
     switchTabToPrevious: "subscription:switch-tab-to-previous",
-    switchTabToArticle: "subscription:switch-tab-to-article",
-    switchTabToSocial: "subscription:switch-tab-to-social",
-    switchTabToPicture: "subscription:switch-tab-to-picture",
-    switchTabToVideo: "subscription:switch-tab-to-video",
-    switchTabToAudio: "subscription:switch-tab-to-audio",
-    switchTabToNotification: "subscription:switch-tab-to-notification",
 
     nextSubscription: "subscription:next",
     previousSubscription: "subscription:previous",

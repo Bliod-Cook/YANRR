@@ -6,20 +6,16 @@ import { tinykeys } from "tinykeys"
 import type { FollowCommand, FollowCommandId } from "../types"
 import { getCommand } from "./use-command"
 
-export interface HotkeyOptions {
-  forceInputElement?: true
-}
 export interface RegisterHotkeyOptions<T extends FollowCommandId> {
   shortcut: string
   commandId: T
   args?: Parameters<Extract<FollowCommand, { id: T }>["run"]>
   when?: boolean
-
-  options?: HotkeyOptions
 }
 
+// Matched by the typed character, as the key that types it differs between keyboard layouts
 const SPECIAL_KEYS_MAPPINGS = {
-  "?": "Shift+Slash",
+  "?": "[Shift]+?",
 }
 
 // Elements the browser itself acts on with Space or Enter: it presses them or types into them
@@ -78,7 +74,6 @@ export const useCommandHotkey = <T extends FollowCommandId>({
   commandId,
   when,
   args,
-  options,
 }: RegisterHotkeyOptions<T>) => {
   const argsRef = useRefValue(args)
   useEffect(() => {
@@ -105,10 +100,7 @@ export const useCommandHotkey = <T extends FollowCommandId>({
       keyMap[nextKey] = (event) => {
         const { target } = event
 
-        if (
-          !options?.forceInputElement &&
-          (checkIsEditableElement(target as HTMLElement) || isKeyForFocusedControl(event))
-        ) {
+        if (checkIsEditableElement(target as HTMLElement) || isKeyForFocusedControl(event)) {
           return
         }
 
@@ -137,5 +129,5 @@ export const useCommandHotkey = <T extends FollowCommandId>({
     })
 
     return tinykeys(document.documentElement, keyMap)
-  }, [shortcut, commandId, when, argsRef, options?.forceInputElement])
+  }, [shortcut, commandId, when, argsRef])
 }

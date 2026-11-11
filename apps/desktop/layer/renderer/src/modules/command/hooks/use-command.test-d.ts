@@ -8,7 +8,7 @@ test("getCommand types work properly", () => {
   expectTypeOf(getCommand(COMMAND_ID.entry.copyLink)).toMatchTypeOf<CopyLinkCommand | null>()
 
   // @ts-expect-error - get an unknown command should throw an error
-  assertType(getCmd("unknown command"))
+  assertType(getCommand("unknown command"))
 })
 
 test("useCommand types work properly", () => {

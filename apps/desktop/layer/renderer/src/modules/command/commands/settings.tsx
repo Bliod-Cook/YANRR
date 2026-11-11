@@ -1,7 +1,5 @@
-import { useThemeAtomValue } from "@follow/hooks"
 import { useTranslation } from "react-i18next"
 
-import { useSetTheme } from "~/hooks/common"
 import { useShowCustomizeToolbarModal } from "~/modules/customize-toolbar/modal"
 
 import { useRegisterCommandEffect } from "../hooks/use-register-command"
@@ -10,7 +8,6 @@ import { COMMAND_ID } from "./id"
 
 export const useRegisterSettingsCommands = () => {
   useCustomizeToolbarCommand()
-  useRegisterThemeCommands()
 }
 
 const category: CommandCategory = "category.settings"
@@ -25,45 +22,6 @@ const useCustomizeToolbarCommand = () => {
       icon: <i className="i-mgc-settings-7-cute-re" />,
       run() {
         showModal()
-      },
-    },
-  ])
-}
-
-const useRegisterThemeCommands = () => {
-  const [t] = useTranslation("settings")
-  const theme = useThemeAtomValue()
-  const setTheme = useSetTheme()
-
-  useRegisterCommandEffect([
-    {
-      id: COMMAND_ID.settings.changeThemeToAuto,
-      label: t("appearance.theme.switch_to", { theme: t("appearance.theme.system") }),
-      category,
-      icon: <i className="i-mgc-settings-7-cute-re" />,
-      when: theme !== "system",
-      run() {
-        setTheme("system")
-      },
-    },
-    {
-      id: COMMAND_ID.settings.changeThemeToDark,
-      label: t("appearance.theme.switch_to", { theme: t("appearance.theme.dark") }),
-      category,
-      icon: <i className="i-mingcute-moon-line" />,
-      when: theme !== "dark",
-      run() {
-        setTheme("dark")
-      },
-    },
-    {
-      id: COMMAND_ID.settings.changeThemeToLight,
-      label: t("appearance.theme.switch_to", { theme: t("appearance.theme.light") }),
-      category,
-      icon: <i className="i-mingcute-sun-line" />,
-      when: theme !== "light",
-      run() {
-        setTheme("light")
       },
     },
   ])

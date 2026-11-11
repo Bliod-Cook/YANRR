@@ -12,12 +12,6 @@ declare module "@follow/utils/event-bus" {
   interface EventBusMap {
     "subscription:switch-tab-to-next": never
     "subscription:switch-tab-to-previous": never
-    "subscription:switch-tab-to-article": never
-    "subscription:switch-tab-to-social": never
-    "subscription:switch-tab-to-picture": never
-    "subscription:switch-tab-to-video": never
-    "subscription:switch-tab-to-audio": never
-    "subscription:switch-tab-to-notification": never
 
     "subscription:next": never
     "subscription:previous": never
@@ -51,72 +45,6 @@ export const useRegisterSubscriptionCommands = () => {
       category,
       run: () => {
         EventBus.dispatch(COMMAND_ID.subscription.switchTabToPrevious)
-      },
-    },
-    {
-      id: COMMAND_ID.subscription.switchTabToArticle,
-      label: {
-        title: t("command.subscription.switch_tab_to_article.title"),
-        description: t("command.subscription.switch_tab_to_article.description"),
-      },
-      category,
-      run: () => {
-        EventBus.dispatch(COMMAND_ID.subscription.switchTabToArticle)
-      },
-    },
-    {
-      id: COMMAND_ID.subscription.switchTabToSocial,
-      label: {
-        title: t("command.subscription.switch_tab_to_social.title"),
-        description: t("command.subscription.switch_tab_to_social.description"),
-      },
-      category,
-      run: () => {
-        EventBus.dispatch(COMMAND_ID.subscription.switchTabToSocial)
-      },
-    },
-    {
-      id: COMMAND_ID.subscription.switchTabToPicture,
-      label: {
-        title: t("command.subscription.switch_tab_to_picture.title"),
-        description: t("command.subscription.switch_tab_to_picture.description"),
-      },
-      category,
-      run: () => {
-        EventBus.dispatch(COMMAND_ID.subscription.switchTabToPicture)
-      },
-    },
-    {
-      id: COMMAND_ID.subscription.switchTabToVideo,
-      label: {
-        title: t("command.subscription.switch_tab_to_video.title"),
-        description: t("command.subscription.switch_tab_to_video.description"),
-      },
-      category,
-      run: () => {
-        EventBus.dispatch(COMMAND_ID.subscription.switchTabToVideo)
-      },
-    },
-    {
-      id: COMMAND_ID.subscription.switchTabToAudio,
-      label: {
-        title: t("command.subscription.switch_tab_to_audio.title"),
-        description: t("command.subscription.switch_tab_to_audio.description"),
-      },
-      category,
-      run: () => {
-        EventBus.dispatch(COMMAND_ID.subscription.switchTabToAudio)
-      },
-    },
-    {
-      id: COMMAND_ID.subscription.switchTabToNotification,
-      label: {
-        title: t("command.subscription.switch_tab_to_notification.title"),
-        description: t("command.subscription.switch_tab_to_notification.description"),
-      },
-      category,
-      run: () => {
-        EventBus.dispatch(COMMAND_ID.subscription.switchTabToNotification)
       },
     },
     {
@@ -186,36 +114,6 @@ type SwitchTabToPreviousCommand = Command<{
   fn: () => void
 }>
 
-type SwitchTabToArticleCommand = Command<{
-  id: typeof COMMAND_ID.subscription.switchTabToArticle
-  fn: () => void
-}>
-
-type SwitchTabToSocialCommand = Command<{
-  id: typeof COMMAND_ID.subscription.switchTabToSocial
-  fn: () => void
-}>
-
-type SwitchTabToPictureCommand = Command<{
-  id: typeof COMMAND_ID.subscription.switchTabToPicture
-  fn: () => void
-}>
-
-type SwitchTabToVideoCommand = Command<{
-  id: typeof COMMAND_ID.subscription.switchTabToVideo
-  fn: () => void
-}>
-
-type SwitchTabToAudioCommand = Command<{
-  id: typeof COMMAND_ID.subscription.switchTabToAudio
-  fn: () => void
-}>
-
-type SwitchTabToNotificationCommand = Command<{
-  id: typeof COMMAND_ID.subscription.switchTabToNotification
-  fn: () => void
-}>
-
 type NextSubscriptionCommand = Command<{
   id: typeof COMMAND_ID.subscription.nextSubscription
   fn: () => void
@@ -244,12 +142,6 @@ type OpenSiteInBrowserCommand = Command<{
 export type SubscriptionCommand =
   | SwitchTabToNextCommand
   | SwitchTabToPreviousCommand
-  | SwitchTabToArticleCommand
-  | SwitchTabToSocialCommand
-  | SwitchTabToPictureCommand
-  | SwitchTabToVideoCommand
-  | SwitchTabToAudioCommand
-  | SwitchTabToNotificationCommand
   | NextSubscriptionCommand
   | PreviousSubscriptionCommand
   | ToggleFolderCollapseCommand

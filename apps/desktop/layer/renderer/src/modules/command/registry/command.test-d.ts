@@ -43,18 +43,3 @@ test("defineFollowCommand types", () => {
     }),
   )
 })
-
-test("defineFollowCommand with keyBinding types", () => {
-  assertType(
-    defineFollowCommand({
-      id: COMMAND_ID.entry.viewSourceContent,
-      label: "",
-      when: true,
-      // @ts-expect-error - only simple command can set keybinding
-      keyBinding: "",
-      run: ({ entryId }) => {
-        expectTypeOf(entryId).toEqualTypeOf<string>()
-      },
-    }),
-  )
-})
