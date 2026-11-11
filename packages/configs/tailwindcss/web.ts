@@ -1,5 +1,5 @@
 /* @moduleResolution bundler */
-import "./tw-css-plugin"
+import "./tw-css-plugin.cjs"
 
 import { getIconCollections, iconsPlugin } from "@egoist/tailwindcss-icons"
 import { isEmptyColor, parseColors } from "@iconify/tools/lib/colors/parse.js"
@@ -13,7 +13,7 @@ import type { Config } from "tailwindcss"
 import { withUIKit } from "tailwindcss-uikit-colors/macos"
 import { workspaceRootSync } from "workspace-root"
 
-import ratioMixingPlugin from "./ratio-mixing-plugin"
+import ratioMixingPlugin from "./ratio-mixing-plugin.cjs"
 
 const workspaceRoot = workspaceRootSync(__dirname)
 const twConfig = {
@@ -54,11 +54,6 @@ const twConfig = {
         folo: "#FF5C00",
 
         theme: {
-          boxShadow: {
-            "context-menu":
-              "0px 0px 1px rgba(0, 0, 0, 0.4), 0px 0px 1.5px rgba(0, 0, 0, 0.3), 0px 7px 22px rgba(0, 0, 0, 0.25)",
-          },
-
           item: {
             active: "var(--fo-item-active)",
             hover: "var(--fo-item-hover)",

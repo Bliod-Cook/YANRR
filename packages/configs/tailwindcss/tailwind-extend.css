@@ -44,41 +44,15 @@
     --alpha: 2;
   }
 
-  [theme="dark"] .shadow-perfect {
+  [data-theme="dark"] .shadow-perfect {
     --tint: 221;
   }
 
   .shadow-modal {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   }
-  [theme="dark"] .shadow-modal {
+  [data-theme="dark"] .shadow-modal {
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
-  }
-  /* Utils */
-  .no-animation {
-    --btn-focus-scale: 1;
-    --animation-btn: 0;
-    --animation-input: 0;
-  }
-
-  @keyframes radiomark {
-    0% {
-      box-shadow:
-        0 0 0 12px var(--fallback-b1, oklch(var(--b1) / 1)) inset,
-        0 0 0 12px var(--fallback-b1, oklch(var(--b1) / 1)) inset;
-    }
-
-    50% {
-      box-shadow:
-        0 0 0 3px var(--fallback-b1, oklch(var(--b1) / 1)) inset,
-        0 0 0 3px var(--fallback-b1, oklch(var(--b1) / 1)) inset;
-    }
-
-    to {
-      box-shadow:
-        0 0 0 4px var(--fallback-b1, oklch(var(--b1) / 1)) inset,
-        0 0 0 4px var(--fallback-b1, oklch(var(--b1) / 1)) inset;
-    }
   }
 }
 
@@ -113,79 +87,6 @@
   }
 }
 
-/* Checkbox */
-@layer components {
-  .checkbox {
-    --chkbg: theme(colors.accent);
-    --chkfg: theme(colors.zinc.100);
-
-    flex-shrink: 0;
-    height: 0.9em;
-    width: 0.9em;
-    cursor: pointer;
-    appearance: none;
-    border-radius: 5px;
-    border-width: 1px;
-    border-color: theme(colors.border);
-    --tw-border-opacity: 0.2;
-  }
-
-  .checkbox:focus {
-    box-shadow: none;
-  }
-
-  .checkbox:focus-visible {
-    outline-style: solid;
-    outline-width: 2px;
-    outline-offset: 2px;
-    outline-color: theme(colors.accent);
-    border-color: theme(colors.accent);
-  }
-
-  .checkbox:disabled {
-    border-width: 0;
-    cursor: not-allowed;
-    border-color: transparent;
-    --tw-bg-opacity: 1;
-    background-color: var(--chkbg);
-    opacity: 0.2;
-  }
-
-  .checkbox:checked,
-  .checkbox[aria-checked="true"] {
-    background-repeat: no-repeat;
-    animation: checkmark var(--animation-input, 0.2s) ease-out;
-    border-color: theme(colors.accent);
-    background-color: var(--chkbg);
-    background-image:
-      linear-gradient(-45deg, transparent 65%, var(--chkbg) 65.99%),
-      linear-gradient(45deg, transparent 75%, var(--chkbg) 75.99%),
-      linear-gradient(-45deg, var(--chkbg) 40%, transparent 40.99%),
-      linear-gradient(
-        45deg,
-        var(--chkbg) 30%,
-        var(--chkfg) 30.99%,
-        var(--chkfg) 40%,
-        transparent 40.99%
-      ),
-      linear-gradient(-45deg, var(--chkfg) 50%, var(--chkbg) 50.99%);
-  }
-
-  @keyframes checkmark {
-    0% {
-      background-position-y: 5px;
-    }
-
-    50% {
-      background-position-y: -2px;
-    }
-
-    to {
-      background-position-y: 0;
-    }
-  }
-}
-
 /* Shadow */
 @layer components {
   .shadow-context-menu {
@@ -194,10 +95,6 @@
       var(--shadow-color) 0px 3px 8px,
       var(--shadow-color) 0px 2px 5px,
       var(--shadow-color) 0px 1px 1px;
-  }
-
-  [data-theme="dark"] .shadow-context-menu {
-    --shadow-color: rgba(255, 255, 255, 0.07);
   }
 
   .shadow-ai-chat-floating-panel {
@@ -216,19 +113,6 @@
       rgba(255, 255, 255, 0.07) 0px 3px 8px,
       rgba(255, 255, 255, 0.05) 0px 2px 5px,
       rgba(255, 255, 255, 0.04) 0px 1px 1px;
-  }
-
-  .shadow-ai-chat-floating-panel {
-    box-shadow:
-      -5px -6px 20px 0px rgba(0, 0, 0, 0.08),
-      10px -5px 20px 0px rgba(0, 0, 0, 0.08),
-      0px 10px 20px 0px rgba(0, 0, 0, 0.08);
-  }
-  [data-theme="dark"] .shadow-ai-chat-floating-panel {
-    box-shadow:
-      -5px -6px 20px 0px rgba(255, 255, 255, 0.04),
-      10px -5px 20px 0px rgba(255, 255, 255, 0.04),
-      0px 10px 20px 0px rgba(255, 255, 255, 0.04);
   }
 }
 
