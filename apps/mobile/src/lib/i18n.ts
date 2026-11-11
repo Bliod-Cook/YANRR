@@ -1,4 +1,5 @@
 import dayjs from "dayjs"
+import type { Locale } from "expo-localization"
 import { getLocales } from "expo-localization"
 import i18n from "i18next"
 import { initReactI18next } from "react-i18next"
@@ -68,21 +69,35 @@ export async function initializeI18n() {
   ])
 }
 
-export function getDeviceLanguage() {
-  const locale = getLocales()[0]
-  if (!locale) {
-    return fallbackLanguage
-  }
+// Where Chinese is written in traditional characters
+const traditionalChineseRegions = new Set(["TW", "HK", "MO"])
 
-  const { languageCode, languageRegionCode } = locale
-  const possibleDeviceLanguage = [
-    languageCode,
-    languageRegionCode,
-    languageCode && languageRegionCode ? `${languageCode}-${languageRegionCode}` : null,
-  ].filter((i) => i !== null)
+// Chinese goes by its script; Android may leave the script out, and then by the region
+const getChineseRegion = ({ languageScriptCode, languageRegionCode }: Locale) => {
+  const script =
+    languageScriptCode ??
+    (languageRegionCode && traditionalChineseRegions.has(languageRegionCode) ? "Hant" : "Hans")
+  return script === "Hant" ? "TW" : "CN"
+}
 
+/** The app's language for the locale: the one of its region, else any of its language */
+const matchLanguage = (locale: Locale) => {
+  const { languageCode } = locale
+  if (!languageCode) return
+  const region = languageCode === "zh" ? getChineseRegion(locale) : locale.languageRegionCode
   return (
-    possibleDeviceLanguage.find((lang) => currentSupportedLanguages.includes(lang)) ||
-    fallbackLanguage
+    currentSupportedLanguages.find((language) => language === `${languageCode}-${region}`) ??
+    currentSupportedLanguages.find(
+      (language) => language === languageCode || language.startsWith(`${languageCode}-`),
+    )
   )
+}
+
+/** The first of the device's preferred languages the app has */
+export function getDeviceLanguage() {
+  for (const locale of getLocales()) {
+    const language = matchLanguage(locale)
+    if (language) return language
+  }
+  return fallbackLanguage
 }
