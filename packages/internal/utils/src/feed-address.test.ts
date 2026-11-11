@@ -17,4 +17,16 @@ describe("normalizeFeedAddress", () => {
   it.each(["", "https://", "rsshub://", "not an address"])("refuses %j", (input) => {
     expect(normalizeFeedAddress(input)).toBeNull()
   })
+
+  // As the server, which looks only for those
+  it.each(["rust", "localhost/feed", "http://localhost:8080/rss", "ftp://example.com/feed"])(
+    "refuses %j, which is no web address with a dotted host",
+    (input) => {
+      expect(normalizeFeedAddress(input)).toBeNull()
+    },
+  )
+
+  it("takes an IP address", () => {
+    expect(normalizeFeedAddress("127.0.0.1/feed")).toBe("https://127.0.0.1/feed")
+  })
 })

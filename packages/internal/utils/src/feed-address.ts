@@ -1,13 +1,19 @@
 /**
- * An address typed to find or add a feed, with `https://` in front when it names no scheme, as
- * people paste `example.com/feed`. Path and query stay as typed. `null` when no host is left,
- * such as for `https://` alone.
+ * An address typed to find or add a feed, by the rule the server discovers feeds by: an RSSHub
+ * route, or a web address whose host has a dot. Without a scheme it is taken as `https://`, as
+ * people paste `example.com/feed`; path and query stay as typed. `null` for anything else, at
+ * which the server would find nothing.
  */
 export const normalizeFeedAddress = (input: string): string | null => {
   const value = input.trim()
-  const address = /^[a-z][\d+.a-z-]*:\/\//i.test(value) ? value : `https://${value}`
+  const address = value.includes("://") ? value : `https://${value}`
   try {
-    return new URL(address).host ? address : null
+    const { protocol, host, hostname } = new URL(address)
+    const isFeedAddress =
+      protocol === "rsshub:"
+        ? host !== ""
+        : (protocol === "http:" || protocol === "https:") && hostname.includes(".")
+    return isFeedAddress ? address : null
   } catch {
     return null
   }
