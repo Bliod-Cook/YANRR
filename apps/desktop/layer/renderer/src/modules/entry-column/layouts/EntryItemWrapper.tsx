@@ -18,11 +18,9 @@ import { useGeneralSettingKey } from "~/atoms/settings/general"
 import { FocusablePresets } from "~/components/common/Focusable"
 import { CommandActionButton } from "~/components/ui/button/CommandActionButton"
 import { useEntryIsRead } from "~/hooks/biz/useAsRead"
-import { useContextMenuActionShortCutTrigger } from "~/hooks/biz/useContextMenuActionShortCutTrigger"
 import {
   EntryActionMenuItem,
   HIDE_ACTIONS_IN_ENTRY_TOOLBAR_ACTIONS,
-  useEntryActions,
   useSortedEntryActions,
 } from "~/hooks/biz/useEntryActions"
 import { useEntryContextMenu } from "~/hooks/biz/useEntryContextMenu"
@@ -49,12 +47,9 @@ export const EntryItemWrapper: FC<
     const { id, url } = state
     return { feedId, id, inboxId: inboxHandle, url }
   })
-  const actionConfigs = useEntryActions({ entryId, view })
   const isMobile = useMobile()
 
   const isActive = useRouteParamsSelector(({ entryId }) => entryId === entry?.id, [entry?.id])
-  const when = useGlobalFocusableScopeSelector(FocusablePresets.isTimeline)
-  useContextMenuActionShortCutTrigger(actionConfigs, isActive && when)
   const showEntryDetailsColumn = useShowEntryDetailsColumn()
 
   const asRead = useEntryIsRead(entryId)
@@ -168,11 +163,12 @@ export const EntryItemWrapper: FC<
     [handleClick],
   )
 
-  const { contextMenuProps, isContextMenuOpen, openContextMenuAt } = useEntryContextMenu({
-    entryId,
-    view,
-    feedId: entry?.feedId || entry?.inboxId || "",
-  })
+  const { contextMenuProps, isContextMenuOpen, openContextMenuAt, contextMenuHost } =
+    useEntryContextMenu({
+      entryId,
+      view,
+      feedId: entry?.feedId || entry?.inboxId || "",
+    })
 
   const isWide = !showEntryDetailsColumn
 
@@ -207,13 +203,14 @@ export const EntryItemWrapper: FC<
             <ActionBar
               openContextMenu={() => {
                 const { x, y } = getMousePosition()
-                void openContextMenuAt(x, y)
+                openContextMenuAt(x, y)
               }}
               entryId={entryId}
               isFirstItem={!!isFirstItem}
             />
           )}
         </AnimatePresence>
+        {contextMenuHost}
       </Link>
     </div>
   )

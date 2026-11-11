@@ -1,37 +1,34 @@
 import type { FeedViewType } from "@follow/constants"
-import { useCallback, useMemo, useState } from "react"
+import { createElement, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 
-import {
-  MENU_ITEM_SEPARATOR,
-  MenuItemSeparator,
-  MenuItemText,
-  useShowContextMenu,
-} from "~/atoms/context-menu"
+import { MENU_ITEM_SEPARATOR, MenuItemSeparator, MenuItemText } from "~/atoms/context-menu"
 import { HIDE_ACTIONS_IN_ENTRY_CONTEXT_MENU, useEntryActions } from "~/hooks/biz/useEntryActions"
 import { useFeedActions } from "~/hooks/biz/useFeedActions"
 import { useContextMenu } from "~/hooks/common/useContextMenu"
 import { copyToClipboardWithFeedback } from "~/lib/clipboard"
 
-export function useEntryContextMenu({
-  entryId,
-  view,
-  feedId,
-}: {
+import { useLazyContextMenu, useShowContextMenuOnMount } from "./useLazyContextMenu"
+
+interface EntryContextMenuTarget {
   entryId: string
   view: FeedViewType
   feedId: string
-}) {
-  const { t } = useTranslation("common")
-  const showContextMenu = useShowContextMenu()
+}
 
+const EntryContextMenu = ({
+  entryId,
+  view,
+  feedId,
+  event,
+  onClosed,
+}: EntryContextMenuTarget & { event: MouseEvent | React.MouseEvent; onClosed: () => void }) => {
+  const { t } = useTranslation("common")
   const actionConfigs = useEntryActions({ entryId, view })
   const feedItems = useFeedActions({ feedId, view, type: "entryList" })
 
-  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
-
-  const buildMenuItems = useCallback(() => {
-    return [
+  useShowContextMenuOnMount(
+    () => [
       ...actionConfigs.filter((item) => {
         if (item instanceof MenuItemSeparator) return true
 
@@ -48,11 +45,24 @@ export function useEntryContextMenu({
         label: `${t("words.copy")}${t("space")}${t("words.entry")} ${t("words.id")}`,
         click: () => copyToClipboardWithFeedback(entryId),
       }),
-    ]
-  }, [actionConfigs, feedItems, t, entryId])
+    ],
+    event,
+    onClosed,
+  )
+
+  return null
+}
+
+/**
+ * The row's context menu. Its items are built when the menu is requested (right click, long
+ * press or the toolbar's "more" button), not for every rendered row; render `contextMenuHost`
+ * inside the row.
+ */
+export function useEntryContextMenu(target: EntryContextMenuTarget) {
+  const { event, open, close, isOpen } = useLazyContextMenu()
 
   const contextMenuProps = useContextMenu({
-    onContextMenu: async (e) => {
+    onContextMenu: (e) => {
       const $target = e.target as HTMLElement
       const selection = window.getSelection()
       if (selection) {
@@ -65,29 +75,23 @@ export function useEntryContextMenu({
       }
 
       e.preventDefault()
-      setIsContextMenuOpen(true)
-      await showContextMenu(buildMenuItems(), e)
-      setIsContextMenuOpen(false)
+      open(e)
     },
   })
 
   const openContextMenuAt = useCallback(
-    async (x: number, y: number) => {
-      const mouseEvent = new MouseEvent("contextmenu", {
-        bubbles: true,
-        cancelable: true,
-        clientX: x,
-        clientY: y,
-      })
-      // Delegate to the same onContextMenu handler
-      // @ts-expect-error MouseEvent type alignment
-      await contextMenuProps.onContextMenu?.(mouseEvent)
+    (x: number, y: number) => {
+      open(new MouseEvent("contextmenu", { clientX: x, clientY: y }))
     },
-    [contextMenuProps],
+    [open],
   )
 
-  return useMemo(
-    () => ({ contextMenuProps, isContextMenuOpen, openContextMenuAt }),
-    [contextMenuProps, isContextMenuOpen, openContextMenuAt],
-  )
+  return {
+    contextMenuProps,
+    isContextMenuOpen: isOpen,
+    openContextMenuAt,
+    contextMenuHost: event
+      ? createElement(EntryContextMenu, { ...target, event, onClosed: close })
+      : null,
+  }
 }

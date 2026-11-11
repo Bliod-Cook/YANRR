@@ -30,6 +30,7 @@ import { useTimelineList } from "~/hooks/biz/useTimelineList"
 import { WindowUnderBlur } from "../../components/ui/background"
 import { COMMAND_ID } from "../command/commands/id"
 import { useCommandBinding } from "../command/hooks/use-command-binding"
+import { ActiveSubscriptionShortcuts } from "./ActiveSubscriptionShortcuts"
 import { getSelectedFeedIds, resetSelectedFeedIds, setSelectedFeedIds } from "./atom"
 import { useShouldFreeUpSpace } from "./hook"
 import { SubscriptionListGuard } from "./subscription-list/SubscriptionListGuard"
@@ -71,7 +72,14 @@ export function SubscriptionColumn({
     view: s.view,
   }))
 
-  const [timelineId, setMemoizedTimelineId] = useState(routeParams.timelineId ?? timelineList[0])
+  const [memoizedTimelineId, setMemoizedTimelineId] = useState(
+    routeParams.timelineId ?? timelineList[0],
+  )
+  // A route may point at a tab that is hidden; show the first visible one then
+  const timelineId =
+    memoizedTimelineId && timelineList.includes(memoizedTimelineId)
+      ? memoizedTimelineId
+      : timelineList[0]
 
   useEffect(() => {
     if (routeParams.timelineId) setMemoizedTimelineId(routeParams.timelineId)
@@ -146,6 +154,7 @@ export function SubscriptionColumn({
         }
       }, [navigateBackHome])}
     >
+      <ActiveSubscriptionShortcuts />
       <CommandsHandler setActive={setActive} timelineList={timelineList} />
       <SubscriptionColumnHeader />
       {!feedColumnShow && (
