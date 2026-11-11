@@ -1,7 +1,6 @@
-import { SafeAreaView, StyleSheet, Switch, Text as RNText, View } from "react-native"
+import { SafeAreaView, Switch, Text as RNText, View } from "react-native"
 
 import { setUISetting, useUISettingKey } from "@/src/atoms/settings/ui"
-import { Slider } from "@/src/components/ui/slider"
 import { Text } from "@/src/components/ui/typography/Text"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
 
@@ -30,15 +29,6 @@ export const TextDebugScreen: NavigationControllerView = () => {
 
           <RNText className="font-medium text-label">{fontScaling.toFixed(2)}</RNText>
         </View>
-        <Slider
-          style={styles.slider}
-          maximumValue={1.5}
-          minimumValue={0.8}
-          value={fontScaling}
-          onValueChange={(value) => {
-            setUISetting("fontScale", value)
-          }}
-        />
       </View>
 
       <View>
@@ -65,9 +55,3 @@ export const TextDebugScreen: NavigationControllerView = () => {
     </SafeAreaView>
   )
 }
-
-const styles = StyleSheet.create({
-  slider: {
-    marginTop: 16,
-  },
-})
