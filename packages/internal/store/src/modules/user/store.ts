@@ -72,9 +72,8 @@ class UserSyncService {
       })
 
     if (!res) {
-      immerSet((state) => {
-        state.whoami = null
-      })
+      // Also in the database, or the next launch would start signed in as that user
+      await userActions.removeCurrentUser()
       return null
     }
 

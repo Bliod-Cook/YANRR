@@ -1,3 +1,4 @@
+import { UserService } from "@follow/database/services/user"
 import type { AuthClient } from "@follow/shared/auth"
 import { FollowAPIError, FollowAuthError, FollowTimeoutError } from "@follow-app/client-sdk"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -56,6 +57,8 @@ describe("userSyncService.whoami", () => {
 
     await expect(userSyncService.whoami()).resolves.toBeNull()
     expect(useUserStore.getState().whoami).toBeNull()
+    // The next launch would otherwise start signed in as the user in the database
+    expect(UserService.removeCurrentUser).toHaveBeenCalledTimes(1)
   })
 })
 
