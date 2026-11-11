@@ -171,7 +171,6 @@ const formatSecondsToMinutes = (seconds: number) => {
 export function ProgressBar() {
   const { isBackgroundLight } = usePlayerScreenContext()
   const { duration, position } = useProgress(0.25)
-  const isSliding = useSharedValue(false)
   const progress = useDerivedValue(() => {
     return duration > 0 ? position / duration : 0
   })
@@ -193,14 +192,9 @@ export function ProgressBar() {
           minimumTrackTintColor: "rgba(255,255,255,0.6)",
           maximumTrackTintColor: "rgba(255,255,255,0.4)",
         }}
-        onSlidingStart={() => (isSliding.value = true)}
-        onValueChange={async (value) => {
-          await player.seekTo(value * duration)
-        }}
-        onSlidingComplete={async (value) => {
-          if (!isSliding.value) return
-          isSliding.value = false
-          await player.seekTo(value * duration)
+        // Seeking a remote file buffers it again, so it seeks once, where the drag ends
+        onSlidingComplete={(value) => {
+          void player.seekTo(value * duration)
         }}
       />
 

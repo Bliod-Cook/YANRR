@@ -4,29 +4,24 @@ import { GlassView } from "expo-glass-effect"
 import { useAtomValue } from "jotai"
 import type { PropsWithChildren } from "react"
 import { use } from "react"
-import { Pressable, StyleSheet, View } from "react-native"
+import { StyleSheet, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { ThemedBlurView } from "@/src/components/common/ThemedBlurView"
 import { useLightbox } from "@/src/components/ui/lightbox/lightboxState"
-import { Text } from "@/src/components/ui/typography/Text"
 import { BottomTabContext } from "@/src/lib/navigation/bottom-tab/BottomTabContext"
 import { ChainNavigationContext } from "@/src/lib/navigation/ChainNavigationContext"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { NavigationInstanceContext } from "@/src/lib/navigation/NavigationInstanceContext"
 import { isAndroid, isIos26 } from "@/src/lib/platform"
-import { useActivePlayable } from "@/src/lib/player"
-import { PlayerScreen } from "@/src/screens/PlayerScreen"
-import { usePrefetchImageColors } from "@/src/store/image/hooks"
 
-import { PlayPauseButton, SeekButton, StopButton } from "./control"
 import {
   FLOATING_PLAYER_BAR_HEIGHT,
   FLOATING_PLAYER_BAR_SPACING,
   isRootStackPushedScreenOnTop,
 } from "./floating-player-bar"
 import { useShouldShowPlayerBar } from "./hooks"
-import { PlayerArtwork } from "./PlayerArtwork"
+import { PlayerBarContent } from "./PlayerBarContent"
 
 /**
  * Player bar for screens pushed over the JS tab bar, which hide the tab bar and its player bar.
@@ -58,9 +53,6 @@ function FloatingPlayerBarContent({ bottomInset }: { bottomInset: number }) {
   const routes = useAtomValue(routesAtom)
   // The lightbox is drawn below the root portal host, so the bar would cover it
   const { activeLightbox } = useLightbox()
-  const activePlayable = useActivePlayable()
-  usePrefetchImageColors(activePlayable?.artwork ?? undefined)
-  const navigation = useNavigation()
 
   if (!showPlayerBar || !isRootStackPushedScreenOnTop(routes) || activeLightbox) {
     return null
@@ -74,25 +66,12 @@ function FloatingPlayerBarContent({ bottomInset }: { bottomInset: number }) {
       style={{ bottom: bottomInset + FLOATING_PLAYER_BAR_SPACING }}
     >
       <PlayerBarSurface>
-        <Pressable
+        <PlayerBarContent
           testID="floating-player-bar"
-          className="flex-1 flex-row items-center gap-3"
-          onPress={() => {
-            navigation.presentControllerView(PlayerScreen, void 0, "transparentModal")
-          }}
-        >
-          <PlayerArtwork playable={activePlayable} size={40} className="size-10 rounded-full" />
-          <View className="flex-1 overflow-hidden">
-            <Text className="text-base font-semibold text-label" numberOfLines={1}>
-              {activePlayable?.title ?? ""}
-            </Text>
-          </View>
-        </Pressable>
-        <View className="flex-row items-center gap-4">
-          <PlayPauseButton />
-          <SeekButton />
-          <StopButton />
-        </View>
+          artworkSize={40}
+          artworkClassName="size-10 rounded-full"
+          titleClassName="text-base font-semibold text-label"
+        />
       </PlayerBarSurface>
     </View>
   )
