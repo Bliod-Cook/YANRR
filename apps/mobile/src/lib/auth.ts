@@ -20,7 +20,6 @@ const storagePrefix = "follow_auth"
 export const cookieKey = `${storagePrefix}_cookie`
 export const sessionTokenKey = "__Secure-better-auth.session_token"
 const sessionDataKey = `${storagePrefix}_session_data`
-const sessionCookieRefreshIntervalSeconds = 60 * 60 * 12
 
 let authStateRevision = 0
 /**
@@ -63,10 +62,6 @@ const authCookieStorage = createSessionAwareAuthCookieStorage({
 export const authClient = createAuthClient<MobileAuthClientOptions>({
   // Until the user has set a server there is no address, and better-auth refuses a relative one
   baseURL: serverEnv.API_URL ? `${serverEnv.API_URL}/better-auth` : undefined,
-  sessionOptions: {
-    refetchInterval: sessionCookieRefreshIntervalSeconds,
-    refetchOnWindowFocus: true,
-  },
   fetchOptions: {
     cache: "no-store",
     // Learn more: https://better-fetch.vercel.app/docs/hooks
@@ -91,12 +86,7 @@ export const authClient = createAuthClient<MobileAuthClientOptions>({
 })
 
 // @keep-sorted
-export const { changePassword, getCookie, signIn, signUp, useSession } = authClient
-
-// Mount Better Auth's session atom so the Expo plugin can persist refreshed Set-Cookie metadata.
-export const useAuthSessionCookieRefresh = () => {
-  useSession()
-}
+export const { changePassword, getCookie, signIn, signUp } = authClient
 
 const clearAuthStorage = async () => {
   const keys = [cookieKey, sessionTokenKey, sessionDataKey]

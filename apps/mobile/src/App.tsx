@@ -12,7 +12,6 @@ import { useIntentHandler } from "./hooks/useIntentHandler"
 import { useMessaging, useUpdateMessagingToken } from "./hooks/useMessaging"
 import { useOnboarding } from "./hooks/useOnboarding"
 import { useUnreadCountBadge } from "./hooks/useUnreadCountBadge"
-import { useAuthSessionCookieRefresh } from "./lib/auth"
 import { useSyncAppColorScheme } from "./lib/color-scheme"
 import { destination } from "./lib/navigation/biz/Destination"
 import { getServerUrl } from "./lib/server-env"
@@ -68,7 +67,6 @@ const OpenLoginScreen = () => {
 }
 
 const SessionSideEffect = () => {
-  useAuthSessionCookieRefresh()
   const sessionQuery = usePrefetchSessionUser()
   const hasHandledInitialSessionRef = useRef(false)
   useEffect(() => {

@@ -1,10 +1,12 @@
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
+
 import { UserService } from "@follow/database/services/user"
 import type { AuthClient } from "@follow/shared/auth"
-import { FollowAPIError, FollowAuthError, FollowTimeoutError } from "@follow-app/client-sdk"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { createAppAuthClient } from "@follow/shared/auth"
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { apiContext, authClientContext } from "../../context"
-import type { FollowAPI } from "../../types"
+import { authClientContext } from "../../context"
 import type { MeModel } from "./store"
 import { userSyncService, useUserStore } from "./store"
 
@@ -20,45 +22,72 @@ vi.mock("@follow/database/services/user", () => ({
 const me = { id: "user1", name: "Me", email: "me@example.com" } as MeModel
 
 describe("userSyncService.whoami", () => {
-  const getSessionMock = vi.fn()
+  // A real auth client against a real HTTP server answering like the server's session endpoint
+  let answer: { status: number; body: unknown } = { status: 200, body: null }
+  const server = createServer((_request, response) => {
+    response.writeHead(answer.status, { "content-type": "application/json" })
+    response.end(JSON.stringify(answer.body))
+  })
+  let baseUrl = ""
+
+  beforeAll(async () => {
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+    baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+  })
+  afterAll(() => void server.close())
 
   beforeEach(() => {
     vi.clearAllMocks()
     useUserStore.setState({ whoami: me })
-    apiContext.provide({ auth: { getSession: getSessionMock } } as unknown as FollowAPI)
+    answer = { status: 200, body: null }
+    authClientContext.provide(createAppAuthClient({ apiURL: baseUrl }))
   })
 
   it.each([
-    ["browser fetch", new TypeError("Failed to fetch")],
-    ["Electron IPC fetch", new Error("Error invoking remote method: TypeError: fetch failed")],
-    ["React Native fetch", new TypeError("Network request failed")],
-    ["timeout", new FollowTimeoutError()],
-    ["server error", new FollowAPIError("Internal error", 500)],
-    ["rate limit", new FollowAPIError("Too many requests", 429)],
-  ])("keeps the local user when the request fails without a 401 (%s)", async (_, error) => {
-    getSessionMock.mockRejectedValue(error)
+    ["server error", 500],
+    ["rate limit", 429],
+  ])("keeps the local user when the server answers %s", async (_, status) => {
+    answer = { status, body: { message: "Failed" } }
 
-    await expect(userSyncService.whoami()).rejects.toBe(error)
+    await expect(userSyncService.whoami()).rejects.toMatchObject({ status })
     expect(useUserStore.getState().whoami).toEqual(me)
   })
 
-  it.each([
-    ["FollowAuthError", new FollowAuthError()],
-    ["FollowAPIError", new FollowAPIError("Unauthorized", 401)],
-  ])("clears the local user on a 401 (%s)", async (_, error) => {
-    getSessionMock.mockRejectedValue(error)
+  it("keeps the local user when the server cannot be reached", async () => {
+    authClientContext.provide(createAppAuthClient({ apiURL: "http://127.0.0.1:1" }))
+
+    await expect(userSyncService.whoami()).rejects.toThrow()
+    expect(useUserStore.getState().whoami).toEqual(me)
+  })
+
+  it("clears the local user on a 401", async () => {
+    answer = { status: 401, body: { message: "Unauthorized" } }
 
     await expect(userSyncService.whoami()).resolves.toBeNull()
     expect(useUserStore.getState().whoami).toBeNull()
   })
 
   it("clears the local user when the server returns no session", async () => {
-    getSessionMock.mockResolvedValue(null)
-
     await expect(userSyncService.whoami()).resolves.toBeNull()
     expect(useUserStore.getState().whoami).toBeNull()
     // The next launch would otherwise start signed in as the user in the database
     expect(UserService.removeCurrentUser).toHaveBeenCalledTimes(1)
+  })
+
+  it("stores the user of the session", async () => {
+    const createdAt = "2024-01-01T00:00:00.000Z"
+    answer = {
+      status: 200,
+      body: { user: { ...me, name: "Renamed", createdAt, updatedAt: createdAt }, session: {} },
+    }
+
+    await expect(userSyncService.whoami()).resolves.toMatchObject({ user: { id: "user1" } })
+    expect(useUserStore.getState().whoami).toMatchObject({
+      id: "user1",
+      name: "Renamed",
+      createdAt,
+      updatedAt: createdAt,
+    })
   })
 })
 

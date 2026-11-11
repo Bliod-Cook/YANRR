@@ -3,8 +3,8 @@ import { UserService } from "@follow/database/services/user"
 import type { AuthUser } from "@follow-app/client-sdk"
 import { FollowAPIError } from "@follow-app/client-sdk"
 
-import { api, authClient, queryClient } from "../../context"
-import type { Hydratable, Resetable } from "../../lib/base"
+import { authClient, queryClient } from "../../context"
+import type { Hydratable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
 import { apiMorph } from "../../morph/api"
 import { registerSessionVerifier, startSessionCheck } from "../../sync/account"
@@ -38,7 +38,6 @@ const defaultState: UserStore = {
 export const useUserStore = createZustandStore<UserStore>("user")(() => defaultState)
 
 const get = useUserStore.getState
-const set = useUserStore.setState
 const immerSet = createImmerSetter(useUserStore)
 
 /** The fields a profile save sends and keeps, with the name trimmed */
@@ -59,17 +58,15 @@ class UserSyncService {
   }
 
   private async fetchSession() {
-    const res = await api()
-      .auth.getSession()
-      .catch((err) => {
-        // Only a 401 tells that the session is gone. Connection failures, timeouts and
-        // server errors must not sign the user out locally.
-        const isUnauthenticated = err instanceof FollowAPIError && err.status === 401
-        if (!isUnauthenticated) {
-          throw err
-        }
-        return null
-      })
+    // Through the auth client, so one request also lets the Expo plugin keep the refreshed cookie.
+    // It resolves with the error instead of throwing; connection failures still throw.
+    const { data, error } = await authClient().getSession()
+    // Only a 401 tells that the session is gone. Server errors and rate limits must not sign
+    // the user out locally.
+    if (error && error.status !== 401) {
+      throw new FollowAPIError(error.message || error.statusText, error.status)
+    }
+    const res = error ? null : data
 
     if (!res) {
       // Also in the database, or the next launch would start signed in as that user
@@ -78,7 +75,8 @@ class UserSyncService {
     }
 
     if (!res.user) return res
-    const user = apiMorph.toWhoami(res.user)
+    // The auth client does not know the fields the server adds to its user
+    const user = apiMorph.toWhoami(res.user as unknown as AuthUser)
     immerSet((state) => {
       state.whoami = user
     })
@@ -126,19 +124,10 @@ class UserSyncService {
   }
 }
 
-class UserActions implements Hydratable, Resetable {
+class UserActions implements Hydratable {
   async hydrate() {
     const users = await UserService.getUserAll()
     userActions.upsertManyInSession(users)
-  }
-
-  async reset() {
-    const tx = createTransaction()
-    tx.store(() => {
-      set(defaultState)
-    })
-    tx.persist(() => UserService.reset())
-    await tx.run()
   }
 
   upsertManyInSession(users: UserModel[]) {

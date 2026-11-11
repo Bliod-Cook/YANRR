@@ -204,8 +204,9 @@ class APIMorph {
       name: data.name,
       email: data.email,
       image: data.image,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
+      // The auth client parses the dates of its answers; the store keeps them as ISO strings
+      createdAt: new Date(data.createdAt).toISOString(),
+      updatedAt: new Date(data.updatedAt).toISOString(),
       isAnonymous: data.isAnonymous,
       suspended: data.suspended,
       deleted: data.deleted,
