@@ -73,9 +73,6 @@ export const getSpotlightTextColor = (color: string) => {
   return luminance > 0.179 ? "#000000" : "#FFFFFF"
 }
 
-const isSpotlightsUpdated = (value: unknown): value is number =>
-  typeof value === "number" && Number.isFinite(value)
-
 const isSpotlightRule = (value: unknown): value is SpotlightRule => {
   if (!value || typeof value !== "object") return false
 
@@ -90,23 +87,7 @@ const isSpotlightRule = (value: unknown): value is SpotlightRule => {
   )
 }
 
-export const toAppearanceSpotlightPayload = (
-  settings: SpotlightSettings,
-  spotlightsUpdated?: number,
-) => ({
-  spotlights: settings.spotlights.map((rule) => ({ ...rule })),
-  ...(isSpotlightsUpdated(spotlightsUpdated) ? { spotlightsUpdated } : {}),
-})
-
-export const mergeAppearancePayloadWithSpotlightSettings = (
-  appearancePayload: Record<string, unknown>,
-  spotlightSettings: SpotlightSettings,
-  spotlightsUpdated?: number,
-) => ({
-  ...appearancePayload,
-  ...toAppearanceSpotlightPayload(spotlightSettings, spotlightsUpdated),
-})
-
+/** The spotlight settings among the appearance settings of the account, where they are stored. */
 export const fromAppearanceSpotlightPayload = (
   payload?: Record<string, unknown> | null,
 ): SpotlightSettings => {
@@ -124,14 +105,6 @@ export const fromAppearanceSpotlightPayload = (
       : [...defaultSpotlightSettings.spotlights],
   }
 }
-
-export const pickSpotlightPayloadFromRemoteAppearance = (
-  payload: Record<string, unknown>,
-  updated: number,
-) => ({
-  ...fromAppearanceSpotlightPayload(payload),
-  updated: isSpotlightsUpdated(payload.spotlightsUpdated) ? payload.spotlightsUpdated : updated,
-})
 
 export const moveSpotlightRule = (rules: SpotlightRule[], index: number, direction: -1 | 1) => {
   if (index < 0 || index >= rules.length) return rules

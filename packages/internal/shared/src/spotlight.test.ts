@@ -6,11 +6,8 @@ import {
   defaultSpotlightSettings,
   fromAppearanceSpotlightPayload,
   getSpotlightTextColor,
-  mergeAppearancePayloadWithSpotlightSettings,
   moveSpotlightRule,
-  pickSpotlightPayloadFromRemoteAppearance,
   spotlightColorPresets,
-  toAppearanceSpotlightPayload,
 } from "./spotlight"
 
 const createRule = (id: string): SpotlightRule => ({
@@ -42,46 +39,6 @@ describe("spotlight shared contract", () => {
       "#60A5FA",
       "#5EEAD4",
     ])
-  })
-
-  test("round-trips spotlight rules through the appearance payload", () => {
-    const payload = toAppearanceSpotlightPayload({
-      spotlights: [
-        {
-          id: "headline",
-          enabled: true,
-          pattern: "OpenAI",
-          patternType: "keyword",
-          caseSensitive: false,
-          color: "#F97316",
-        },
-      ],
-    })
-
-    expect(payload).toEqual({
-      spotlights: [
-        expect.objectContaining({
-          id: "headline",
-          pattern: "OpenAI",
-        }),
-      ],
-    })
-
-    expect(fromAppearanceSpotlightPayload(payload)).toEqual({
-      spotlights: payload.spotlights,
-    })
-  })
-
-  test("clones the spotlight array when creating the appearance payload", () => {
-    const settings = {
-      spotlights: [createRule("headline")],
-    }
-
-    const payload = toAppearanceSpotlightPayload(settings)
-
-    expect(payload).toEqual(settings)
-    expect(payload.spotlights).not.toBe(settings.spotlights)
-    expect(payload.spotlights[0]).not.toBe(settings.spotlights[0])
   })
 
   test("falls back to the default empty list when the payload value is not an array", () => {
@@ -145,67 +102,6 @@ describe("spotlight shared contract", () => {
       "third",
     ])
     expect(rules.map((rule) => rule.id)).toEqual(["first", "second", "third"])
-  })
-})
-
-describe("spotlight transport", () => {
-  test("merges spotlight settings into an appearance payload without dropping appearance fields", () => {
-    const spotlightSettings = {
-      spotlights: [createRule("priority")],
-    }
-
-    const payload = mergeAppearancePayloadWithSpotlightSettings(
-      {
-        accentColor: "orange",
-        uiFontFamily: "system-ui",
-      },
-      spotlightSettings,
-      1710000000000,
-    )
-
-    expect(payload).toEqual({
-      accentColor: "orange",
-      uiFontFamily: "system-ui",
-      spotlightsUpdated: 1710000000000,
-      spotlights: [
-        expect.objectContaining({
-          id: "priority",
-          pattern: "priority",
-        }),
-      ],
-    })
-    expect(payload.spotlights).not.toBe(spotlightSettings.spotlights)
-    expect(payload.spotlights[0]).not.toBe(spotlightSettings.spotlights[0])
-  })
-
-  test("extracts spotlight settings from the mixed remote appearance payload", () => {
-    expect(
-      pickSpotlightPayloadFromRemoteAppearance(
-        {
-          accentColor: "orange",
-          spotlightsUpdated: 1710000000100,
-          spotlights: [
-            {
-              id: "priority",
-              enabled: true,
-              pattern: "urgent",
-              patternType: "keyword",
-              caseSensitive: false,
-              color: "#EF4444",
-            },
-          ],
-        },
-        1710000000000,
-      ),
-    ).toEqual({
-      updated: 1710000000100,
-      spotlights: [
-        expect.objectContaining({
-          id: "priority",
-          pattern: "urgent",
-        }),
-      ],
-    })
   })
 })
 
