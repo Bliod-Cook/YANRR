@@ -184,9 +184,7 @@ export default ({ mode }) => {
           "@radix-ui/react-select",
           "@radix-ui/react-slider",
           "@radix-ui/react-slot",
-          "@radix-ui/react-switch",
           "@radix-ui/react-tabs",
-          "@radix-ui/react-toast",
           "@radix-ui/react-tooltip",
 
           "@headlessui/react",

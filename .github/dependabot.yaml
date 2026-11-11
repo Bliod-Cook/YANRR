@@ -22,12 +22,10 @@ updates:
       patched:
         patterns:
           - "@follow-app/client-sdk"
-          - "@mozilla/readability"
           - "@pengx17/electron-forge-maker-appimage"
           - re-resizable
           - react-native-ios-utilities
           - react-native-sheet-transitions
-          - workbox-precaching
       minor-and-patch:
         applies-to: version-updates
         update-types:

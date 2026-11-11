@@ -16,11 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@electron-toolkit/preload": "3.0.2",
     "@electron-toolkit/utils": "4.0.0",
     "@eneris/push-receiver": "4.4.0",
-    "@follow-app/client-sdk": "catalog:",
-    "@follow-app/readability": "workspace:*",
     "@follow/shared": "workspace:*",
     "@follow/utils": "workspace:*",
     "electron-context-menu": "5.1.0",
@@ -28,14 +25,10 @@
     "electron-log": "5.4.4",
     "electron-squirrel-startup": "1.0.1",
     "electron-store": "11.0.2",
-    "es-toolkit": "1.52.0",
     "font-list": "2.1.0",
     "i18next": "26.4.2",
-    "linkedom": "0.18.13",
-    "lowdb": "7.0.1",
-    "node-machine-id": "1.1.12",
-    "ofetch": "1.5.1",
     "pathe": "2.0.3",
+    "undici": "7.29.1",
     "vscode-languagedetection": "npm:@vscode/vscode-languagedetection@1.0.23"
   },
   "devDependencies": {
