@@ -19,7 +19,7 @@ import { UINavigationHeaderActionButton } from "@/src/components/layouts/header/
 import { useRegisterNavigationScrollView } from "@/src/components/layouts/tabbar/hooks"
 import { PlatformActivityIndicator } from "@/src/components/ui/loading/PlatformActivityIndicator"
 import { TabBar } from "@/src/components/ui/tabview/TabBar"
-import type { TabComponent } from "@/src/components/ui/tabview/TabView"
+import type { TabComponent } from "@/src/components/ui/tabview/types"
 import { Text } from "@/src/components/ui/typography/Text"
 import { MingcuteLeftLineIcon } from "@/src/icons/mingcute_left_line"
 import { useNavigation } from "@/src/lib/navigation/hooks"
@@ -27,6 +27,7 @@ import { useColor } from "@/src/theme/colors"
 
 import { fetchRsshubPopular } from "./api"
 import { RecommendationListItem } from "./RecommendationListItem"
+import { SearchErrorView } from "./search-tabs/hooks"
 
 export const Recommendations = () => {
   const { t } = useTranslation("common")
@@ -150,7 +151,7 @@ export const RecommendationTab: TabComponent<{
 }) => {
   const { t } = useTranslation("common")
   const discoverLanguage = useUISettingKey("discoverLanguage")
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["rsshub-popular", tab.value, discoverLanguage],
     queryFn: () => fetchRsshubPopular(tab.value, discoverLanguage).then((res) => res.data),
     staleTime: 1000 * 60 * 60 * 24,
@@ -223,6 +224,14 @@ export const RecommendationTab: TabComponent<{
   const insets = useSafeAreaInsets()
   if (isLoading) {
     return <PlatformActivityIndicator className="flex-1 items-center justify-center" />
+  }
+  // The RSSHub instance may be out of reach, which is not the same as having no routes
+  if (!data && error) {
+    return (
+      <View className="flex-1 justify-center">
+        <SearchErrorView error={error} onRetry={() => void refetch()} />
+      </View>
+    )
   }
   if (keys.length === 0) {
     return (

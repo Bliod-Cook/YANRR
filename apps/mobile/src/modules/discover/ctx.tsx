@@ -1,6 +1,5 @@
 import type { PrimitiveAtom } from "jotai"
 import { atom } from "jotai"
-import type { Dispatch, SetStateAction } from "react"
 import { createContext, use, useState } from "react"
 
 interface SearchPageContextType {
@@ -8,26 +7,6 @@ interface SearchPageContextType {
   searchValueAtom: PrimitiveAtom<string>
 }
 export const SearchPageContext = createContext<SearchPageContextType>(null!)
-
-const SearchBarHeightContext = createContext<number>(0)
-const setSearchBarHeightContext = createContext<Dispatch<SetStateAction<number>>>(() => {})
-export const SearchBarHeightProvider = ({ children }: { children: React.ReactNode }) => {
-  const [searchBarHeight, setSearchBarHeight] = useState(0)
-  return (
-    <SearchBarHeightContext value={searchBarHeight}>
-      <setSearchBarHeightContext.Provider value={setSearchBarHeight}>
-        {children}
-      </setSearchBarHeightContext.Provider>
-    </SearchBarHeightContext>
-  )
-}
-
-export const useSearchBarHeight = () => {
-  return use(SearchBarHeightContext)
-}
-export const useSetSearchBarHeight = () => {
-  return use(setSearchBarHeightContext)
-}
 
 export const SearchPageProvider = ({ children }: { children: React.ReactNode }) => {
   const [atomRefs] = useState((): SearchPageContextType => {

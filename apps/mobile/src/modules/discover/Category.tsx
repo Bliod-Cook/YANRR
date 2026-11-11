@@ -1,8 +1,7 @@
 import type { RSSHubCategory } from "@follow/constants"
 import { CategoryMap, RSSHubCategories } from "@follow/constants"
-import { Image } from "expo-image"
 import { LinearGradient } from "expo-linear-gradient"
-import { memo, useMemo, useState } from "react"
+import { memo } from "react"
 import { useTranslation } from "react-i18next"
 import { Platform, Pressable, StyleSheet, useWindowDimensions, View } from "react-native"
 import { useColor } from "react-native-uikit-colors"
@@ -57,39 +56,13 @@ export const Category = () => {
   )
 }
 
-const emojiCdnBaseUrl = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72"
-
-const getEmojiImageUrl = (emoji: string) => {
-  const codePoints = Array.from(emoji)
-    .map((character) => character.codePointAt(0)?.toString(16))
-    .filter((value): value is string => Boolean(value) && value !== "fe0f")
-
-  return `${emojiCdnBaseUrl}/${codePoints.join("-")}.png`
-}
-
-const CategoryEmoji = ({ emoji }: { emoji: string }) => {
-  const [useTextFallback, setUseTextFallback] = useState(false)
-  const emojiImageUrl = useMemo(() => getEmojiImageUrl(emoji), [emoji])
-
-  return (
-    <View style={styles.emojiContainer}>
-      {useTextFallback ? (
-        <Text allowFontScaling={false} style={styles.emojiText}>
-          {emoji}
-        </Text>
-      ) : (
-        <Image
-          allowDownscaling
-          cachePolicy="memory-disk"
-          contentFit="contain"
-          onError={() => setUseTextFallback(true)}
-          source={emojiImageUrl}
-          style={styles.emojiImage}
-        />
-      )}
-    </View>
-  )
-}
+const CategoryEmoji = ({ emoji }: { emoji: string }) => (
+  <View style={styles.emojiContainer}>
+    <Text allowFontScaling={false} style={styles.emojiText}>
+      {emoji}
+    </Text>
+  </View>
+)
 
 const CategoryItem = memo(({ category }: { category: RSSHubCategory }) => {
   const { t } = useTranslation("common")
@@ -143,7 +116,7 @@ const styles = StyleSheet.create({
   cardItem: {
     aspectRatio: 16 / 9,
   },
-  // Takes the height the name leaves; on a small card the emoji shrinks to fit it
+  // Takes the height the name leaves
   emojiContainer: {
     flex: 1,
     alignItems: "flex-end",
@@ -158,10 +131,5 @@ const styles = StyleSheet.create({
           includeFontPadding: false,
         }
       : {}),
-  },
-  emojiImage: {
-    flex: 1,
-    aspectRatio: 1,
-    maxHeight: 40,
   },
 })
