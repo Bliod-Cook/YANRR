@@ -8,8 +8,7 @@ import type {
 } from "@follow/shared/settings/interface"
 import { DEFAULT_SHORTCUT_TARGETS } from "@follow/shared/settings/interface"
 import { jotaiStore } from "@follow/utils"
-import type { ExtractResponseData, GetStatusConfigsResponse } from "@follow-app/client-sdk"
-import { clamp, isEqual } from "es-toolkit"
+import { clamp } from "es-toolkit"
 import { atom, useAtomValue } from "jotai"
 
 import { getFeature } from "~/hooks/biz/useFeature"
@@ -19,9 +18,6 @@ export interface WebAISettings extends AISettings {
   showSplineButton: boolean
 }
 
-type ServerShortcutConfig = ExtractResponseData<GetStatusConfigsResponse>["AI_SHORTCUTS"][number]
-
-const FALLBACK_SHORTCUT_ICON = "i-mgc-hotkey-cute-re"
 const VALID_SHORTCUT_TARGETS = new Set<AIShortcutTarget>(DEFAULT_SHORTCUT_TARGETS)
 
 const isValidShortcutTarget = (target: string): target is AIShortcutTarget =>
@@ -47,61 +43,6 @@ const normalizeShortcut = (shortcut: AIShortcut): AIShortcut => {
 const normalizeShortcuts = (shortcuts: readonly AIShortcut[] | undefined): AIShortcut[] =>
   (shortcuts ?? []).map((shortcut) => normalizeShortcut({ ...shortcut }))
 
-const mergeWithServerShortcuts = (
-  localShortcuts: readonly AIShortcut[],
-  serverShortcuts: readonly ServerShortcutConfig[],
-): AIShortcut[] => {
-  const normalizedLocal = normalizeShortcuts(localShortcuts)
-  if (serverShortcuts.length === 0) {
-    return normalizedLocal
-  }
-
-  const serverShortcutMap = new Map<string, ServerShortcutConfig>()
-  serverShortcuts.forEach((shortcut) => {
-    serverShortcutMap.set(shortcut.id, shortcut)
-  })
-
-  const seenServerShortcutIds = new Set<string>()
-  const mergedShortcuts: AIShortcut[] = []
-
-  normalizedLocal.forEach((shortcut) => {
-    const serverShortcut = serverShortcutMap.get(shortcut.id)
-    if (!serverShortcut) {
-      mergedShortcuts.push(shortcut)
-      return
-    }
-
-    seenServerShortcutIds.add(serverShortcut.id)
-    const shouldClearPrompt = shortcut.prompt === serverShortcut.defaultPrompt
-
-    mergedShortcuts.push({
-      ...shortcut,
-      name: shortcut.name || serverShortcut.name,
-      prompt: shouldClearPrompt ? "" : shortcut.prompt,
-      defaultPrompt: serverShortcut.defaultPrompt,
-      displayTargets: sanitizeShortcutTargets(
-        shortcut.displayTargets || serverShortcut.displayTargets,
-      ),
-    })
-  })
-
-  serverShortcuts.forEach((serverShortcut) => {
-    if (seenServerShortcutIds.has(serverShortcut.id)) return
-
-    mergedShortcuts.push({
-      id: serverShortcut.id,
-      name: serverShortcut.name,
-      prompt: "",
-      defaultPrompt: serverShortcut.defaultPrompt,
-      enabled: true,
-      icon: FALLBACK_SHORTCUT_ICON,
-      displayTargets: sanitizeShortcutTargets(serverShortcut.displayTargets),
-    })
-  })
-
-  return mergedShortcuts
-}
-
 export const getShortcutEffectivePrompt = (shortcut: AIShortcut): string => {
   return shortcut.prompt || shortcut.defaultPrompt || ""
 }
@@ -126,21 +67,6 @@ export const {
 } = createSettingAtom("ai", createDefaultSettings)
 /** Device-local AI settings: every other AI setting syncs to the account. */
 export const aiLocalOnlyKeys: (keyof AISettings)[] = []
-
-export const syncServerShortcuts = (
-  serverShortcuts: readonly ServerShortcutConfig[] | null | undefined,
-) => {
-  const currentSettings = jotaiStore.get(__aiSettingAtom)
-  const storedShortcuts = currentSettings.shortcuts ?? []
-  const serverShortcutList = Array.isArray(serverShortcuts) ? serverShortcuts : []
-  const mergedShortcuts = mergeWithServerShortcuts(storedShortcuts, serverShortcutList)
-
-  if (isEqual(mergedShortcuts, storedShortcuts)) return
-
-  // Every device merges the server defaults on its own: written past `setAISetting`, the merge
-  // is not sent to the account as a change of the user.
-  jotaiStore.set(__aiSettingAtom, { ...currentSettings, shortcuts: mergedShortcuts })
-}
 
 ////////// AI Panel Style
 export enum AIChatPanelStyle {
