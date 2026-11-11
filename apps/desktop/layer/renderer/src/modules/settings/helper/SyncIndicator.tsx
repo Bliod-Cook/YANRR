@@ -4,78 +4,49 @@ import { PhCloudX } from "@follow/components/icons/PhCloudX.jsx"
 import { RootPortal } from "@follow/components/ui/portal/index.js"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@follow/components/ui/tooltip/index.jsx"
 import { useIsOnline } from "@follow/hooks"
-import { useEffect, useMemo, useRef } from "react"
+import { useSyncExternalStore } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useAuthQuery } from "~/hooks/common"
-import { settings } from "~/queries/settings"
-
 import { useSettingContextSelector } from "../modal/hooks"
-import type { RemoteSettingsResponse } from "./sync-queue"
 import { settingSyncQueue } from "./sync-queue"
 
-export const SettingSyncIndicator = () => {
+const useSyncIndicator = () => {
   const { t } = useTranslation()
-  const { data: remoteSettings, isLoading } = useAuthQuery(settings.get(), {})
-  const canSync = useSettingContextSelector((s) => s.canSync)
-
   const isOnline = useIsOnline()
-  const seedEmptyRemoteOnceRef = useRef(false)
-  useEffect(() => {
-    if (isLoading || !remoteSettings) {
-      return
-    }
+  const canSync = useSettingContextSelector((s) => s.canSync)
+  const status = useSyncExternalStore(settingSyncQueue.subscribe, settingSyncQueue.getStatus)
 
-    const hasSetting = JSON.stringify(remoteSettings.settings) !== "{}"
-    if (hasSetting) {
-      settingSyncQueue.applyRemoteSettings(remoteSettings as RemoteSettingsResponse)
-      return
+  if (!isOnline) {
+    return { icon: <PhCloudX className="size-4" />, text: t("sync_indicator.offline") }
+  }
+  if (!canSync) {
+    return { icon: <PhCloudWarning className="size-4" />, text: t("sync_indicator.disabled") }
+  }
+  if (status === "failed") {
+    return { icon: <PhCloudWarning className="size-4" />, text: t("sync_indicator.failed") }
+  }
+  if (status === "pending") {
+    return {
+      icon: <i className="i-mgc-loading-3-cute-re size-4 animate-spin" />,
+      text: t("sync_indicator.pending"),
     }
+  }
+  return { icon: <PhCloudCheck className="size-4" />, text: t("sync_indicator.synced") }
+}
 
-    if (!seedEmptyRemoteOnceRef.current) {
-      seedEmptyRemoteOnceRef.current = true
-      // Seed remote settings once for new accounts, but re-check before writing because another
-      // session may have created remote settings while this modal was loading.
-      settingSyncQueue.replaceRemoteIfEmpty()
-    }
-  }, [remoteSettings, isLoading])
-
-  const metaInfo: {
-    icon: React.FC<React.SVGProps<SVGSVGElement>>
-    text: string
-  } = useMemo(() => {
-    switch (true) {
-      case !isOnline: {
-        return {
-          icon: PhCloudX,
-          text: t("sync_indicator.offline"),
-        }
-      }
-      case !canSync: {
-        return {
-          icon: PhCloudWarning,
-          text: t("sync_indicator.disabled"),
-        }
-      }
-      default: {
-        return {
-          icon: PhCloudCheck,
-          text: t("sync_indicator.synced"),
-        }
-      }
-    }
-  }, [isOnline, canSync, t])
+export const SettingSyncIndicator = () => {
+  const { icon, text } = useSyncIndicator()
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="size-5">
-          <metaInfo.icon className="size-4" />
+        <div role="img" aria-label={text} className="size-5">
+          {icon}
         </div>
       </TooltipTrigger>
       <RootPortal>
         <TooltipContent>
-          <div className="text-center text-xs">{metaInfo.text}</div>
+          <div className="text-center text-xs">{text}</div>
         </TooltipContent>
       </RootPortal>
     </Tooltip>
