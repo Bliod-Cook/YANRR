@@ -16,7 +16,6 @@ import { useForm } from "react-hook-form"
 import { Trans, useTranslation } from "react-i18next"
 import { z } from "zod"
 
-import { Media } from "~/components/ui/media/Media"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { followClient } from "~/lib/api-client"
 import { toastFetchError } from "~/lib/error-parser"
@@ -61,7 +60,7 @@ export function DiscoverImport() {
       onSuccess: (parsedData) => {
         present({
           title: t("discover.import.preview_opml_content"),
-          content: () => <OpmlSelectionModal file={values.file} parsedData={parsedData} />,
+          content: () => <OpmlSelectionModal parsedData={parsedData} />,
           clickOutsideToDismiss: false,
           modalClassName: "max-w-2xl w-full h-[80vh]",
           modalContentClassName: "flex flex-col h-full",
@@ -81,12 +80,7 @@ export function DiscoverImport() {
             collapseId="inoreader"
             title={
               <div className="flex h-14 items-center justify-normal gap-2 border-border font-medium">
-                <Media
-                  className="size-5"
-                  src="https://inoreader.com/favicon.ico"
-                  alt="inoreader"
-                  type="photo"
-                />
+                <i className="i-simple-icons-inoreader size-5 text-[#007BC5]" />
                 {t("discover.import.opml_step1_inoreader")}
                 <div className="absolute inset-x-0 bottom-0 h-px bg-border" />
               </div>
@@ -119,12 +113,7 @@ export function DiscoverImport() {
             collapseId="feedly"
             title={
               <div className="flex h-14 items-center justify-normal gap-2 border-border font-medium">
-                <Media
-                  className="size-5"
-                  src="https://feedly.com/favicon.ico"
-                  alt="feedly"
-                  type="photo"
-                />
+                <i className="i-simple-icons-feedly size-5 text-[#2BB24C]" />
                 {t("discover.import.opml_step1_feedly")}
                 <div className="absolute inset-x-0 bottom-0 h-px bg-border" />
               </div>

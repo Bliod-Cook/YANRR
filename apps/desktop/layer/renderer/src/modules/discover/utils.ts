@@ -11,6 +11,13 @@ export const normalizeRSSHubParameters = (
     : null
 
 /**
+ * The `:routeParams` segment of an RSSHub route. RSSHub decodes the segment and reads it as a
+ * query string, so the query string is encoded once more.
+ */
+export const encodeRSSHubRouteParams = (params: Record<string, string>) =>
+  encodeURIComponent(new URLSearchParams(params).toString())
+
+/**
  * Whether discovering `url` left nothing to choose from: it found no feed, or only the feed at
  * `url` itself. The feed at `url` is then previewed directly.
  */

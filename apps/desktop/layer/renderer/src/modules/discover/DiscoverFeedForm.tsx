@@ -50,7 +50,7 @@ import {
 import { useFormHasChanges } from "~/hooks/common/useFormHasChanges"
 
 import { FeedForm } from "./FeedForm"
-import { normalizeRSSHubParameters } from "./utils"
+import { encodeRSSHubRouteParams, normalizeRSSHubParameters } from "./utils"
 
 const FeedMaintainers = ({ maintainers }: { maintainers?: string[] }) => {
   if (!maintainers || maintainers.length === 0) {
@@ -171,12 +171,12 @@ export const DiscoverFeedForm = ({
       )
 
       try {
-        const routeParamsPath = encodeURIComponent(
-          Object.entries(_data)
-            .filter(([key, value]) => key.startsWith(routeParamsKeyPrefix) && value)
-            .map(([key, value]) => [key.slice(routeParamsKeyPrefix.length), value])
-            .map(([key, value]) => `${key}=${value}`)
-            .join("&"),
+        const routeParamsPath = encodeRSSHubRouteParams(
+          Object.fromEntries(
+            Object.entries(_data)
+              .filter(([key, value]) => key.startsWith(routeParamsKeyPrefix) && value)
+              .map(([key, value]) => [key.slice(routeParamsKeyPrefix.length), value] as const),
+          ),
         )
 
         const fillRegexpPath = regexpPathToPath(
@@ -195,8 +195,8 @@ export const DiscoverFeedForm = ({
           content: () => <FeedForm url={finalUrl} onSuccess={dismissAll} />,
         })
       } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : String(err))
         if (err instanceof MissingOptionalParamError) {
-          toast.error(err.message)
           const idx = keys.findIndex((item) => item.name === err.param)
 
           form.setFocus(keys[idx === 0 ? 0 : idx - 1]!.name, {
@@ -296,7 +296,7 @@ export const DiscoverFeedForm = ({
                                   })
                                 }}
                                 placeholder={
-                                  (parameters?.default ?? formPlaceholder[keyItem.name])
+                                  formPlaceholder[keyItem.name]
                                     ? `e.g. ${formPlaceholder[keyItem.name]}`
                                     : void 0
                                 }

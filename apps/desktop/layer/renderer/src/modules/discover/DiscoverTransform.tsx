@@ -72,19 +72,25 @@ export function DiscoverTransform() {
     )
   }
 
+  // Missing when the server cannot reach RSSHub or the instance has no such route
+  const route = data?.rsshub?.routes["/transform/html/:url/:routeParams"]
+  if (!route) {
+    return (
+      <p className="mt-12 text-center text-sm text-text-secondary">
+        {t("discover.transform.unavailable")}
+      </p>
+    )
+  }
+
   return (
-    <>
-      {data?.rsshub!.routes && (
-        <div className="w-full pt-6">
-          <DiscoverFeedForm
-            routePrefix="rsshub"
-            route={data?.rsshub.routes["/transform/html/:url/:routeParams"]!}
-            routeParams={transformRouteParams}
-            noDescription
-            viewportClassName="pt-0 max-h-none"
-          />
-        </div>
-      )}
-    </>
+    <div className="w-full pt-6">
+      <DiscoverFeedForm
+        routePrefix="rsshub"
+        route={route}
+        routeParams={transformRouteParams}
+        noDescription
+        viewportClassName="pt-0 max-h-none"
+      />
+    </div>
   )
 }

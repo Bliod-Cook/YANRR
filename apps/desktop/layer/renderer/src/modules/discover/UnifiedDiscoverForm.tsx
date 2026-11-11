@@ -33,7 +33,8 @@ import { DiscoverTransform } from "./DiscoverTransform"
 import { FeedForm } from "./FeedForm"
 import { isDiscoveredFeedItself } from "./utils"
 
-const isFeedLikeUrl = (value: string) => /^(?:https?:\/\/|rsshub:\/\/|yanrr:\/\/)/.test(value)
+// What the server can follow
+const isFeedLikeUrl = (value: string) => /^(?:https?:\/\/|rsshub:\/\/)/.test(value)
 
 const isWebUrl = (value: string) => /^https?:\/\//.test(value)
 
@@ -149,8 +150,9 @@ export function UnifiedDiscoverForm() {
         return
       }
 
+      // The field itself updates right away, so the caret stays where the user types
+      form.setValue("url", value, { shouldValidate: true })
       startTransition(() => {
-        form.setValue("url", value, { shouldValidate: true })
         setUrlSearchParam(value)
       })
     },
@@ -177,7 +179,7 @@ export function UnifiedDiscoverForm() {
         content: () => <FeedForm url={url} onSuccess={dismissAll} />,
       })
 
-    // RSSHub routes and app links open the feed preview directly
+    // RSSHub routes open the feed preview directly
     if (!isWebUrl(url)) {
       presentFeedForm()
       return
