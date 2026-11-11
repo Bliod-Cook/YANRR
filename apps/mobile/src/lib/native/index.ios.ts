@@ -12,9 +12,7 @@ interface NativeModule {
   }>
   /** Missing from builds before it was added */
   dismissPresentedBrowser?: () => Promise<boolean>
-  previewImage: (images: string[]) => void
   scrollToTop: (reactTag: number) => void
-  isScrollToEnd: (reactTag: number) => Promise<boolean>
 }
 const nativeModule = requireNativeModule("Helper") as NativeModule
 
@@ -52,18 +50,4 @@ export const dismissInAppBrowser = async () => {
 
 export const performNativeScrollToTop = (reactTag: number) => {
   nativeModule.scrollToTop(reactTag)
-}
-
-export const showIntelligenceGlowEffect = () => {
-  requireNativeModule("AppleIntelligenceGlowEffect").show()
-
-  return hideIntelligenceGlowEffect
-}
-
-export const hideIntelligenceGlowEffect = () => {
-  requireNativeModule("AppleIntelligenceGlowEffect").hide()
-}
-
-export const isScrollToEnd = async (tag: number) => {
-  return nativeModule.isScrollToEnd(tag)
 }
