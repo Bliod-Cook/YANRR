@@ -8,7 +8,7 @@ TARGET=${VITE_DEV_PROXY_TARGET:-http://127.0.0.1:3100}
 case "${1:-}" in
 start)
   mkdir -p "$STATE"
-  VITE_DEV_PROXY_TARGET=$TARGET nohup corepack pnpm run dev:web > "$STATE/vite.log" 2>&1 &
+  VITE_DEV_PROXY_TARGET=$TARGET nohup pnpm run dev:web > "$STATE/vite.log" 2>&1 &
   for _ in $(seq 240); do
     if [ "$(curl -s --noproxy '*' -o /dev/null -w '%{http_code}' http://localhost:2233/)" = 200 ]; then
       echo "web client on http://localhost:2233, /api -> $TARGET, log in $STATE/vite.log"

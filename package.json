@@ -22,7 +22,7 @@
     "lint:tsl": "tsslint --project apps/*/tsconfig.json",
     "polyfill-optimize": "pnpx nolyfill install",
     "postinstall": "pnpm run build:packages",
-    "prepare": "simple-git-hooks && corepack prepare",
+    "prepare": "simple-git-hooks",
     "reinstall": "rm -rf node_modules && rm -rf apps/**/node_modules && rm -rf packages/**/node_modules && pnpm install",
     "test": "cross-env CI=1 pnpm --recursive run test",
     "typecheck": "turbo typecheck"

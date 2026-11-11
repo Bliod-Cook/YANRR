@@ -9,7 +9,7 @@ to `apps/desktop/`. Verified on Windows 11 with Git Bash.
 
 ## Prerequisites
 
-- Client dependencies, installed at the repo root with `corepack pnpm install`.
+- Client dependencies, installed at the repo root with `pnpm install`.
 - A server on http://127.0.0.1:3100, started with the server's run skill (see `server/.claude/skills/run-server`);
   export its `YANRR_AI__*` variables first for the AI parts of the example below:
 
@@ -72,7 +72,7 @@ EOF
 
 ## Run (human path)
 
-`VITE_DEV_PROXY_TARGET=http://127.0.0.1:3100 corepack pnpm run dev:web`, then open http://localhost:2233; Ctrl-C stops it.
+`VITE_DEV_PROXY_TARGET=http://127.0.0.1:3100 pnpm run dev:web`, then open http://localhost:2233; Ctrl-C stops it.
 
 ## Gotchas
 

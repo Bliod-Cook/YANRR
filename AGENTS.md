@@ -51,8 +51,8 @@
 # Server (needs server/config.toml, see config.example.toml)
 cd server && cargo run
 
-# Client deps; pnpm is pinned in package.json, run it through corepack
-corepack pnpm install
+# Client deps; pnpm switches itself to the version pinned in package.json
+pnpm install
 
 # Desktop – browser renderer (recommended)
 cd apps/desktop && pnpm run dev:web
