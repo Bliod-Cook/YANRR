@@ -1,6 +1,8 @@
 mod common;
 
-use common::{Fixtures, TestApp, assert_error, json, subscribe};
+use std::time::Duration;
+
+use common::{Fixtures, Reply, TestApp, assert_error, json, json_feed, subscribe};
 use serde_json::{Value, json};
 
 async fn timeline(app: &TestApp, query: Value) -> Vec<Value> {
@@ -69,4 +71,45 @@ async fn collect_and_uncollect() {
         .post("/api/collections", json!({ "entryId": "1" }))
         .await;
     assert_error(unknown, 404, 3000).await;
+}
+
+#[tokio::test]
+async fn the_collection_pages_by_when_entries_were_collected() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    let items = json!([
+        { "id": "a", "title": "A", "date_published": "2026-10-03T08:00:00Z" },
+        { "id": "b", "title": "B", "date_published": "2026-10-02T08:00:00Z" },
+        { "id": "c", "title": "C", "date_published": "2026-10-01T08:00:00Z" },
+    ]);
+    fixtures.set("/feed.json", Reply::Body(json_feed(items)));
+    subscribe(&app, &fixtures.url("/feed.json"), json!({})).await;
+    let listed = timeline(&app, json!({})).await;
+    let id = |title: &str| {
+        let item = listed.iter().find(|item| item["entries"]["title"] == title);
+        item.unwrap()["entries"]["id"].clone()
+    };
+    for title in ["B", "A", "C"] {
+        app.post("/api/collections", json!({ "entryId": id(title) }))
+            .await;
+        // Each a millisecond apart at least, the precision of the times
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    let titles = |items: &[Value]| -> Vec<Value> {
+        items
+            .iter()
+            .map(|item| item["entries"]["title"].clone())
+            .collect()
+    };
+
+    let first = timeline(&app, json!({ "isCollection": true, "limit": 2 })).await;
+    assert_eq!(titles(&first), ["C", "A"]);
+    let last = &first[1];
+    let next = json!({
+        "isCollection": true,
+        "limit": 2,
+        "publishedAfter": last["collections"]["createdAt"],
+        "cursorId": last["entries"]["id"],
+    });
+    assert_eq!(titles(&timeline(&app, next).await), ["B"]);
 }
