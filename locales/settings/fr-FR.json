@@ -248,7 +248,6 @@
   "data_control.clean_cache.cancel": "Annuler",
   "data_control.clean_cache.clear": "Effacer",
   "data_control.clean_cache.description": "Nettoyez le cache de l'application pour libérer de l'espace.",
-  "data_control.clean_cache.description_web": "Nettoyez le cache du service worker de l'application web pour libérer de l'espace.",
   "data_control.clean_cache.success": "Cache nettoyé avec succès.",
   "data_control.data_sources": "Sources de données",
   "data_control.export_local_database.failed": "Échec de l'exportation de la base de données",

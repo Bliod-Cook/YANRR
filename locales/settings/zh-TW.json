@@ -248,7 +248,6 @@
   "data_control.clean_cache.cancel": "取消",
   "data_control.clean_cache.clear": "清理",
   "data_control.clean_cache.description": "清理程式快取以釋放空間。",
-  "data_control.clean_cache.description_web": "清理網頁應用服務快取以釋放空間。",
   "data_control.clean_cache.success": "快取清理成功。",
   "data_control.data_sources": "資料來源",
   "data_control.export_local_database.failed": "資料庫匯出失敗",

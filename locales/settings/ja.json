@@ -251,7 +251,6 @@
   "data_control.clean_cache.cancel": "キャンセル",
   "data_control.clean_cache.clear": "クリア",
   "data_control.clean_cache.description": "空き容量を確保するためにキャッシュをクリアします。",
-  "data_control.clean_cache.description_web": "サービスワーカーのキャッシュを削除して空き容量を確保します。",
   "data_control.clean_cache.success": "キャッシュが正常にクリアされました。",
   "data_control.data_sources": "データソース",
   "data_control.export_local_database.failed": "データベースをエクスポートできませんでした",

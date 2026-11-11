@@ -251,7 +251,6 @@
   "data_control.clean_cache.cancel": "Cancel",
   "data_control.clean_cache.clear": "Clear",
   "data_control.clean_cache.description": "Clean the app cache to free up space.",
-  "data_control.clean_cache.description_web": "Clean the web app service worker cache to free up space.",
   "data_control.clean_cache.success": "Cache cleaned successfully.",
   "data_control.data_sources": "Data Sources",
   "data_control.export_local_database.failed": "Failed to export database",
