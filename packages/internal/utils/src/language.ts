@@ -9,14 +9,24 @@ const detectableLanguageCodes = Object.values(ACTION_LANGUAGE_MAP).flatMap(({ co
   code ? [code] : [],
 )
 
+const primaryLanguage = (tag: string) => tag.split("-")[0]!.toLowerCase()
+
+/**
+ * Whether `content` is already written in `language`.
+ * `contentLanguage` is the language the server detected for the entry (ISO 639-1, `zh` for any
+ * Chinese); when it is known, the text is not inspected.
+ */
 export const checkLanguage = ({
   content,
+  contentLanguage,
   language,
 }: {
   content: string
+  contentLanguage?: string | null
   language: SupportedActionLanguage
 }) => {
   if (!content) return true
+  if (contentLanguage) return primaryLanguage(contentLanguage) === primaryLanguage(language)
   const pureContent = parseHtml(content)
     .toText()
     .replaceAll(/https?:\/\/\S+|www\.\S+/g, " ")

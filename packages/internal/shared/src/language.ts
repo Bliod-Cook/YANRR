@@ -19,6 +19,7 @@ export const ACTION_LANGUAGE_MAP: Record<
     value: "zh-CN",
   },
   "zh-TW": {
+    code: "cmn",
     label: "Traditional Chinese (Taiwan)",
     value: "zh-TW",
   },

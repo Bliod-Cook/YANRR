@@ -218,6 +218,7 @@ class TranslationSyncService {
 
       return !checkLanguage({
         content,
+        contentLanguage: entry.language,
         language,
       })
     })
