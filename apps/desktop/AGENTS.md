@@ -109,111 +109,14 @@ import { FeedList } from "~/modules/name/components"
 
 ## Glassmorphic Depth Design System
 
-Follow uses a sophisticated glassmorphic depth design system for elevated UI components (modals, toasts, floating panels, etc.). This design provides visual hierarchy through layered transparency and subtle color accents.
+Elevated UI (toasts, modals, floating panels, popovers, context menus) uses layered translucency with the accent color, following the root rules on styles and motion:
 
-### Design Principles
-
-- **Multi-layer Depth**: Create visual depth through stacked transparent layers
-- **Subtle Color Accents**: Use brand colors at very low opacity (5-20%) for borders, glows, and backgrounds
-- **Refined Blur**: Heavy backdrop blur (backdrop-blur-2xl) for frosted glass effect
-- **Minimal Shadows**: Combine multiple soft shadows with accent colors for depth perception
-- **Smooth Animations**: Use Spring presets for all transitions
-
-### Color Usage
-
-- **Primary Accent**: Use CSS variable `--fo-a` (HSL: `331.7 84% 67%`) at 5-20% opacity for borders, glows, and highlights
-- **Border**: `hsl(var(--fo-a) / 0.2)` for main borders
-- **Inner Glow**: `hsl(var(--fo-a) / 0.05)` for subtle radial/linear gradients inside containers
-- **Shadows**: Layered shadows with accent tint:
-  - `0 8px 32px hsl(var(--fo-a) / 0.08)` - large soft glow
-  - `0 4px 16px hsl(var(--fo-a) / 0.06)` - medium shadow
-  - `0 2px 8px rgba(0, 0, 0, 0.1)` - close depth
-
-### Component Structure
-
-```tsx
-<div
-  className="rounded-2xl backdrop-blur-2xl"
-  style={{
-    backgroundImage:
-      "linear-gradient(to bottom right, rgba(var(--color-background) / 0.98), rgba(var(--color-background) / 0.95))",
-    borderWidth: "1px",
-    borderStyle: "solid",
-    borderColor: "hsl(var(--fo-a) / 0.2)",
-    boxShadow:
-      "0 8px 32px hsl(var(--fo-a) / 0.08), 0 4px 16px hsl(var(--fo-a) / 0.06), 0 2px 8px rgba(0, 0, 0, 0.1)",
-  }}
->
-  {/* Inner glow layer */}
-  <div
-    className="absolute inset-0 rounded-2xl"
-    style={{
-      background:
-        "linear-gradient(to bottom right, hsl(var(--fo-a) / 0.05), transparent, hsl(var(--fo-a) / 0.05))",
-    }}
-  />
-
-  {/* Content */}
-  <div className="relative">{/* Your content here */}</div>
-</div>
-```
-
-### Interactive Elements
-
-For hover states on buttons or interactive areas within glass containers:
-
-```tsx
-<button
-  onMouseEnter={(e) => {
-    e.currentTarget.style.background =
-      "linear-gradient(to right, hsl(var(--fo-a) / 0.08), hsl(var(--fo-a) / 0.05))"
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.background = "transparent"
-  }}
->
-  {/* Subtle shine effect */}
-  <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-gray/5 to-transparent transition-transform duration-700 group-hover:translate-x-full dark:via-white/5" />
-</button>
-```
-
-### Dividers
-
-Use gradient dividers within glass containers:
-
-```tsx
-<div
-  className="mx-4 h-px"
-  style={{
-    background: "linear-gradient(to right, transparent, hsl(var(--fo-a) / 0.2), transparent)",
-  }}
-/>
-```
-
-### Animation Guidelines
-
-- Entry animations: `initial={{ y: 8, opacity: 0 }}` → `animate={{ y: 0, opacity: 1 }}`
-- Use `Spring.presets.snappy` for quick interactions
-- Use `Spring.presets.smooth` for larger movements
-- Keep scale animations subtle (1.0 ↔ 1.02)
-
-### When to Use
-
-Apply this design system to:
-
-- Toast notifications
-- Modal dialogs
-- Floating panels and popovers
-- Ambient UI prompts
-- Contextual menus
-- Elevated cards with actions
-
-### Accessibility
-
-- Ensure sufficient contrast for text over glass backgrounds
-- Maintain border visibility in both light and dark modes
-- Preserve keyboard focus indicators
-- Keep animations respectful of `prefers-reduced-motion`
+- **Surface**: `rounded-2xl backdrop-blur-2xl` over a near-opaque background gradient, a 1px border in `hsl(var(--fo-a) / 0.2)`, and layered shadows tinted with `--fo-a` at 5-10% opacity plus one neutral close shadow.
+- **Inner glow and dividers**: gradients of `hsl(var(--fo-a) / 0.05)` (glow) and `/ 0.2` (dividers) fading to transparent.
+- **Where the styles live**: values built from CSS variables, gradients or several properties go in a `styles.ts` next to the component as `CSSProperties` objects, never inline in JSX.
+- **Hover and focus**: CSS only (Tailwind `hover:`/`group-hover:` with `transition-*`), never `onMouseEnter`/`onMouseLeave` writing styles.
+- **Motion**: entries `y: 8, opacity: 0 → y: 0, opacity: 1` with `Spring.presets.snappy` (quick) or `.smooth` (larger moves); scale changes stay within 1.0-1.02 and respect `prefers-reduced-motion`.
+- **Accessibility**: keep text contrast, visible borders in both themes, and focus indicators.
 
 ## Build Outputs
 
