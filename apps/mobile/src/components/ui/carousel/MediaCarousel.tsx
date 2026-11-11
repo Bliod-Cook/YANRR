@@ -2,7 +2,7 @@ import type { FeedViewType } from "@follow/constants"
 import type { MediaModel } from "@follow/database/schemas/types"
 import { useRecyclingState } from "@shopify/flash-list"
 import type { ImageSource } from "expo-image"
-import type { Ref } from "react"
+import type { ReactNode, Ref } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { ScrollView, View } from "react-native"
 import Animated, {
@@ -11,8 +11,6 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated"
-
-import { EntryGridFooter } from "@/src/modules/entry-content/EntryGridFooter"
 
 import { Image } from "../image/Image"
 import { ImageContextMenu } from "../image/ImageContextMenu"
@@ -28,6 +26,8 @@ export const MediaCarousel = ({
   onPreview,
   aspectRatio,
   view,
+  entryActions,
+  footer,
 }: {
   ref?: Ref<View>
   entryId: string
@@ -35,6 +35,9 @@ export const MediaCarousel = ({
   onPreview?: (index: number, thumbnail: ImageSource | undefined) => void
   aspectRatio: number
   view: FeedViewType
+  /** Menu items of the entry, shown in the context menu of each image */
+  entryActions?: ReactNode
+  footer?: ReactNode
 }) => {
   const [containerWidth, setContainerWidth] = useState(0)
   const containerHeight = Math.floor(containerWidth / aspectRatio)
@@ -102,14 +105,14 @@ export const MediaCarousel = ({
                   className="relative"
                   style={{ width: containerWidth, height: containerHeight }}
                 >
-                  <ImageContextMenu entryId={entryId} imageUrl={imageUrl} view={view}>
+                  <ImageContextMenu imageUrl={imageUrl} entryActions={entryActions}>
                     {ImageItem}
                   </ImageContextMenu>
                 </View>
               )
             } else if (m.type === "video") {
               return (
-                <ImageContextMenu key={imageUrl} entryId={entryId} imageUrl={imageUrl} view={view}>
+                <ImageContextMenu key={imageUrl} imageUrl={imageUrl} entryActions={entryActions}>
                   <VideoPlayer
                     source={m.url}
                     height={containerHeight}
@@ -134,7 +137,7 @@ export const MediaCarousel = ({
           </View>
         )}
       </View>
-      <EntryGridFooter entryId={entryId} view={view!} />
+      {footer}
     </View>
   )
 }
