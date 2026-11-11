@@ -1,7 +1,6 @@
 import { Spring } from "@follow/components/constants/spring.js"
-import { convertLexicalToMarkdown } from "@follow/components/ui/lexical-rich-editor/utils.js"
 import { nextFrame, stopPropagation, thenable } from "@follow/utils"
-import type { LexicalEditor, SerializedEditorState } from "lexical"
+import type { EditorState } from "lexical"
 import { AnimatePresence, m } from "motion/react"
 import * as React from "react"
 import { useTranslation } from "react-i18next"
@@ -10,6 +9,7 @@ import { RelativeTime } from "~/components/ui/datetime"
 import { useEditingMessageId, useSetEditingMessageId } from "~/modules/ai-chat/atoms/session"
 import { useChatActions, useChatStatus } from "~/modules/ai-chat/store/hooks"
 import type { AIChatContextBlock, BizUIMessage } from "~/modules/ai-chat/store/types"
+import { createRichTextData } from "~/modules/ai-chat/store/user-message"
 
 import { AIDataBlockPart } from "./AIDataBlockPart"
 import { AIMessageIdContext } from "./AIMessageIdContext"
@@ -73,26 +73,20 @@ export const UserChatMessage: React.FC<UserChatMessageProps> = React.memo(({ mes
     })
   }, [messageId, setEditingMessageId, setMessageBubbleHeight])
 
+  // The edited message replaces this one and the rest of the chat, with the context it had
   const handleSaveEdit = React.useCallback(
-    (newState: SerializedEditorState, editor: LexicalEditor) => {
-      const messageContent = convertLexicalToMarkdown(editor)
-      const messages = chatActions.getMessages()
-      const messageIndex = messages.findIndex((msg) => msg.id === messageId)
-      if (messageIndex !== -1) {
-        const messagesToKeep = messages.slice(0, messageIndex)
-        const nextMessage = messages[messageIndex]!
-        chatActions.setMessages(messagesToKeep)
-
-        const richTextPart = nextMessage.parts.find((part) => part.type === "data-rich-text")
-        if (richTextPart) {
-          richTextPart.data = {
-            state: JSON.stringify(newState),
-            text: messageContent,
-          }
-        }
-
-        // Send the edited message
-        chatActions.sendMessage(nextMessage)
+    (editorState: EditorState) => {
+      const message = chatActions.getMessages().find((msg) => msg.id === messageId)
+      if (message) {
+        void chatActions.sendMessage({
+          ...message,
+          messageId,
+          parts: message.parts.map((part) =>
+            part.type === "data-rich-text"
+              ? { ...part, data: createRichTextData(editorState) }
+              : part,
+          ),
+        })
       }
       setEditingMessageId(null)
     },

@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next"
 import { ROUTE_FEED_IN_FOLDER } from "~/constants"
 import type { AIChatContextBlock, FileAttachment } from "~/modules/ai-chat/store/types"
 
-import { CircularProgress } from "../ui/UploadProgress"
 import {
   getBlockIcon,
   getBlockLabel,
@@ -39,7 +38,8 @@ export function useContextBlockPresentation(block: AIChatContextBlock): ContextB
         return <span className="text-text-tertiary">{t("chat.file.unknown")}</span>
       }
 
-      const { dataUrl, previewUrl, uploadStatus, uploadProgress, errorMessage, name } = attachment
+      const { dataUrl, previewUrl, uploadStatus, errorMessage, name } = attachment
+      const isUploading = uploadStatus === "processing" || uploadStatus === "uploading"
 
       if (isImage && (dataUrl || previewUrl)) {
         return (
@@ -47,15 +47,9 @@ export function useContextBlockPresentation(block: AIChatContextBlock): ContextB
             <div className="relative">
               <ImageThumbnail className="m-0.5 size-5 rounded-md" attachment={attachment} />
 
-              {uploadStatus === "uploading" && uploadProgress !== undefined && (
+              {isUploading && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-md bg-black/50">
-                  <CircularProgress
-                    progress={uploadProgress}
-                    size={16}
-                    strokeWidth={2}
-                    variant="default"
-                    className="text-white"
-                  />
+                  <i className="i-mgc-loading-3-cute-re size-3 animate-spin text-white" />
                 </div>
               )}
 
@@ -74,10 +68,6 @@ export function useContextBlockPresentation(block: AIChatContextBlock): ContextB
                 {name}
               </span>
 
-              {uploadStatus === "uploading" && uploadProgress !== undefined && (
-                <span className="text-xs text-text-tertiary">{Math.round(uploadProgress)}%</span>
-              )}
-
               {uploadStatus === "error" && (
                 <span className="text-xs text-red" title={errorMessage}>
                   {t("chat.file.upload_failed")}
@@ -94,16 +84,8 @@ export function useContextBlockPresentation(block: AIChatContextBlock): ContextB
             {name}
           </span>
 
-          {uploadStatus === "uploading" && uploadProgress !== undefined && (
-            <div className="flex items-center gap-1">
-              <CircularProgress
-                progress={uploadProgress}
-                size={14}
-                strokeWidth={2}
-                variant="default"
-              />
-              <span className="text-xs text-text-tertiary">{Math.round(uploadProgress)}%</span>
-            </div>
+          {isUploading && (
+            <i className="i-mgc-loading-3-cute-re size-3 animate-spin text-text-tertiary" />
           )}
 
           {uploadStatus === "error" && (

@@ -41,7 +41,11 @@ export async function processFile(
     let dataUrl: string
     let previewUrl: string | undefined
 
-    if (validation.fileInfo?.category === "image") {
+    if (file.type === "image/gif") {
+      // A canvas would keep only the first frame
+      dataUrl = await fileToDataUrl(file)
+      previewUrl = dataUrl
+    } else if (validation.fileInfo?.category === "image") {
       // Process image: compress and generate preview
       const processedImage = await processImage(file, {
         maxWidth: maxImageWidth,
@@ -169,75 +173,36 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export async function uploadFileAttachment(
   fileAttachment: FileAttachment,
-  onProgressUpdate?: (attachment: FileAttachment) => void,
+  onUpdate?: (attachment: FileAttachment) => void,
 ): Promise<FileAttachment> {
   try {
-    // Update status to uploading with 0% progress
-    let currentAttachment: FileAttachment = {
-      ...fileAttachment,
-      uploadStatus: "uploading" as const,
-      uploadProgress: 0,
-    }
-    onProgressUpdate?.(currentAttachment)
+    onUpdate?.({ ...fileAttachment, uploadStatus: "uploading" })
 
     const { dataUrl } = fileAttachment
     if (!dataUrl) {
       throw new Error("No data URL found for file attachment")
     }
     const blob = await fetch(dataUrl).then((r) => r.blob())
+    const response = await followApi.upload.uploadChatAttachment({ file: blob })
 
-    // TODO: Replace with real progress tracking when followApi supports it
-    // Currently followApi.upload.uploadChatAttachment doesn't provide progress callbacks
-    // Future implementation could use XMLHttpRequest or a custom fetch wrapper
-
-    // Simulate realistic progress updates during upload
-    // This mimics a realistic upload progression pattern
-    const progressInterval = setInterval(() => {
-      if (currentAttachment.uploadProgress! < 85) {
-        // Start faster, then slow down (realistic network behavior)
-        const currentProgress = currentAttachment.uploadProgress || 0
-        const increment =
-          currentProgress < 50
-            ? Math.random() * 20 + 5 // Fast initial progress
-            : Math.random() * 8 + 2 // Slower progress as it approaches completion
-
-        currentAttachment = {
-          ...currentAttachment,
-          uploadProgress: Math.min(85, currentProgress + increment),
-        }
-        onProgressUpdate?.(currentAttachment)
-      }
-    }, 150)
-
-    try {
-      // Actual upload
-      const response = await followApi.upload.uploadChatAttachment({ file: blob })
-      const serverUrl = response.data.url
-
-      // Update to 100% and completed status
-      const completedAttachment: FileAttachment = {
-        ...fileAttachment,
-        serverUrl,
-        uploadStatus: "completed",
-        uploadProgress: 100,
-        errorMessage: undefined,
-      }
-
-      // Show 100% briefly before final callback
-      onProgressUpdate?.(completedAttachment)
-
-      return completedAttachment
-    } finally {
-      // Clear progress interval
-      clearInterval(progressInterval)
+    // A resized image is uploaded in the format and size the canvas encoded
+    const completedAttachment: FileAttachment = {
+      ...fileAttachment,
+      type: blob.type,
+      size: blob.size,
+      serverUrl: response.data.url,
+      uploadStatus: "completed",
+      errorMessage: undefined,
     }
+    onUpdate?.(completedAttachment)
+
+    return completedAttachment
   } catch (error) {
     // Return attachment with error status. The message of an API error also carries the
     // request and its headers, which are not for the user.
     const errorAttachment: FileAttachment = {
       ...fileAttachment,
       uploadStatus: "error",
-      uploadProgress: undefined,
       errorMessage:
         error instanceof Error
           ? getFetchErrorMessage(error)
@@ -251,7 +216,7 @@ export async function uploadFileAttachment(
 export async function processAndUploadFile(
   file: File,
   options: ProcessFileOptions,
-  onProgressUpdate?: (attachment: FileAttachment) => void,
+  onUpdate?: (attachment: FileAttachment) => void,
 ): Promise<ProcessFileResult> {
   // First process the file locally
   const localResult = await processFile(file, options)
@@ -261,10 +226,7 @@ export async function processAndUploadFile(
   }
 
   // Then upload to server
-  const uploadedAttachment = await uploadFileAttachment(
-    localResult.fileAttachment,
-    onProgressUpdate,
-  )
+  const uploadedAttachment = await uploadFileAttachment(localResult.fileAttachment, onUpdate)
 
   return {
     success: uploadedAttachment.uploadStatus === "completed",

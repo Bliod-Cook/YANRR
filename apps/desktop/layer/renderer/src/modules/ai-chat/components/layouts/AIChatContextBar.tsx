@@ -1,17 +1,16 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@follow/components/ui/popover/index.jsx"
 import { cn } from "@follow/utils/utils"
-import { memo, useCallback, useEffect, useMemo, useRef } from "react"
+import { memo, useCallback, useMemo, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useGeneralSettingKey } from "~/atoms/settings/general"
-import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { useDisplayBlocks } from "~/modules/ai-chat/hooks/useDisplayBlocks"
 import { useFileUploadWithDefaults } from "~/modules/ai-chat/hooks/useFileUpload"
+import { useRouteContext } from "~/modules/ai-chat/hooks/useRouteContext"
 import { useAIChatStore } from "~/modules/ai-chat/store/AIChatContext"
+import type { AIChatContextBlock } from "~/modules/ai-chat/store/types"
 import { SUPPORTED_MIME_ACCEPT } from "~/modules/ai-chat/utils/file-validation"
 
 import { useBlockActions } from "../../store/hooks"
-import { BlockSliceAction } from "../../store/slices/block.slice"
 import { CombinedContextBlock, ContextBlock } from "../context-bar/blocks"
 import { MentionButton } from "../context-bar/MentionButton"
 
@@ -20,7 +19,8 @@ const MAX_VISIBLE_BLOCKS = 4
 
 export const AIChatContextBar: Component = memo(({ className }) => {
   const { t } = useTranslation("ai")
-  const blocks = useAIChatStore()((s) => s.blocks)
+  const attachmentBlocks = useAIChatStore()((s) => s.blocks)
+  const excludedContextKey = useAIChatStore()((s) => s.excludedContextKey)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { handleFileInputChange } = useFileUploadWithDefaults()
 
@@ -28,64 +28,26 @@ export const AIChatContextBar: Component = memo(({ className }) => {
     fileInputRef.current?.click()
   }, [])
 
-  const { addOrUpdateBlock, removeBlock } = useBlockActions()
+  const { setContextExcluded, removeFileAttachment } = useBlockActions()
+  const routeContext = useRouteContext()
+  const isRouteContextExcluded = !!routeContext && routeContext.key === excludedContextKey
 
-  const view = useRouteParamsSelector((i) => {
-    if (!i.isPendingEntry) return
-    return i.view
-  })
-  const feedId = useRouteParamsSelector((i) => {
-    if (i.isAllFeeds || !i.isPendingEntry) return
-    return i.feedId
-  })
-  useEffect(() => {
-    if (typeof view === "number") {
-      addOrUpdateBlock({
-        id: BlockSliceAction.SPECIAL_TYPES.mainView,
-        type: "mainView",
-        value: `${view}`,
-      })
-    } else {
-      removeBlock(BlockSliceAction.SPECIAL_TYPES.mainView)
-    }
+  const blocks = useMemo<AIChatContextBlock[]>(() => {
+    const contextBlocks =
+      routeContext?.blocks.map((block) =>
+        isRouteContextExcluded ? { ...block, disabled: true } : block,
+      ) ?? []
+    return [...contextBlocks, ...attachmentBlocks]
+  }, [attachmentBlocks, isRouteContextExcluded, routeContext])
 
-    return () => {
-      removeBlock(BlockSliceAction.SPECIAL_TYPES.mainView)
-    }
-  }, [addOrUpdateBlock, view, removeBlock])
-
-  useEffect(() => {
-    if (feedId) {
-      addOrUpdateBlock({
-        id: BlockSliceAction.SPECIAL_TYPES.mainFeed,
-        type: "mainFeed",
-        value: feedId,
-      })
-    } else {
-      removeBlock(BlockSliceAction.SPECIAL_TYPES.mainFeed)
-    }
-    return () => {
-      removeBlock(BlockSliceAction.SPECIAL_TYPES.mainFeed)
-    }
-  }, [addOrUpdateBlock, feedId, removeBlock])
-
-  // Add unreadOnly context block only when unreadOnly is enabled
-  const unreadOnly = useGeneralSettingKey("unreadOnly")
-  useEffect(() => {
-    if (unreadOnly) {
-      addOrUpdateBlock({
-        id: BlockSliceAction.SPECIAL_TYPES.unreadOnly,
-        type: "unreadOnly",
-        value: "true",
-      })
-    } else {
-      removeBlock(BlockSliceAction.SPECIAL_TYPES.unreadOnly)
-    }
-
-    return () => {
-      removeBlock(BlockSliceAction.SPECIAL_TYPES.unreadOnly)
-    }
-  }, [addOrUpdateBlock, unreadOnly, removeBlock])
+  const excludeRouteContext = useCallback(
+    () => routeContext && setContextExcluded(routeContext.key, true),
+    [routeContext, setContextExcluded],
+  )
+  const includeRouteContext = useCallback(
+    () => routeContext && setContextExcluded(routeContext.key, false),
+    [routeContext, setContextExcluded],
+  )
 
   const displayBlocks = useDisplayBlocks(blocks)
 
@@ -100,20 +62,39 @@ export const AIChatContextBar: Component = memo(({ className }) => {
     }
   }, [displayBlocks])
 
-  const renderBlock = useCallback((item: (typeof displayBlocks)[number]) => {
-    if (item.kind === "combined") {
-      return (
-        <CombinedContextBlock
-          key={`combined-${item.viewBlock?.id}-${item.feedBlock?.id}-${item.unreadOnlyBlock?.id}`}
-          viewBlock={item.viewBlock}
-          feedBlock={item.feedBlock}
-          unreadOnlyBlock={item.unreadOnlyBlock}
+  const renderBlock = useCallback(
+    (item: (typeof displayBlocks)[number]) => {
+      if (item.kind === "combined") {
+        return (
+          <CombinedContextBlock
+            key={`combined-${item.viewBlock?.id}-${item.feedBlock?.id}-${item.unreadOnlyBlock?.id}`}
+            viewBlock={item.viewBlock}
+            feedBlock={item.feedBlock}
+            unreadOnlyBlock={item.unreadOnlyBlock}
+            onRemove={excludeRouteContext}
+            onRestore={includeRouteContext}
+          />
+        )
+      }
+
+      const { block } = item
+      return block.type === "fileAttachment" ? (
+        <ContextBlock
+          key={block.id}
+          block={block}
+          onRemove={() => removeFileAttachment(block.attachment.id)}
+        />
+      ) : (
+        <ContextBlock
+          key={block.id}
+          block={block}
+          onRemove={excludeRouteContext}
+          onRestore={includeRouteContext}
         />
       )
-    }
-
-    return <ContextBlock key={item.block.id} block={item.block} />
-  }, [])
+    },
+    [excludeRouteContext, includeRouteContext, removeFileAttachment],
+  )
 
   return (
     <div className={cn("flex items-center gap-2 px-4 py-3", className)}>

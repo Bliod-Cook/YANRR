@@ -11,8 +11,6 @@ export interface FileAttachment {
   uploadStatus?: "processing" | "uploading" | "completed" | "error"
   serverUrl?: string
   errorMessage?: string
-  /** Upload progress percentage (0-100) */
-  uploadProgress?: number
 }
 
 interface BaseContextBlock {

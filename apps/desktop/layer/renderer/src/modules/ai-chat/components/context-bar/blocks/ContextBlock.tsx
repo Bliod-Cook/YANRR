@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next"
 
 import { ROUTE_FEED_IN_FOLDER } from "~/constants"
 import { useContextBlockPresentation } from "~/modules/ai-chat/components/message/useContextBlockPresentation"
-import { useChatBlockActions } from "~/modules/ai-chat/store/hooks"
 import type { AbstractValueContextBlock, AIChatContextBlock } from "~/modules/ai-chat/store/types"
 
 import { FeedTitle } from "./TitleComponents"
@@ -80,14 +79,21 @@ type MainViewBlock = AbstractValueContextBlock<"mainView">
 type MainFeedBlock = AbstractValueContextBlock<"mainFeed">
 type UnreadOnlyBlock = AbstractValueContextBlock<"unreadOnly">
 
-export const CombinedContextBlock: FC<{
-  viewBlock?: MainViewBlock
-  feedBlock?: MainFeedBlock
-  unreadOnlyBlock?: UnreadOnlyBlock
-  readOnly?: boolean
-}> = memo(({ viewBlock, feedBlock, unreadOnlyBlock, readOnly = false }) => {
+/** Without `onRemove`, a block is only shown, as in a sent message */
+interface BlockActionProps {
+  onRemove?: () => void
+  /** Takes a block the user removed back into the context */
+  onRestore?: () => void
+}
+
+export const CombinedContextBlock: FC<
+  {
+    viewBlock?: MainViewBlock
+    feedBlock?: MainFeedBlock
+    unreadOnlyBlock?: UnreadOnlyBlock
+  } & BlockActionProps
+> = memo(({ viewBlock, feedBlock, unreadOnlyBlock, onRemove, onRestore }) => {
   const { t } = useTranslation("ai")
-  const blockActions = useChatBlockActions()
 
   const viewIcon = viewBlock && getView(Number(viewBlock.value))?.icon.props.className
   const feedIcon = feedBlock && "i-mgc-rss-cute-fi"
@@ -132,17 +138,6 @@ export const CombinedContextBlock: FC<{
     return categories.every((category) => category === firstCategory) ? firstCategory : null
   }, [feedSubscriptions, normalizedFeedIds])
 
-  const handleRemove = () => {
-    viewBlock && blockActions.toggleBlockDisabled(viewBlock.id, true)
-    feedBlock && blockActions.toggleBlockDisabled(feedBlock.id, true)
-    unreadOnlyBlock && blockActions.removeBlock(unreadOnlyBlock.id)
-  }
-
-  const handleEnable = () => {
-    viewBlock && blockActions.toggleBlockDisabled(viewBlock.id, false)
-    feedBlock && blockActions.toggleBlockDisabled(feedBlock.id, false)
-  }
-
   // Determine what to display
   const displayContent = feedBlock ? (
     <span className="flex items-center gap-1">
@@ -178,19 +173,17 @@ export const CombinedContextBlock: FC<{
     <BlockContainer
       icon={viewIcon || feedIcon}
       disabled={viewBlock?.disabled || feedBlock?.disabled || unreadOnlyBlock?.disabled}
-      onRemove={!readOnly ? handleRemove : undefined}
-      onDisableClick={!readOnly ? handleEnable : undefined}
+      onRemove={onRemove}
+      onDisableClick={onRestore}
       content={displayContent}
-      readOnly={readOnly}
+      readOnly={!onRemove}
     />
   )
 })
 CombinedContextBlock.displayName = "CombinedContextBlock"
 
-export const ContextBlock: FC<{ block: AIChatContextBlock; readOnly?: boolean }> = memo(
-  ({ block, readOnly }) => {
-    const blockActions = useChatBlockActions()
-
+export const ContextBlock: FC<{ block: AIChatContextBlock } & BlockActionProps> = memo(
+  ({ block, onRemove, onRestore }) => {
     const { icon, label, displayContent } = useContextBlockPresentation(block)
 
     return (
@@ -198,20 +191,10 @@ export const ContextBlock: FC<{ block: AIChatContextBlock; readOnly?: boolean }>
         icon={icon}
         label={label}
         disabled={block.disabled}
-        onRemove={() => {
-          if (block.type === "mainEntry") {
-            blockActions.toggleBlockDisabled(block.id, true)
-          } else {
-            blockActions.removeBlock(block.id)
-          }
-        }}
-        onDisableClick={() => {
-          if (block.type === "mainEntry") {
-            blockActions.toggleBlockDisabled(block.id, false)
-          }
-        }}
+        onRemove={onRemove}
+        onDisableClick={onRestore}
         content={displayContent}
-        readOnly={readOnly}
+        readOnly={!onRemove}
       />
     )
   },

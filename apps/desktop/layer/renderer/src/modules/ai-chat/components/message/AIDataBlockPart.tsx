@@ -30,12 +30,11 @@ export const AIDataBlockPart: React.FC<AIDataBlockPartProps> = React.memo(({ blo
               viewBlock={item.viewBlock}
               feedBlock={item.feedBlock}
               unreadOnlyBlock={item.unreadOnlyBlock}
-              readOnly
             />
           )
         }
 
-        return <ContextBlock key={item.block.id} block={item.block} readOnly />
+        return <ContextBlock key={item.block.id} block={item.block} />
       })}
     </div>
   )

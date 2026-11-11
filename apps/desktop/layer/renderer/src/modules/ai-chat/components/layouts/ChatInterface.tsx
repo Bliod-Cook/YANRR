@@ -1,15 +1,8 @@
 import { useFocusable } from "@follow/components/common/Focusable/hooks.js"
 import type { LexicalRichEditorRef } from "@follow/components/ui/lexical-rich-editor/types.js"
-import {
-  convertLexicalToMarkdown,
-  getEditorStateJSONString,
-} from "@follow/components/ui/lexical-rich-editor/utils.js"
-import { getCategoryFeedIds } from "@follow/store/subscription/getter"
 import { usePrefetchSummary } from "@follow/store/summary/hooks"
-import { detectIsEditableElement, nextFrame } from "@follow/utils"
+import { checkIsEditableElement, nextFrame } from "@follow/utils"
 import type { EditorState } from "lexical"
-import { createEditor } from "lexical"
-import { nanoid } from "nanoid"
 import type { RefObject } from "react"
 import { use, useEffect, useMemo, useRef, useState } from "react"
 import { useEventCallback, useEventListener } from "usehooks-ts"
@@ -17,8 +10,6 @@ import { useEventCallback, useEventListener } from "usehooks-ts"
 import { useAISettingKey } from "~/atoms/settings/ai"
 import { useActionLanguage } from "~/atoms/settings/general"
 import { ErrorBoundary } from "~/components/common/ErrorBoundary"
-import { ROUTE_FEED_IN_FOLDER } from "~/constants"
-import { getRouteParams } from "~/hooks/biz/useRouteParams"
 import { useRequireLogin } from "~/hooks/common/useRequireLogin"
 import { useAutoScroll } from "~/modules/ai-chat/hooks/useAutoScroll"
 import { useMainEntryId } from "~/modules/ai-chat/hooks/useMainEntryId"
@@ -32,15 +23,10 @@ import {
   useLastUserMessage,
 } from "~/modules/ai-chat/store/hooks"
 
-import { LexicalAIEditorNodes } from "../../editor"
 import { useAttachScrollBeyond } from "../../hooks/useAttachScrollBeyond"
 import { AIPanelRefsContext } from "../../store/AIChatContext"
-import type { AIChatContextBlock, BizUIMessage, SendingUIMessage } from "../../store/types"
-import {
-  extractShortcutIdFromMessageParts,
-  extractShortcutIdFromSerializedState,
-  prefixMessageIdWithShortcut,
-} from "../../utils/shortcut"
+import type { BizUIMessage } from "../../store/types"
+import { createUserMessage } from "../../store/user-message"
 import { GlobalFileDropZone } from "../file/GlobalFileDropZone"
 import { AIErrorFallback } from "./AIErrorFallback"
 import { ChatBottomPanel } from "./ChatBottomPanel"
@@ -99,85 +85,14 @@ const ChatInterfaceContent = ({ centerInputOnEmpty, visualOffsetY }: ChatInterfa
 
   const blockActions = useBlockActions()
 
-  const staticEditor = useMemo(() => {
-    return createEditor({
-      nodes: LexicalAIEditorNodes,
-    })
-  }, [])
-
   const handleSendMessage = useEventCallback((message: string | EditorState) => {
     if (!ensureLogin()) {
       return
     }
     resetScrollState()
 
-    const blocks = [] as AIChatContextBlock[]
-
-    for (const block of blockActions.getBlocks()) {
-      if (block.type === "fileAttachment") {
-        // A file that failed or has not finished uploading has nothing for the model to read
-        if (!block.attachment.serverUrl) continue
-        blocks.push({
-          ...block,
-          attachment: {
-            id: block.attachment.id,
-            name: block.attachment.name,
-            type: block.attachment.type,
-            size: block.attachment.size,
-            serverUrl: block.attachment.serverUrl,
-          },
-        })
-      } else if (block.type === "mainFeed" && block.value.startsWith(ROUTE_FEED_IN_FOLDER)) {
-        const categoryName = block.value.slice(ROUTE_FEED_IN_FOLDER.length)
-        const { view } = getRouteParams()
-        const feedIds = getCategoryFeedIds(categoryName, view)
-        blocks.push({
-          ...block,
-          value: feedIds.join(","),
-        })
-      } else {
-        blocks.push(block)
-      }
-    }
-
-    const parts: BizUIMessage["parts"] = [
-      {
-        type: "data-block",
-        data: blocks.filter((block) => !block.disabled),
-      },
-    ]
-
-    let shortcutIdFromMessage: string | undefined
-
-    if (typeof message === "string") {
-      parts.push({
-        type: "data-rich-text",
-        data: {
-          state: getEditorStateJSONString(message),
-          text: message,
-        },
-      })
-    } else {
-      staticEditor.setEditorState(message)
-      const serializedState = message.toJSON()
-      shortcutIdFromMessage = extractShortcutIdFromSerializedState(serializedState)
-      parts.push({
-        type: "data-rich-text",
-        data: {
-          state: JSON.stringify(serializedState),
-          text: convertLexicalToMarkdown(staticEditor),
-        },
-      })
-    }
-
     captureContentHeightBeforeSend()
-    const messageId = prefixMessageIdWithShortcut(nanoid(), shortcutIdFromMessage)
-    const sendMessage: SendingUIMessage = {
-      parts,
-      role: "user",
-      id: messageId,
-    }
-    chatActions.sendMessage(sendMessage)
+    void chatActions.sendMessage(createUserMessage(message, blockActions.takeMessageContext()))
 
     // Clear draft message after sending
     clearDraft()
@@ -188,6 +103,7 @@ const ChatInterfaceContent = ({ centerInputOnEmpty, visualOffsetY }: ChatInterfa
     })
   })
 
+  // An interrupted message is asked again as it was sent
   const handleRetryLastMessage = useEventCallback(() => {
     if (!ensureLogin()) {
       return
@@ -197,20 +113,9 @@ const ChatInterfaceContent = ({ centerInputOnEmpty, visualOffsetY }: ChatInterfa
     }
 
     resetScrollState()
-
-    const clonedMessage = structuredClone(lastUserMessage)
-    const { createdAt: _createdAt, id: _originalId, ...rest } = clonedMessage
-    const retryMessage: SendingUIMessage = {
-      ...(rest as Omit<SendingUIMessage, "id">),
-      id: nanoid(),
-    }
-    const retryShortcutId = extractShortcutIdFromMessageParts(retryMessage.parts)
-    retryMessage.id = prefixMessageIdWithShortcut(retryMessage.id, retryShortcutId)
-
     captureContentHeightBeforeSend()
 
-    chatActions.popMessage()
-    void chatActions.sendMessage(retryMessage)
+    void chatActions.regenerate({ messageId: lastUserMessage.id })
 
     nextFrame(() => {
       handleScrollPositioning()
@@ -291,7 +196,7 @@ const useChatInputFocusHandler = (
     }
     const currentActiveElement = document.activeElement
 
-    if (detectIsEditableElement(currentActiveElement as HTMLElement)) {
+    if (checkIsEditableElement(currentActiveElement as HTMLElement)) {
       return
     }
 

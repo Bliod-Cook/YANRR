@@ -3,7 +3,7 @@ import type { LexicalRichEditorRef } from "@follow/components/ui/lexical-rich-ed
 import { LexicalRichEditor } from "@follow/components/ui/lexical-rich-editor/index.js"
 import { ScrollArea } from "@follow/components/ui/scroll-area/ScrollArea.js"
 import { cn, nextFrame } from "@follow/utils"
-import type { EditorState, LexicalEditor, SerializedEditorState } from "lexical"
+import type { EditorState, LexicalEditor } from "lexical"
 import { $getRoot } from "lexical"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Trans, useTranslation } from "react-i18next"
@@ -18,7 +18,7 @@ import { isEditorStateUnchanged } from "../../utils/editor-state"
 interface EditableMessageProps {
   messageId: string
   parts: BizUIMessage["parts"]
-  onSave: (content: SerializedEditorState, editor: LexicalEditor) => void
+  onSave: (editorState: EditorState) => void
   onCancel: () => void
   className?: string
   initialHeight?: number
@@ -89,7 +89,7 @@ export const EditableMessage = ({
       handleCancel()
       return
     }
-    onSave(currentEditor.getEditorState().toJSON(), currentEditor)
+    onSave(currentEditor.getEditorState())
   }, [currentEditor, handleCancel, initialEditorState, onSave])
 
   const handleKeyDown = useCallback(

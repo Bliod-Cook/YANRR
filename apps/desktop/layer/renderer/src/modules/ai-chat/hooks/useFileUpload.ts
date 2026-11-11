@@ -76,7 +76,6 @@ export function useFileUpload(
         size: file.size,
         dataUrl: "", // Will be filled during processing
         uploadStatus: "processing",
-        uploadProgress: 0,
       }
 
       // Add the initial block immediately for real-time UI feedback
@@ -124,7 +123,6 @@ export function useFileUpload(
             ...initialFileAttachment,
             uploadStatus: "error",
             errorMessage: result.error || t("chat.file.upload_failed"),
-            uploadProgress: undefined,
           }
 
           blockActions.updateFileAttachment(initialFileAttachment.id, errorAttachment)
@@ -153,7 +151,6 @@ export function useFileUpload(
           ...initialFileAttachment,
           uploadStatus: "error",
           errorMessage,
-          uploadProgress: undefined,
         }
 
         blockActions.updateFileAttachment(initialFileAttachment.id, errorAttachment)

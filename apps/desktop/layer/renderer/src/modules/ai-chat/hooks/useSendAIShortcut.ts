@@ -1,26 +1,20 @@
-import { convertLexicalToMarkdown } from "@follow/components/ui/lexical-rich-editor/utils.js"
 import { DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID } from "@follow/shared/settings/defaults"
 import type { AIShortcut } from "@follow/shared/settings/interface"
-import { getCategoryFeedIds } from "@follow/store/subscription/getter"
 import type { EditorState } from "lexical"
 import { $createParagraphNode, $getRoot, createEditor } from "lexical"
-import { nanoid } from "nanoid"
-import { use, useCallback, useMemo } from "react"
+import { use, useCallback } from "react"
 
 import {
   getShortcutEffectivePrompt,
   setAIPanelVisibility,
   useAISettingKey,
 } from "~/atoms/settings/ai"
-import { ROUTE_FEED_IN_FOLDER } from "~/constants"
-import { getRouteParams } from "~/hooks/biz/useRouteParams"
 import { useRequireLogin } from "~/hooks/common/useRequireLogin"
 import type { ShortcutData } from "~/modules/ai-chat/editor"
 import { LexicalAIEditorNodes, ShortcutNode } from "~/modules/ai-chat/editor"
 import { AIPanelRefsContext } from "~/modules/ai-chat/store/AIChatContext"
 import { useBlockActions, useChatActions } from "~/modules/ai-chat/store/hooks"
-import type { AIChatContextBlock, SendingUIMessage } from "~/modules/ai-chat/store/types"
-import { prefixMessageIdWithShortcut } from "~/modules/ai-chat/utils/shortcut"
+import { createUserMessage } from "~/modules/ai-chat/store/user-message"
 
 type ShortcutLike = ShortcutData | AIShortcut
 
@@ -47,12 +41,6 @@ export const useSendAIShortcut = () => {
   const blockActions = useBlockActions()
   const aiPanelRefs = use(AIPanelRefsContext)
   const { ensureLogin } = useRequireLogin()
-
-  const staticEditor = useMemo(() => {
-    return createEditor({
-      nodes: LexicalAIEditorNodes,
-    })
-  }, [])
 
   const createShortcutEditorState = useCallback((shortcutData: ShortcutData): EditorState => {
     const tempEditor = createEditor({
@@ -112,81 +100,20 @@ export const useSendAIShortcut = () => {
     [shortcuts],
   )
 
-  const buildContextBlocks = useCallback((): AIChatContextBlock[] => {
-    const blocks: AIChatContextBlock[] = []
-
-    for (const block of blockActions.getBlocks()) {
-      if (block.type === "fileAttachment") {
-        // A file that failed or has not finished uploading has nothing for the model to read
-        if (!block.attachment.serverUrl) continue
-        blocks.push({
-          ...block,
-          attachment: {
-            id: block.attachment.id,
-            name: block.attachment.name,
-            type: block.attachment.type,
-            size: block.attachment.size,
-            serverUrl: block.attachment.serverUrl,
-          },
-        })
-      } else if (block.type === "mainFeed" && block.value.startsWith(ROUTE_FEED_IN_FOLDER)) {
-        const categoryName = block.value.slice(ROUTE_FEED_IN_FOLDER.length)
-        const { view } = getRouteParams()
-        const feedIds = getCategoryFeedIds(categoryName, view)
-        blocks.push({
-          ...block,
-          value: feedIds.join(","),
-        })
-      } else {
-        blocks.push(block)
-      }
-    }
-
-    return blocks.filter((block) => !block.disabled)
-  }, [blockActions])
-
   const sendShortcutMessage = useCallback(
-    (editorState: EditorState, shortcutId?: string) => {
+    (editorState: EditorState, shortcutId: string) => {
       if (!ensureLogin()) {
         return
       }
-      const isTimelineSummaryShortcut = shortcutId === DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID
-      const contextBlocks = buildContextBlocks()
-
-      staticEditor.setEditorState(editorState)
-
-      const parts: SendingUIMessage["parts"] = [
-        {
-          type: "data-block",
-          data: contextBlocks,
-        },
-        {
-          type: "data-rich-text",
-          data: {
-            state: JSON.stringify(editorState.toJSON()),
-            text: convertLexicalToMarkdown(staticEditor),
-          },
-        },
-      ]
-
-      const message: SendingUIMessage = {
-        parts,
-        role: "user",
-        id: prefixMessageIdWithShortcut(nanoid(), shortcutId),
-      }
 
       void chatActions.sendMessage(
-        message,
-        isTimelineSummaryShortcut
-          ? {
-              body: {
-                scene: "timeline-summary",
-              },
-            }
+        createUserMessage(editorState, blockActions.takeMessageContext()),
+        shortcutId === DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID
+          ? { body: { scene: "timeline-summary" } }
           : undefined,
       )
     },
-    [buildContextBlocks, chatActions, ensureLogin, staticEditor],
+    [blockActions, chatActions, ensureLogin],
   )
 
   const prefillInput = useCallback(

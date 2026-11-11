@@ -59,7 +59,7 @@ const ChatHeaderLayout = ({
     }
 
     chatActions.newChat()
-    blockActions.clearBlocks({ keepSpecialTypes: true })
+    blockActions.clearFileAttachments()
   }, [chatActions, blockActions])
 
   const handleTogglePanelStyle = useCallback(() => {
