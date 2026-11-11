@@ -25,31 +25,35 @@ export const CSSEditor: Component<{
 
   const isDark = useIsDark()
 
+  // Fill the editor once; later theme changes must keep what the user typed.
   useLayoutEffect(() => {
-    let dispose: () => void
-    if (ref.current) {
-      ref.current.focus()
-      // Move cursor to the end of the content
-      const selection = window.getSelection()
-      const range = document.createRange()
-      range.selectNodeContents(ref.current)
-      range.collapse(false)
-      selection?.removeAllRanges()
-      selection?.addRange(range)
+    const element = ref.current
+    if (!element) return
+    element.textContent = defaultValue ?? ""
+    element.focus()
+    // Move cursor to the end of the content
+    const selection = window.getSelection()
+    const range = document.createRange()
+    range.selectNodeContents(element)
+    range.collapse(false)
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-      ref.current.textContent = defaultValue ?? ""
-      const { dispose: disposeShiki } = createPlainShiki(shiki).mount(ref.current, {
-        lang: "css",
-        themes: {
-          light: "github-light",
-          dark: "github-dark",
-        },
-        defaultTheme: isDark ? "dark" : "light",
-      })
-
-      dispose = disposeShiki
+  useLayoutEffect(() => {
+    if (!ref.current) return
+    const { dispose } = createPlainShiki(shiki).mount(ref.current, {
+      lang: "css",
+      themes: {
+        light: "github-light",
+        dark: "github-dark",
+      },
+      defaultTheme: isDark ? "dark" : "light",
+    })
+    return () => {
+      dispose()
     }
-    return () => dispose?.()
   }, [isDark])
   const props = useInputComposition<HTMLInputElement>({
     onKeyDown: (e) => {
@@ -61,7 +65,7 @@ export const CSSEditor: Component<{
         const selection = window.getSelection()
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0)
-          const tabNode = document.createTextNode("\u00A0\u00A0\u00A0\u00A0") // Using four non-breaking spaces as a tab
+          const tabNode = document.createTextNode("  ")
           range.insertNode(tabNode)
           range.setStartAfter(tabNode)
           range.setEndAfter(tabNode)
