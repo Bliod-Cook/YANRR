@@ -11,20 +11,14 @@ export const discover = {
     categories?: string
     lang?: string
   }) =>
-    defineQuery(
-      ["discover", "rsshub", "category", category, categories, lang],
-      async () => {
-        const res = await followClient.api.discover.rsshub({
-          category,
-          categories,
-          ...(lang !== "all" && { lang }),
-        })
-        return res.data
-      },
-      {
-        rootKey: ["discover", "rsshub", "category"],
-      },
-    ),
+    defineQuery(["discover", "rsshub", "category", category, categories, lang], async () => {
+      const res = await followClient.api.discover.rsshub({
+        category,
+        categories,
+        ...(lang !== "all" && { lang }),
+      })
+      return res.data
+    }),
   rsshubNamespace: ({ namespace }: { namespace: string }) =>
     defineQuery(["discover", "rsshub", "namespace", namespace], async () => {
       const res = await followClient.api.discover.rsshub({

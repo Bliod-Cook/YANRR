@@ -11,16 +11,11 @@ type FeedQueryParams = { id?: string; url?: string }
 
 export const feed = {
   byId: ({ id, url }: FeedQueryParams) =>
-    defineQuery(
-      ["feed", id, url],
-      async () =>
-        feedSyncServices.fetchFeed({
-          id,
-          url,
-        }),
-      {
-        rootKey: ["feed"],
-      },
+    defineQuery(["feed", id, url], async () =>
+      feedSyncServices.fetchFeed({
+        id,
+        url,
+      }),
     ),
 }
 

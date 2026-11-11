@@ -5,10 +5,7 @@ import { followClient } from "~/lib/api-client"
 import { defineQuery } from "~/lib/defineQuery"
 
 export const messaging = {
-  list: () =>
-    defineQuery(["messaging"], () => followClient.api.messaging.getTokens(), {
-      rootKey: ["messaging"],
-    }),
+  list: () => defineQuery(["messaging"], () => followClient.api.messaging.getTokens()),
 }
 
 export const useMessaging = () => useAuthQuery(messaging.list())
