@@ -3,6 +3,7 @@ import { createRequire } from "node:module"
 import { app, nativeTheme } from "electron"
 import { IpcMethod, IpcService } from "electron-ipc-decorator"
 
+import { START_IN_TRAY_ARGS } from "~/constants/app"
 import { WindowManager } from "~/manager/window"
 
 import { setProxyConfig, updateProxy } from "../../lib/proxy"
@@ -10,12 +11,6 @@ import { store } from "../../lib/store"
 import { getTrayConfig, setTrayConfig } from "../../lib/tray"
 
 const require = createRequire(import.meta.url)
-
-interface SetLoginItemSettingsInput {
-  openAtLogin: boolean
-  path?: string
-  args?: string[]
-}
 
 export class SettingService extends IpcService {
   static override readonly groupName = "setting"
@@ -25,9 +20,15 @@ export class SettingService extends IpcService {
     return app.getLoginItemSettings()
   }
 
+  /** Whether the app, and nothing else a page could name, starts when the user logs in */
   @IpcMethod()
-  setLoginItemSettings(input: SetLoginItemSettingsInput): void {
-    app.setLoginItemSettings(input)
+  setOpenAtLogin(enabled: boolean): void {
+    app.setLoginItemSettings({
+      openAtLogin: enabled,
+      // Start hidden in the tray when launched at login and the tray icon is enabled. Only
+      // Windows passes the arguments, a login launch on macOS is detected in `AppService`
+      args: [START_IN_TRAY_ARGS],
+    })
   }
 
   @IpcMethod()

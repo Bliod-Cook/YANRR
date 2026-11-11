@@ -1,6 +1,6 @@
 import { PushReceiver } from "@eneris/push-receiver"
 import { callWindowExpose } from "@follow/shared/bridge"
-import { APP_ID, APP_PROTOCOL, DEV } from "@follow/shared/constants"
+import { APP_ID, APP_PROTOCOL } from "@follow/shared/constants"
 import { app, nativeTheme, Notification, shell } from "electron"
 import contextMenu from "electron-context-menu"
 import path from "pathe"
@@ -169,7 +169,7 @@ class AppManagerStatic {
       showCopyLink: true,
       showCopyImageAddress: true,
       showCopyImage: true,
-      showInspectElement: DEV,
+      showInspectElement: import.meta.env.DEV,
       showSelectAll: true,
       showCopyVideoAddress: true,
       showSaveVideoAs: true,

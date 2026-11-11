@@ -4,6 +4,7 @@ import type { BrowserWindow, ContextMenuParams, IpcMainEvent, WebContents } from
 import { ipcMain, Menu, WebContentsView } from "electron"
 import path from "pathe"
 
+import { FindBarChannel } from "~/ipc/channels"
 import type { FindDirection, FindRequest, FindResult } from "~/lib/find-in-page-session"
 import { FindInPageSession } from "~/lib/find-in-page-session"
 import { t } from "~/lib/i18n"
@@ -13,7 +14,6 @@ import {
   FIND_BAR_HEIGHT,
   FIND_BAR_SHADOW_MARGIN,
   FIND_BAR_WIDTH,
-  FindBarChannel,
   findBarPage,
 } from "./find-bar-page"
 

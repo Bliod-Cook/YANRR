@@ -9,17 +9,14 @@ export type ElectronMenuItem = Omit<MenuItemConstructorOptions, "click" | "subme
 
 export const showElectronContextMenu = async (items: Array<ElectronMenuItem>) => {
   if (!window.electron) throw new Error("electron is not available")
-  const dispose = window.electron.ipcRenderer.on(
-    "menu-click",
-    (_, { path }: { path: number[] }) => {
-      const targetMenu = getMenuItemByPath(items, path)
-      if (targetMenu && typeof targetMenu.click === "function") {
-        targetMenu.click()
-      } else {
-        console.warn(`Menu item not found or click handler missing for path: ${path}`)
-      }
-    },
-  )
+  const dispose = window.electron.on("menu-click", ({ path }: { path: number[] }) => {
+    const targetMenu = getMenuItemByPath(items, path)
+    if (targetMenu && typeof targetMenu.click === "function") {
+      targetMenu.click()
+    } else {
+      console.warn(`Menu item not found or click handler missing for path: ${path}`)
+    }
+  })
   const itemsWithoutClick = removeClick(items)
   await ipcServices?.menu.showContextMenu({ items: itemsWithoutClick })
   dispose()

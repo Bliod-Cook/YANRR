@@ -94,7 +94,6 @@ vi.mock("@follow/shared/bridge", () => ({
 vi.mock("@follow/shared/constants", () => ({
   APP_ID: "io.github.bliodcook.yanrr",
   APP_PROTOCOL: "yanrr",
-  DEV: false,
 }))
 
 vi.stubEnv("VITE_FIREBASE_CONFIG", JSON.stringify(mocks.firebaseConfig))

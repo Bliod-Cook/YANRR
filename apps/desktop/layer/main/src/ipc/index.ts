@@ -1,6 +1,7 @@
 import type { MergeIpcService } from "electron-ipc-decorator"
 import { createServices } from "electron-ipc-decorator"
 
+import { registerForAppPageOnly } from "./app-page-only"
 import { AppService } from "./services/app"
 import { AuthService } from "./services/auth"
 import { DebugService } from "./services/debug"
@@ -10,17 +11,20 @@ import { MenuService } from "./services/menu"
 import { ReaderService } from "./services/reader"
 import { SettingService } from "./services/setting"
 
-// Initialize all services
-const services = createServices([
-  AppService,
-  AuthService,
-  DebugService,
-  DockService,
-  MenuService,
-  ReaderService,
-  SettingService,
-  IntegrationService,
-])
+// A service's group also has to be listed in `./channels`, or the preload script keeps its
+// methods from the pages
+const services = registerForAppPageOnly(() =>
+  createServices([
+    AppService,
+    AuthService,
+    DebugService,
+    DockService,
+    MenuService,
+    ReaderService,
+    SettingService,
+    IntegrationService,
+  ]),
+)
 // Extract method types automatically from services
 export type IpcServices = MergeIpcService<typeof services>
 

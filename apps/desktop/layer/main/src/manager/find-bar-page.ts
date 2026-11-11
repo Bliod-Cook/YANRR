@@ -1,18 +1,9 @@
 // The find bar's page, loaded into a view of its own above the window's page. It talks to the
 // main process through the app's preload script (`window.electron`).
 
-export const FindBarChannel = {
-  /** Page to main: find `{ text, direction }` */
-  find: "find-bar:find",
-  /** Page to main: the text was emptied */
-  clear: "find-bar:clear",
-  /** Page to main: Escape or the close button */
-  close: "find-bar:close",
-  /** Main to page: shown, `{ labels, accent }` */
-  open: "find-bar:open",
-  /** Main to page: `{ activeMatchOrdinal, matches }` */
-  result: "find-bar:result",
-} as const
+import { FindBarChannel } from "~/ipc/channels"
+
+import type { ElectronBridge } from "../../preload"
 
 /**
  * Room around the bar for its shadow, in the page and in the view's bounds. The view takes the
@@ -37,17 +28,7 @@ const icon = (path: string) =>
 
 // Runs in the page. Kept as a function so that it is type-checked, then inlined as source.
 function findBarScript(channel: typeof FindBarChannel) {
-  type IpcListener = (event: unknown, payload: never) => void
-  const { ipcRenderer } = (
-    window as unknown as {
-      electron: {
-        ipcRenderer: {
-          send: (channel: string, payload?: unknown) => void
-          on: (channel: string, listener: IpcListener) => void
-        }
-      }
-    }
-  ).electron
+  const ipc = (window as unknown as { electron: ElectronBridge }).electron
 
   const bar = document.querySelector("form")!
   const input = document.querySelector("input")!
@@ -64,10 +45,10 @@ function findBarScript(channel: typeof FindBarChannel) {
     if (composing) return
     if (!input.value) {
       count.textContent = ""
-      ipcRenderer.send(channel.clear)
+      ipc.send(channel.clear)
       return
     }
-    ipcRenderer.send(channel.find, { text: input.value, direction })
+    ipc.send(channel.find, { text: input.value, direction })
   }
   const findSoon = () => {
     clearTimeout(timer)
@@ -76,7 +57,7 @@ function findBarScript(channel: typeof FindBarChannel) {
   const requestClose = () => {
     // A search still waiting for the typing to stop would run in the page after the bar closed
     clearTimeout(timer)
-    ipcRenderer.send(channel.close)
+    ipc.send(channel.close)
   }
 
   input.addEventListener("input", () => {
@@ -108,18 +89,15 @@ function findBarScript(channel: typeof FindBarChannel) {
   next.addEventListener("click", () => find("forward"))
   close.addEventListener("click", requestClose)
 
-  ipcRenderer.on(
+  ipc.on(
     channel.open,
-    (
-      _event,
-      {
-        labels,
-        accent,
-      }: {
-        labels: { find: string; previous: string; next: string; close: string }
-        accent: string | null
-      },
-    ) => {
+    ({
+      labels,
+      accent,
+    }: {
+      labels: { find: string; previous: string; next: string; close: string }
+      accent: string | null
+    }) => {
       input.setAttribute("aria-label", labels.find)
       for (const [button, label] of [
         [previous, labels.previous],
@@ -139,9 +117,9 @@ function findBarScript(channel: typeof FindBarChannel) {
       input.select()
     },
   )
-  ipcRenderer.on(
+  ipc.on(
     channel.result,
-    (_event, { activeMatchOrdinal, matches }: { activeMatchOrdinal: number; matches: number }) => {
+    ({ activeMatchOrdinal, matches }: { activeMatchOrdinal: number; matches: number }) => {
       count.textContent =
         input.value && matches > 0 && activeMatchOrdinal > 0
           ? `${activeMatchOrdinal}/${matches}`

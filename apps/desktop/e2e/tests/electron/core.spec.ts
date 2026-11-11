@@ -23,9 +23,7 @@ test.describe("electron core flows", () => {
 
     try {
       await test.step("loads the preload bridge and uses the native clipboard", async () => {
-        expect(await electronApp.page.evaluate(() => Boolean(window.electron?.ipcRenderer))).toBe(
-          true,
-        )
+        expect(await electronApp.page.evaluate(() => Boolean(window.electron?.invoke))).toBe(true)
         const result = await electronApp.electronApp.evaluate(
           async ({ app, BrowserWindow, clipboard, ClipboardItem }) => {
             // Read handles are lazy snapshots and cannot be passed back to write().

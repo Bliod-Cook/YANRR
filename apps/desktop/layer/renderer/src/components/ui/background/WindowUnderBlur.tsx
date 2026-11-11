@@ -31,10 +31,7 @@ export const WindowUnderBlur = SYSTEM_CAN_UNDER_BLUR_WINDOW
         return <Noop {...props} />
       }
 
-      if (!window.electron) {
-        return <Noop {...props} />
-      }
-      switch (window.electron.process.platform) {
+      switch (window.platform) {
         case "darwin": {
           return <MacOSVibrancy {...props} />
         }

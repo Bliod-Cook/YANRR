@@ -1,8 +1,7 @@
 import { fileURLToPath } from "node:url"
 
-import { is } from "@electron-toolkit/utils"
 import { callWindowExpose, WindowState } from "@follow/shared/bridge"
-import { APP_PROTOCOL, DEV } from "@follow/shared/constants"
+import { APP_PROTOCOL } from "@follow/shared/constants"
 import { SERVER_URL_ARG } from "@follow/shared/desktop-launch"
 import type { BrowserWindowConstructorOptions } from "electron"
 import { BrowserWindow, screen, shell } from "electron"
@@ -13,6 +12,7 @@ import { isMacOS, isWindows } from "~/env"
 import { filePathToAppUrl, getIconPath } from "~/helper"
 import { setRendererReady } from "~/lib/deep-link"
 import { t } from "~/lib/i18n"
+import { getDevServerUrl, isAppPage } from "~/lib/page-origin"
 import { getServerUrl } from "~/lib/server-url"
 import { store } from "~/lib/store"
 import { getTrayConfig } from "~/lib/tray"
@@ -146,22 +146,17 @@ class WindowManagerStatic {
       await confirmAndOpenExternalProtocol(url)
     }
 
-    // The window only shows the app's own pages. Any other page would run with the app's Node
-    // integration, so web pages open in the browser instead.
-    const rendererUrl = this.getRendererUrl()
+    // The window only shows the app's own pages. Any other page would get the app's preload
+    // script, so web pages open in the browser instead.
     const handleMainFrameNavigation = async (e: Event, url: string) => {
-      let target: URL
-      try {
-        target = new URL(url)
-      } catch {
-        logger.warn("Blocked navigation to an invalid URL", { url })
+      const protocol = parseProtocol(url)
+      if (!protocol) {
         e.preventDefault()
         return
       }
       // E.g. a reload
-      if (target.protocol === rendererUrl.protocol && target.host === rendererUrl.host) return
+      if (isAppPage(url)) return
 
-      const protocol = target.protocol.slice(0, -1)
       if (protocol === "http" || protocol === "https") {
         e.preventDefault()
         void shell.openExternal(url)
@@ -183,6 +178,17 @@ class WindowManagerStatic {
       void handleMainFrameNavigation(e, url)
     })
 
+    // A webview shows pages of the web: none of the app's scripts in them, and none of the
+    // powers the attributes of the element could ask for
+    window.webContents.on("will-attach-webview", (_, webPreferences) => {
+      delete webPreferences.preload
+      webPreferences.nodeIntegration = false
+      webPreferences.nodeIntegrationInSubFrames = false
+      webPreferences.contextIsolation = true
+      webPreferences.webSecurity = true
+      webPreferences.sandbox = true
+    })
+
     // Handle webview external links
     window.webContents.on("did-attach-webview", (_, webContents) => {
       webContents.on("will-navigate", (e, url) => {
@@ -200,14 +206,6 @@ class WindowManagerStatic {
     }
 
     this.bindWindowStateEvents(window)
-  }
-
-  /** Where the app's pages load from: the dev server, or the bundle behind the app protocol */
-  private getRendererUrl() {
-    if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-      return new URL(process.env["ELECTRON_RENDERER_URL"])
-    }
-    return new URL(filePathToAppUrl("/"))
   }
 
   private setupDevToolsFont(window: BrowserWindow) {
@@ -370,13 +368,15 @@ class WindowManagerStatic {
       resizable: configs?.resizable ?? true,
       autoHideMenuBar: true,
       alwaysOnTop: false,
+      // The page shows HTML from feeds: it runs without Node and apart from the preload
+      // script, which hands it the few things of Electron it needs
       webPreferences: {
         preload: this.config.windowPreferences.preloadScript,
+        // The preload script is an ES module, which a sandboxed one cannot be
         sandbox: false,
         webviewTag: true,
-        webSecurity: !DEV,
-        nodeIntegration: true,
-        contextIsolation: false,
+        nodeIntegration: false,
+        contextIsolation: true,
         additionalArguments: server ? [`${SERVER_URL_ARG}${server}`] : [],
       },
       ...this.getPlatformSpecificWindowConfig(),
@@ -392,9 +392,10 @@ class WindowManagerStatic {
 
     // HMR for renderer base on electron-vite cli.
     // Load the remote URL for development or the local html file for production.
-    if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-      window.loadURL(process.env["ELECTRON_RENDERER_URL"] + (options?.extraPath || ""))
-      logger.log(process.env["ELECTRON_RENDERER_URL"] + (options?.extraPath || ""))
+    const devServerUrl = getDevServerUrl()
+    if (devServerUrl) {
+      window.loadURL(devServerUrl + (options?.extraPath || ""))
+      logger.log(devServerUrl + (options?.extraPath || ""))
     } else {
       const rendererEntry = filePathToAppUrl(path.resolve(__dirname, "../renderer/index.html"))
       const appLoadEntry = `${rendererEntry}${options?.extraPath || ""}`

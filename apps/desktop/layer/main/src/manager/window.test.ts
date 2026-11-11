@@ -19,7 +19,7 @@ vi.mock("@follow/shared/bridge", () => ({
   }),
   WindowState: {},
 }))
-vi.mock("@follow/shared/constants", () => ({ APP_PROTOCOL: "yanrr", DEV: false }))
+vi.mock("@follow/shared/constants", () => ({ APP_PROTOCOL: "yanrr" }))
 vi.mock("electron", () => ({
   BrowserWindow: class {},
   screen: {},
@@ -70,6 +70,34 @@ describe("main window visibility", () => {
 
     window.emit("show")
     expect(mocks.onWindowShow).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("webviews of the main window", () => {
+  it("get no script of the app's and none of the powers their attributes ask for", () => {
+    const window = new FakeWindow()
+    const bindEvents = Reflect.get(WindowManager, "bindEvents") as (window: BrowserWindow) => void
+    bindEvents.call(WindowManager, window as unknown as BrowserWindow)
+    const webPreferences = {
+      preload: "/tmp/planted.js",
+      nodeIntegration: true,
+      nodeIntegrationInSubFrames: true,
+      contextIsolation: false,
+      webSecurity: false,
+      sandbox: false,
+      zoomFactor: 1,
+    }
+
+    window.webContents.emit("will-attach-webview", {}, webPreferences)
+
+    expect(webPreferences).toEqual({
+      nodeIntegration: false,
+      nodeIntegrationInSubFrames: false,
+      contextIsolation: true,
+      webSecurity: true,
+      sandbox: true,
+      zoomFactor: 1,
+    })
   })
 })
 
