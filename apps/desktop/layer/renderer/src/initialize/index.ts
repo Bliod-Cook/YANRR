@@ -78,7 +78,7 @@ export const initializeApp = async () => {
     },
   })
 
-  apm("migration", doMigration)
+  await apm("migration", doMigration)
 
   // Enable Map/Set in immer
   enableMapSet()
