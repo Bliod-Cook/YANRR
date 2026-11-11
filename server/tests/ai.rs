@@ -1,11 +1,12 @@
 mod common;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use common::{
     AI_PATH, Fixtures, Recorded, Reply, TestApp, assert_error, create_inbox, deliver, fake_ai,
     json, json_feed, subscribe,
 };
+use reqwest::header;
 use serde_json::{Value, json};
 
 /// A signed-in app whose AI is faked by `fixtures`, following the JSON Feed `items` at `/feed.json`.
@@ -58,8 +59,40 @@ async fn ai_needs_configuring() {
     let batch = json!({ "ids": ["1"], "language": "en", "fields": "title" });
     let batch = app.post("/api/ai/translation/batch", batch).await;
 
-    assert_error(summary, 500, 5).await;
-    assert_error(batch, 500, 5).await;
+    assert_error(summary, 403, 5).await;
+    assert_error(batch, 403, 5).await;
+}
+
+#[tokio::test]
+async fn batch_lines_arrive_while_later_ones_are_translated() {
+    let fixtures = Fixtures::spawn().await;
+    let items = json!([
+        { "id": "quick", "title": "Quick" },
+        { "id": "slow", "title": "Please hang" },
+    ]);
+    let app = following(&fixtures, items).await;
+    let quick = entry_id(&app, "quick").await;
+    let slow = entry_id(&app, "slow").await;
+
+    // Asking for gzip alone, as mobile clients do, gets the compression the server offers.
+    let batch = json!({ "ids": [quick, slow], "language": "ja", "fields": "title" });
+    let mut response = app
+        .client
+        .post(format!("{}/api/ai/translation/batch", app.url))
+        .header(header::ACCEPT_ENCODING, "gzip")
+        .json(&batch)
+        .send()
+        .await
+        .unwrap();
+    let first = tokio::time::timeout(Duration::from_secs(5), response.chunk())
+        .await
+        .expect("the first line arrives before the second is translated");
+
+    let line: Value = serde_json::from_slice(&first.unwrap().unwrap()).unwrap();
+    assert_eq!(
+        line,
+        json!({ "id": quick, "data": { "title": "T: Quick" } })
+    );
 }
 
 #[tokio::test]

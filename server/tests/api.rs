@@ -2,23 +2,36 @@ mod common;
 
 use std::io::Read;
 
-use common::TestApp;
+use common::{Fixtures, TestApp, assert_error, fake_ai, fake_fcm};
 use flate2::read::GzDecoder;
 use reqwest::header;
 use sea_orm::ConnectionTrait;
 use serde_json::{Value, json};
 
 #[tokio::test]
-async fn status_configs_is_public() {
-    let app = TestApp::spawn().await;
+async fn status_configs_tells_signed_out_clients_what_is_offered() {
+    let fixtures = Fixtures::spawn().await;
+    let (push, _key_file) = fake_fcm(&fixtures);
+    let ai = fake_ai(&fixtures);
+    let plain = TestApp::spawn().await;
+    let configured = TestApp::spawn_with(move |config| {
+        config.ai = Some(ai);
+        config.push = Some(push);
+        config.auth.registration = false;
+    })
+    .await;
 
-    let res = app.get("/api/status/configs").await;
+    let res = plain.get("/api/status/configs").await;
 
     assert_eq!(res.status(), 200);
+    let offered = json!({ "ai": false, "registration": true, "push": false });
     assert_eq!(
         res.json::<Value>().await.unwrap(),
-        json!({ "code": 0, "data": {} })
+        json!({ "code": 0, "data": offered })
     );
+    let res = configured.get("/api/status/configs").await;
+    let offered = json!({ "ai": true, "registration": false, "push": true });
+    assert_eq!(res.json::<Value>().await.unwrap()["data"], offered);
 }
 
 #[tokio::test]
@@ -40,6 +53,11 @@ async fn api_errors_use_exception_codes() {
     app.state.db.execute_unprepared(expire).await.unwrap();
     let res = app.get("/api/feeds/refresh?id=1").await;
     assert_eq!(res.status(), 401);
+
+    // A session that cannot be looked up is the server's failure, not a signed-out client.
+    let gone = "ALTER TABLE sessions RENAME TO sessions_gone";
+    app.state.db.execute_unprepared(gone).await.unwrap();
+    assert_error(app.get("/api/feeds/refresh?id=1").await, 500, 1005).await;
 }
 
 #[tokio::test]

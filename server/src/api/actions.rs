@@ -115,7 +115,7 @@ fn validate(rules: &[Rule], stored: Option<action_rule::Model>) -> ApiResult<()>
     let stored = match stored {
         Some(row) => rules::parse(row.rules).map_err(|err| {
             tracing::error!("stored action rules do not parse: {err}");
-            ApiError::new(ExceptionCode::InternalError, "Internal error")
+            ApiError::internal()
         })?,
         None => Vec::new(),
     };

@@ -28,7 +28,7 @@ async fn tokens_replace_per_channel() {
         app.delete("/api/messaging", json!({ "channel": "ios" }))
             .await;
     }
-    assert_error(app.get("/api/messaging/test").await, 500, 5).await;
+    assert_error(app.get("/api/messaging/test").await, 403, 5).await;
 
     let tokens = json(app.get("/api/messaging").await).await;
     assert_eq!(

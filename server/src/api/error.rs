@@ -52,9 +52,10 @@ impl ExceptionCode {
             | Self::InboxNotFound
             | Self::RSSHubRouteError => StatusCode::NOT_FOUND,
             Self::AuthError => StatusCode::UNAUTHORIZED,
-            Self::InboxPermissionDenied => StatusCode::FORBIDDEN,
+            // A feature left unconfigured is how the server was deployed, not a failure.
+            Self::InboxPermissionDenied | Self::MissingConfiguration => StatusCode::FORBIDDEN,
             Self::ActionRulesConflict => StatusCode::CONFLICT,
-            Self::MissingConfiguration | Self::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
+            Self::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -82,6 +83,11 @@ impl ApiError {
 
     pub fn unauthorized() -> Self {
         Self::new(ExceptionCode::AuthError, "Unauthorized")
+    }
+
+    /// A failure of the server, whose details were logged.
+    pub fn internal() -> Self {
+        Self::new(ExceptionCode::InternalError, "Internal error")
     }
 
     pub fn feed_not_found() -> Self {
@@ -126,7 +132,7 @@ impl IntoResponse for ApiError {
 impl From<sea_orm::DbErr> for ApiError {
     fn from(err: sea_orm::DbErr) -> Self {
         tracing::error!("database error: {err}");
-        Self::new(ExceptionCode::InternalError, "Internal error")
+        Self::internal()
     }
 }
 
@@ -176,9 +182,12 @@ pub struct ApiQuery<T>(pub T);
 #[from_request(via(axum::Json), rejection(ApiError))]
 pub struct ApiJson<T>(pub T);
 
-/// A `FeedViewType`; All (-1) included, as the contract allows it wherever a view is written.
+/// The All view, which lists every view rather than being one a feed or collection is put in.
+const ALL_VIEWS: i16 = -1;
+
+/// A `FeedViewType` to put a feed or collection in.
 pub fn view(view: i16) -> ApiResult<i16> {
-    if (-1..=5).contains(&view) {
+    if (0..=5).contains(&view) {
         Ok(view)
     } else {
         Err(ApiError::new(
@@ -186,4 +195,9 @@ pub fn view(view: i16) -> ApiResult<i16> {
             "Invalid view",
         ))
     }
+}
+
+/// The one view a listing asking for `view` is limited to; none for All.
+pub fn single_view(view: Option<i16>) -> Option<i16> {
+    view.filter(|view| *view != ALL_VIEWS)
 }

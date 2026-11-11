@@ -1,5 +1,3 @@
-use std::convert::Infallible;
-
 use axum::{
     extract::{FromRequestParts, OptionalFromRequestParts},
     http::request::Parts,
@@ -14,12 +12,17 @@ pub struct AuthUser {
     pub id: String,
 }
 
-async fn signed_in(parts: &mut Parts, state: &AppState) -> Option<AuthUser> {
+/// The signed-in user, or `None` when the request carries no valid session. A session that cannot be looked up
+/// is the server's failure, not a signed-out client.
+async fn signed_in(parts: &mut Parts, state: &AppState) -> Result<Option<AuthUser>, ApiError> {
     match OptionalSession::<AppAuthSchema>::from_request_parts(parts, state).await {
-        Ok(OptionalSession(Some(session))) => Some(AuthUser {
+        Ok(OptionalSession(session)) => Ok(session.map(|session| AuthUser {
             id: session.user.id,
-        }),
-        _ => None,
+        })),
+        Err(rejection) => {
+            tracing::error!("looking up the session failed: {}", rejection.status());
+            Err(ApiError::internal())
+        }
     }
 }
 
@@ -28,19 +31,19 @@ impl FromRequestParts<AppState> for AuthUser {
 
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, ApiError> {
         signed_in(parts, state)
-            .await
+            .await?
             .ok_or_else(ApiError::unauthorized)
     }
 }
 
 /// For routes that also answer signed-out visitors.
 impl OptionalFromRequestParts<AppState> for AuthUser {
-    type Rejection = Infallible;
+    type Rejection = ApiError;
 
     async fn from_request_parts(
         parts: &mut Parts,
         state: &AppState,
-    ) -> Result<Option<Self>, Infallible> {
-        Ok(signed_in(parts, state).await)
+    ) -> Result<Option<Self>, ApiError> {
+        signed_in(parts, state).await
     }
 }
