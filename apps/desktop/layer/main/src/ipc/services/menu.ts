@@ -67,15 +67,6 @@ export class MenuService extends IpcService {
 
   @IpcMethod()
   async showShareMenu(input: string): Promise<void> {
-    const { sender } = getIpcContext()
-    const menu = new ShareMenu({
-      urls: [input],
-    })
-
-    menu.popup({
-      callback: () => {
-        sender.send("menu-closed")
-      },
-    })
+    new ShareMenu({ urls: [input] }).popup()
   }
 }
