@@ -39,13 +39,10 @@ export default {
         const cwd = process.cwd()
         const currentFilePath = path.relative(cwd, context.filename).replaceAll("\\", "/")
 
-        const packageJsonFilePaths = fg.globSync(
-          ["packages/*/package.json", "apps/*/package.json", "package.json"],
-          {
-            cwd,
-            ignore: ["**/node_modules/**"],
-          },
-        )
+        const packageJsonFilePaths = fg.globSync("**/package.json", {
+          cwd,
+          ignore: ["**/node_modules/**", "**/dist/**", "**/out/**", "server/target/**"],
+        })
 
         /** @type {Map<string, { version: string, filePath: string }[]>} */
         const packageVersionMap = new Map()
