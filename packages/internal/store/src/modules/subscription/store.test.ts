@@ -1,16 +1,25 @@
 import { FeedViewType } from "@follow/constants"
+import { db } from "@follow/database/db"
+import { FeedService } from "@follow/database/services/feed"
+import { SubscriptionService } from "@follow/database/services/subscription"
+import { UnreadService } from "@follow/database/services/unread"
 import { QueryClient } from "@tanstack/react-query"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 import { apiContext, queryClientContext } from "../../context"
 import type { SyncEngineHandle } from "../../sync/sync-status"
 import { registerSyncEngine } from "../../sync/sync-status"
+import { transactionQueue } from "../../sync/transaction-queue"
 import type { FollowAPI } from "../../types"
 import { getFeedByIdOrUrl } from "../feed/getter"
 import { feedSyncServices, useFeedStore } from "../feed/store"
 import type { FeedModel } from "../feed/types"
 import { useUnreadStore } from "../unread/store"
-import { getSortedGroupedSubscriptionSelector, getSubscriptionByFeedId } from "./getter"
+import {
+  getCategoriesByViewSelector,
+  getSortedGroupedSubscriptionSelector,
+  getSubscriptionByFeedId,
+} from "./getter"
 import {
   getConfirmedSubscriptionChange,
   subscriptionActions,
@@ -19,44 +28,23 @@ import {
 } from "./store"
 import type { SubscriptionModel } from "./types"
 
+vi.mock("@follow/database/db", async () =>
+  (await import("@follow/database/test-db")).createTestDB(),
+)
+
 const mocks = vi.hoisted(() => ({
-  upsertSubscriptionRows: vi.fn(),
   deleteSubscriptions: vi.fn(),
-  deleteSubscriptionRows: vi.fn(),
-  unreadUpsertMany: vi.fn(),
   batchUpdate: vi.fn(),
   update: vi.fn(),
-  patch: vi.fn(),
   updateCategory: vi.fn(),
   deleteCategory: vi.fn(),
-  patchMany: vi.fn(),
   create: vi.fn(),
+  getSubscriptions: vi.fn(),
 }))
 
 vi.mock("i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("i18next")>()),
   t: (key: string) => key,
-}))
-
-vi.mock("@follow/database/services/feed", () => ({
-  FeedService: {
-    upsertMany: vi.fn(async () => {}),
-  },
-}))
-
-vi.mock("@follow/database/services/unread", () => ({
-  UnreadService: {
-    upsertMany: mocks.unreadUpsertMany,
-  },
-}))
-
-vi.mock("@follow/database/services/subscription", () => ({
-  SubscriptionService: {
-    upsertMany: mocks.upsertSubscriptionRows,
-    delete: mocks.deleteSubscriptionRows,
-    patch: mocks.patch,
-    patchMany: mocks.patchMany,
-  },
 }))
 
 const createSubscription = (
@@ -75,44 +63,37 @@ const createSubscription = (
   type: "feed",
 })
 
-const seed = (subscriptions: SubscriptionModel[]) => {
-  const state = useSubscriptionStore.getState()
-  const feedIdByView = Object.fromEntries(
-    Object.keys(state.feedIdByView).map((view) => [view, new Set<string>()]),
-  ) as Record<FeedViewType, Set<string>>
-  const categories = Object.fromEntries(
-    Object.keys(state.categories).map((view) => [view, new Set<string>()]),
-  ) as Record<FeedViewType, Set<string>>
-
-  for (const subscription of subscriptions) {
-    feedIdByView[subscription.view].add(subscription.feedId!)
-    feedIdByView[FeedViewType.All].add(subscription.feedId!)
-    if (subscription.category) {
-      categories[subscription.view].add(subscription.category)
-      categories[FeedViewType.All].add(subscription.category)
-    }
-  }
-
-  useSubscriptionStore.setState({
-    data: Object.fromEntries(subscriptions.map((s) => [s.feedId!, s])),
-    feedIdByView,
-    categories,
-  })
+/** Subscriptions as a launch hydrates them from the database */
+const seed = async (subscriptions: SubscriptionModel[]) => {
+  useSubscriptionStore.setState(useSubscriptionStore.getInitialState(), true)
+  await subscriptionActions.upsertMany(subscriptions, { reset: true })
 }
 
+/** The app quits and starts again on the same database */
+const restart = async () => {
+  useSubscriptionStore.setState(useSubscriptionStore.getInitialState(), true)
+  await subscriptionActions.hydrate()
+}
+
+const storedCategories = async () =>
+  Object.fromEntries(
+    (await db.query.subscriptionsTable.findMany()).map((row) => [row.feedId, row.category]),
+  )
+
+const categoriesOf = (view: FeedViewType) =>
+  [...getCategoriesByViewSelector(useSubscriptionStore.getState())(view)].sort()
+
 describe("subscriptionSyncService", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-    mocks.batchUpdate.mockResolvedValue({})
-    mocks.updateCategory.mockResolvedValue({})
-    mocks.deleteCategory.mockResolvedValue({})
-    mocks.patchMany.mockResolvedValue(undefined)
-    mocks.update.mockResolvedValue({})
-    mocks.deleteSubscriptions.mockResolvedValue({})
-    mocks.deleteSubscriptionRows.mockResolvedValue(undefined)
-    mocks.upsertSubscriptionRows.mockResolvedValue(undefined)
-    mocks.unreadUpsertMany.mockResolvedValue(undefined)
-    mocks.patch.mockResolvedValue(undefined)
+    // Follows and unfollows confirmed by an earlier test
+    transactionQueue.clearInSession()
+    await Promise.all([SubscriptionService.reset(), FeedService.reset(), UnreadService.reset()])
+    mocks.batchUpdate.mockResolvedValue({ code: 0 })
+    mocks.updateCategory.mockResolvedValue({ code: 0 })
+    mocks.deleteCategory.mockResolvedValue({ code: 0 })
+    mocks.update.mockResolvedValue({ code: 0 })
+    mocks.deleteSubscriptions.mockResolvedValue({ code: 0 })
     queryClientContext.provide(new QueryClient())
     apiContext.provide({
       subscriptions: {
@@ -120,14 +101,15 @@ describe("subscriptionSyncService", () => {
         create: mocks.create,
         delete: mocks.deleteSubscriptions,
         update: mocks.update,
+        get: mocks.getSubscriptions,
       },
       categories: { update: mocks.updateCategory, delete: mocks.deleteCategory },
     } as unknown as FollowAPI)
   })
 
-  test("skips a subscription in a view the app has no list for, keeping the others", () => {
+  test("skips a subscription in a view the app has no list for, keeping the others", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {})
-    seed([])
+    await seed([])
 
     subscriptionActions.upsertManyInSession([
       createSubscription("a", FeedViewType.Articles, "Tech"),
@@ -149,7 +131,7 @@ describe("subscriptionSyncService", () => {
   })
 
   test("takes feeds out of their category when the category is null", async () => {
-    seed([
+    await seed([
       createSubscription("a", FeedViewType.Articles, "Tech"),
       createSubscription("b", FeedViewType.Articles, "News"),
       createSubscription("c", FeedViewType.Articles, "News"),
@@ -165,11 +147,12 @@ describe("subscriptionSyncService", () => {
     expect(state.data.a!.category).toBeNull()
     expect(state.data.b!.category).toBeNull()
     expect(state.data.c!.category).toBe("News")
-    expect([...state.categories[FeedViewType.Articles]]).toEqual(["News"])
+    expect(categoriesOf(FeedViewType.Articles)).toEqual(["News"])
+    expect(await storedCategories()).toEqual({ a: null, b: null, c: "News" })
   })
 
   test("keeps the category when only the view changes", async () => {
-    seed([createSubscription("a", FeedViewType.Articles, "Tech")])
+    await seed([createSubscription("a", FeedViewType.Articles, "Tech")])
 
     await subscriptionSyncService.batchUpdateSubscription({
       feedIds: ["a"],
@@ -179,10 +162,12 @@ describe("subscriptionSyncService", () => {
     const state = useSubscriptionStore.getState()
     expect(state.data.a!.view).toBe(FeedViewType.Pictures)
     expect(state.data.a!.category).toBe("Tech")
+    expect(categoriesOf(FeedViewType.Articles)).toEqual([])
+    expect(categoriesOf(FeedViewType.Pictures)).toEqual(["Tech"])
   })
 
   test("renames a folder of the All view in every view it spans", async () => {
-    seed([
+    await seed([
       createSubscription("a", FeedViewType.Articles, "Tech"),
       createSubscription("b", FeedViewType.Pictures, "Tech"),
     ])
@@ -196,8 +181,9 @@ describe("subscriptionSyncService", () => {
     const state = useSubscriptionStore.getState()
     expect(state.data.a!.category).toBe("Science")
     expect(state.data.b!.category).toBe("Science")
-    expect([...state.categories[FeedViewType.Articles]]).toEqual(["Science"])
-    expect([...state.categories[FeedViewType.Pictures]]).toEqual(["Science"])
+    expect(categoriesOf(FeedViewType.Articles)).toEqual(["Science"])
+    expect(categoriesOf(FeedViewType.Pictures)).toEqual(["Science"])
+    expect(categoriesOf(FeedViewType.All)).toEqual(["Science"])
     expect(mocks.updateCategory).toHaveBeenCalledWith({
       from: "Tech",
       to: "Science",
@@ -223,7 +209,7 @@ describe("subscriptionSyncService", () => {
       } as unknown as Record<string, FeedModel>,
     })
     // "a" is in the folder by its site, "b" by name
-    seed([
+    await seed([
       createSubscription("a", FeedViewType.Articles, null),
       createSubscription("b", FeedViewType.Articles, "Example.com"),
     ])
@@ -246,7 +232,7 @@ describe("subscriptionSyncService", () => {
 
   test("sends only the fields an edit changed, so another device's edit is kept", async () => {
     // The local copy still has the category another device just changed.
-    seed([{ ...createSubscription("a", FeedViewType.Articles, "World"), title: null }])
+    await seed([{ ...createSubscription("a", FeedViewType.Articles, "World"), title: null }])
 
     await subscriptionSyncService.edit({
       ...createSubscription("a", FeedViewType.Articles, "World"),
@@ -261,8 +247,8 @@ describe("subscriptionSyncService", () => {
     })
   })
 
-  test("moves a feed to another category with only that field", async () => {
-    seed([createSubscription("a", FeedViewType.Articles, "News")])
+  test("moves a feed to another category, and forgets the one it left", async () => {
+    await seed([createSubscription("a", FeedViewType.Articles, "News")])
 
     await subscriptionSyncService.edit({
       ...createSubscription("a", FeedViewType.Articles, "News"),
@@ -270,13 +256,28 @@ describe("subscriptionSyncService", () => {
     })
 
     expect(mocks.update).toHaveBeenCalledWith({ category: "Blogs", feedId: "a" })
-    const state = useSubscriptionStore.getState()
-    expect(state.data.a!.category).toBe("Blogs")
-    expect(state.categories[FeedViewType.Articles].has("Blogs")).toBe(true)
+    expect(useSubscriptionStore.getState().data.a!.category).toBe("Blogs")
+    expect(categoriesOf(FeedViewType.Articles)).toEqual(["Blogs"])
+    expect(await storedCategories()).toEqual({ a: "Blogs" })
+  })
+
+  test("puts the category back when the server refuses the move", async () => {
+    await seed([createSubscription("a", FeedViewType.Articles, "News")])
+    mocks.update.mockRejectedValue(new Error("Network error"))
+
+    await expect(
+      subscriptionSyncService.edit({
+        ...createSubscription("a", FeedViewType.Articles, "News"),
+        category: "Blogs",
+      }),
+    ).rejects.toThrow("Network error")
+
+    expect(useSubscriptionStore.getState().data.a!.category).toBe("News")
+    expect(categoriesOf(FeedViewType.Articles)).toEqual(["News"])
   })
 
   test("sends nothing when a form only spells the same values differently", async () => {
-    seed([createSubscription("a", FeedViewType.Articles, null)])
+    await seed([createSubscription("a", FeedViewType.Articles, null)])
 
     await subscriptionSyncService.edit({
       ...createSubscription("a", FeedViewType.Articles, null),
@@ -290,7 +291,7 @@ describe("subscriptionSyncService", () => {
   })
 
   test("renames the feeds another device moved into the category since the last pull", async () => {
-    seed([
+    await seed([
       createSubscription("a", FeedViewType.Articles, "CatB2"),
       createSubscription("b", FeedViewType.Articles, null),
     ])
@@ -320,15 +321,17 @@ describe("subscriptionSyncService", () => {
     })
     const state = useSubscriptionStore.getState()
     expect(state.data.b!.category).toBe("CatB3")
+    expect(categoriesOf(FeedViewType.Articles)).toEqual(["CatB3"])
   })
 
   test("leaves out a feed another device took out of the category since the last pull", async () => {
-    seed([
+    await seed([
       createSubscription("a", FeedViewType.Articles, "Tech"),
       createSubscription("c", FeedViewType.Articles, "Tech"),
     ])
     registerSyncEngine({
       catchUp: async () => {
+        // In memory only, as the pull's own write to the database is not part of this test
         subscriptionActions.patchInSession("c", { category: "Other" })
         return true
       },
@@ -349,17 +352,13 @@ describe("subscriptionSyncService", () => {
       to: "Science",
       view: FeedViewType.Articles,
     })
-    const state = useSubscriptionStore.getState()
-    expect(state.data.c!.category).toBe("Other")
-    expect(mocks.patchMany).toHaveBeenCalledWith({
-      feedIds: ["a"],
-      data: { category: "Science" },
-    })
+    expect(useSubscriptionStore.getState().data.c!.category).toBe("Other")
+    expect(await storedCategories()).toEqual({ a: "Science", c: "Tech" })
   })
 
   test("renames at once and does not wait long for the pull on a slow network", async () => {
+    await seed([createSubscription("a", FeedViewType.Articles, "Tech")])
     vi.useFakeTimers()
-    seed([createSubscription("a", FeedViewType.Articles, "Tech")])
     registerSyncEngine({
       catchUp: () => new Promise<boolean>(() => {}),
     } as unknown as SyncEngineHandle)
@@ -388,8 +387,8 @@ describe("subscriptionSyncService", () => {
     })
   })
 
-  test("forgets a category renamed on another device once no feed uses it", () => {
-    seed([
+  test("forgets a category renamed on another device once no feed uses it", async () => {
+    await seed([
       createSubscription("a", FeedViewType.Articles, "CatB4"),
       createSubscription("b", FeedViewType.Articles, "CatB4"),
       createSubscription("c", FeedViewType.Pictures, "CatB4"),
@@ -397,36 +396,35 @@ describe("subscriptionSyncService", () => {
 
     // The change log delivers the rename as one category change per feed.
     subscriptionActions.patchInSession("a", { category: "CatB5" })
-    let { categories } = useSubscriptionStore.getState()
-    expect(categories[FeedViewType.Articles].has("CatB4")).toBe(true)
+    expect(categoriesOf(FeedViewType.Articles)).toEqual(["CatB4", "CatB5"])
 
     subscriptionActions.patchInSession("b", { category: "CatB5" })
-    categories = useSubscriptionStore.getState().categories
-    expect([...categories[FeedViewType.Articles]]).toEqual(["CatB5"])
+    expect(categoriesOf(FeedViewType.Articles)).toEqual(["CatB5"])
     // Another view still has a folder of that name.
-    expect(categories[FeedViewType.Pictures].has("CatB4")).toBe(true)
-    expect(categories[FeedViewType.All].has("CatB4")).toBe(true)
+    expect(categoriesOf(FeedViewType.Pictures)).toEqual(["CatB4"])
+    expect(categoriesOf(FeedViewType.All)).toEqual(["CatB4", "CatB5"])
 
     subscriptionActions.patchInSession("c", { category: "CatB5" })
-    categories = useSubscriptionStore.getState().categories
-    expect(categories[FeedViewType.All].has("CatB4")).toBe(false)
+    expect(categoriesOf(FeedViewType.All)).toEqual(["CatB5"])
   })
 
-  test("forgets the category a feed left when it was moved to another one", async () => {
-    seed([createSubscription("a", FeedViewType.Articles, "News")])
-
-    await subscriptionSyncService.edit({
-      ...createSubscription("a", FeedViewType.Articles, "News"),
-      category: "Blogs",
-    })
-
-    expect([...useSubscriptionStore.getState().categories[FeedViewType.Articles]]).toEqual([
-      "Blogs",
+  test("keeps a category its other feeds still use when one of them is unfollowed", async () => {
+    await seed([
+      createSubscription("a", FeedViewType.Articles, "News"),
+      createSubscription("b", FeedViewType.Articles, "News"),
     ])
+
+    await subscriptionSyncService.unsubscribe(["a"])
+
+    expect(categoriesOf(FeedViewType.Articles)).toEqual(["News"])
+    expect(categoriesOf(FeedViewType.All)).toEqual(["News"])
+
+    subscriptionActions.removeManyInSession(["b"])
+    expect(categoriesOf(FeedViewType.Articles)).toEqual([])
   })
 
   test("unfollows the selected feeds in one request", async () => {
-    seed([
+    await seed([
       createSubscription("feed1", FeedViewType.Articles, null),
       createSubscription("feed2", FeedViewType.Articles, null),
     ])
@@ -439,14 +437,14 @@ describe("subscriptionSyncService", () => {
     const state = useSubscriptionStore.getState()
     expect(Object.keys(state.data)).toEqual([])
     expect([...state.feedIdByView[FeedViewType.Articles]]).toEqual([])
-    expect(mocks.deleteSubscriptionRows).toHaveBeenCalledWith(["feed/feed1", "feed/feed2"])
+    expect(await storedCategories()).toEqual({})
     // The unfollows stay confirmed until the change log reaches the request's sync id
     expect(getConfirmedSubscriptionChange("feed1")).toEqual({ subscription: null, syncId: 41 })
     expect(getConfirmedSubscriptionChange("feed2")).toEqual({ subscription: null, syncId: 41 })
   })
 
   test("puts the selection back when its unfollow failed", async () => {
-    seed([
+    await seed([
       createSubscription("leaving", FeedViewType.Articles, null),
       createSubscription("failing", FeedViewType.Articles, null),
     ])
@@ -460,14 +458,14 @@ describe("subscriptionSyncService", () => {
     expect(Object.keys(state.data).sort()).toEqual(["failing", "leaving"])
     expect(state.feedIdByView[FeedViewType.Articles].has("failing")).toBe(true)
     expect(state.feedIdByView[FeedViewType.Articles].has("leaving")).toBe(true)
-    expect(mocks.deleteSubscriptionRows).not.toHaveBeenCalled()
+    expect(await storedCategories()).toEqual({ leaving: null, failing: null })
     expect(getConfirmedSubscriptionChange("failing")).toBeUndefined()
     expect(getConfirmedSubscriptionChange("leaving")).toBeUndefined()
   })
 
   test("fails a follow the server answered without what it followed, storing nothing", async () => {
     const url = "https://example.com/new-feed.xml"
-    seed([])
+    await seed([])
     mocks.create.mockResolvedValue({ code: 0, feed: null, unread: {} })
 
     await expect(
@@ -482,14 +480,14 @@ describe("subscriptionSyncService", () => {
     ).rejects.toThrow("feed.follow_failed")
 
     expect(useSubscriptionStore.getState().data).toEqual({})
-    expect(mocks.upsertSubscriptionRows).not.toHaveBeenCalled()
+    expect(await storedCategories()).toEqual({})
   })
 
   test("finds the subscription of a feed followed by its RSSHub instance address", async () => {
     const address = "http://localhost:1200/test/sort"
     const url = "rsshub://test/sort"
     useFeedStore.setState({ feeds: {}, resolvedUrls: {} })
-    seed([])
+    await seed([])
     const getFeed = vi.fn(async () => ({
       data: { feed: { type: "feed", id: "feed-sort", title: "", url } },
     }))
@@ -519,25 +517,40 @@ describe("subscriptionSyncService", () => {
     expect(getSubscriptionByFeedId(feedId)?.feedId).toBe("feed-sort")
   })
 
-  test("refetching one view keeps the other views' subscriptions", async () => {
-    seed([
+  test("replaces the subscriptions of a view with the server's list, in memory and on disk", async () => {
+    await seed([
       createSubscription("article", FeedViewType.Articles, null),
       createSubscription("dropped", FeedViewType.Articles, null),
       createSubscription("picture", FeedViewType.Pictures, null),
     ])
-    useSubscriptionStore.setState({
-      subscriptionIdSet: new Set(["feed/article", "feed/dropped", "feed/picture"]),
+    mocks.getSubscriptions.mockResolvedValue({
+      code: 0,
+      data: [
+        {
+          ...createSubscription("article", FeedViewType.Articles, null),
+          feeds: { type: "feed", id: "article", url: "https://example.com/feed.xml" },
+        },
+      ],
     })
 
-    await subscriptionActions.upsertMany(
-      [createSubscription("article", FeedViewType.Articles, null)],
-      { resetBeforeUpsert: FeedViewType.Articles },
-    )
+    await subscriptionSyncService.fetch(FeedViewType.Articles)
 
-    const state = useSubscriptionStore.getState()
-    expect([...state.subscriptionIdSet].sort()).toEqual(["feed/article", "feed/picture"])
-    expect(Object.keys(state.data).sort()).toEqual(["article", "picture"])
-    expect([...state.feedIdByView[FeedViewType.All]].sort()).toEqual(["article", "picture"])
+    const expectOnlyKept = () => {
+      const state = useSubscriptionStore.getState()
+      expect([...state.subscriptionIdSet].sort()).toEqual(["feed/article", "feed/picture"])
+      expect(Object.keys(state.data).sort()).toEqual(["article", "picture"])
+      expect([...state.feedIdByView[FeedViewType.All]].sort()).toEqual(["article", "picture"])
+    }
+    expectOnlyKept()
+    // The feed the server dropped does not come back with the next launch
+    await restart()
+    expectOnlyKept()
+
+    // A list of every view replaces them all.
+    mocks.getSubscriptions.mockResolvedValue({ code: 0, data: [] })
+    await subscriptionSyncService.fetch()
+    await restart()
+    expect(useSubscriptionStore.getState().data).toEqual({})
   })
 })
 

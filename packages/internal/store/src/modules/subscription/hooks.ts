@@ -212,11 +212,6 @@ export const useSubscriptionCategoryExist = (categoryId: string | undefined | nu
   )
 }
 
-export const getSubscriptionCategory = (view?: FeedViewType) => {
-  const state = useSubscriptionStore.getState()
-  return view === undefined ? [] : Array.from(state.categories[view] ?? [])
-}
-
 export const useViewWithSubscription = () =>
   useSubscriptionStore((state) => {
     return getViewList()
