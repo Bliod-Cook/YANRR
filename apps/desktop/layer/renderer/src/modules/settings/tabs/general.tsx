@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next"
 
 import { currentSupportedLanguages } from "~/@types/constants"
 import { defaultResources } from "~/@types/default-resource"
+import { useServerCapability } from "~/atoms/server-configs"
 import {
   DEFAULT_ACTION_LANGUAGE,
   setGeneralSetting,
@@ -61,6 +62,7 @@ export const SettingGeneral = () => {
     WrapEnhancedSettingTab.General,
   )
 
+  const aiEnabled = useServerCapability("ai")
   const { ask } = useDialog()
   const reRenderKey = useGeneralSettingKey("enhancedSettings")
 
@@ -84,20 +86,22 @@ export const SettingGeneral = () => {
           IN_ELECTRON && MinimizeToTraySetting,
           LanguageSelector,
 
-          {
+          aiEnabled && {
             type: "title",
             value: t("general.action.title"),
           },
-          defineSettingItem("summary", {
-            label: t("general.action.summary.label"),
-            description: t("general.action.summary.description"),
-          }),
-          defineSettingItem("translation", {
-            label: t("general.action.translation.label"),
-            description: t("general.action.translation.description"),
-          }),
-          TranslationModeSelector,
-          ActionLanguageSelector,
+          aiEnabled &&
+            defineSettingItem("summary", {
+              label: t("general.action.summary.label"),
+              description: t("general.action.summary.description"),
+            }),
+          aiEnabled &&
+            defineSettingItem("translation", {
+              label: t("general.action.translation.label"),
+              description: t("general.action.translation.description"),
+            }),
+          aiEnabled && TranslationModeSelector,
+          aiEnabled && ActionLanguageSelector,
 
           {
             type: "title",

@@ -8,6 +8,7 @@ import { useEntryIsInReadabilitySuccess } from "~/atoms/readability"
 import { setAIPanelVisibility, useAIPanelVisibility } from "~/atoms/settings/ai"
 import { useActionLanguage } from "~/atoms/settings/general"
 import { AISummaryCardBase } from "~/components/ui/ai-summary-card"
+import { isMissingConfiguration } from "~/lib/error-parser"
 
 export function AISummary({ entryId }: { entryId: string }) {
   const { t } = useTranslation()
@@ -35,7 +36,8 @@ export function AISummary({ entryId }: { entryId: string }) {
     setAIPanelVisibility(true)
   }
 
-  if (!showAISummary) {
+  // The server lost its AI after the app learned of it: the summary is off, not failing
+  if (!showAISummary || isMissingConfiguration(summary.error)) {
     return null
   }
 

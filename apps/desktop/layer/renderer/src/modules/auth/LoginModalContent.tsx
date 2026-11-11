@@ -8,6 +8,7 @@ import { m } from "motion/react"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { useServerCapability } from "~/atoms/server-configs"
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
 import { CurrentServer } from "~/modules/server-setup/CurrentServer"
 import { useSession } from "~/queries/auth"
@@ -29,10 +30,12 @@ export const LoginModalContent = (props: LoginModalContentProps) => {
   const isMobile = useMobile()
 
   // Most who see it already have an account, and a server may not take new ones
-  const [isRegister, setIsRegister] = useState(false)
+  const registrationOpen = useServerCapability("registration")
+  const [wantsRegister, setWantsRegister] = useState(false)
+  const isRegister = registrationOpen && wantsRegister
 
   const handleLoginStateChange = (state: "register" | "login") => {
-    setIsRegister(state === "register")
+    setWantsRegister(state === "register")
   }
 
   useEffect(() => {
@@ -91,7 +94,9 @@ export const LoginModalContent = (props: LoginModalContentProps) => {
         {isRegister ? (
           <RegisterForm onLoginStateChange={handleLoginStateChange} />
         ) : (
-          <LoginWithPassword onLoginStateChange={handleLoginStateChange} />
+          <LoginWithPassword
+            onLoginStateChange={registrationOpen ? handleLoginStateChange : undefined}
+          />
         )}
       </m.div>
       {/* Last, so the modal still focuses the first credential field */}

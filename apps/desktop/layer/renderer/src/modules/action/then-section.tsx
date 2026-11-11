@@ -13,6 +13,7 @@ import { Fragment, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { defaultResources } from "~/@types/default-resource"
+import { useServerCapability } from "~/atoms/server-configs"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +29,10 @@ type ActionConfigProps = {
 }
 
 const availableActions = Object.values(availableActionMap)
+const AI_ACTIONS = new Set<ActionId>(["summary", "translation"])
+// A server without AI cannot run the summary and translation actions
+const isOffered = (action: ActionAction, aiEnabled: boolean) =>
+  aiEnabled || !AI_ACTIONS.has(action.value)
 
 export const ThenSection = ({ index }: { index: number }) => {
   const { t } = useTranslation("settings")
@@ -35,6 +40,7 @@ export const ThenSection = ({ index }: { index: number }) => {
   const settingModalPresent = useSettingModal()
 
   const disabled = useActionRule(index, (a) => a.result.disabled)
+  const aiEnabled = useServerCapability("ai")
 
   const enabledActions = useMemo(() => {
     if (!result) return []
@@ -45,11 +51,14 @@ export const ThenSection = ({ index }: { index: number }) => {
     // Sort availableActions based on the order in result object
     return resultKeys
       .map((key) => availableActionMap[key as ActionId])
-      .filter((action): action is NonNullable<typeof action> => !!action)
-  }, [result])
+      .filter(
+        (action): action is NonNullable<typeof action> => !!action && isOffered(action, aiEnabled),
+      )
+  }, [result, aiEnabled])
   const notEnabledActions = useMemo(
-    () => availableActions.filter((action) => !result?.[action.value]),
-    [result],
+    () =>
+      availableActions.filter((action) => !result?.[action.value] && isOffered(action, aiEnabled)),
+    [result, aiEnabled],
   )
 
   return (

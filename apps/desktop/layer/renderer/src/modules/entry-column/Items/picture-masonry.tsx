@@ -35,6 +35,7 @@ import {
 } from "react"
 import { useEventCallback } from "usehooks-ts"
 
+import { useShowAITranslationAuto } from "~/atoms/ai-translation"
 import { useActionLanguage, useGeneralSettingKey } from "~/atoms/settings/general"
 import { useUISettingKey } from "~/atoms/settings/ui"
 import { MediaContainerWidthProvider } from "~/components/ui/media/MediaContainerWidthProvider"
@@ -331,7 +332,7 @@ const MasonryRender: React.ComponentType<
   }>
 > = ({ data, index }) => {
   const firstScreenReady = use(FirstScreenReadyContext)
-  const enableTranslation = useGeneralSettingKey("translation")
+  const enableTranslation = useShowAITranslationAuto()
   const translationMode = useGeneralSettingKey("translationMode")
   const actionLanguage = useActionLanguage()
   const translation = useEntryTranslation({

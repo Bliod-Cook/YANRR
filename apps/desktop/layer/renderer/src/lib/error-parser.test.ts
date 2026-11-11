@@ -15,7 +15,7 @@ import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
 import { setApiUnreachable } from "~/atoms/api-connection"
 
-import { getFetchErrorMessage, toastFetchError } from "./error-parser"
+import { getFetchErrorMessage, isMissingConfiguration, toastFetchError } from "./error-parser"
 
 vi.mock("sonner", () => ({
   toast: {
@@ -203,5 +203,17 @@ describe("error code translations", () => {
         language,
       ).toEqual([])
     }
+  })
+})
+
+describe("isMissingConfiguration", () => {
+  test("recognises the answer of a feature the server has not configured", () => {
+    const answer = new FollowAPIError("AI is not configured", 403, "5", undefined, {
+      serverCode: 5,
+    })
+
+    expect(isMissingConfiguration(answer)).toBe(true)
+    expect(isMissingConfiguration(new FollowAPIError("Forbidden", 403, "4", undefined))).toBe(false)
+    expect(isMissingConfiguration(new Error("5"))).toBe(false)
   })
 })

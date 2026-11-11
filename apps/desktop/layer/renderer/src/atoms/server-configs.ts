@@ -1,16 +1,24 @@
-import { getStorageNS } from "@follow/utils/ns"
-import type { ExtractResponseData, GetStatusConfigsResponse } from "@follow-app/client-sdk"
-import { atomWithStorage } from "jotai/utils"
+import { atom } from "jotai"
 
 import { createAtomHooks } from "~/lib/jotai"
 
+/** What the server offers, from `GET /status/configs` */
+export interface ServerConfigs {
+  /** Entry summaries and translation are configured (not AI chat, see `AI_CHAT_ENABLED`) */
+  ai: boolean
+  /** Sign-up is accepted */
+  registration: boolean
+  /** Push notifications are configured */
+  push: boolean
+  /** The server never sends it: AI chat does not exist on it */
+  AI_CHAT_ENABLED?: boolean
+}
+
+// Not persisted: an answer kept from another server would be wrong
 export const [, , useServerConfigs, , getServerConfigs, setServerConfigs] = createAtomHooks(
-  atomWithStorage<Nullable<ExtractResponseData<GetStatusConfigsResponse>>>(
-    getStorageNS("server-configs"),
-    null,
-    undefined,
-    {
-      getOnInit: true,
-    },
-  ),
+  atom<Nullable<ServerConfigs>>(null),
 )
+
+/** Off until the server says it is on, so no feature shows that the server cannot serve */
+export const useServerCapability = (capability: "ai" | "registration" | "push") =>
+  useServerConfigs()?.[capability] === true

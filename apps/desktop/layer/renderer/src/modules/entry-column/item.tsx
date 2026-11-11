@@ -4,6 +4,8 @@ import { useEntryTranslation, usePrefetchEntryTranslation } from "@follow/store/
 import type { FC } from "react"
 import { memo } from "react"
 
+import { useShowAITranslationAuto } from "~/atoms/ai-translation"
+import { useServerCapability } from "~/atoms/server-configs"
 import { useActionLanguage, useGeneralSettingKey } from "~/atoms/settings/general"
 
 import { getItemComponentByView } from "./Items/getItemComponentByView"
@@ -22,7 +24,8 @@ const EntryItemImpl = memo(function EntryItemImpl({
   currentFeedTitle,
   isFirstItem,
 }: EntryItemProps) {
-  const enableTranslation = useGeneralSettingKey("translation")
+  const aiEnabled = useServerCapability("ai")
+  const enableTranslation = useShowAITranslationAuto()
   const translationMode = useGeneralSettingKey("translationMode")
   const actionLanguage = useActionLanguage()
   const translation = useEntryTranslation({
@@ -32,7 +35,8 @@ const EntryItemImpl = memo(function EntryItemImpl({
     enabled: enableTranslation,
   })
   usePrefetchEntryTranslation({
-    entryIds: [entryId],
+    // An action rule may ask for translations the server cannot make
+    entryIds: aiEnabled ? [entryId] : [],
     enabled: enableTranslation,
     language: actionLanguage,
     withContent: view === FeedViewType.SocialMedia,

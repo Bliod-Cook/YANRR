@@ -31,10 +31,11 @@ const enterWith = async (request: Parameters<typeof succeededOrToast>[0]) => {
   if (await succeededOrToast(request)) handleSessionChanges()
 }
 
+/** Without `onLoginStateChange` the form offers signing in only */
 export function LoginWithPassword({
   onLoginStateChange,
 }: {
-  onLoginStateChange: (state: "register" | "login") => void
+  onLoginStateChange?: (state: "register" | "login") => void
 }) {
   const { t } = useTranslation("app")
   const form = useForm<z.infer<typeof formSchema>>({
@@ -108,24 +109,28 @@ export function LoginWithPassword({
         </div>
       </form>
 
-      <Divider className="my-4" />
+      {onLoginStateChange && (
+        <>
+          <Divider className="my-4" />
 
-      <div className="pb-2 text-center text-sm text-text-secondary">
-        <Trans
-          t={t}
-          i18nKey="login.no_account"
-          components={{
-            strong: (
-              <button
-                data-testid="login-switch-register"
-                type="button"
-                className="inline-flex cursor-pointer items-center gap-1 text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
-                onClick={() => onLoginStateChange("register")}
-              />
-            ),
-          }}
-        />
-      </div>
+          <div className="pb-2 text-center text-sm text-text-secondary">
+            <Trans
+              t={t}
+              i18nKey="login.no_account"
+              components={{
+                strong: (
+                  <button
+                    data-testid="login-switch-register"
+                    type="button"
+                    className="inline-flex cursor-pointer items-center gap-1 text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
+                    onClick={() => onLoginStateChange("register")}
+                  />
+                ),
+              }}
+            />
+          </div>
+        </>
+      )}
     </Form>
   )
 }

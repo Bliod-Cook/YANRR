@@ -1,4 +1,4 @@
-import { actionActions } from "@follow/store/action/store"
+import { useActionStore } from "@follow/store/action/store"
 import { apiContext } from "@follow/store/context"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import * as React from "react"
@@ -7,6 +7,8 @@ import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
+
+import { setServerConfigs } from "~/atoms/server-configs"
 
 import { SubViewHeaderActions } from "../app-layout/subview/HeaderActions"
 import { ActionSetting } from "./action-setting"
@@ -34,7 +36,8 @@ describe("ActionSetting", () => {
   })
 
   beforeEach(async () => {
-    await actionActions.reset()
+    useActionStore.setState({ rules: [], isDirty: false, isLoaded: false })
+    setServerConfigs(null)
     getRules.mockReset()
     putRules.mockReset()
     apiContext.provide({ actions: { get: getRules, put: putRules } } as unknown as Parameters<
@@ -104,5 +107,33 @@ describe("ActionSetting", () => {
     await vi.waitFor(() =>
       expect(putRules).toHaveBeenCalledWith({ rules: [], expectedUpdatedAt: LOADED_AT }),
     )
+  })
+
+  test("offers the summary and translation actions only on a server with AI", async () => {
+    getRules.mockResolvedValue({
+      code: 0,
+      data: {
+        rules: [{ name: "Only", condition: [], result: { star: true, summary: true } }],
+        updatedAt: LOADED_AT,
+      },
+    })
+    // The rule card lists what the rule does; the editor offers the action
+    const hasSummaryAction = () =>
+      [...host!.querySelectorAll("span")].some(
+        (element) => element.textContent === "actions.action_card.generate_summary",
+      )
+    const rules = (ai: boolean) => {
+      setServerConfigs({ ai, push: false, registration: false })
+      return render()
+    }
+
+    await rules(false)
+    await vi.waitFor(() => expect(button("actions.action_card.summary.delete")).toBeDefined())
+    expect(hasSummaryAction()).toBe(false)
+    await act(async () => root!.unmount())
+    host!.remove()
+
+    await rules(true)
+    await vi.waitFor(() => expect(hasSummaryAction()).toBe(true))
   })
 })

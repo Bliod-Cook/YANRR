@@ -14,6 +14,7 @@ import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest"
 
+import { setServerConfigs } from "~/atoms/server-configs"
 import { initializeDefaultGeneralSettings, setGeneralSetting } from "~/atoms/settings/general"
 import { jotaiStore } from "~/lib/jotai"
 import { useRegisterEntryCommands } from "~/modules/command/commands/entry"
@@ -85,6 +86,7 @@ describe("EntryHeader", () => {
     root = null
     host = null
     initializeDefaultGeneralSettings()
+    setServerConfigs(null)
     setRoute({
       params: {},
       searchParams: new URLSearchParams(),
@@ -92,39 +94,57 @@ describe("EntryHeader", () => {
     })
   })
 
+  const renderHeader = async (view: FeedViewType) => {
+    // Otherwise they apply by themselves, and their toggles are hidden for any entry
+    setGeneralSetting("summary", false)
+    setGeneralSetting("translation", false)
+    useEntryStore.setState({ data: { [post.id]: post } })
+    useSubscriptionStore.setState({ data: { social: { ...socialSubscription, view } } })
+    setRoute({
+      params: { timelineId: "all", entryId: post.id },
+      searchParams: new URLSearchParams(),
+      location: { pathname: "/timeline/all", search: "", hash: "", state: null, key: "" },
+    })
+    host = document.createElement("div")
+    document.body.append(host)
+    root = createRoot(host)
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={new QueryClient()}>
+          <Provider store={jotaiStore}>
+            <GlobalFocusableProvider>
+              <EntryHeaderWithCommands entryId={post.id} />
+            </GlobalFocusableProvider>
+          </Provider>
+        </QueryClientProvider>,
+      )
+    })
+    return (id: string) => host?.querySelector(`[data-command-id="${id}"]`)
+  }
+
   // The social media and picture layouts render neither the AI summary nor the readability content
   test.each([FeedViewType.SocialMedia, FeedViewType.Pictures])(
     "leaves out the actions the layout of view %i ignores in the all timeline",
     async (view) => {
-      // Otherwise the summary shows by itself, and its toggle is hidden for any entry
-      setGeneralSetting("summary", false)
-      useEntryStore.setState({ data: { [post.id]: post } })
-      useSubscriptionStore.setState({ data: { social: { ...socialSubscription, view } } })
-      setRoute({
-        params: { timelineId: "all", entryId: post.id },
-        searchParams: new URLSearchParams(),
-        location: { pathname: "/timeline/all", search: "", hash: "", state: null, key: "" },
-      })
-      host = document.createElement("div")
-      document.body.append(host)
-      root = createRoot(host)
+      const actionOf = await renderHeader(view)
 
-      await act(async () => {
-        root?.render(
-          <QueryClientProvider client={new QueryClient()}>
-            <Provider store={jotaiStore}>
-              <GlobalFocusableProvider>
-                <EntryHeaderWithCommands entryId={post.id} />
-              </GlobalFocusableProvider>
-            </Provider>
-          </QueryClientProvider>,
-        )
-      })
-
-      const actionOf = (id: string) => host?.querySelector(`[data-command-id="${id}"]`)
       expect(actionOf(COMMAND_ID.entry.star)).not.toBeNull()
       expect(actionOf(COMMAND_ID.entry.toggleAISummary)).toBeNull()
       expect(actionOf(COMMAND_ID.entry.readability)).toBeNull()
     },
   )
+
+  test("offers the summary toggle only on a server with AI", async () => {
+    setServerConfigs({ ai: false, push: false, registration: false })
+    let actionOf = await renderHeader(FeedViewType.Articles)
+    expect(actionOf(COMMAND_ID.entry.star)).not.toBeNull()
+    expect(actionOf(COMMAND_ID.entry.toggleAISummary)).toBeNull()
+    await act(async () => root?.unmount())
+    host?.remove()
+
+    setServerConfigs({ ai: true, push: false, registration: false })
+    actionOf = await renderHeader(FeedViewType.Articles)
+    expect(actionOf(COMMAND_ID.entry.toggleAISummary)).not.toBeNull()
+  })
 })

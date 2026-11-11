@@ -2,6 +2,7 @@ import { atom } from "jotai"
 
 import { createAtomHooks } from "~/lib/jotai"
 
+import { useServerCapability } from "./server-configs"
 import { useGeneralSettingKey } from "./settings/general"
 
 // NOTE: We have three levels of settings can enable AI translation or Summary:
@@ -20,12 +21,16 @@ export const toggleShowAITranslationOnce = () => setShowAITranslationOnce((prev)
 export const enableShowAITranslationOnce = () => setShowAITranslationOnce(true)
 export const disableShowAITranslationOnce = () => setShowAITranslationOnce(false)
 
+// A server without AI never translates, whatever the settings say
 export const useShowAITranslationAuto = (settings?: boolean | null) => {
-  return useGeneralSettingKey("translation") || !!settings
+  const aiEnabled = useServerCapability("ai")
+  const enabledBySetting = useGeneralSettingKey("translation") || !!settings
+  return aiEnabled && enabledBySetting
 }
 
 export const useShowAITranslation = (settings?: boolean | null) => {
+  const aiEnabled = useServerCapability("ai")
   const showAITranslationAuto = useShowAITranslationAuto(settings)
   const showAITranslationOnce = useShowAITranslationOnce()
-  return showAITranslationAuto || showAITranslationOnce
+  return aiEnabled && (showAITranslationAuto || showAITranslationOnce)
 }

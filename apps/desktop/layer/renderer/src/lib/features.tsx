@@ -1,11 +1,11 @@
-import type { ExtractResponseData, GetStatusConfigsResponse } from "@follow-app/client-sdk"
 import type { FC } from "react"
 
+import type { ServerConfigs } from "~/atoms/server-configs"
 import { useFeature } from "~/hooks/biz/useFeature"
 
 export const featureConfigMap = {
   ai: "AI_CHAT_ENABLED",
-} satisfies Record<string, keyof ExtractResponseData<GetStatusConfigsResponse>>
+} satisfies Record<string, keyof ServerConfigs>
 
 export const withFeature =
   (feature: keyof typeof featureConfigMap) =>

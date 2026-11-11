@@ -16,6 +16,12 @@ const CONNECTION_FAILURE_MESSAGE =
 export const isConnectionFailure = (error: Error) =>
   !(error instanceof FollowAPIError) && CONNECTION_FAILURE_MESSAGE.test(error.message)
 
+/** The server answers this when a feature is not configured: the feature is off, not broken */
+const MISSING_CONFIGURATION_CODE = 5
+
+export const isMissingConfiguration = (error: unknown) =>
+  error instanceof FollowAPIError && getServerCode(error) === MISSING_CONFIGURATION_CODE
+
 /**
  * The code of the server's answer, which the error locales translate. `code` names some errors
  * the SDK's own way, such as AUTH_REQUIRED for a refused session, whose server code is 1000, or

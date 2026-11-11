@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { useShowAITranslation } from "~/atoms/ai-translation"
 import { useEntryIsInReadability, useEntryIsInReadabilitySuccess } from "~/atoms/readability"
+import { useServerCapability } from "~/atoms/server-configs"
 import { useActionLanguage, useGeneralSettingKey } from "~/atoms/settings/general"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 
@@ -42,6 +43,7 @@ export const useEntryContent = (entryId: string) => {
   const isInReadabilityMode = useEntryIsInReadability(entryId)
   const isReadabilitySuccess = useEntryIsInReadabilitySuccess(entryId)
 
+  const aiEnabled = useServerCapability("ai")
   const enableTranslation = useShowAITranslation()
   const actionLanguage = useActionLanguage()
   const translationMode = useGeneralSettingKey("translationMode")
@@ -52,7 +54,8 @@ export const useEntryContent = (entryId: string) => {
     enabled: enableTranslation,
   })
   usePrefetchEntryTranslation({
-    entryIds: [entryId],
+    // An action rule may ask for translations the server cannot make
+    entryIds: aiEnabled ? [entryId] : [],
     enabled: enableTranslation,
     language: actionLanguage,
     withContent: true,
