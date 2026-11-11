@@ -195,7 +195,7 @@ describe("SharePanel", () => {
     expect(open).toHaveBeenCalledWith(
       "https://t.me/share/url?url=https%3A%2F%2Fexample.com%2Farticle&text=Example%20entry",
       "_blank",
-      "width=600,height=400",
+      "noopener,width=600,height=400",
     )
     expect(mocks.dismissPopover).toHaveBeenCalledOnce()
   })

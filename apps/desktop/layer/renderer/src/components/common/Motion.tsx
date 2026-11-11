@@ -1,10 +1,11 @@
-import type { TargetAndTransition } from "motion/react"
 import { m as M } from "motion/react"
 import { createElement } from "react"
 
 import { useReduceMotion } from "~/hooks/biz/useReduceMotion"
 
-import { isLCPEnded } from "./LCPEndDetector"
+// The first seconds after navigation start are when the largest contentful paint happens
+const LCP_WINDOW_MS = 3000
+const isLCPEnded = () => performance.now() > LCP_WINDOW_MS
 
 type WithLCPOptimization<P> = P & { lcpOptimization?: boolean }
 // Narrow exported proxy type so each motion component accepts `lcpOptimization`
@@ -26,21 +27,8 @@ export const m: MotionProxy = new Proxy(M, {
       const shouldReduceMotion = useReduceMotion()
       const nextProps = { ...props }
       if (shouldReduceMotion) {
-        if (props.exit) {
-          nextProps.exit = {
-            opacity: 0,
-            transition: (props.exit as TargetAndTransition).transition,
-          }
-        }
-
-        if (props.initial) {
-          nextProps.initial = {
-            opacity: 0,
-          }
-        }
-        nextProps.animate = {
-          opacity: 1,
-        }
+        // Keep the animated values, which carry state, and only skip the movement between them
+        nextProps.transition = { duration: 0 }
       }
 
       // Disable initial animation before hydration ends to optimize LCP

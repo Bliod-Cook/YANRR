@@ -18,18 +18,6 @@ vi.mock("@follow/store/inbox/store", () => ({
   },
 }))
 
-vi.mock("~/components/ui/button/AnimatedCommandButton", () => ({
-  AnimatedCommandButton: ({
-    onClick,
-  }: {
-    onClick?: React.MouseEventHandler<HTMLButtonElement>
-  }) => (
-    <button type="button" onClick={onClick}>
-      Copy
-    </button>
-  ),
-}))
-
 vi.mock("sonner", () => ({
   toast: {
     error: mocks.toastError,

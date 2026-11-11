@@ -6,7 +6,7 @@ import { cn } from "@follow/utils/utils"
 import { Combobox, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react"
 import Fuse from "fuse.js"
 import { AnimatePresence, m } from "motion/react"
-import { Fragment, memo, useCallback, useEffect, useState } from "react"
+import { Fragment, memo, useMemo, useState } from "react"
 
 export type Suggestion = {
   name: string
@@ -41,24 +41,14 @@ export const Autocomplete = ({
     () => suggestions.find((suggestion) => suggestion.value === value) || null,
   )
 
-  const [filterableSuggestions, setFilterableSuggestions] = useState(suggestions)
-
-  const doFilter = useCallback(() => {
-    const fuse = new Fuse(suggestions, {
-      keys: searchKeys,
-    })
-
+  const filterableSuggestions = useMemo(() => {
     const trimInputValue = (value as string)?.trim()
+    if (!trimInputValue) return suggestions
 
-    if (!trimInputValue) return setFilterableSuggestions(suggestions)
-
-    const results = fuse.search(trimInputValue)
-
-    setFilterableSuggestions(results.map((result) => result.item))
+    return new Fuse(suggestions, { keys: searchKeys })
+      .search(trimInputValue)
+      .map((result) => result.item)
   }, [suggestions, value, searchKeys])
-  useEffect(() => {
-    doFilter()
-  }, [doFilter])
 
   const zIndex = useCorrectZIndex(9)
   return (

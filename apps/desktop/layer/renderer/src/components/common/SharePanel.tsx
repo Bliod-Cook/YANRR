@@ -143,7 +143,7 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
         .replace("{url}", encodeURIComponent(shareContent.url))
         .replace("{title}", encodeURIComponent(shareContent.title ?? ""))
 
-      window.open(finalUrl, "_blank", "width=600,height=400")
+      window.open(finalUrl, "_blank", "noopener,width=600,height=400")
       dismissPopover()
     },
     [entryId],

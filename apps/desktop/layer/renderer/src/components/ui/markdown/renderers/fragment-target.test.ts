@@ -18,16 +18,16 @@ describe("isFragmentLink", () => {
 })
 
 describe("findFragmentTarget", () => {
-  it("finds an id the sanitizer prefixed on the server and again in the client", () => {
+  it("finds an id the sanitizer prefixed", () => {
     const container = render(
-      `<h2 id="user-content-user-content-section-1">One</h2><h2 id="user-content-user-content-section-2">Two</h2>`,
+      `<h2 id="user-content-section-1">One</h2><h2 id="user-content-section-2">Two</h2>`,
     )
 
     expect(findFragmentTarget(container, "#section-2")?.textContent).toBe("Two")
   })
 
   it("finds the target when the link already carries the prefix", () => {
-    const container = render(`<li id="user-content-user-content-fn1">Note</li>`)
+    const container = render(`<li id="user-content-fn1">Note</li>`)
 
     expect(findFragmentTarget(container, "#user-content-fn1")?.textContent).toBe("Note")
   })

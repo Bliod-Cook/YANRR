@@ -1,5 +1,4 @@
 import { RelativeTime as RelativeTimeBase } from "@follow/components/ui/datetime/index.js"
-import { getUpdateInterval } from "@follow/components/ui/datetime/utils.js"
 import {
   Tooltip,
   TooltipContent,
@@ -9,10 +8,9 @@ import {
 import { stopPropagation } from "@follow/utils/dom"
 import dayjs from "dayjs"
 import type { ComponentProps } from "react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useGeneralSettingSelector } from "~/atoms/settings/general"
 import { useUISettingKey } from "~/atoms/settings/ui"
 
 // Absolute dates follow the Date Format setting unless the caller asks for a format
@@ -30,7 +28,6 @@ export const RelativeDay = ({
   plain?: boolean
 }) => {
   const { t } = useTranslation("common")
-  const language = useGeneralSettingSelector((s) => s.language)
 
   const dateFormatValue = useUISettingKey("dateFormat")
   const formatTemplateString = "lll"
@@ -58,23 +55,20 @@ export const RelativeDay = ({
     [t],
   )
 
-  const timerRef = useRef<any>(null)
   const [dateString, setDateString] = useState<string>(() => formatDateString(date))
 
+  // "Today" and "yesterday" change at local midnight, however long the app stays open
   useEffect(() => {
-    const updateInterval = getUpdateInterval(date, 3)
-
-    if (updateInterval !== null) {
-      timerRef.current = setTimeout(() => {
-        setDateString(formatDateString(date))
-      }, updateInterval)
+    let timer: ReturnType<typeof setTimeout>
+    const update = () => {
+      setDateString(formatDateString(date))
+      const now = new Date()
+      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+      timer = setTimeout(update, nextMidnight.getTime() - now.getTime() + 1000)
     }
-    setDateString(formatDateString(date))
-
-    return () => {
-      timerRef.current = clearTimeout(timerRef.current)
-    }
-  }, [date, formatDateString, language])
+    update()
+    return () => clearTimeout(timer)
+  }, [date, formatDateString])
 
   const formated = useMemo(() => dayjs(date).format(dateFormat), [dateFormat, date])
 

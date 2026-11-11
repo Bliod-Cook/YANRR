@@ -6,7 +6,7 @@ import { nextFrame, stopPropagation } from "@follow/utils/dom"
 import { cn } from "@follow/utils/utils"
 import type { Variant } from "motion/react"
 import { m, useAnimationControls } from "motion/react"
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 
 import { RelativeTime } from "~/components/ui/datetime"
 import { usePreviewMedia } from "~/components/ui/media/hooks"
@@ -30,29 +30,20 @@ const variants: Record<string, Variant> = {
   },
 }
 
+const identity = <T,>(value: T) => value
+
 export const EntryToastPreview = ({ entryId }: { entryId: string }) => {
   usePrefetchEntryDetail(entryId)
 
-  const entry = useEntry(entryId, (state) => {
-    const { feedId } = state
-    const { author, authorAvatar, description, publishedAt } = state
-
-    const media = state.media || []
-    const firstPhotoUrl = media.find((a) => a.type === "photo")?.url
-    const iconEntry: FeedIconEntry = {
-      firstPhotoUrl,
-      authorAvatar,
-    }
-
-    return {
-      author,
-      description,
-      feedId,
-      iconEntry,
-      media,
-      publishedAt,
-    }
-  })
+  // Select the stored entry itself: a selector that builds a new object re-renders on every store update
+  const entry = useEntry(entryId, identity)
+  const iconEntry = useMemo<FeedIconEntry>(
+    () => ({
+      firstPhotoUrl: entry?.media?.find((a) => a.type === "photo")?.url,
+      authorAvatar: entry?.authorAvatar,
+    }),
+    [entry?.media, entry?.authorAvatar],
+  )
   const isInCollection = useIsEntryStarred(entryId)
 
   const feed = useFeedById(entry?.feedId)
@@ -91,7 +82,7 @@ export const EntryToastPreview = ({ entryId }: { entryId: string }) => {
           fallback
           className="mask-squircle mask"
           target={feed}
-          entry={entry.iconEntry}
+          entry={iconEntry}
           size={36}
         />
         <div className="flex min-w-0 grow flex-col">
