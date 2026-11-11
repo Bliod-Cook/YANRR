@@ -16,8 +16,7 @@ import { FeedTitle } from "~/modules/feed/feed-title"
 
 import { GridItem } from "../templates/grid-item-template"
 import type { EntryItemStatelessProps, UniversalItemProps } from "../types"
-
-const ViewTag = IN_ELECTRON ? "webview" : "iframe"
+import { VideoPreview } from "./video-preview"
 
 export function VideoItem({ entryId, translation }: UniversalItemProps) {
   const { t } = useTranslation()
@@ -87,9 +86,8 @@ export function VideoItem({ entryId, translation }: UniversalItemProps) {
       <div className="w-full cursor-card">
         <div className="relative overflow-x-auto" ref={ref}>
           {miniIframeSrc && showPreview ? (
-            <ViewTag
+            <VideoPreview
               src={miniIframeSrc}
-              referrerPolicy="strict-origin-when-cross-origin"
               className={cn(
                 "pointer-events-none aspect-video w-full shrink-0 rounded-md bg-black object-cover",
                 isActive && "rounded-b-none",

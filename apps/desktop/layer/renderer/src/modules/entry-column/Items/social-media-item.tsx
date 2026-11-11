@@ -124,7 +124,10 @@ export const SocialMediaItem: EntryListItemFC = ({ entryId, translation }) => {
               <a
                 href={`https://x.com/${parsed.meta.handle}`}
                 target="_blank"
+                rel="noreferrer"
                 className="text-zinc-500"
+                // The row cancels the click to open the entry, which would cancel the link too
+                onClick={(e) => e.stopPropagation()}
               >
                 @{parsed.meta.handle}
               </a>
