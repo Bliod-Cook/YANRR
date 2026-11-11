@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, test, vi } from "vitest"
 
 import { getShowAISummaryOnce } from "~/atoms/ai-summary"
 import { getShowAITranslationOnce } from "~/atoms/ai-translation"
+import { setServerConfigs } from "~/atoms/server-configs"
 
 import { getCommand } from "../hooks/use-command"
 import { useRegisterEntryCommands } from "./entry"
@@ -49,8 +50,17 @@ describe("useRegisterEntryCommands", () => {
     host?.remove()
   })
 
+  test("offers no AI summary or translation toggle when the server has no AI", async () => {
+    await act(async () => setServerConfigs({ ai: false, push: false, registration: false }))
+
+    expect(getCommand(COMMAND_ID.entry.toggleAISummary)).toBeNull()
+    expect(getCommand(COMMAND_ID.entry.toggleAITranslation)).toBeNull()
+  })
+
   // The entry toolbar hides the actions of unregistered commands
-  test("registers the AI summary and translation toggles", () => {
+  test("registers the AI summary and translation toggles when the server has AI", async () => {
+    await act(async () => setServerConfigs({ ai: true, push: false, registration: false }))
+
     getCommand(COMMAND_ID.entry.toggleAISummary)?.run()
     getCommand(COMMAND_ID.entry.toggleAITranslation)?.run()
 

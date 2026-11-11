@@ -15,6 +15,7 @@ import { toast } from "sonner"
 import { toggleShowAISummaryOnce } from "~/atoms/ai-summary"
 import { toggleShowAITranslationOnce } from "~/atoms/ai-translation"
 import { showPopover } from "~/atoms/popover"
+import { useServerCapability } from "~/atoms/server-configs"
 import { getGeneralSettings } from "~/atoms/settings/general"
 import {
   getShowSourceContent,
@@ -32,7 +33,8 @@ import { getIsPreviewFeed } from "~/modules/entry-column/hooks/useIsPreviewFeed"
 import { markAllByRoute } from "~/modules/entry-column/hooks/useMarkAll"
 import { useGalleryModal } from "~/modules/entry-content/hooks"
 
-import { useRegisterFollowCommand } from "../hooks/use-register-command"
+import { useRegisterCommandEffect, useRegisterFollowCommand } from "../hooks/use-register-command"
+import { defineFollowCommand } from "../registry/command"
 import type { Command, CommandCategory } from "../types"
 import { COMMAND_ID } from "./id"
 
@@ -125,6 +127,7 @@ export const useRegisterEntryCommands = () => {
   const openGalleryModal = useGalleryModal()
   const read = useRead()
   const unread = useUnread()
+  const aiEnabled = useServerCapability("ai")
 
   useRegisterFollowCommand(
     [
@@ -376,22 +379,31 @@ export const useRegisterEntryCommands = () => {
           })
         },
       },
-      {
-        id: COMMAND_ID.entry.toggleAISummary,
-        label: t("entry_actions.toggle_ai_summary"),
-        icon: <i className="i-mgc-ai-cute-re" />,
-        category,
-        run: toggleShowAISummaryOnce,
-      },
-      {
-        id: COMMAND_ID.entry.toggleAITranslation,
-        label: t("entry_actions.toggle_ai_translation"),
-        icon: <i className="i-mgc-translate-2-ai-cute-re" />,
-        category,
-        run: toggleShowAITranslationOnce,
-      },
     ],
     {},
+  )
+
+  // Summaries and translations need a server with AI
+  useRegisterCommandEffect(
+    aiEnabled
+      ? [
+          defineFollowCommand({
+            id: COMMAND_ID.entry.toggleAISummary,
+            label: t("entry_actions.toggle_ai_summary"),
+            icon: <i className="i-mgc-ai-cute-re" />,
+            category,
+            run: toggleShowAISummaryOnce,
+          }),
+          defineFollowCommand({
+            id: COMMAND_ID.entry.toggleAITranslation,
+            label: t("entry_actions.toggle_ai_translation"),
+            icon: <i className="i-mgc-translate-2-ai-cute-re" />,
+            category,
+            run: toggleShowAITranslationOnce,
+          }),
+        ]
+      : [],
+    { deps: [aiEnabled] },
   )
 }
 
