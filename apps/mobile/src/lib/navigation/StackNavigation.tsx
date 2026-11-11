@@ -1,8 +1,8 @@
 import { StatusBar } from "expo-status-bar"
 import type { PrimitiveAtom } from "jotai"
-import { atom, useAtomValue, useAtomValueRawSync, useStore } from "jotai"
+import { atom, useAtomValue, useAtomValueRawSync } from "jotai"
 import type { FC, PropsWithChildren } from "react"
-import { memo, use, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { memo, use, useCallback, useEffect, useMemo, useState } from "react"
 import { StyleSheet } from "react-native"
 import {
   SafeAreaFrameContext,
@@ -17,12 +17,10 @@ import { isAndroid, isIOS } from "../platform"
 import type { Route } from "./ChainNavigationContext"
 import { ChainNavigationContext } from "./ChainNavigationContext"
 import { GroupedNavigationRouteContext } from "./GroupedNavigationRouteContext"
-import { useNavigation } from "./hooks"
 import { Navigation } from "./Navigation"
 import { createNavigationScrollTargets } from "./navigation-scroll-targets"
 import { NavigationInstanceContext } from "./NavigationInstanceContext"
 import { NavigationScrollTargetsContext } from "./NavigationScrollTargetsContext"
-import { ScreenNameContext } from "./ScreenNameContext"
 import type { ScreenOptionsContextType } from "./ScreenOptionsContext"
 import { ModalScreenItemOptionsContext } from "./ScreenOptionsContext"
 import type { NavigationControllerView } from "./types"
@@ -43,24 +41,21 @@ export const RootStackNavigation = ({ children, headerConfig }: RootStackNavigat
 
   return (
     <NavigationScrollTargetsProvider>
-      <ScreenNameContext value={useMemo(() => atom(""), [])}>
-        <ChainNavigationContext value={Navigation.rootNavigation.__dangerous_getCtxValue()}>
-          <NavigationInstanceContext value={Navigation.rootNavigation}>
-            <ScreenStack style={StyleSheet.absoluteFill}>
-              <WrappedScreenItem
-                headerConfig={headerConfig}
-                screenId="root"
-                onNativeAppear={handleRootAppear}
-              >
-                {children}
-              </WrappedScreenItem>
+      <ChainNavigationContext value={Navigation.rootNavigation.__dangerous_getCtxValue()}>
+        <NavigationInstanceContext value={Navigation.rootNavigation}>
+          <ScreenStack style={StyleSheet.absoluteFill}>
+            <WrappedScreenItem
+              headerConfig={headerConfig}
+              screenId="root"
+              onNativeAppear={handleRootAppear}
+            >
+              {children}
+            </WrappedScreenItem>
 
-              {nativeRootReady && <ScreenItemsMapper />}
-              <StateHandler />
-            </ScreenStack>
-          </NavigationInstanceContext>
-        </ChainNavigationContext>
-      </ScreenNameContext>
+            {nativeRootReady && <ScreenItemsMapper />}
+          </ScreenStack>
+        </NavigationInstanceContext>
+      </ChainNavigationContext>
     </NavigationScrollTargetsProvider>
   )
 }
@@ -70,41 +65,6 @@ const NavigationScrollTargetsProvider: FC<PropsWithChildren> = ({ children }) =>
 
   return <NavigationScrollTargetsContext value={targets}>{children}</NavigationScrollTargetsContext>
 }
-const StateHandler = () => {
-  const navigation = useNavigation()
-  const nameAtom = use(ScreenNameContext)
-  const navigationInstance = use(NavigationInstanceContext)
-  const jotaiStore = useStore()
-  const previousName = useRef(jotaiStore.get(nameAtom))
-  useEffect(() => {
-    return navigation.on("screenChange", (payload) => {
-      if (!payload.route) return
-      const Component = payload.route.Component as NavigationControllerView
-      const state = jotaiStore.get(navigationInstance.__dangerous_getCtxValue().routesAtom)
-      if (payload.type === "appear" && state.at(-1)?.id === payload.route.id) {
-        previousName.current = jotaiStore.get(nameAtom)
-        jotaiStore.set(nameAtom, Component.title || Component.displayName || Component.name)
-      }
-      if (payload.type === "disappear") {
-        const lastRoute = state.at(-1)
-
-        if (lastRoute && lastRoute.Component) {
-          previousName.current = jotaiStore.get(nameAtom)
-          jotaiStore.set(
-            nameAtom,
-            lastRoute?.Component.title ||
-              lastRoute?.Component.displayName ||
-              lastRoute?.Component.name,
-          )
-        } else {
-          jotaiStore.set(nameAtom, previousName.current)
-        }
-      }
-    })
-  }, [jotaiStore, nameAtom, navigation, navigationInstance])
-  return null
-}
-
 const ScreenItemsMapper = () => {
   const chainCtxValue = use(ChainNavigationContext)
   const routes = useAtomValue(chainCtxValue.routesAtom)

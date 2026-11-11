@@ -38,8 +38,3 @@ export const useBottomTabHeight = () => {
   const { tabHeightAtom } = use(BottomTabContext)
   return useAtomValue(tabHeightAtom)
 }
-
-export const useTabScreenIdentifier = () => {
-  const { identifierAtom } = use(TabScreenContext)
-  return useAtomValue(identifierAtom)
-}

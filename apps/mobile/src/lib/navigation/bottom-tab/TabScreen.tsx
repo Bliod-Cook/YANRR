@@ -1,4 +1,4 @@
-import { atom, useAtom, useAtomValue, useSetAtom } from "jotai"
+import { useAtom, useAtomValue, useSetAtom } from "jotai"
 import type { FC, PropsWithChildren } from "react"
 import { use, useEffect, useMemo } from "react"
 import { StyleSheet } from "react-native"
@@ -9,7 +9,7 @@ import { isIOS } from "../../platform"
 import { WrappedScreenItem } from "../WrappedScreenItem"
 import { BottomTabContext } from "./BottomTabContext"
 import { TabScreenWrapper } from "./native"
-import { LifecycleEvents, ScreenNameRegister } from "./shared"
+import { LifecycleEvents } from "./shared"
 import type { TabScreenContextType } from "./TabScreenContext"
 import { TabScreenContext } from "./TabScreenContext"
 import type { ResolvedTabScreenProps, TabScreenComponent, TabScreenProps } from "./types"
@@ -92,29 +92,23 @@ export const TabScreen: FC<PropsWithChildren<Omit<TabScreenProps, "tabScreenInde
     }
   }, [setLoadedableIndex, tabScreenIndex, isSelected])
 
-  const ctxValue = useMemo<TabScreenContextType>(
-    () => ({
-      tabScreenIndex,
-      identifierAtom: atom(mergedProps.identifier ?? ""),
-      titleAtom: atom(mergedProps.title),
-    }),
-    [tabScreenIndex, mergedProps.identifier, mergedProps.title],
-  )
+  const ctxValue = useMemo<TabScreenContextType>(() => ({ tabScreenIndex }), [tabScreenIndex])
   const shouldLoadReact = mergedProps.lazy ? isSelected || isLoadedBefore : true
 
-  const render = !__DEV__ && isIOS ? true : isSelected
   return (
     <TabScreenWrapper
       style={StyleSheet.absoluteFill}
+      // A tab left keeps its screens, with their scroll positions and state. The native tab bar on
+      // iOS shows one tab at a time; elsewhere the tabs are stacked views, so the others hide.
+      className={isIOS || isSelected ? undefined : "hidden"}
       title={mergedProps.title}
       icon={IconNativeNameMap[icon]}
       activeIcon={IconNativeNameMap[activeIcon]}
     >
       <TabScreenContext value={ctxValue}>
-        {shouldLoadReact && render && (
+        {shouldLoadReact && (
           <WrappedScreenItem screenId={`tab-screen-${tabScreenIndex}`}>
             {children}
-            <ScreenNameRegister />
             <LifecycleEvents isSelected={isSelected} />
           </WrappedScreenItem>
         )}
