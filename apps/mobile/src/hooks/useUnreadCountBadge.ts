@@ -2,6 +2,7 @@ import { useUnreadAll } from "@follow/store/unread/hooks"
 import { useEffect } from "react"
 
 import { useUISettingKey } from "../atoms/settings/ui"
+import { setBackgroundTaskEnabled } from "../initialize/background"
 import { setBadgeCountAsyncWithPermission } from "../lib/permission"
 
 // Unread counts change in bursts while syncing; only the settled value is written
@@ -10,6 +11,9 @@ const BADGE_UPDATE_DELAY = 500
 export function useUnreadCountBadge() {
   const unreadCount = useUnreadAll()
   const showUnreadCountBadge = useUISettingKey("showUnreadCountBadgeMobile")
+  useEffect(() => {
+    setBackgroundTaskEnabled(showUnreadCountBadge).catch(console.error)
+  }, [showUnreadCountBadge])
   useEffect(() => {
     if (!showUnreadCountBadge) return
     const timer = setTimeout(() => {

@@ -24,11 +24,11 @@ import { getUIKitAlphaVariables } from "../lib/uikit-colors"
 import { TimelineSelectorDragProgressProvider } from "../modules/screen/atoms"
 import { ApiConnectionNotice } from "./ApiConnectionNotice"
 import { FontScalingProvider } from "./FontScalingProvider"
-import { MigrationProvider } from "./migration"
 import { ServerConfigsLoader } from "./ServerConfigsLoader"
+import { StartupProvider } from "./startup"
 
 const contexts = [
-  <MigrationProvider children={null} />,
+  <StartupProvider children={null} />,
   <Provider store={jotaiStore} />,
   <ErrorBoundary fallbackRender={GlobalErrorScreen} children={null} />,
   <KeyboardProvider children={null} />,

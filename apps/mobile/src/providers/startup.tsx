@@ -1,3 +1,4 @@
+import { deleteDB } from "@follow/database/db"
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import { Button, View } from "react-native"
@@ -6,13 +7,22 @@ import { Text } from "@/src/components/ui/typography/Text"
 
 import { PlatformActivityIndicator } from "../components/ui/loading/PlatformActivityIndicator"
 import { BugCuteReIcon } from "../icons/bug_cute_re"
-import { useDatabaseMigration } from "../initialize/migration"
-import { scheduleLocalDataReset } from "../lib/local-data-reset"
+import { useStartupState } from "../initialize/startup"
 import { reloadApp } from "../lib/reload-app"
 
-export const MigrationProvider = ({ children }: { children: ReactNode }) => {
+const resetLocalData = async () => {
+  try {
+    await deleteDB()
+  } catch (error) {
+    console.error(error)
+  }
+  await reloadApp("Reset local data")
+}
+
+/** Shows the screens only once the database is migrated and the stores are hydrated */
+export const StartupProvider = ({ children }: { children: ReactNode }) => {
   const { t } = useTranslation()
-  const { success, error } = useDatabaseMigration()
+  const { ready, error } = useStartupState()
   if (error) {
     return (
       <View className="flex-1 items-center justify-center">
@@ -22,17 +32,12 @@ export const MigrationProvider = ({ children }: { children: ReactNode }) => {
           <Text className="font-mono text-text">{error.message}</Text>
         </View>
 
-        <Button
-          title={t("migration.reset_database")}
-          onPress={async () => {
-            scheduleLocalDataReset()
-            await reloadApp("Clear Sqlite Data")
-          }}
-        />
+        <Button title={t("retry", { ns: "common" })} onPress={() => reloadApp("Retry startup")} />
+        <Button title={t("migration.reset_database")} onPress={resetLocalData} />
       </View>
     )
   }
-  if (!success) {
+  if (!ready) {
     return (
       <View className="flex-1 items-center justify-center">
         <PlatformActivityIndicator />

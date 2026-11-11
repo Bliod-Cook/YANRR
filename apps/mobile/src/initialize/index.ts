@@ -1,4 +1,4 @@
-import { initializeDB } from "@follow/database/db"
+import { initializeDB, migrateDB } from "@follow/database/db"
 import { hydrateDatabaseToStore } from "@follow/store/hydrate"
 import { ensureSyncedThroughEngine } from "@follow/store/sync/sync-status"
 import { whoami } from "@follow/store/user/getters"
@@ -6,12 +6,11 @@ import { fetchSessionUser } from "@follow/store/user/hooks"
 
 import { applyStoredAppColorScheme } from "../lib/color-scheme"
 import { settingSyncQueue } from "../modules/settings/sync-queue"
-import { initBackgroundTask } from "./background"
 import { initializeDayjs } from "./dayjs"
 import { initDeviceType } from "./device"
 import { hydrateQueryClient, hydrateSettings } from "./hydrate"
-import { migrateDatabase } from "./migration"
 import { initializePlayer } from "./player"
+import { setStartupFailed, setStartupReady } from "./startup"
 import { initSyncTriggers } from "./sync"
 
 type RequestIdleCallback = (callback: () => void, options?: { timeout?: number }) => number
@@ -28,6 +27,19 @@ const runWhenIdle = (callback: () => void) => {
   setTimeout(callback, 0)
 }
 
+/** Runs a stage that the app cannot start without; a failure is shown on the startup screen */
+const runStage = async (label: string, fn: () => Promise<unknown> | unknown) => {
+  try {
+    await apm(label, fn)
+    return true
+  } catch (error) {
+    console.error(`${label} failed`, error)
+    setStartupFailed(error instanceof Error ? error : new Error(String(error)))
+    return false
+  }
+}
+
+/** The app is ready, see `appReady`, once the database is migrated and the stores are hydrated */
 export const initializeApp = async () => {
   console.log(`Initialize...`)
 
@@ -36,17 +48,21 @@ export const initializeApp = async () => {
   // Apply the persisted color scheme before the first frame to avoid a theme flash.
   applyStoredAppColorScheme()
 
-  await initDeviceType()
-  await initializeDB()
+  const started =
+    (await runStage("initDeviceType", initDeviceType)) &&
+    (await runStage("migrateDatabase", async () => {
+      await initializeDB()
+      await migrateDB()
+    })) &&
+    (await runStage("hydrate", async () => {
+      initializeDayjs()
+      await hydrateSettings()
+      await hydrateDatabaseToStore()
+      await hydrateQueryClient()
+    }))
+  if (!started) return
+  setStartupReady()
 
-  await apm("migrateDatabase", migrateDatabase)
-  initializeDayjs()
-
-  await apm("hydrateSettings", hydrateSettings)
-  await apm("hydrateDatabaseToStore", () => {
-    return hydrateDatabaseToStore()
-  })
-  await apm("hydrateQueryClient", hydrateQueryClient)
   runWhenIdle(() => {
     void apm("initializePlayer", initializePlayer)
   })
@@ -71,12 +87,11 @@ export const initializeApp = async () => {
   })
   const loadingTime = Date.now() - now
 
-  initBackgroundTask()
   initSyncTriggers()
   console.log(`Initialize done,`, `${loadingTime}ms`)
 }
 
-const apm = async (label: string, fn: () => Promise<any> | any) => {
+const apm = async (label: string, fn: () => Promise<unknown> | unknown) => {
   const start = Date.now()
   const result = await fn()
   const end = Date.now()
