@@ -1,11 +1,13 @@
-import { isOnboardingEntryUrl } from "@follow/store/constants/onboarding"
 import { useEntry } from "@follow/store/entry/hooks"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useIsInbox } from "@follow/store/inbox/hooks"
-import { resolveUrlWithBase } from "@follow/utils/utils"
 import { useMemo } from "react"
 
-export const useFeedSafeUrl = (entryId: string) => {
+/**
+ * The web page of the entry, to open or to embed. Never another scheme, such as the `mailto:`
+ * author of an inbox email, which an embed would not show either.
+ */
+export const useFeedSafeUrl = (entryId: string): string | null => {
   const entry = useEntry(entryId, (state) => {
     return {
       feedId: state.feedId,
@@ -22,26 +24,19 @@ export const useFeedSafeUrl = (entryId: string) => {
   const isInbox = useIsInbox(entry?.inboxId)
 
   return useMemo(() => {
-    if (isInbox) return entry?.authorUrl
-    const href = entry?.url
+    const href = isInbox ? entry?.authorUrl : entry?.url
     if (!href) return null
 
-    if (isOnboardingEntryUrl(href)) {
+    // A relative link of a feed entry points into the site of the feed
+    const base = !isInbox && feed?.type === "feed" ? feed.siteUrl : null
+    let url: URL
+    try {
+      url = new URL(href, base ?? undefined)
+    } catch {
       return null
     }
-
-    if (href.startsWith("http")) {
-      try {
-        const domain = new URL(href).hostname
-        if (domain === "localhost") return null
-      } catch {
-        return null
-      }
-
-      return href
-    }
-    const feedSiteUrl = feed?.type === "feed" ? feed?.siteUrl : null
-    if (feedSiteUrl) return resolveUrlWithBase(href, feedSiteUrl)
-    return href
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null
+    if (url.hostname === "localhost") return null
+    return url.href
   }, [entry?.authorUrl, entry?.url, feed?.type, feed?.siteUrl, isInbox])
 }
