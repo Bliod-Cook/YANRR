@@ -316,13 +316,17 @@ export const logoutFromProfileMenu = async (page: Page) => {
   const appHomeURL = new URL("/timeline/articles/all/pending", page.url()).toString()
   await visibleByTestId(page, "profile-menu-trigger").click()
 
-  const signOutResponse = page
-    .waitForResponse(
-      (response) =>
-        response.request().method() === "POST" && response.url().includes("/better-auth/sign-out"),
-      { timeout: optionalRendererResponseTimeout(page) },
-    )
-    .catch(() => null)
+  // The desktop app's main process signs out, so the page sends no request of its own
+  const signOutResponse = isElectron
+    ? null
+    : page
+        .waitForResponse(
+          (response) =>
+            response.request().method() === "POST" &&
+            response.url().includes("/better-auth/sign-out"),
+          { timeout: optionalRendererResponseTimeout(page) },
+        )
+        .catch(() => null)
 
   const [response] = await Promise.all([
     signOutResponse,
