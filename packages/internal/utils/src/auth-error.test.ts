@@ -30,6 +30,15 @@ describe("describeAuthError", () => {
     ).toBe("translated auth.error.invalid_email_or_password")
   })
 
+  it("translates a password change refused for the current password", () => {
+    expect(
+      describeAuthError(
+        { code: "INVALID_PASSWORD", message: "Invalid password", status: 400 },
+        translate,
+      ),
+    ).toBe("translated auth.error.invalid_password")
+  })
+
   it("keeps what the server said about anything else", () => {
     expect(
       describeAuthError(

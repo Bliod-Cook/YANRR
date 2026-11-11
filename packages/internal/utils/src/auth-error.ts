@@ -1,10 +1,12 @@
 /**
- * Codes the auth server refuses a sign-in or sign-up with, in an error's `code`. The values are
+ * Codes the auth server refuses a sign-in, sign-up or password change with, in an error's `code`. The values are
  * the keys of their messages in the common locales.
  */
 const AUTH_ERROR_MESSAGE_KEYS = {
   // A password sign-in with an email that has no account, or with the wrong password
   INVALID_EMAIL_OR_PASSWORD: "auth.error.invalid_email_or_password",
+  // A password change with a wrong current password
+  INVALID_PASSWORD: "auth.error.invalid_password",
   // Too many sign-up or sign-in attempts
   TOO_MANY_REQUESTS: "auth.error.too_many_requests",
 } as const

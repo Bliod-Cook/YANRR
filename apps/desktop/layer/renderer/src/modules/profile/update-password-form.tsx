@@ -19,6 +19,7 @@ import { z } from "zod"
 
 import { useCurrentModal, useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { changePassword } from "~/lib/auth"
+import { getAuthErrorMessage } from "~/lib/error-parser"
 
 const passwordSchema = z.string().min(8).max(128)
 
@@ -60,7 +61,7 @@ const UpdateExistingPasswordForm = () => {
         revokeOtherSessions: true,
       })
       if (res.error) {
-        throw new Error(res.error.message)
+        throw new Error(getAuthErrorMessage(res.error))
       }
     },
     onError: (error) => {

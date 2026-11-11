@@ -10,8 +10,8 @@ import {
   FormMessage,
 } from "@follow/components/ui/form/index.jsx"
 import { Input } from "@follow/components/ui/input/index.js"
-import { invalidateUserSession, useWhoami } from "@follow/store/user/hooks"
-import { userActions } from "@follow/store/user/store"
+import { useWhoami } from "@follow/store/user/hooks"
+import { userSyncService } from "@follow/store/user/store"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
@@ -19,7 +19,6 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { z } from "zod"
 
-import { updateUser } from "~/lib/auth"
 import { toastFetchError } from "~/lib/error-parser"
 
 const formItemLabelClassName = tw`pl-3`
@@ -44,19 +43,9 @@ export const ProfileSettingForm = () => {
   })
 
   const updateMutation = useMutation({
-    mutationFn: async (values: ProfileFormValues) => {
-      const res = await updateUser(values)
-      // The auth client resolves with the error instead of throwing
-      if (res.error) {
-        throw new Error(res.error.message || res.error.statusText)
-      }
-      return res
-    },
+    mutationFn: (values: ProfileFormValues) => userSyncService.updateProfile(values),
     onError: (error) => toastFetchError(error),
-    onSuccess: (_, values) => {
-      userActions.updateWhoami(values)
-      // The profile menu reads the cached session, so refresh it as well
-      invalidateUserSession()
+    onSuccess: () => {
       toast(t("profile.updateSuccess"), {
         duration: 3000,
       })
