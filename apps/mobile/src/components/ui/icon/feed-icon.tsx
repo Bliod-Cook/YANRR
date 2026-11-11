@@ -1,8 +1,8 @@
 import type { FeedViewType } from "@follow/constants"
 import type { FeedSchema } from "@follow/database/schemas/types"
 import { cn } from "@follow/utils"
-import type { ReactNode } from "react"
-import { useCallback, useMemo, useState } from "react"
+import { useRecyclingState } from "@shopify/flash-list"
+import { useCallback, useMemo } from "react"
 
 import { getFeedIconSource } from "@/src/lib/image"
 
@@ -21,30 +21,22 @@ export type FeedIconFeed = FeedIconRequiredFeed | FeedSchema
 
 interface FeedIconProps {
   feed?: FeedIconFeed
-  fallbackUrl?: string
   className?: string
   size?: number
   siteUrl?: string
-  /**
-   * Image loading error fallback to site icon
-   */
-  fallback?: boolean
-  fallbackElement?: ReactNode
 }
 export function FeedIcon({
   feed,
-  fallbackUrl,
   className,
   size = 20,
-  fallback,
-  fallbackElement,
   siteUrl,
   ...props
 }: FeedIconProps & ImageProps) {
-  const [isError, setIsError] = useState(false)
   const src = useMemo(() => getFeedIconSource(feed, siteUrl), [feed, siteUrl])
+  // Lists recycle rows for other feeds, whose icons may load fine
+  const [isError, setIsError] = useRecyclingState(false, [src])
 
-  const handleError = useCallback(() => setIsError(true), [])
+  const handleError = useCallback(() => setIsError(true), [setIsError])
 
   if (!src || isError) {
     return (

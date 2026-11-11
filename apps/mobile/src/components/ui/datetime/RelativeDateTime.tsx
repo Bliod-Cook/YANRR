@@ -1,3 +1,4 @@
+import { useRecyclingState } from "@shopify/flash-list"
 import dayjs from "dayjs"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -20,7 +21,7 @@ const formatTime = (
   return dayjs.duration(dayjs(date).diff(dayjs(), "minute"), "minute").humanize()
 }
 
-const getUpdateInterval = (date: string | Date, relativeBeforeDay?: number) => {
+const getUpdateInterval = (date: dayjs.ConfigType, relativeBeforeDay?: number) => {
   if (!relativeBeforeDay) return null
   const diffInSeconds = Math.abs(dayjs(date).diff(new Date(), "second"))
   if (diffInSeconds <= 60) {
@@ -55,26 +56,22 @@ export const RelativeDateTime = ({
   postfixText,
   ...props
 }: RelativeDateTimeProps) => {
-  const { t, i18n } = useTranslation("common")
-  // dayjs formats in its global locale, which switches along with the app language
-  const { language } = i18n
-  const [relative, setRelative] = useState<string>(() =>
-    formatTime(date, displayAbsoluteTimeAfterDay, dateFormatTemplate),
-  )
+  // dayjs formats in its global locale, which switches along with the app language, and the
+  // language switch renders this again
+  const { t } = useTranslation("common")
+  const time = dayjs(date).valueOf()
+  // Lists recycle rows for other items, which start in the relative mode
+  const [mode, setMode] = useRecyclingState<"relative" | "absolute">("relative", [time])
 
-  const [mode, setMode] = useState<"relative" | "absolute">("relative")
+  // Renders again once the relative time may read differently
+  const [tick, setTick] = useState(0)
   useEffect(() => {
     if (mode === "absolute") return
-    if (!displayAbsoluteTimeAfterDay) return
-    setRelative(formatTime(date, displayAbsoluteTimeAfterDay, dateFormatTemplate))
-    const interval = setInterval(
-      () => {
-        setRelative(formatTime(date, displayAbsoluteTimeAfterDay, dateFormatTemplate))
-      },
-      getUpdateInterval(date, displayAbsoluteTimeAfterDay) ?? 1000,
-    )
-    return () => clearInterval(interval)
-  }, [date, displayAbsoluteTimeAfterDay, dateFormatTemplate, mode, language])
+    const interval = getUpdateInterval(time, displayAbsoluteTimeAfterDay)
+    if (interval === null) return
+    const timer = setTimeout(() => setTick((value) => value + 1), interval)
+    return () => clearTimeout(timer)
+  }, [time, displayAbsoluteTimeAfterDay, mode, tick])
 
   return (
     <NativePressable
@@ -85,7 +82,7 @@ export const RelativeDateTime = ({
     >
       <Text key={mode} {...props}>
         {mode === "relative"
-          ? `${relative}${t("space")}${postfixText ?? t("words.ago")}`
+          ? `${formatTime(date, displayAbsoluteTimeAfterDay, dateFormatTemplate)}${t("space")}${postfixText ?? t("words.ago")}`
           : dayjs(date).format(dateFormatTemplate ?? formatTemplateString)}
       </Text>
     </NativePressable>
