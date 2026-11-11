@@ -20,7 +20,6 @@ const follow = (feedId: string) => ({
   feedId,
   userId: "me",
   view: 0,
-  isPrivate: false,
   type: "feed" as const,
 })
 

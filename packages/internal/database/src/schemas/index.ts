@@ -15,9 +15,7 @@ export const feedsTable = sqliteTable("feeds", {
   image: text("image"),
   errorAt: text("error_at"),
   siteUrl: text("site_url"),
-  ownerUserId: text("owner_user_id"),
   errorMessage: text("error_message"),
-  tipUserIds: text("tip_users", { mode: "json" }).$type<string[]>(),
   updatedAt: integer("published_at", { mode: "timestamp_ms" }),
 })
 
@@ -26,7 +24,6 @@ export const subscriptionsTable = sqliteTable("subscriptions", {
   inboxId: text("inbox_id"),
   userId: text("user_id").notNull(),
   view: integer("view").notNull().$type<FeedViewType>(),
-  isPrivate: integer("is_private", { mode: "boolean" }).notNull(),
   hideFromTimeline: integer("hide_from_timeline", { mode: "boolean" }),
   title: text("title"),
   category: text("category"),
@@ -49,21 +46,10 @@ export const unreadTable = sqliteTable("unread", {
 export const usersTable = sqliteTable("users", {
   id: text("id").primaryKey(),
   email: text("email"),
-  handle: text("handle"),
   name: text("name"),
   image: text("image"),
   isMe: integer("is_me", { mode: "boolean" }),
   emailVerified: integer("email_verified", { mode: "boolean" }),
-  bio: text("bio"),
-  website: text("website"),
-  socialLinks: text("social_links", { mode: "json" }).$type<{
-    twitter?: string
-    github?: string
-    instagram?: string
-    facebook?: string
-    youtube?: string
-    discord?: string
-  }>(),
 })
 export const entriesTable = sqliteTable("entries", {
   id: text("id").primaryKey(),
@@ -89,7 +75,6 @@ export const entriesTable = sqliteTable("entries", {
 
   inboxHandle: text("inbox_handle"),
   read: integer("read", { mode: "boolean" }),
-  sources: text("sources", { mode: "json" }).$type<string[]>(),
   settings: text("settings", { mode: "json" }).$type<EntrySettings>(),
 })
 
@@ -153,7 +138,6 @@ export const aiChatTable = sqliteTable(
       .integer("updated_at", { mode: "timestamp_ms" })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
-    isLocal: t.integer("is_local", { mode: "boolean" }).notNull().default(false),
   }),
   (table) => [index("idx_ai_chat_sessions_updated_at").on(table.updatedAt)],
 )

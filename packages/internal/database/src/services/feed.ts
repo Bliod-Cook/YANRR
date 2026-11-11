@@ -1,5 +1,3 @@
-import { eq } from "drizzle-orm"
-
 import { db } from "../db"
 import { feedsTable } from "../schemas"
 import type { FeedSchema } from "../schemas/types"
@@ -23,10 +21,6 @@ class FeedServiceStatic implements Resetable {
 
   getFeedAll() {
     return db.query.feedsTable.findMany()
-  }
-
-  async patch(feedId: string, patch: Partial<FeedSchema>) {
-    await db.update(feedsTable).set(patch).where(eq(feedsTable.id, feedId)).execute()
   }
 }
 
