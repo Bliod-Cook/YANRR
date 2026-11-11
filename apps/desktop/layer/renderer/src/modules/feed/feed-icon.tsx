@@ -3,12 +3,13 @@ import { PlatformIcon } from "@follow/components/ui/platform-icon/index.jsx"
 import { env } from "@follow/shared/env.desktop"
 import type { FeedModel } from "@follow/store/feed/types"
 import { getBackgroundGradient } from "@follow/utils/color"
+import { LRUCache } from "@follow/utils/lru-cache"
 import { getSiteIconUrl } from "@follow/utils/server-url"
 import { cn } from "@follow/utils/utils"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 import { m } from "motion/react"
 import type { ReactNode } from "react"
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 
 const { Avatar, AvatarFallback, AvatarImage } = AvatarPrimitive
 
@@ -98,7 +99,8 @@ const fadeInVariant = {
   animate: { opacity: 1 },
 }
 
-const isIconLoadedSet = new Set<string>()
+// Icons shown before skip the fade-in; bounded, as feeds come and go
+const shownIcons = new LRUCache<string, true>(500)
 export function FeedIcon({
   target,
   entry,
@@ -183,8 +185,7 @@ export function FeedIcon({
   switch (iconProps.type) {
     case "image": {
       finalSrc = iconProps.src
-      const isIconLoaded = isIconLoadedSet.has(finalSrc)
-      isIconLoadedSet.add(finalSrc)
+      const isIconLoaded = shownIcons.get(finalSrc) !== undefined
 
       imageElement = (
         <PlatformIcon url={iconProps.platformUrl} style={sizeStyle} className={className}>
@@ -214,6 +215,11 @@ export function FeedIcon({
       break
     }
   }
+
+  // Written after the commit, as rendering must not change what the next render reads
+  useEffect(() => {
+    if (finalSrc) shownIcons.put(finalSrc, true)
+  }, [finalSrc])
 
   if (!imageElement) {
     return null
