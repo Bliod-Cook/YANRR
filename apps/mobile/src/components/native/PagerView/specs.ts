@@ -29,5 +29,4 @@ export interface PagerProps {
 export interface PagerRef {
   setPage: (index: number) => void
   getPage: () => number
-  getState: () => "idle" | "dragging" | "scrolling"
 }

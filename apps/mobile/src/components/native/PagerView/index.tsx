@@ -60,7 +60,6 @@ export const PagerView: FC<PagerViewProps> = ({
       nativeRef.current?.setPage(index)
     },
     getPage: () => currentPage,
-    getState: () => nativeRef.current?.getState() ?? "idle",
   }))
   return (
     <EnhancePagerView
