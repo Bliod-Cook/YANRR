@@ -51,7 +51,7 @@ describe("links", () => {
     expect(renderEntry({ content })?.querySelector("button")).toBeNull()
   })
 
-  test("resolves relative addresses against the entry, and drops them without one", () => {
+  test("resolves relative addresses against the entry, else its site, and drops them without either", () => {
     const content = '<p><a href="/post/2">Next</a></p><p><img src="images/a.png"></p>'
 
     const article = renderEntry({ url: "https://example.com/articles/entry", content })
@@ -59,6 +59,9 @@ describe("links", () => {
     expect(article?.querySelector("img")?.getAttribute("src")).toBe(
       "https://example.com/articles/images/a.png",
     )
+
+    const onSite = renderEntry({ siteUrl: "https://example.com/blog/", content })
+    expect(onSite?.querySelector("a")?.getAttribute("href")).toBe("https://example.com/post/2")
 
     const withoutUrl = renderEntry({ content })
     expect(withoutUrl?.querySelector("a")?.hasAttribute("href")).toBe(false)

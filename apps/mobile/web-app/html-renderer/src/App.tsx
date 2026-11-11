@@ -36,7 +36,7 @@ export const App = () => {
         noMedia={noMedia}
         spotlightRules={spotlightRules}
         coverImageUrl={coverMedia?.type === "photo" ? coverMedia.url : undefined}
-        baseUrl={entry?.url ?? undefined}
+        baseUrl={entry?.url || entry?.siteUrl || undefined}
         style={articleStyle}
         className={readerStyle?.textColor ? READER_TEXT_COLOR_CLASS : undefined}
       >

@@ -1,5 +1,6 @@
 import { resolveReaderTextColor } from "@follow/shared/settings/reader-style"
 import { useEntry } from "@follow/store/entry/hooks"
+import { useFeedById } from "@follow/store/feed/hooks"
 import { useEntryTranslation } from "@follow/store/translation/hooks"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { PixelRatio } from "react-native"
@@ -57,7 +58,9 @@ export function useWebViewEntry({
     url: state.url,
     media: state.media,
     attachments: state.attachments,
+    feedId: state.feedId,
   }))
+  const siteUrl = useFeedById(entry?.feedId ?? undefined, (feed) => feed?.siteUrl)
   const language = useActionLanguage()
   const translationMode = useGeneralSettingKey("translationMode")
   const translation = useEntryTranslation({
@@ -104,8 +107,8 @@ export function useWebViewEntry({
   const media = entry?.media
   const attachments = entry?.attachments
   const entryInWebview = useMemo<WebViewEntry | null>(
-    () => (hasEntry ? { content, url, media, attachments, spotlightRules } : null),
-    [hasEntry, content, url, media, attachments, spotlightRules],
+    () => (hasEntry ? { content, url, siteUrl, media, attachments, spotlightRules } : null),
+    [hasEntry, content, url, siteUrl, media, attachments, spotlightRules],
   )
 
   // Update WebView settings when dependencies change

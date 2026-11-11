@@ -8,7 +8,7 @@ import type { ReaderStylePayload } from "./settings/reader-style"
 import type { SpotlightRule } from "./spotlight"
 
 /** Bumped on any change to the messages below or to the page's `__FO_BRIDGE__` handlers */
-export const WEBVIEW_BRIDGE_VERSION = 1
+export const WEBVIEW_BRIDGE_VERSION = 2
 
 /** App to page: `__FO_BRIDGE__.dispatch(type, JSON.stringify(payload))` */
 export interface AppToPagePayloads {

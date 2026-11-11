@@ -22,8 +22,6 @@ export const atStart = `
   }
 
   window.bridge = {
-    // Nothing to do: the ResizeObserver set up at the end reports every height change
-    measure: () => {},
     setContentHeight: (height) => {
       send({
         type: "setContentHeight",

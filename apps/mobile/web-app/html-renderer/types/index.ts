@@ -17,6 +17,8 @@ export interface AttachmentModel {
 export interface EntryModel {
   content?: string
   url?: string | null
+  /** The feed's site, the base for relative addresses when the entry has no URL */
+  siteUrl?: string | null
   media?: MediaModel[]
   attachments?: AttachmentModel[] | null
   spotlightRules?: SpotlightRule[]
