@@ -1,6 +1,8 @@
 mod json;
 mod xml;
 
+use std::collections::HashSet;
+
 use chrono::{DateTime, TimeDelta, Utc};
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -17,7 +19,57 @@ pub struct ParsedFeed {
     pub site_url: Option<String>,
     pub language: Option<String>,
     pub ttl: Option<i32>,
-    pub entries: Vec<ParsedEntry>,
+    pub entries: Entries,
+}
+
+/// A feed's entries as read, normalized by [`Entries::finish`]: that is the costly part, which only entries not
+/// stored yet need.
+#[derive(Default)]
+pub struct Entries {
+    drafts: Vec<Draft>,
+    /// What relative links are relative to.
+    base: Option<Url>,
+    /// The feed's language, for entries whose own cannot be told.
+    language: Option<String>,
+}
+
+impl Entries {
+    /// Entries in the order the feed lists them, newest first: each may be dated a millisecond earlier than the one
+    /// before at the latest, so that undated entries keep that order.
+    fn new(
+        drafts: impl Iterator<Item = Draft>,
+        base: Option<Url>,
+        language: Option<String>,
+    ) -> Self {
+        let now = Utc::now();
+        let drafts = drafts
+            .enumerate()
+            .map(|(index, mut draft)| {
+                draft.guid = draft.identify(base.as_ref());
+                draft.latest = now - TimeDelta::milliseconds(index as i64);
+                draft
+            })
+            .collect();
+        Self {
+            drafts,
+            base,
+            language,
+        }
+    }
+
+    pub fn guids(&self) -> Vec<String> {
+        self.drafts.iter().map(|draft| draft.guid.clone()).collect()
+    }
+
+    /// The entries whose guid `known` lacks, normalized, once per guid.
+    pub fn finish(self, mut known: HashSet<String>) -> Vec<ParsedEntry> {
+        let (base, language) = (self.base.as_ref(), self.language.as_deref());
+        self.drafts
+            .into_iter()
+            .filter(|draft| known.insert(draft.guid.clone()))
+            .map(|draft| draft.finish(base, language))
+            .collect()
+    }
 }
 
 #[derive(Debug)]
@@ -49,6 +101,17 @@ pub struct Media {
     pub width: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<u32>,
+}
+
+impl Media {
+    /// The media with its links resolved against `base`, unless it has no web address.
+    fn resolved(self, base: Option<&Url>) -> Option<Self> {
+        Some(Self {
+            url: resolve(base, &self.url)?,
+            preview_image_url: self.preview_image_url.and_then(|url| resolve(base, &url)),
+            ..self
+        })
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -101,23 +164,6 @@ pub fn parse(body: &[u8], url: &str) -> Result<ParsedFeed, String> {
     }
 }
 
-/// Finishes a feed's entries in the order the feed lists them, newest first: each may be dated a millisecond
-/// earlier than the one before at the latest, so that undated entries keep that order.
-fn finish_all(
-    drafts: impl Iterator<Item = Draft>,
-    base: Option<&Url>,
-    feed_language: Option<&str>,
-) -> Vec<ParsedEntry> {
-    let now = Utc::now();
-    drafts
-        .enumerate()
-        .map(|(index, draft)| {
-            let latest = now - TimeDelta::milliseconds(index as i64);
-            draft.finish(base, feed_language, latest)
-        })
-        .collect()
-}
-
 /// Entry fields as a format provides them, before the shared normalization in [`Draft::finish`].
 #[derive(Default)]
 struct Draft {
@@ -133,6 +179,8 @@ struct Draft {
     extra: Option<Extra>,
     language: Option<String>,
     published: Option<DateTime<Utc>>,
+    /// The latest date the entry may have, set by [`Entries::new`].
+    latest: DateTime<Utc>,
 }
 
 #[derive(Default)]
@@ -164,12 +212,26 @@ impl Draft {
         });
     }
 
-    fn finish(
-        self,
-        base: Option<&Url>,
-        feed_language: Option<&str>,
-        latest: DateTime<Utc>,
-    ) -> ParsedEntry {
+    /// The entry's id within its feed: its own, else its link, else a digest of its title and text, which entries
+    /// sharing a title tell apart.
+    fn identify(&self, base: Option<&Url>) -> String {
+        let guid = self.guid.trim();
+        if !guid.is_empty() {
+            return guid.into();
+        }
+        if let Some(url) = self.url.as_deref().and_then(|url| resolve(base, url)) {
+            return url;
+        }
+        let text = self.content.as_deref().or(self.summary.as_deref());
+        let digest = Sha256::new()
+            .chain_update(self.title.as_deref().unwrap_or_default())
+            .chain_update([0u8])
+            .chain_update(text.unwrap_or_default())
+            .finalize();
+        format!("{digest:x}")
+    }
+
+    fn finish(self, base: Option<&Url>, feed_language: Option<&str>) -> ParsedEntry {
         let url = self.url.and_then(|url| resolve(base, &url));
         let content = self.content.or_else(|| self.summary.clone());
         let description = self
@@ -178,13 +240,25 @@ impl Draft {
             .or(content.as_deref())
             .and_then(describe);
 
-        let mut media = self.media;
+        let mut media: Vec<_> = self
+            .media
+            .into_iter()
+            .filter_map(|media| media.resolved(base))
+            .collect();
         if let Some(content) = &content {
             let page = url.as_deref().and_then(|url| Url::parse(url).ok());
             media.extend(html::media(content, page.as_ref().or(base)));
         }
-        let mut seen = std::collections::HashSet::new();
+        let mut seen = HashSet::new();
         media.retain(|item| seen.insert(item.url.clone()));
+        let attachments = self
+            .attachments
+            .into_iter()
+            .filter_map(|attachment| {
+                let url = resolve(base, &attachment.url)?;
+                Some(Attachment { url, ..attachment })
+            })
+            .collect();
 
         let language = self.language.or_else(|| {
             let text = [self.title.as_deref(), description.as_deref()]
@@ -193,40 +267,36 @@ impl Draft {
             language::detect(&text.collect::<Vec<_>>().join(" "))
         });
 
-        let guid = Some(self.guid.trim().to_string())
-            .filter(|guid| !guid.is_empty())
-            .or_else(|| url.clone())
-            .or_else(|| self.title.clone())
-            .unwrap_or_else(|| {
-                format!(
-                    "{:x}",
-                    Sha256::digest(content.as_deref().unwrap_or_default())
-                )
-            });
-
         let names: Vec<_> = self
             .authors
             .iter()
             .filter_map(|author| author.name.as_deref())
             .collect();
+        let link = |href: Option<&String>| resolve(base, href?);
         ParsedEntry {
-            guid,
+            guid: self.guid,
             title: self.title,
             url,
             description,
             content,
             author: (!names.is_empty()).then(|| names.join(", ")),
-            author_url: self.authors.iter().find_map(|author| author.url.clone()),
-            author_avatar: self.authors.iter().find_map(|author| author.avatar.clone()),
+            author_url: self
+                .authors
+                .iter()
+                .find_map(|author| link(author.url.as_ref())),
+            author_avatar: self
+                .authors
+                .iter()
+                .find_map(|author| link(author.avatar.as_ref())),
             categories: self.categories,
             media,
-            attachments: self.attachments,
+            attachments,
             extra: self.extra,
             language: language.or_else(|| feed_language.map(String::from)),
             // A future date would pin the entry to the top of every timeline.
             published_at: self
                 .published
-                .map_or(latest, |published| published.min(latest)),
+                .map_or(self.latest, |published| published.min(self.latest)),
         }
     }
 }
@@ -252,6 +322,11 @@ mod tests {
         .unwrap()
     }
 
+    /// Every entry of the feed at `url`, normalized.
+    fn entries(body: &[u8], url: &str) -> Vec<ParsedEntry> {
+        parse(body, url).unwrap().entries.finish(HashSet::new())
+    }
+
     fn photo(url: &str, width: Option<u32>, height: Option<u32>) -> Media {
         Media {
             url: url.into(),
@@ -272,7 +347,8 @@ mod tests {
         assert_eq!(feed.language.as_deref(), Some("en"));
         assert_eq!(feed.ttl, Some(30));
 
-        let [first, second] = &feed.entries[..] else {
+        let entries = feed.entries.finish(HashSet::new());
+        let [first, second] = &entries[..] else {
             panic!("expected two entries")
         };
         assert_eq!(first.guid, "post-1");
@@ -338,7 +414,7 @@ mod tests {
             feed.site_url.as_deref(),
             Some("https://journal.example.org/")
         );
-        let entry = &feed.entries[0];
+        let entry = &feed.entries.finish(HashSet::new())[0];
         assert_eq!(entry.guid, "urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a");
         assert_eq!(
             entry.url.as_deref(),
@@ -373,7 +449,7 @@ mod tests {
         );
         assert_eq!(feed.language.as_deref(), Some("zh-cn"));
 
-        let entry = &feed.entries[0];
+        let entry = &feed.entries.finish(HashSet::new())[0];
         assert_eq!(entry.guid, "status-42");
         assert_eq!(entry.author.as_deref(), Some("Alice"));
         assert_eq!(
@@ -417,24 +493,40 @@ mod tests {
     }
 
     #[test]
-    fn missing_guid_is_stable() {
+    fn missing_guids_are_stable_and_tell_entries_apart() {
         let xml = br#"<rss version="2.0"><channel><title>t</title>
-            <item><title>Only a title</title></item>
+            <item><title>Daily note</title><description>Monday</description></item>
+            <item><title>Daily note</title><description>Tuesday</description></item>
             <item><description>Only some text</description></item>
+            <item><link>/posts/1</link></item>
         </channel></rss>"#;
         let parse_guids = || {
-            let feed = parse(xml, "https://example.com/feed.xml").unwrap();
-            feed.entries
-                .into_iter()
-                .map(|entry| entry.guid)
-                .collect::<Vec<_>>()
+            parse(xml, "https://example.com/feed.xml")
+                .unwrap()
+                .entries
+                .guids()
         };
 
         let guids = parse_guids();
 
-        assert_eq!(guids[0], "Only a title");
-        assert!(!guids[1].is_empty());
         assert_eq!(guids, parse_guids());
+        assert_eq!(HashSet::<&String>::from_iter(&guids).len(), 4);
+        assert_eq!(guids[3], "https://example.com/posts/1");
+    }
+
+    #[test]
+    fn only_entries_not_known_are_finished() {
+        let xml = br#"<rss version="2.0"><channel><title>t</title>
+            <item><guid>new</guid></item>
+            <item><guid>stored</guid></item>
+            <item><guid>new</guid></item>
+        </channel></rss>"#;
+        let feed = parse(xml, "https://example.com/feed.xml").unwrap();
+
+        let entries = feed.entries.finish(HashSet::from(["stored".into()]));
+
+        let guids: Vec<_> = entries.iter().map(|entry| entry.guid.as_str()).collect();
+        assert_eq!(guids, ["new"]);
     }
 
     #[test]
@@ -444,14 +536,74 @@ mod tests {
             <item><guid>older</guid></item>
         </channel></rss>"#;
 
-        let feed = parse(xml, "https://example.com/feed.xml").unwrap();
+        let entries = entries(xml, "https://example.com/feed.xml");
 
-        let [newer, older] = &feed.entries[..] else {
+        let [newer, older] = &entries[..] else {
             panic!("expected two entries")
         };
         assert_eq!(
             newer.published_at - older.published_at,
             TimeDelta::milliseconds(1)
         );
+    }
+
+    #[test]
+    fn links_are_resolved_and_only_web_addresses_kept() {
+        let json =
+            br#"{"version": "https://jsonfeed.org/version/1.1", "icon": "/icon.png", "items": [{
+            "id": "1",
+            "image": "javascript:alert(1)",
+            "authors": [{ "url": "/alice", "avatar": "avatars/alice.png" }],
+            "attachments": [
+                { "url": "/episode.mp3", "mime_type": "audio/mpeg" },
+                { "url": "data:audio/mpeg;base64,AAAA", "mime_type": "audio/mpeg" }
+            ]
+        }]}"#;
+        let feed = parse(json, "https://example.com/feeds/main.json").unwrap();
+        assert_eq!(feed.image.as_deref(), Some("https://example.com/icon.png"));
+        let entry = &feed.entries.finish(HashSet::new())[0];
+
+        assert_eq!(
+            entry.author_url.as_deref(),
+            Some("https://example.com/alice")
+        );
+        assert_eq!(
+            entry.author_avatar.as_deref(),
+            Some("https://example.com/feeds/avatars/alice.png")
+        );
+        assert!(entry.media.is_empty());
+        let urls: Vec<_> = entry.attachments.iter().map(|a| a.url.as_str()).collect();
+        assert_eq!(urls, ["https://example.com/episode.mp3"]);
+
+        let rss = br#"<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+            <channel><title>t</title>
+            <image><url>logo.png</url></image>
+            <item><guid>1</guid><itunes:image href="javascript:alert(1)"/></item>
+        </channel></rss>"#;
+        let feed = parse(rss, "https://example.com/feeds/main.xml").unwrap();
+        assert_eq!(
+            feed.image.as_deref(),
+            Some("https://example.com/feeds/logo.png")
+        );
+        let entry = &feed.entries.finish(HashSet::new())[0];
+        assert!(entry.media.is_empty());
+    }
+
+    #[test]
+    fn json_feeds_need_their_version_and_skip_items_that_do_not_fit() {
+        let untitled = br#"{"title": "Some JSON"}"#;
+        assert!(parse(untitled, "https://example.com/data.json").is_err());
+
+        let json = br#"{"version": "https://jsonfeed.org/version/1", "items": [
+            { "id": "bad", "title": 42 },
+            { "id": "nul\u0000", "content_text": "text\u0000" }
+        ]}"#;
+        let entries = entries(json, "https://example.com/feed.json");
+
+        let [entry] = &entries[..] else {
+            panic!("expected one entry")
+        };
+        assert_eq!(entry.guid, "nul");
+        assert_eq!(entry.content.as_deref(), Some("text"));
     }
 }

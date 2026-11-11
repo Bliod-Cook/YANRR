@@ -3,19 +3,21 @@ use reqwest::Url;
 use serde::Deserialize;
 use serde_json::Value;
 
-use super::{Attachment, Author, Draft, Media, MediaKind, ParsedFeed, finish_all, resolve};
+use super::{Attachment, Author, Draft, Entries, Media, MediaKind, ParsedFeed, resolve};
 
 /// JSON Feed 1.0/1.1 plus RSSHub's `_extra`; feed-rs drops avatars, item images, durations and `_extra`.
 #[derive(Deserialize)]
 struct JsonFeed {
+    version: String,
     title: Option<String>,
     home_page_url: Option<String>,
     description: Option<String>,
     icon: Option<String>,
     favicon: Option<String>,
     language: Option<String>,
+    /// Read one by one, so that an item that does not fit is skipped rather than failing the feed.
     #[serde(default)]
-    items: Vec<Item>,
+    items: Vec<Value>,
 }
 
 #[derive(Deserialize)]
@@ -58,7 +60,12 @@ struct JsonAttachment {
 }
 
 pub fn parse(body: &[u8], url: &str) -> Result<ParsedFeed, String> {
-    let feed: JsonFeed = serde_json::from_slice(body).map_err(|err| err.to_string())?;
+    let mut feed: Value = serde_json::from_slice(body).map_err(|err| err.to_string())?;
+    strip_nul(&mut feed);
+    let feed: JsonFeed = serde_json::from_value(feed).map_err(|err| err.to_string())?;
+    if !feed.version.starts_with("https://jsonfeed.org/version/") {
+        return Err("Not a JSON Feed".into());
+    }
     let feed_url = Url::parse(url).ok();
     let site_url = feed
         .home_page_url
@@ -67,18 +74,30 @@ pub fn parse(body: &[u8], url: &str) -> Result<ParsedFeed, String> {
         .as_deref()
         .and_then(|url| Url::parse(url).ok())
         .or(feed_url);
+    let image = feed.icon.or(feed.favicon);
+    let image = image.and_then(|href| resolve(base.as_ref(), &href));
     let language = feed.language;
-    let drafts = feed.items.into_iter().map(draft);
-    let entries = finish_all(drafts, base.as_ref(), language.as_deref());
+    let items = feed.items.into_iter();
+    let drafts = items.filter_map(|item| serde_json::from_value(item).ok().map(draft));
     Ok(ParsedFeed {
         title: feed.title,
         description: feed.description,
-        image: feed.icon.or(feed.favicon),
+        image,
         site_url,
-        language,
+        language: language.clone(),
         ttl: None,
-        entries,
+        entries: Entries::new(drafts, base, language),
     })
+}
+
+/// Drops the NUL characters of every string, which PostgreSQL text cannot hold.
+fn strip_nul(value: &mut Value) {
+    match value {
+        Value::String(text) => text.retain(|char| char != '\0'),
+        Value::Array(items) => items.iter_mut().for_each(strip_nul),
+        Value::Object(fields) => fields.values_mut().for_each(strip_nul),
+        _ => {}
+    }
 }
 
 fn draft(item: Item) -> Draft {

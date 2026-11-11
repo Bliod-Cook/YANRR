@@ -257,6 +257,8 @@ pub enum Reply {
     MovedTo(&'static str),
     /// Never answers.
     Hang,
+    /// An empty answer with this status and these headers.
+    Headers(u16, &'static [(&'static str, &'static str)]),
 }
 
 #[derive(Clone)]
@@ -367,6 +369,15 @@ async fn replied(
         Reply::Hang => std::future::pending().await,
         Reply::MovedTo(path) => {
             (StatusCode::MOVED_PERMANENTLY, [(header::LOCATION, path)]).into_response()
+        }
+        Reply::Headers(status, headers) => {
+            let mut response = StatusCode::from_u16(status).unwrap().into_response();
+            for (name, value) in headers {
+                response
+                    .headers_mut()
+                    .insert(*name, header::HeaderValue::from_static(value));
+            }
+            response
         }
     }
 }

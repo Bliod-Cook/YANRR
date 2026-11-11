@@ -2,14 +2,23 @@
 
 pub mod deliver;
 
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, LazyLock, Mutex, PoisonError},
+};
 
+use chrono::{DateTime, Utc};
 use regex::Regex;
-use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, ConnectionTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 
 use crate::entity::{action_rule, entry, feed, subscription};
+
+/// Each user's compiled rules with the `updated_at` they were saved at. Compiling every pattern on each load would
+/// add up: timelines and every refresh load rules for each user they concern.
+static CACHE: LazyLock<Mutex<HashMap<String, (DateTime<Utc>, Arc<Rules>)>>> =
+    LazyLock::new(Mutex::default);
 
 /// An entry as one user's rules see it.
 #[derive(Clone, Copy)]
@@ -26,18 +35,19 @@ pub struct Subject<'a> {
 }
 
 impl<'a> Subject<'a> {
-    /// A new entry arriving in a subscription, so neither read nor collected yet.
+    /// A new entry arriving for a user who follows its feed with `subscription`, if at all: neither read nor
+    /// collected yet.
     pub fn arriving(
         feed: &'a feed::Model,
         entry: &'a entry::Model,
-        subscription: &'a subscription::Model,
+        subscription: Option<&'a subscription::Model>,
     ) -> Self {
         Self {
             feed,
             entry,
-            view: Some(subscription.view),
-            title: subscription.title.as_deref(),
-            category: subscription.category.as_deref(),
+            view: subscription.map(|subscription| subscription.view),
+            title: subscription.and_then(|subscription| subscription.title.as_deref()),
+            category: subscription.and_then(|subscription| subscription.category.as_deref()),
             read: false,
             collected: false,
         }
@@ -48,19 +58,23 @@ impl<'a> Subject<'a> {
 #[derive(Default)]
 pub struct Rules {
     rules: Vec<Rule>,
-    /// Regex conditions and block rules by pattern; one that does not compile is missing and never matches.
+    /// Regex conditions and block rules of the enabled rules by pattern; one that does not compile is missing and
+    /// never matches.
     patterns: HashMap<String, Regex>,
 }
 
 impl Rules {
     pub fn new(rules: Vec<Rule>) -> Self {
-        let conditions = rules
-            .iter()
+        let enabled = || {
+            rules
+                .iter()
+                .filter(|rule| rule.result.disabled != Some(true))
+        };
+        let conditions = enabled()
             .flat_map(|rule| rule.condition.0.iter().flatten())
             .filter(|item| item.operator == Operator::Regex)
             .map(|item| item.value.clone());
-        let block_rules = rules
-            .iter()
+        let block_rules = enabled()
             .flat_map(|rule| rule.result.block_rules.iter().flatten())
             .filter(|rule| rule.operator == Operator::Regex)
             .map(BlockRule::value);
@@ -82,26 +96,54 @@ impl Rules {
     }
 
     /// The user's rules, none until they save some.
-    pub async fn load(db: &impl ConnectionTrait, user_id: &str) -> Result<Self, DbErr> {
+    pub async fn load(db: &impl ConnectionTrait, user_id: &str) -> Result<Arc<Self>, DbErr> {
         let mut rules = Self::load_many(db, [user_id.to_string()]).await?;
         Ok(rules.remove(user_id).unwrap_or_default())
     }
 
-    /// The rules of those users who saved some, by user id.
+    /// The rules of those users who saved some, by user id. Rules are compiled once per save: only when a user's
+    /// `updated_at` differs from the cached one are their rules read and compiled again.
     pub async fn load_many(
         db: &impl ConnectionTrait,
         user_ids: impl IntoIterator<Item = String>,
-    ) -> Result<HashMap<String, Self>, DbErr> {
-        let rows = action_rule::Entity::find()
+    ) -> Result<HashMap<String, Arc<Self>>, DbErr> {
+        let saved: Vec<(String, DateTime<Utc>)> = action_rule::Entity::find()
+            .select_only()
+            .columns([action_rule::Column::UserId, action_rule::Column::UpdatedAt])
             .filter(action_rule::Column::UserId.is_in(user_ids))
+            .into_tuple()
             .all(db)
             .await?;
-        rows.into_iter()
-            .map(|row| {
-                let rules = parse(row.rules).map_err(|err| DbErr::Json(err.to_string()))?;
-                Ok((row.user_id, Self::new(rules)))
-            })
-            .collect()
+        let (mut found, mut stale) = (HashMap::new(), Vec::new());
+        {
+            let cache = CACHE.lock().unwrap_or_else(PoisonError::into_inner);
+            for (user_id, updated_at) in saved {
+                match cache.get(&user_id) {
+                    Some((cached_at, rules)) if *cached_at == updated_at => {
+                        found.insert(user_id, rules.clone());
+                    }
+                    _ => stale.push(user_id),
+                }
+            }
+        }
+        if stale.is_empty() {
+            return Ok(found);
+        }
+        let rows = action_rule::Entity::find()
+            .filter(action_rule::Column::UserId.is_in(stale))
+            .all(db)
+            .await?;
+        let mut compiled = Vec::new();
+        for row in rows {
+            let rules = parse(row.rules).map_err(|err| DbErr::Json(err.to_string()))?;
+            compiled.push((row.user_id, row.updated_at, Arc::new(Self::new(rules))));
+        }
+        let mut cache = CACHE.lock().unwrap_or_else(PoisonError::into_inner);
+        for (user_id, updated_at, rules) in compiled {
+            cache.insert(user_id.clone(), (updated_at, rules.clone()));
+            found.insert(user_id, rules);
+        }
+        Ok(found)
     }
 
     /// Whether an enabled rule's condition reads the entry's content, so entries must be loaded with it.
@@ -390,7 +432,7 @@ pub enum BlockValue {
 }
 
 impl BlockRule {
-    fn value(&self) -> String {
+    pub fn value(&self) -> String {
         match &self.value {
             BlockValue::Text(text) => text.clone(),
             BlockValue::Number(number) => number.to_string(),
@@ -414,7 +456,7 @@ impl BlockRule {
                 all = fields.map(Option::unwrap_or_default).join("\n");
                 Some(all.as_str())
             }
-            // What `order` refers to is unknown.
+            // What `order` refers to is unknown, so saving refuses it; it is read only from rules stored before.
             BlockField::Order => return false,
         };
         let value = self.value();

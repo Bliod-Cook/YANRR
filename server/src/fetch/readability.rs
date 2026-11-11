@@ -10,7 +10,8 @@ pub async fn extract(state: &AppState, url: &str) -> Result<String, FetchError> 
         .map_err(FetchError::Fetch)?
         .ok_or(FetchError::Fetch("HTTP 304".into()))?;
     let html = String::from_utf8_lossy(&page.body).into_owned();
-    let url = url.to_owned();
+    // Links in the page are relative to where redirects led.
+    let url = page.url;
     // `Readability` is not `Send`, so it lives and dies on a blocking thread.
     tokio::task::spawn_blocking(move || {
         let mut readability =

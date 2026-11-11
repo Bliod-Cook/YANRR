@@ -12,6 +12,7 @@ use serde_json::{Map, Value, json};
 
 use crate::{
     entity::{feed, subscription, unread},
+    search,
     sync::Action,
     wire,
 };
@@ -214,7 +215,7 @@ pub async fn update(
         .collect())
 }
 
-/// Unsubscribes `user_id` from `feed_ids` and drops their unread entries; logs one `D` per subscription removed.
+/// Unsubscribes `user_id` from `feed_ids`, whose unread marks go with them; logs one `D` per subscription removed.
 pub async fn unsubscribe(
     txn: &DatabaseTransaction,
     user_id: &str,
@@ -231,60 +232,84 @@ pub async fn unsubscribe(
         .filter(subscription::Column::FeedId.is_in(feed_ids.iter().copied()))
         .exec_with_returning(txn)
         .await?;
-    unread::Entity::delete_many()
-        .filter(unread::Column::UserId.eq(user_id))
-        .filter(unread::Column::FeedId.is_in(feed_ids.iter().copied()))
-        .exec(txn)
-        .await?;
     Ok(removed
         .into_iter()
         .map(|subscription| deleted(subscription.user_id, subscription.feed_id))
         .collect())
 }
 
-/// Moves the subscriptions of `old`, which just migrated, to `target`.
+/// Moves the subscriptions of `old`, which just migrated, to `target`, along with the entries of `old` that `target`
+/// lacks.
 ///
-/// Moved users get `target`'s entries unread, except those whose guid they already read on `old`. Users who
-/// already followed `target` only lose the old subscription.
+/// Moved users keep what they blocked, and get `target`'s entries unread as a new subscription does, except those
+/// whose guid they already read on `old`. Users who already followed `target` only lose the old subscription.
 pub async fn migrate(
     txn: &DatabaseTransaction,
     old: i64,
     target: &feed::Model,
 ) -> Result<Vec<Action>, DbErr> {
-    let moved_sql = "WITH moved AS (
-            INSERT INTO subscriptions
-                (user_id, feed_id, view, category, title, hide_from_timeline, created_at)
-            SELECT user_id, $2, view, category, title, hide_from_timeline, created_at
-            FROM subscriptions WHERE feed_id = $1
-            ON CONFLICT DO NOTHING
-            RETURNING *
-        ), unread AS (
-            INSERT INTO unreads (user_id, entry_id, feed_id)
-            SELECT moved.user_id, entry.id, entry.feed_id
-            FROM moved JOIN entries entry ON entry.feed_id = moved.feed_id
-            WHERE NOT EXISTS (
-                SELECT 1 FROM entries old_entry
-                WHERE old_entry.feed_id = $1 AND old_entry.guid = entry.guid
-                  AND NOT EXISTS (
-                      SELECT 1 FROM unreads WHERE user_id = moved.user_id AND entry_id = old_entry.id
-                  )
-            )
+    // `$1` is the old feed, `$2` the target, and `$3` the users moved, if given.
+    let statement = |sql: &str, users: Option<&Vec<String>>| {
+        let mut params = vec![old.into(), target.id.into()];
+        params.extend(users.map(|users| users.clone().into()));
+        Statement::from_sql_and_values(DbBackend::Postgres, sql, params)
+    };
+    let moved_sql = "INSERT INTO subscriptions
+            (user_id, feed_id, view, category, title, hide_from_timeline, created_at)
+        SELECT user_id, $2, view, category, title, hide_from_timeline, created_at
+        FROM subscriptions WHERE feed_id = $1
+        ON CONFLICT DO NOTHING
+        RETURNING *";
+    let moved = subscription::Model::find_by_statement(statement(moved_sql, None))
+        .all(txn)
+        .await?;
+    let users: Vec<_> = moved.iter().map(|row| row.user_id.clone()).collect();
+    let blocks_sql = "INSERT INTO blocked_entries (user_id, entry_id)
+        SELECT b.user_id, e.id
+        FROM blocked_entries b
+        JOIN entries old_entry ON old_entry.id = b.entry_id AND old_entry.feed_id = $1
+        JOIN entries e ON e.feed_id = $2 AND e.guid = old_entry.guid
+        WHERE b.user_id = ANY($3)
+        ON CONFLICT DO NOTHING";
+    txn.execute_raw(statement(blocks_sql, Some(&users))).await?;
+    let unread_sql = format!(
+        "INSERT INTO unreads (user_id, entry_id, feed_id)
+        SELECT u.id, e.id, e.feed_id
+        FROM unnest($3::text[]) AS u (id)
+        CROSS JOIN LATERAL (
+            SELECT id, feed_id, guid FROM entries
+            WHERE feed_id = $2
+              AND id NOT IN (SELECT entry_id FROM blocked_entries WHERE user_id = u.id)
+            ORDER BY published_at DESC, id DESC LIMIT {UNREAD_ON_FOLLOW}
+        ) e
+        WHERE NOT EXISTS (
+            SELECT 1 FROM entries old_entry
+            WHERE old_entry.feed_id = $1 AND old_entry.guid = e.guid
+              AND NOT EXISTS (SELECT 1 FROM unreads WHERE user_id = u.id AND entry_id = old_entry.id)
+        )"
+    );
+    txn.execute_raw(statement(&unread_sql, Some(&users)))
+        .await?;
+    // Unread marks of the entries that move follow them; those of the ones left behind go with the subscriptions.
+    let entries_sql = "WITH moved AS (
+            UPDATE entries e SET feed_id = $2
+            WHERE e.feed_id = $1
+              AND NOT EXISTS (SELECT 1 FROM entries t WHERE t.feed_id = $2 AND t.guid = e.guid)
+            RETURNING id
+        ), marks AS (
+            UPDATE unreads SET feed_id = $2 WHERE entry_id IN (SELECT id FROM moved)
         )
-        SELECT * FROM moved";
-    let moved = subscription::Model::find_by_statement(Statement::from_sql_and_values(
-        DbBackend::Postgres,
-        moved_sql,
-        [old.into(), target.id.into()],
-    ))
-    .all(txn)
-    .await?;
+        SELECT id FROM moved";
+    let moved_entries = txn.query_all_raw(statement(entries_sql, None)).await?;
+    let moved_entries: Vec<i64> = moved_entries
+        .iter()
+        .map(|row| row.try_get("", "id"))
+        .collect::<Result<_, _>>()?;
+    // The index files entries by feed.
+    search::enqueue(txn, &moved_entries).await?;
     let removed = subscription::Entity::delete_many()
         .filter(subscription::Column::FeedId.eq(old))
         .exec_with_returning(txn)
-        .await?;
-    unread::Entity::delete_many()
-        .filter(unread::Column::FeedId.eq(old))
-        .exec(txn)
         .await?;
     let mut actions: Vec<_> = removed
         .into_iter()
