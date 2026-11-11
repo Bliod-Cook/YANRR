@@ -1,20 +1,16 @@
 import { whoami } from "@follow/store/user/getters"
 import { userActions, userSyncService } from "@follow/store/user/store"
 import { trackApiConnection } from "@follow/utils/api-connection"
-import { createMobileAPIHeaders } from "@follow/utils/headers"
 import { FollowClient } from "@follow-app/client-sdk"
 import { fetch } from "expo/fetch"
-import { nativeApplicationVersion } from "expo-application"
-import { Platform } from "react-native"
-import DeviceInfo from "react-native-device-info"
 
 import { setApiUnreachable } from "@/src/atoms/api-connection"
 
-import { getAuthStateRevision, getCookie, getLastAuthStateChangeAt } from "./auth"
-import { getClientId, getSessionId } from "./client-session"
+import { getAuthStateRevision, getCookie } from "./auth"
 import { getUserAgent } from "./native/user-agent"
 import { destination } from "./navigation/biz/Destination"
 import { trackFetch } from "./network-activity"
+import { SessionReadError } from "./network-error"
 import { serverEnv } from "./server-env"
 import { createUnauthorizedSessionCheck } from "./session-check"
 
@@ -33,66 +29,22 @@ export const followClient = new FollowClient({
 
 export const followApi = followClient.api
 
-followClient.addRequestInterceptor(async (ctx) => {
-  const { url } = ctx
-
-  try {
-    const urlObj = new URL(url)
-    urlObj.searchParams.set("t", Date.now().toString())
-    ctx.url = urlObj.toString()
-  } catch {
-    /* empty */
-  }
-
-  return ctx
-})
-followClient.addRequestInterceptor(async (ctx) => {
-  const { options } = ctx
-  ;(options as typeof options & { __followAuthRevision?: number }).__followAuthRevision =
-    getAuthStateRevision()
-
-  const header = options.headers || {}
-  header["X-Client-Id"] = getClientId()
-  header["X-Session-Id"] = getSessionId()
-  header["User-Agent"] = await getUserAgent()
-  header["cookie"] = await getCookie()
-
-  const apiHeader = createMobileAPIHeaders({
-    version: nativeApplicationVersion || "",
-    rnPlatform: {
-      OS: Platform.OS,
-      isPad: Platform.OS === "ios" && Platform.isPad,
-    },
-    installerPackageName: await DeviceInfo.getInstallerPackageName(),
+// A keychain that cannot be read says nothing about the session, so the request fails to be
+// tried again rather than going out without the cookie
+const readSessionCookie = () =>
+  getCookie().catch((cause: unknown) => {
+    throw new SessionReadError({ cause })
   })
 
-  options.headers = {
-    ...header,
-    ...apiHeader,
+followClient.addRequestInterceptor(async (ctx) => {
+  ctx.options.headers = {
+    ...ctx.options.headers,
+    "Cache-Control": "no-store",
+    "User-Agent": await getUserAgent(),
+    cookie: await readSessionCookie(),
   }
   return ctx
 })
-
-const getRequestCookie = (headers: HeadersInit | undefined) => {
-  if (!headers) {
-    return
-  }
-
-  if (headers instanceof Headers) {
-    return headers.get("cookie") ?? undefined
-  }
-
-  if (Array.isArray(headers)) {
-    return headers.find(([key]) => key.toLowerCase() === "cookie")?.[1]
-  }
-
-  return Object.entries(headers).find(([key]) => key.toLowerCase() === "cookie")?.[1]
-}
-
-const getRequestAuthRevision = (options: Record<string, unknown>) => {
-  const revision = options.__followAuthRevision
-  return typeof revision === "number" ? revision : undefined
-}
 
 const signOutLocally = async () => {
   await userActions.removeCurrentUser()
@@ -108,42 +60,8 @@ const checkSessionAfterUnauthorized = createUnauthorizedSessionCheck({
 })
 
 followClient.addResponseInterceptor(async (ctx) => {
-  const { options, response } = ctx
-  if (response.status === 401) {
-    const currentCookie = await getCookie()
-    const requestCookie = getRequestCookie(options.headers)
-    const requestAuthRevision = getRequestAuthRevision(options as Record<string, unknown>)
-    const currentAuthRevision = getAuthStateRevision()
-
-    if (typeof requestAuthRevision === "number" && requestAuthRevision < currentAuthRevision) {
-      return ctx.response
-    }
-
-    if (currentCookie && requestCookie !== currentCookie) {
-      return ctx.response
-    }
-
-    if (Date.now() - getLastAuthStateChangeAt() < 10_000) {
-      return ctx.response
-    }
-
-    if (currentCookie) {
-      void checkSessionAfterUnauthorized()
-      return ctx.response
-    }
-
-    void signOutLocally()
-  } else if (response.status >= 400) {
-    // try {
-    //   const isJSON = response.headers.get("content-type")?.includes("application/json")
-    //   const json = isJSON ? await response.json() : null
-    //   if (isJSON && json?.code?.toString().startsWith("11")) {
-    //   }
-    // } catch (error) {
-    //   console.error(`Request failed with status ${response.status}`, error)
-    // }
-  }
-
+  // With a cookie or without, the session endpoint decides whether the session is gone
+  if (ctx.response.status === 401) void checkSessionAfterUnauthorized()
   return ctx.response
 })
 

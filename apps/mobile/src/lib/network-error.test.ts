@@ -2,7 +2,7 @@ import { trackApiConnection } from "@follow/utils/api-connection"
 import { FollowAPIError, FollowClient, FollowTimeoutError } from "@follow-app/client-sdk"
 import { describe, expect, it } from "vitest"
 
-import { isConnectionFailure, isUnansweredRequestError } from "./network-error"
+import { isConnectionFailure, isUnansweredRequestError, SessionReadError } from "./network-error"
 
 describe("isUnansweredRequestError", () => {
   it("counts requests that never got an answer", () => {
@@ -17,6 +17,12 @@ describe("isUnansweredRequestError", () => {
       ),
     ).toBe(true)
     expect(isUnansweredRequestError(new FollowTimeoutError())).toBe(true)
+    // Not sent, as the keychain could not be read before the first unlock
+    expect(
+      isUnansweredRequestError(
+        new SessionReadError({ cause: new Error("User interaction is not allowed.") }),
+      ),
+    ).toBe(true)
   })
 
   it("leaves out answers and cancelled requests", () => {
@@ -27,6 +33,10 @@ describe("isUnansweredRequestError", () => {
     expect(isUnansweredRequestError(new Error("fetch failed: The operation was aborted."))).toBe(
       false,
     )
+    // What expo/fetch says on both platforms for a request cancelled under way
+    expect(
+      isUnansweredRequestError(new Error("fetch failed: Fetch request has been canceled")),
+    ).toBe(false)
     expect(isUnansweredRequestError("fetch failed: offline")).toBe(false)
     expect(isUnansweredRequestError(null)).toBe(false)
   })

@@ -11,3 +11,6 @@ const asSetting = (value: unknown) => (typeof value === "string" && value ? valu
 
 export const getE2ELanguage = () =>
   asSetting(getAppExtra().e2eLanguage) ?? asSetting(process.env.EXPO_PUBLIC_E2E_LANGUAGE)
+
+/** E2E builds always fix the language they run in */
+export const isE2EBuild = () => getE2ELanguage() !== null

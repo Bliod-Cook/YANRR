@@ -1,122 +1,67 @@
 import * as SecureStore from "expo-secure-store"
 import Storage from "expo-sqlite/kv-store"
 
-const fallbackPrefix = "follow_secure_store_fallback"
-const warnedFallbackKeys = new Set<string>()
-let forceFallback = false
+import { isE2EBuild } from "./e2e-config"
 
-const getFallbackKey = (key: string) => `${fallbackPrefix}:${key}`
-
-const isSecureStoreUnavailable = (error: unknown) => {
-  if (!(error instanceof Error)) {
-    return false
-  }
-
-  return (
-    error.message.includes("KeyChainException") ||
-    error.message.includes("required entitlement") ||
-    error.message.includes("keychain")
-  )
+// Background tasks run while the device is locked, and need the session as well
+const writeOptions: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
 }
 
-const warnFallback = (
-  action: "getItem" | "setItem" | "removeItem",
-  key: string,
-  error: unknown,
-) => {
-  const warnKey = `${action}:${key}`
-  if (warnedFallbackKeys.has(warnKey)) {
-    return
-  }
+const plainTextKeyOf = (key: string) => `follow_secure_store_fallback:${key}`
 
-  warnedFallbackKeys.add(warnKey)
+/**
+ * Development and E2E builds may run without access to the keychain, such as unsigned simulator
+ * builds, and keep the values in plain text instead. A release build never does.
+ */
+let usesPlainText = false
 
-  if (!(error instanceof Error)) {
-    console.warn(`[auth-storage] SecureStore ${action} fallback enabled for ${key}`)
-    return
-  }
-
-  console.warn(`[auth-storage] SecureStore ${action} fallback enabled for ${key}: ${error.message}`)
-}
-
-const getFallbackValue = (key: string) => Storage.getItemSync(getFallbackKey(key))
-
-const deleteSecureStoreItem = async (key: string) => {
+const withKeychain = <T>(action: string, keychain: () => T, plainText: () => T): T => {
+  if (usesPlainText) return plainText()
   try {
-    await SecureStore.deleteItemAsync(key)
+    return keychain()
   } catch (error) {
-    if (isSecureStoreUnavailable(error)) {
-      forceFallback = true
-      warnFallback("removeItem", key, error)
-      return
-    }
-
-    console.warn(
-      `[auth-storage] SecureStore removeItem failed for ${key}: ${error instanceof Error ? error.message : String(error)}`,
-    )
+    if (!__DEV__ && !isE2EBuild()) throw error
+    usesPlainText = true
+    console.warn(`[secure-store] ${action} failed, keeping values in plain text from now on`, error)
+    return plainText()
   }
 }
+
+// What was read or written, so the keychain is read once per key and process
+const values = new Map<string, string | null>()
 
 export const safeSecureStore = {
+  /** `null` when there is no value; throws when the keychain could not be read. */
   getItem(key: string) {
-    if (forceFallback) {
-      return getFallbackValue(key)
-    }
+    const cached = values.get(key)
+    if (cached !== undefined) return cached
 
-    try {
-      const value = SecureStore.getItem(key)
-      if (value != null) {
-        return value
-      }
-    } catch (error) {
-      if (isSecureStoreUnavailable(error)) {
-        forceFallback = true
-        warnFallback("getItem", key, error)
-        return getFallbackValue(key)
-      }
-
-      throw error
-    }
-
-    return getFallbackValue(key)
+    const value = withKeychain(
+      "getItem",
+      () => SecureStore.getItem(key),
+      () => Storage.getItemSync(plainTextKeyOf(key)),
+    )
+    values.set(key, value)
+    return value
   },
   setItem(key: string, value: string) {
-    if (forceFallback) {
-      Storage.setItemSync(getFallbackKey(key), value)
-      return
-    }
-
-    try {
-      SecureStore.setItem(key, value)
-      Storage.removeItemSync(getFallbackKey(key))
-      return
-    } catch (error) {
-      if (isSecureStoreUnavailable(error)) {
-        forceFallback = true
-        warnFallback("setItem", key, error)
-        Storage.setItemSync(getFallbackKey(key), value)
-        return
-      }
-
-      throw error
-    }
-  },
-  removeItem(key: string) {
-    Storage.removeItemSync(getFallbackKey(key))
-
-    if (forceFallback) {
-      return
-    }
-
-    void deleteSecureStoreItem(key)
+    withKeychain(
+      "setItem",
+      () => SecureStore.setItem(key, value, writeOptions),
+      () => Storage.setItemSync(plainTextKeyOf(key), value),
+    )
+    values.set(key, value)
   },
   async removeItemAsync(key: string) {
-    Storage.removeItemSync(getFallbackKey(key))
+    values.delete(key)
+    Storage.removeItemSync(plainTextKeyOf(key))
+    if (usesPlainText) return
 
-    if (forceFallback) {
-      return
+    try {
+      await SecureStore.deleteItemAsync(key)
+    } catch (error) {
+      console.warn(`[secure-store] removeItem failed for ${key}`, error)
     }
-
-    await deleteSecureStoreItem(key)
   },
 }

@@ -1,11 +1,13 @@
-import { describe, expect, it, vi } from "vitest"
+import { expoClient } from "@better-auth/expo/client"
+import type { Mock } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  createSessionAwareAuthCookieStorage,
-  extractSetCookieHeaderValues,
-  hasAuthSessionChanged,
-  mergeStoredAuthCookies,
-} from "./auth-cookie-sync"
+import { createSessionAwareAuthCookieStorage, hasAuthSessionChanged } from "./auth-cookie-sync"
+
+// The platform modules the Expo plugin imports
+vi.mock("react-native", () => ({ Platform: { OS: "ios" }, AppState: {} }))
+vi.mock("expo-constants", () => ({ default: {} }))
+vi.mock("expo-linking", () => ({ createURL: () => "yanrr://" }))
 
 const createStoredCookie = ({
   token = "session-token",
@@ -40,116 +42,74 @@ const createStoredCookie = ({
     ...extra,
   })
 
-const chunkMarker = "\u0001ba-chunks:"
-const storageValueLimit = 1800
+describe("the stored auth cookie", () => {
+  const cookieKey = "follow_auth_cookie"
+  let values: Map<string, string>
+  let onSessionChange: Mock<() => void>
+  let respond: (setCookie: string) => Promise<void>
 
-const getChunkedCookie = (value: string) => {
-  const chunks = Array.from({ length: Math.ceil(value.length / storageValueLimit) }, (_, index) => {
-    const start = index * storageValueLimit
-    return value.slice(start, start + storageValueLimit)
-  })
-  return {
-    chunks,
-    marker: `${chunkMarker}${chunks.length}`,
-  }
-}
-
-const writeChunkedCookie = async (
-  storage: ReturnType<typeof createSessionAwareAuthCookieStorage>,
-  key: string,
-  value: string,
-) => {
-  const { chunks, marker } = getChunkedCookie(value)
-  await storage.setItem(key, "")
-  for (const [index, chunk] of chunks.entries()) {
-    await storage.setItem(`${key}.${index}`, chunk)
-  }
-  await storage.setItem(key, marker)
-}
-
-describe("mobile auth cookie sync", () => {
-  it("observes recoverable Expo cookie slots only after their marker is committed", async () => {
-    const key = "follow_auth_cookie"
-    const initial = createStoredCookie({ token: "initial" })
-    const next = createStoredCookie({ token: "next" })
-    const values = new Map<string, string>([
-      [key, `${chunkMarker}1:0`],
-      [`${key}.0.0`, initial],
-    ])
-    const onSessionChange = vi.fn()
+  beforeEach(() => {
+    values = new Map()
+    onSessionChange = vi.fn()
     const storage = createSessionAwareAuthCookieStorage({
-      cookieKey: key,
+      cookieKey,
       storage: {
-        getItem: (name) => values.get(name) ?? null,
-        setItem: (name, value) => values.set(name, value),
-        removeItem: (name) => values.delete(name),
+        getItem: (key) => values.get(key) ?? null,
+        setItem: (key, value) => void values.set(key, value),
       },
       onSessionChange,
     })
+    const { onSuccess } = expoClient({
+      scheme: "yanrr",
+      storagePrefix: "follow_auth",
+      storage,
+      disableCache: true,
+    }).fetchPlugins[0]!.hooks
+    // A response of the auth server, as the Expo plugin sees it
+    respond = (setCookie) =>
+      onSuccess({
+        request: { url: "https://rss.example.com/api/better-auth/get-session" },
+        response: new Response(null, { headers: { "set-cookie": setCookie } }),
+        data: null,
+      } as unknown as Parameters<typeof onSuccess>[0])
+  })
 
-    // An interrupted write recovers the previous slot and keeps the same session.
-    await storage.setItemAsync(key, `${chunkMarker}2:1:1`)
-    expect(onSessionChange).not.toHaveBeenCalled()
-    await storage.setItemAsync(`${key}.1.0`, next.slice(0, 80))
-    await storage.setItemAsync(`${key}.1.1`, next.slice(80))
-    expect(onSessionChange).not.toHaveBeenCalled()
-    await storage.setItemAsync(key, `${chunkMarker}2:1:1`)
-    expect(onSessionChange).toHaveBeenCalledTimes(1)
-    expect(await storage.getItemAsync(key)).toBe(`${chunkMarker}2:1:1`)
+  it("tells when a response signs in", async () => {
+    await respond("better-auth.session_token=first; Max-Age=604800; Path=/; HttpOnly")
 
-    // Removing obsolete chunks after a committed write must not invalidate the session.
-    await storage.removeItem(`${key}.0.0`)
     expect(onSessionChange).toHaveBeenCalledTimes(1)
-    await storage.removeItem(key)
+  })
+
+  it("keeps quiet when a response only extends the session", async () => {
+    await respond("better-auth.session_token=first; Max-Age=604800; Path=/; HttpOnly")
+    await respond("better-auth.session_token=first; Max-Age=1209600; Path=/; HttpOnly")
+
+    expect(onSessionChange).toHaveBeenCalledTimes(1)
+  })
+
+  it("tells when a response signs out", async () => {
+    await respond("better-auth.session_token=first; Max-Age=604800; Path=/; HttpOnly")
+    await respond("better-auth.session_token=; Max-Age=0; Path=/; HttpOnly")
+
     expect(onSessionChange).toHaveBeenCalledTimes(2)
   })
 
-  it("keeps the auth cookies of a React Native style combined Set-Cookie header", () => {
-    const previousCookie = JSON.stringify({
-      "better-auth.session_token": {
-        value: "old-session",
-        expires: null,
-      },
-    })
-    const combinedSetCookie = [
-      "better-auth.session_token=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax",
-      "better-auth.session_data=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax",
-      "better-auth.dont_remember=signed-true; Max-Age=600; Path=/; HttpOnly; SameSite=Lax",
-    ].join(", ")
+  it("follows the session in a cookie too large for one keychain entry", async () => {
+    const large = `better-auth.dont_remember=${"x".repeat(2000)}; Max-Age=604800; Path=/`
+    const withSession = (token: string, maxAge: number) =>
+      `better-auth.session_token=${token}; Max-Age=${maxAge}; Path=/, ${large}`
 
-    const storedCookie = mergeStoredAuthCookies([combinedSetCookie], previousCookie)
-    const parsed = JSON.parse(storedCookie)
+    await respond(withSession("first", 604800))
+    expect([...values.keys()].filter((key) => key.startsWith(`${cookieKey}.`))).not.toEqual([])
+    await respond(withSession("first", 1209600))
+    expect(onSessionChange).toHaveBeenCalledTimes(1)
 
-    expect(parsed["better-auth.session_token"]).toBeUndefined()
-    expect(parsed["better-auth.session_data"]).toBeUndefined()
-    expect(parsed["better-auth.dont_remember"]?.value).toBe("signed-true")
+    await respond(withSession("second", 604800))
+    expect(onSessionChange).toHaveBeenCalledTimes(2)
   })
+})
 
-  it("reads Set-Cookie values from standard and React Native header shapes", () => {
-    const headers = new Headers({
-      "set-cookie": "better-auth.session_token=token; Path=/; HttpOnly",
-    }) as Headers & {
-      _headers?: Record<string, string[]>
-    }
-    headers._headers = {
-      "set-cookie": ["better-auth.session_data=data; Path=/; HttpOnly"],
-    }
-
-    expect(extractSetCookieHeaderValues(headers)).toEqual([
-      "better-auth.session_token=token; Path=/; HttpOnly",
-      "better-auth.session_data=data; Path=/; HttpOnly",
-    ])
-  })
-
-  it("ignores unrelated cookies", () => {
-    const storedCookie = mergeStoredAuthCookies(
-      ["analytics_id=third-party; Max-Age=60; Path=/"],
-      "{}",
-    )
-
-    expect(storedCookie).toBe("{}")
-  })
-
+describe("hasAuthSessionChanged", () => {
   it("ignores expiry and ancillary cookie updates when the session values stay the same", () => {
     const previousCookie = createStoredCookie({
       extra: {
@@ -185,142 +145,5 @@ describe("mobile auth cookie sync", () => {
   it("treats malformed stored cookies as a session change", () => {
     expect(hasAuthSessionChanged("not-json", "not-json")).toBe(true)
     expect(hasAuthSessionChanged(createStoredCookie(), "[]")).toBe(true)
-  })
-
-  it("compares complete chunked cookies before notifying about a session change", async () => {
-    const values = new Map<string, string>()
-    const onSessionChange = vi.fn()
-    const storage = createSessionAwareAuthCookieStorage({
-      cookieKey: "follow_auth_cookie",
-      storage: {
-        getItem: (key) => values.get(key) ?? null,
-        setItem: (key, value) => values.set(key, value),
-        removeItem: (key) => values.delete(key),
-      },
-      onSessionChange,
-    })
-    const largeAncillaryCookie = {
-      "better-auth.dont_remember": {
-        value: "x".repeat(storageValueLimit),
-        expires: "2026-09-01T12:00:00.000Z",
-      },
-    }
-
-    await writeChunkedCookie(
-      storage,
-      "follow_auth_cookie",
-      createStoredCookie({ extra: largeAncillaryCookie }),
-    )
-    expect(onSessionChange).toHaveBeenCalledTimes(1)
-    onSessionChange.mockClear()
-
-    await writeChunkedCookie(
-      storage,
-      "follow_auth_cookie",
-      createStoredCookie({
-        tokenExpires: "2026-09-02T12:00:00.000Z",
-        dataExpires: "2026-09-02T12:00:00.000Z",
-        extra: largeAncillaryCookie,
-      }),
-    )
-    expect(onSessionChange).not.toHaveBeenCalled()
-
-    await writeChunkedCookie(
-      storage,
-      "follow_auth_cookie",
-      createStoredCookie({ token: "next-token", extra: largeAncillaryCookie }),
-    )
-    expect(onSessionChange).toHaveBeenCalledTimes(1)
-  })
-
-  it("notifies only after the changed session wins an interleaved chunk write", async () => {
-    const values = new Map<string, string>()
-    const onSessionChange = vi.fn()
-    const key = "follow_auth_cookie"
-    const storage = createSessionAwareAuthCookieStorage({
-      cookieKey: key,
-      storage: {
-        getItem: (storageKey) => values.get(storageKey) ?? null,
-        setItem: (storageKey, value) => values.set(storageKey, value),
-        removeItem: (storageKey) => values.delete(storageKey),
-      },
-      onSessionChange,
-    })
-    const largeAncillaryCookie = {
-      "better-auth.dont_remember": {
-        value: "x".repeat(storageValueLimit),
-        expires: "2026-09-01T12:00:00.000Z",
-      },
-    }
-    const initialCookie = createStoredCookie({ extra: largeAncillaryCookie })
-    const unchangedCookie = createStoredCookie({
-      tokenExpires: "2026-09-02T12:00:00.000Z",
-      dataExpires: "2026-09-02T12:00:00.000Z",
-      extra: largeAncillaryCookie,
-    })
-    const changedCookie = createStoredCookie({
-      token: "next-token",
-      extra: largeAncillaryCookie,
-    })
-    const unchangedChunks = getChunkedCookie(unchangedCookie)
-    const changedChunks = getChunkedCookie(changedCookie)
-
-    await writeChunkedCookie(storage, key, initialCookie)
-    onSessionChange.mockClear()
-
-    // Start the changed write first, then let an unchanged write commit before it.
-    await storage.setItem(key, "")
-    await storage.setItem(key, "")
-    for (const [index, chunk] of unchangedChunks.chunks.entries()) {
-      await storage.setItem(`${key}.${index}`, chunk)
-    }
-    await storage.setItem(key, unchangedChunks.marker)
-    expect(onSessionChange).not.toHaveBeenCalled()
-
-    for (const [index, chunk] of changedChunks.chunks.entries()) {
-      await storage.setItem(`${key}.${index}`, chunk)
-    }
-    await storage.setItem(key, changedChunks.marker)
-    expect(onSessionChange).toHaveBeenCalledTimes(1)
-  })
-
-  it("does not replace the comparison baseline with an incomplete chunk write", async () => {
-    const values = new Map<string, string>()
-    const onSessionChange = vi.fn()
-    const key = "follow_auth_cookie"
-    const storage = createSessionAwareAuthCookieStorage({
-      cookieKey: key,
-      storage: {
-        getItem: (storageKey) => values.get(storageKey) ?? null,
-        setItem: (storageKey, value) => values.set(storageKey, value),
-        removeItem: (storageKey) => values.delete(storageKey),
-      },
-      onSessionChange,
-    })
-    const initialCookie = createStoredCookie()
-    const changedCookie = createStoredCookie({
-      token: "next-token",
-      extra: {
-        "better-auth.dont_remember": {
-          value: "x".repeat(storageValueLimit),
-          expires: "2026-09-01T12:00:00.000Z",
-        },
-      },
-    })
-    const { chunks, marker } = getChunkedCookie(changedCookie)
-
-    await storage.setItem(key, initialCookie)
-    onSessionChange.mockClear()
-
-    await storage.setItem(key, "")
-    await storage.setItem(`${key}.0`, chunks[0]!)
-    await storage.setItem(key, marker)
-    expect(onSessionChange).not.toHaveBeenCalled()
-
-    for (const [index, chunk] of chunks.entries()) {
-      await storage.setItem(`${key}.${index}`, chunk)
-    }
-    await storage.setItem(key, marker)
-    expect(onSessionChange).toHaveBeenCalledTimes(1)
   })
 })

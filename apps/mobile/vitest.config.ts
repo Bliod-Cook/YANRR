@@ -11,5 +11,7 @@ export default defineConfig({
       "scripts/**/*.test.ts",
       "plugins/**/*.test.ts",
     ],
+    // Processed by Vite, so tests can stand in for the React Native modules it imports
+    server: { deps: { inline: ["@better-auth/expo"] } },
   },
 })
