@@ -1,17 +1,11 @@
 import type { AuthClientError } from "@follow/utils/auth-error"
 import { describeAuthError } from "@follow/utils/auth-error"
-import { cn } from "@follow/utils/utils"
 import { ExceptionCodeMap, FollowAPIError } from "@follow-app/client-sdk"
 import { t } from "i18next"
-import { FetchError } from "ofetch"
-import { createElement } from "react"
 import type { ExternalToast } from "sonner"
 import { toast } from "sonner"
 
 import { getApiUnreachable } from "~/atoms/api-connection"
-import { CopyButton } from "~/components/ui/button/CopyButton"
-import { Markdown } from "~/components/ui/markdown/Markdown"
-import { DebugRegistry } from "~/modules/debug/registry"
 
 // How fetch fails when no answer came back, offline or with the API down: each browser words it
 // its own way, and a request the main process made for the window comes back as "fetch failed"
@@ -46,39 +40,10 @@ const translateErrorCode = (code: unknown, fallback: string) => {
     : fallback
 }
 
-const getFetchErrorInfo = (
-  error: Error,
-): {
-  message: string
-  code?: number
-} => {
-  if (error instanceof FetchError) {
-    try {
-      const json = JSON.parse(error.response?._data)
-
-      const { reason, code, message } = json
-      const i18nMessage = translateErrorCode(code, message)
-      return {
-        message: `${i18nMessage}${reason ? `: ${reason}` : ""}`,
-        code,
-      }
-    } catch {
-      return { message: error.message }
-    }
-  }
-
+const getFetchErrorInfo = (error: Error): { message: string; code?: number } => {
   if (error instanceof FollowAPIError) {
-    const { message } = error
     const code = getServerCode(error)
-    if (code === undefined) return { message }
-    try {
-      return {
-        message: translateErrorCode(code, message),
-        code,
-      }
-    } catch {
-      return { message }
-    }
+    return { message: translateErrorCode(code, error.message), code }
   }
 
   if (isConnectionFailure(error)) {
@@ -101,121 +66,23 @@ export const createErrorToaster = (title?: string, toastOptions?: ExternalToast)
 
 export const toastFetchError = (
   error: Error,
-  { title: _title, ..._toastOptions }: ExternalToast & { title?: string } = {},
+  { title, ...toastOptions }: ExternalToast & { title?: string } = {},
 ) => {
-  let message = ""
-  // What the server said, kept next to the translation of its error code
-  let serverMessage = ""
-  let _reason = ""
-  let code: number | undefined
+  // The notice of an unreachable server says the same and stays until it answers again
+  if (!title && isConnectionFailure(error) && getApiUnreachable()) return
 
-  if (error instanceof FetchError) {
-    try {
-      const json =
-        typeof error.response?._data === "string"
-          ? JSON.parse(error.response?._data)
-          : error.response?._data
-
-      const { reason, code: _code, message: _message } = json
-      code = _code
-      message = _message
-      serverMessage = typeof _message === "string" ? _message : ""
-
-      const tValue = t(`errors:${code}` as any)
-      const i18nMessage = tValue === code?.toString() ? message : tValue
-
-      message = i18nMessage
-
-      if (reason) {
-        _reason = reason
-      }
-    } catch {
-      message = error.message
-    }
-  }
-
-  if (error instanceof FollowAPIError) {
-    code = getServerCode(error)
-    serverMessage = error.message
-    try {
-      message = translateErrorCode(code, error.message)
-    } catch {
-      message = error.message
-    }
-  } else if ("code" in error && error.code) {
-    code = Number(error.code)
-    try {
-      const tValue = t(`errors:${code}` as any)
-      const i18nMessage = tValue === code?.toString() ? error.message : tValue
-      message = i18nMessage
-    } catch {
-      message = error.message
-    }
-  }
-
-  if (isConnectionFailure(error)) {
-    // The notice of an unreachable server says the same and stays until it answers again
-    if (!_title && getApiUnreachable()) return
-    message = t("common:app.api_unreachable")
-  }
-
-  // Plain errors, such as wrapped auth client errors, carry their text in `message`
-  if (!message && !(error instanceof FetchError)) {
-    message = error.message
-  }
-
-  const toastOptions: ExternalToast = {
-    ..._toastOptions,
-    classNames: {
-      toast: "items-start bg-theme-background",
-
-      content: "w-full",
-      ..._toastOptions.classNames,
-    },
-  }
-
+  const { message, code } = getFetchErrorInfo(error)
   // Every request validation failure has this code; only the server's message names the field
   const detail =
-    code === ExceptionCodeMap.UnprocessableContent && serverMessage !== message ? serverMessage : ""
+    code === ExceptionCodeMap.UnprocessableContent && error.message !== message ? error.message : ""
 
-  if (!_reason) {
-    const title = _title || message || t("common:error_screen.unknown")
-    toastOptions.description = _title ? detail || message : detail
-    return toast.error(title, toastOptions)
-  } else {
-    return toast.error(message || _title, {
-      duration: 5000,
-      ...toastOptions,
-      description: createElement("div", {}, [
-        createElement(CopyButton, {
-          className: cn(
-            "relative z-[1] float-end -mt-1",
-            "border-transparent bg-theme-background text-text opacity-60 transition-opacity",
-            "hover:bg-material-ultra-thick hover:opacity-100 focus:border-text-tertiary",
-          ),
-          key: "copy",
-          value: _reason,
-        }),
-        createElement(Markdown, {
-          key: "reason",
-          className: "text-sm opacity-70 min-w-0 flex-1 mt-1",
-          children: _reason,
-        }),
-      ]),
-    })
-  }
-}
-DebugRegistry.add("Simulate request error", () => {
-  createErrorToaster(
-    "Simulated request error",
-    {},
-  )({
-    response: {
-      _data: JSON.stringify({
-        code: 1000,
-        message: "Simulated request error",
-        reason: "Simulated reason",
-      }),
+  return toast.error(title || message || t("common:error_screen.unknown"), {
+    ...toastOptions,
+    classNames: {
+      toast: "items-start bg-theme-background",
+      content: "w-full",
+      ...toastOptions.classNames,
     },
-  } as any)
-})
+    description: title ? detail || message : detail,
+  })
+}
