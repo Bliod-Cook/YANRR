@@ -2,9 +2,7 @@ import { FeedViewType } from "@follow/constants"
 import { stopPropagation } from "@follow/utils/dom"
 import { clsx, cn } from "@follow/utils/utils"
 import type { FC, PropsWithChildren } from "react"
-import { memo, useMemo, useState } from "react"
-import { Trans } from "react-i18next"
-import { useDebounceCallback } from "usehooks-ts"
+import { memo, useMemo } from "react"
 
 import { SafeFragment } from "~/components/common/Fragment"
 import { RelativeDay } from "~/components/ui/datetime"
@@ -56,24 +54,8 @@ const UniversalDateItem = ({ date, className, isSticky }: Omit<DateItemProps, "v
 }
 
 const DateItemInner: FC<DateItemInnerProps> = ({ date, className, Wrapper, isSticky }) => {
-  const [confirmMark, setConfirmMark] = useState(false)
-  const removeConfirm = useDebounceCallback(
-    () => {
-      setConfirmMark(false)
-    },
-    1000,
-    {
-      leading: false,
-    },
-  )
-
   const W = Wrapper ?? SafeFragment
 
-  const RelativeElement = (
-    <span key="b" className="inline-flex items-center">
-      <RelativeDay date={date} />
-    </span>
-  )
   return (
     <div
       className={cn(
@@ -82,22 +64,11 @@ const DateItemInner: FC<DateItemInnerProps> = ({ date, className, Wrapper, isSti
         isSticky && "border-border",
       )}
       onClick={stopPropagation}
-      onMouseEnter={removeConfirm.cancel}
-      onMouseLeave={removeConfirm}
     >
       <W>
-        {confirmMark ? (
-          <div className="animate-mask-in" key="a">
-            <Trans
-              i18nKey="mark_all_read_button.confirm_mark_all"
-              components={{
-                which: <>{RelativeElement}</>,
-              }}
-            />
-          </div>
-        ) : (
-          RelativeElement
-        )}
+        <span className="inline-flex items-center">
+          <RelativeDay date={date} />
+        </span>
       </W>
     </div>
   )

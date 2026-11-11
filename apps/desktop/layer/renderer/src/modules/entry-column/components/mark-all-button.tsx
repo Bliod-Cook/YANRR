@@ -144,7 +144,7 @@ export const FlatMarkAllReadButton: FC<
   const { ensureLogin } = useRequireLogin()
 
   const { className, filter, which, buttonClassName, iconClassName } = props
-  const [status, setStatus] = useState<"initial" | "confirm" | "done">("initial")
+  const [status, setStatus] = useState<"initial" | "done">("initial")
 
   return (
     <button

@@ -166,8 +166,4 @@ const MasonryItemFixedDimensionWrapper = (
   )
 }
 
-MasonryItemFixedDimensionWrapper.whyDidYouRender = {
-  logOnDifferentValues: true,
-}
-
 export { PictureItemSkeleton } from "./picture-item-skeleton"
