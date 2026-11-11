@@ -1,5 +1,5 @@
 import { callWindowExposeRenderer } from "@follow/shared/bridge"
-import { detectIsEditableElement } from "@follow/utils"
+import { checkIsEditableElement } from "@follow/utils"
 
 import { showSettings } from "~/modules/settings/modal/use-setting-modal-hack"
 
@@ -48,7 +48,7 @@ export const registerAppGlobalShortcuts = () => {
   const handleKeydown = (e: KeyboardEvent) => {
     shortcuts.forEach(({ accelerator, action, inputBypass }) => {
       // Prevent on input, textarea, [contenteditable]
-      if (!inputBypass && e.target instanceof HTMLElement && detectIsEditableElement(e.target)) {
+      if (!inputBypass && e.target instanceof HTMLElement && checkIsEditableElement(e.target)) {
         return
       }
 
