@@ -106,7 +106,7 @@ export const VideoPlayer = ({
       rest.onClick?.(e)
       handleClick(e)
     },
-    muted: isPlayer ? false : true,
+    muted: rest.muted ?? !isPlayer,
     onDoubleClick(e) {
       rest.onDoubleClick?.(e)
       if (!isPlayer) return
@@ -409,6 +409,7 @@ const PlayProgressBar = () => {
   const { state, controls } = useContext(VideoPlayerContext)
   const [currentDragging, setCurrentDragging] = useState(false)
   const [dragTime, setDragTime] = useState(0)
+  const resumeAfterDrag = useRef(false)
 
   return (
     <Slider.Root
@@ -418,6 +419,7 @@ const PlayProgressBar = () => {
       step={0.01}
       value={[currentDragging ? dragTime : state.time]}
       onPointerDown={() => {
+        resumeAfterDrag.current = state.playing
         if (state.playing) {
           controls.pause()
         }
@@ -431,7 +433,9 @@ const PlayProgressBar = () => {
         })
       }}
       onValueCommit={() => {
-        controls.play()
+        if (resumeAfterDrag.current) {
+          controls.play()
+        }
         setCurrentDragging(false)
         controls.seek(dragTime)
       }}

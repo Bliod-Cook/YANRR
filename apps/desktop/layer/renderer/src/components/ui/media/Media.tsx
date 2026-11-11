@@ -1,9 +1,7 @@
-import { nextFrame } from "@follow/utils/dom"
 import { cn } from "@follow/utils/utils"
-import { useForceUpdate } from "motion/react"
 import type { FC, ImgHTMLAttributes, VideoHTMLAttributes } from "react"
 import * as React from "react"
-import { memo, use, useEffect, useMemo, useRef, useState } from "react"
+import { memo, use, useEffect, useState } from "react"
 import { Blurhash, BlurhashCanvas } from "react-blurhash"
 import { Trans, useTranslation } from "react-i18next"
 import { useEventCallback } from "usehooks-ts"
@@ -27,7 +25,6 @@ type BaseProps = {
   videoClassName?: string
 }
 
-const isImageLoadedSet = new Set<string>()
 export type MediaProps = BaseProps &
   (
     | (ImgHTMLAttributes<HTMLImageElement> & {
@@ -76,16 +73,6 @@ const MediaImpl: FC<MediaProps> = ({
   const [isError, setIsError] = useState(false)
   const [mediaLoadState, setMediaLoadState] = useState<"loading" | "loaded">("loading")
 
-  // When the source changes, start over with its loading state
-  const prevSrc = useRef(src)
-  useEffect(() => {
-    if (prevSrc.current !== src) {
-      prevSrc.current = src
-      setIsError(false)
-      setMediaLoadState(src && isImageLoadedSet.has(src) ? "loaded" : "loading")
-    }
-  }, [src])
-
   const errorHandle: React.ReactEventHandler<HTMLImageElement> = useEventCallback((e) => {
     setIsError(true)
 
@@ -131,9 +118,6 @@ const MediaImpl: FC<MediaProps> = ({
       })
     }
 
-    if (src) {
-      isImageLoadedSet.add(src)
-    }
     if ("cacheDimensions" in props && props.cacheDimensions && src) {
       saveImageDimensionsToDb(src, {
         src,
@@ -147,7 +131,7 @@ const MediaImpl: FC<MediaProps> = ({
 
   const containerWidth = useMediaContainerWidth()
 
-  const InnerContent = useMemo(() => {
+  const renderInnerContent = () => {
     switch (type) {
       case "photo": {
         // @ts-expect-error
@@ -199,23 +183,8 @@ const MediaImpl: FC<MediaProps> = ({
         return null
       }
     }
-  }, [
-    type,
-    rest,
-    finalHeight,
-    finalWidth,
-    errorHandle,
-    inline,
-    popper,
-    mediaLoadState,
-    mediaContainerClassName,
-    handleOnLoad,
-    handleClick,
-    src,
-    previewImageUrl,
-    thumbnail,
-    videoClassName,
-  ])
+  }
+  const InnerContent = renderInnerContent()
 
   if (!type || !src) return null
 
@@ -406,29 +375,31 @@ const VideoPreview: FC<{
   videoClassName?: string
 }> = ({ src, previewImageUrl, thumbnail = false, videoClassName }) => {
   const [isInitVideoPlayer, setIsInitVideoPlayer] = useState(!previewImageUrl)
-
+  const [hovered, setHovered] = useState(false)
+  const [isPaused, setIsPaused] = useState(true)
   const [videoRef, setVideoRef] = useState<VideoPlayerRef | null>(null)
-  const isPaused = videoRef ? videoRef?.getState().paused : true
-  const [forceUpdate] = useForceUpdate()
+
+  // The player mounts on the first hover, so playback follows the state, not the mouse event
+  useEffect(() => {
+    if (!videoRef) return
+    if (hovered) {
+      videoRef.controls.play()
+    } else {
+      videoRef.controls.pause()
+    }
+  }, [hovered, videoRef])
+
   return (
     <div
       className="size-full"
       onMouseEnter={() => {
-        videoRef?.controls.play()?.then(forceUpdate)
+        setIsInitVideoPlayer(true)
+        setHovered(true)
       }}
-      onMouseLeave={() => {
-        videoRef?.controls.pause()
-        nextFrame(forceUpdate)
-      }}
+      onMouseLeave={() => setHovered(false)}
     >
       {!isInitVideoPlayer ? (
-        <img
-          src={previewImageUrl}
-          className={cn("size-full object-cover", videoClassName)}
-          onMouseEnter={() => {
-            setIsInitVideoPlayer(true)
-          }}
-        />
+        <img src={previewImageUrl} className={cn("size-full object-cover", videoClassName)} />
       ) : (
         <VideoPlayer
           variant={thumbnail ? "thumbnail" : "preview"}
@@ -437,6 +408,8 @@ const VideoPreview: FC<{
           poster={previewImageUrl}
           ref={setVideoRef}
           muted
+          onPlay={() => setIsPaused(false)}
+          onPause={() => setIsPaused(true)}
           className={cn("not-prose relative size-full object-cover", videoClassName)}
         />
       )}

@@ -169,41 +169,11 @@ export default function createHTMLMediaHook<T extends HTMLAudioElement | HTMLVid
       } as any) // TODO: fix this typing.
     }
 
-    // Some browsers return `Promise` on `.play()` and may throw errors
-    // if one tries to execute another `.play()` or `.pause()` while that
-    // promise is resolving. So we prevent that with this lock.
-    // See: https://bugs.chromium.org/p/chromium/issues/detail?id=593273
-    let lockPlay = false
-
     const controls = React.useState(() => ({
-      play: () => {
-        const el = ref.current
-        if (!el) {
-          return
-        }
-
-        if (!lockPlay) {
-          const promise = el.play().catch(noop)
-          const isPromise = typeof promise === "object"
-
-          if (isPromise) {
-            lockPlay = true
-            const resetLock = () => {
-              lockPlay = false
-            }
-            promise.then(resetLock, resetLock)
-          }
-
-          return promise
-        }
-        return
-      },
-      pause: () => {
-        const el = ref.current
-        if (el && !lockPlay) {
-          return el.pause()
-        }
-      },
+      // A `pause()` that lands while `play()` is pending rejects that promise with an
+      // AbortError, which is ignored here.
+      play: () => ref.current?.play().catch(noop),
+      pause: () => ref.current?.pause(),
       seek: (time: number) => {
         const state = getState()
         const el = ref.current
