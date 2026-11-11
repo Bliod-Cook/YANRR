@@ -1,4 +1,3 @@
-import { invalidateUserSession } from "@follow/store/user/hooks"
 import { jotaiStore } from "@follow/utils"
 import * as Linking from "expo-linking"
 import { useEffect } from "react"
@@ -16,10 +15,12 @@ const DUPLICATE_LINK_WINDOW_MS = 2000
 let lastHandledLink: { url: string; at: number } | null = null
 let initialUrlChecked = false
 
-type DeepLinkParams =
-  | { id: string | null; type: "url" | "feed"; url?: string | null; view?: string | null }
-  | "refresh"
-  | null
+type DeepLinkParams = {
+  id: string | null
+  type: "url" | "feed"
+  url?: string | null
+  view?: string | null
+} | null
 
 type FollowScreenProps = {
   id?: string
@@ -85,11 +86,6 @@ export const handleIncomingUrl = (incomingUrl: string | null, navigation: Naviga
     return
   }
 
-  if (searchParams === "refresh") {
-    invalidateUserSession()
-    return
-  }
-
   void presentFollowScreen(navigation, {
     id: searchParams.id ?? undefined,
     type: searchParams.type,
@@ -139,9 +135,6 @@ const extractParamsFromDeepLink = (incomingUrl: string | null): DeepLinkParams =
         // Without an id the feed is looked up by its URL
         if (!id) return feedUrl ? { id: null, type: "url", url: feedUrl, view } : null
         return { id, type: "feed", view }
-      }
-      case "refresh": {
-        return "refresh"
       }
       default: {
         return null

@@ -11,12 +11,10 @@ import {
   GroupedInsetListNavigationLinkIcon,
 } from "@/src/components/ui/grouped/GroupedList"
 import { Text } from "@/src/components/ui/typography/Text"
-import { CertificateCuteFiIcon } from "@/src/icons/certificate_cute_fi"
 import { DatabaseIcon } from "@/src/icons/database"
 import { ExitCuteFiIcon } from "@/src/icons/exit_cute_fi"
 import { FlashlightCuteReIcon } from "@/src/icons/flashlight_cute_re"
 import { Magic2CuteFiIcon } from "@/src/icons/magic_2_cute_fi"
-import { NotificationCuteReIcon } from "@/src/icons/notification_cute_re"
 import { PaletteCuteFiIcon } from "@/src/icons/palette_cute_fi"
 import { Settings1CuteFiIcon } from "@/src/icons/settings_1_cute_fi"
 import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
@@ -31,20 +29,16 @@ import { AccountScreen } from "./routes/Account"
 import { ActionsScreen } from "./routes/Actions"
 import { AppearanceScreen } from "./routes/Appearance"
 import { DataScreen } from "./routes/Data"
-import { FeedsScreen } from "./routes/Feeds"
 import { GeneralScreen } from "./routes/General"
-import { NotificationsScreen } from "./routes/Notifications"
 import { SpotlightScreen } from "./routes/Spotlight"
 
 type SettingsNavigationTranslationKey =
   | "titles.general"
-  | "titles.notifications"
   | "titles.appearance"
   | "titles.spotlight"
   | "titles.data_control"
   | "titles.account"
   | "titles.actions"
-  | "titles.feeds"
   | "titles.about"
   | "titles.sign_out"
 
@@ -53,19 +47,12 @@ interface GroupNavigationLinkBase {
   onPress: (data: { navigation: Navigation }) => void
   iconBackgroundColor: string
   anonymous?: boolean
-  todo?: boolean
   testID?: string
 }
 
-type GroupNavigationLink =
-  | (GroupNavigationLinkBase & {
-      translationKey: SettingsNavigationTranslationKey
-      label?: never
-    })
-  | (GroupNavigationLinkBase & {
-      label: string
-      translationKey?: never
-    })
+type GroupNavigationLink = GroupNavigationLinkBase & {
+  translationKey: SettingsNavigationTranslationKey
+}
 
 const SettingGroupNavigationLinks: GroupNavigationLink[] = [
   {
@@ -76,16 +63,6 @@ const SettingGroupNavigationLinks: GroupNavigationLink[] = [
     },
     iconBackgroundColor: "#F43F5E",
     testID: "settings-general-link",
-  },
-  {
-    translationKey: "titles.notifications",
-    icon: NotificationCuteReIcon,
-    onPress: ({ navigation }) => {
-      navigation.pushControllerView(NotificationsScreen)
-    },
-    iconBackgroundColor: "#EF4444",
-    todo: true,
-    anonymous: false,
   },
   {
     translationKey: "titles.appearance",
@@ -133,18 +110,6 @@ const DataGroupNavigationLinks: GroupNavigationLink[] = [
     },
     iconBackgroundColor: "#9333EA",
     anonymous: false,
-  },
-
-  {
-    translationKey: "titles.feeds",
-    icon: CertificateCuteFiIcon,
-    onPress: ({ navigation }) => {
-      navigation.pushControllerView(FeedsScreen)
-    },
-    iconBackgroundColor: "#EAB308",
-    todo: true,
-    anonymous: false,
-    testID: "settings-feeds-link",
   },
 ]
 
@@ -196,26 +161,19 @@ const NavigationLinkGroup: FC<{
 
   return (
     <GroupedInsetListCard>
-      {links
-        .filter((link) => !link.todo)
-        .map((link) => {
-          const label = link.translationKey ? String(t(link.translationKey)) : link.label
-          const key = link.testID ?? link.translationKey ?? link.label
-
-          return (
-            <GroupedInsetListNavigationLink
-              key={key}
-              label={label}
-              icon={
-                <GroupedInsetListNavigationLinkIcon backgroundColor={link.iconBackgroundColor}>
-                  <link.icon height={18} width={18} color="#fff" />
-                </GroupedInsetListNavigationLinkIcon>
-              }
-              testID={link.testID}
-              onPress={() => link.onPress({ navigation })}
-            />
-          )
-        })}
+      {links.map((link) => (
+        <GroupedInsetListNavigationLink
+          key={link.translationKey}
+          label={String(t(link.translationKey))}
+          icon={
+            <GroupedInsetListNavigationLinkIcon backgroundColor={link.iconBackgroundColor}>
+              <link.icon height={18} width={18} color="#fff" />
+            </GroupedInsetListNavigationLinkIcon>
+          }
+          testID={link.testID}
+          onPress={() => link.onPress({ navigation })}
+        />
+      ))}
     </GroupedInsetListCard>
   )
 }
@@ -248,9 +206,8 @@ export const SettingsList: FC = () => {
   return (
     <View className="flex-1 bg-system-grouped-background pb-4" style={{ marginTop }}>
       {filteredNavigationGroups.map((group, index) => {
-        const groupKey = group.map((link) => link.label).join("-")
         return (
-          <Fragment key={groupKey}>
+          <Fragment key={group[0]!.translationKey}>
             <NavigationLinkGroup links={group} />
             {index < filteredNavigationGroups.length - 1 && <View style={{ height: groupGap }} />}
           </Fragment>

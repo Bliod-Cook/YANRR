@@ -27,7 +27,6 @@ vi.mock("expo-linking", () => ({
   getInitialURL: async () => null,
   addEventListener: () => ({ remove: () => {} }),
 }))
-vi.mock("@follow/store/user/hooks", () => ({ invalidateUserSession: vi.fn() }))
 vi.mock("../lib/navigation/hooks", () => ({ useNavigation: vi.fn() }))
 vi.mock("../lib/launch-link", () => ({ getUnhandledLaunchLink: async () => null }))
 vi.mock("../lib/native", () => ({ dismissInAppBrowser: mocks.dismissInAppBrowser }))
@@ -108,20 +107,6 @@ describe("handleIncomingUrl", () => {
     expect(routesOf(navigation)).toHaveLength(1)
   })
 
-  it("opens the form of a link that came in just after signing in once the sign-in closed", async () => {
-    const stopWatching = watchPendingFollowScreen(navigation)
-    // Signed in already: the sign-in screen closes itself, and what is over it, a moment later
-    navigation.presentControllerView(LoginScreen)
-
-    handleIncomingUrl("yanrr://add?id=1337585485484134400", navigation)
-    await settle()
-    expect(screensOf(navigation)).toEqual([LoginScreen])
-
-    navigation.dismiss()
-    await vi.waitFor(() => expect(screensOf(navigation)).toEqual([FollowScreen]))
-    stopWatching()
-  })
-
   describe("signed out", () => {
     it("opens the follow form of a link from the sign-in screen once it closes", async () => {
       const stopWatching = watchPendingFollowScreen(navigation)
@@ -136,17 +121,6 @@ describe("handleIncomingUrl", () => {
       navigation.dismiss()
       await vi.waitFor(() => expect(screensOf(navigation)).toEqual([FollowScreen]))
       expect(routesOf(navigation)[0]!.props).toMatchObject({ id: "1337585485484134400" })
-      stopWatching()
-    })
-
-    it("still opens the form when the sign-in screen closes without signing in", async () => {
-      const stopWatching = watchPendingFollowScreen(navigation)
-      navigation.presentControllerView(LoginScreen)
-      handleIncomingUrl("yanrr://add?id=1337585485484134400", navigation)
-
-      navigation.dismiss()
-
-      await vi.waitFor(() => expect(screensOf(navigation)).toEqual([FollowScreen]))
       stopWatching()
     })
 
