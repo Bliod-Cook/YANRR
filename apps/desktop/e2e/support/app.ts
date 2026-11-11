@@ -265,7 +265,10 @@ export const registerWithCredential = async (page: Page, account: TestAccount) =
   ])
   if (response) {
     expect(response.ok()).toBe(true)
-    await waitForBetterAuthSessionCookie(page, new URL(response.url()).origin)
+    // The desktop app's session cookie is kept for the server by the main process, not the page
+    if (!isElectronPage(page)) {
+      await waitForBetterAuthSessionCookie(page, new URL(response.url()).origin)
+    }
   }
 
   await waitForAuthenticated(page)
@@ -294,7 +297,10 @@ export const loginWithCredential = async (page: Page, account: TestAccount) => {
   ])
   if (response) {
     expect(response.ok()).toBe(true)
-    await waitForBetterAuthSessionCookie(page, new URL(response.url()).origin)
+    // The desktop app's session cookie is kept for the server by the main process, not the page
+    if (!isElectronPage(page)) {
+      await waitForBetterAuthSessionCookie(page, new URL(response.url()).origin)
+    }
   }
 
   await page.reload({ waitUntil: "domcontentloaded" }).catch(() => {})

@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs"
 
 import { electronApp, optimizer } from "@electron-toolkit/utils"
-import { APP_ID, DEV } from "@follow/shared/constants"
+import { APP_ID } from "@follow/shared/constants"
 import { createBuildSafeHeaders } from "@follow/utils/headers"
 import { getApiUrl } from "@follow/utils/server-url"
 import { app, BrowserWindow, net, protocol, session } from "electron"
@@ -10,12 +10,29 @@ import { join } from "pathe"
 import { WindowManager } from "~/manager/window"
 
 import { isMacOS } from "../env"
-import { dedupeManagedAuthCookies } from "../lib/auth-cookies"
+import { proxyApiRequest } from "../lib/api-proxy"
+import { APP_API_URL } from "../lib/app-url"
 import { isDeepLink, openDeepLink, setDeepLinkHandler } from "../lib/deep-link"
+import { getPageOrigin } from "../lib/page-origin"
+import { isPermissionGranted } from "../lib/permissions"
 import { handleUrlRouting } from "../lib/router"
 import { getServerUrl } from "../lib/server-url"
 import { logger } from "../logger"
 import { AppManager } from "./app"
+
+/**
+ * The answer to a request of the app's page for the server's API. A server that cannot be
+ * reached fails the request, as it does in the web app.
+ */
+const answerApiRequest = async (request: Request) => {
+  const server = getServerUrl()
+  if (!server) return Response.error()
+  try {
+    return await proxyApiRequest(request, { server, pageOrigin: getPageOrigin() })
+  } catch {
+    return Response.error()
+  }
+}
 
 export class BootstrapManager {
   public static start() {
@@ -60,8 +77,9 @@ export class BootstrapManager {
       }
     })
 
-    app.whenReady().then(async () => {
+    app.whenReady().then(() => {
       protocol.handle("app", (request) => {
+        if (request.url.startsWith(`${APP_API_URL}/`)) return answerApiRequest(request)
         try {
           const urlObj = new URL(request.url)
           return net.fetch(`file://${urlObj.pathname}`)
@@ -91,17 +109,15 @@ export class BootstrapManager {
         callback({ cancel: false, requestHeaders: details.requestHeaders })
       })
 
-      // A failed cookie cleanup must not keep the main window from opening
-      if (server) {
-        try {
-          await dedupeManagedAuthCookies({
-            apiURL: getApiUrl(server),
-            session: session.defaultSession,
-          })
-        } catch (error) {
-          logger.error("Failed to clean up auth cookies:", error)
-        }
-      }
+      // Electron grants every permission a page asks for unless told otherwise
+      session.defaultSession.setPermissionRequestHandler(
+        (_webContents, permission, callback, details) => {
+          callback(isPermissionGranted(permission, details.requestingUrl))
+        },
+      )
+      session.defaultSession.setPermissionCheckHandler((_webContents, permission, origin) =>
+        isPermissionGranted(permission, origin),
+      )
 
       WindowManager.getMainWindowOrCreate()
 
@@ -111,7 +127,7 @@ export class BootstrapManager {
         if (isDeepLink(arg)) openDeepLink(arg)
       }
 
-      if (DEV) {
+      if (import.meta.env.DEV) {
         this.installDevTools()
       }
     })

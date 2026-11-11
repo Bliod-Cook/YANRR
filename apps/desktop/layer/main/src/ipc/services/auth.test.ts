@@ -6,11 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AuthService } from "./auth"
 
-const server = vi.hoisted(() => ({ url: "" }))
+const mocks = vi.hoisted(() => ({
+  serverUrl: "",
+  events: [] as string[],
+  removeCookie: vi.fn(async (_url: string, _name: string) => {}),
+}))
 
-// Chromium's network stack stands in for Node's, which takes the same signal.
+// Node's network stack stands in for Chromium's, which takes the same request
 vi.mock("electron", () => ({
   net: { fetch: (input: string, init?: RequestInit) => fetch(input, init) },
+  session: { defaultSession: { cookies: { remove: mocks.removeCookie } } },
 }))
 
 vi.mock("electron-ipc-decorator", () => ({
@@ -19,14 +24,10 @@ vi.mock("electron-ipc-decorator", () => ({
   IpcService: class {},
 }))
 
-vi.mock("~/manager/window", () => ({
-  WindowManager: { getMainWindow: () => null },
-}))
-
 vi.mock("../../lib/server-url", () => ({
-  getApiURL: () => `${server.url}/api`,
-  getServerUrl: () => server.url,
-  getWebURL: () => server.url,
+  getApiURL: () => `${mocks.serverUrl}/api`,
+  getServerUrl: () => mocks.serverUrl,
+  getWebURL: () => mocks.serverUrl,
 }))
 
 vi.mock("../../lib/store", () => ({
@@ -34,55 +35,52 @@ vi.mock("../../lib/store", () => ({
 }))
 
 vi.mock("../../lib/user", () => ({
-  deleteNotificationsToken: vi.fn(),
+  deleteNotificationsToken: vi.fn(async () => {
+    mocks.events.push("push token deleted")
+  }),
   updateNotificationsToken: vi.fn(),
 }))
 
-describe("AuthService.fetchWithAuth", () => {
-  let hanging: Server
-  let pending = 0
+describe("AuthService.signOut", () => {
+  let server: Server
 
   beforeEach(async () => {
-    // Takes requests and never answers, like a stuck proxy.
-    hanging = createServer(() => {
-      pending++
+    mocks.events.length = 0
+    mocks.removeCookie.mockClear()
+    server = createServer((request, response) => {
+      mocks.events.push(`${request.method} ${request.url} from ${request.headers.origin}`)
+      response.end()
     })
-    await new Promise<void>((resolve) => hanging.listen(0, "127.0.0.1", resolve))
-    server.url = `http://127.0.0.1:${(hanging.address() as AddressInfo).port}`
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+    mocks.serverUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
   })
 
   afterEach(async () => {
-    vi.useRealTimers()
-    hanging.closeAllConnections()
-    await new Promise((resolve) => hanging.close(resolve))
-    pending = 0
+    server.closeAllConnections()
+    await new Promise((resolve) => server.close(resolve))
   })
 
-  const request = (requestId: string) => ({
-    method: "GET",
-    url: `${server.url}/api/status/configs`,
-    requestId,
+  const sessionCookiesRemoved = () => mocks.removeCookie.mock.calls.map(([, name]) => name)
+
+  it("takes the device off push while the session still stands, then ends the session", async () => {
+    await new AuthService().signOut()
+
+    expect(mocks.events).toEqual([
+      "push token deleted",
+      `POST /api/better-auth/sign-out from ${mocks.serverUrl}`,
+    ])
+    expect(sessionCookiesRemoved()).toEqual([
+      "__Secure-better-auth.session_token",
+      "better-auth.session_token",
+    ])
   })
 
-  it("stops a request the renderer cancels", async () => {
-    const service = new AuthService()
-    const sent = service.fetchWithAuth(request("first"))
-    await vi.waitFor(() => expect(pending).toBe(1))
+  it("leaves no session on the device when the server cannot be reached", async () => {
+    server.closeAllConnections()
+    await new Promise((resolve) => server.close(resolve))
 
-    service.cancelFetch("first")
+    await new AuthService().signOut()
 
-    await expect(sent).rejects.toThrow()
-  })
-
-  it("gives up on its own when nobody cancels", async () => {
-    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
-    const service = new AuthService()
-    const sent = service.fetchWithAuth(request("orphan"))
-    const settled = expect(sent).rejects.toThrow()
-    await vi.waitFor(() => expect(pending).toBe(1))
-
-    vi.advanceTimersByTime(240_000)
-
-    await settled
+    expect(sessionCookiesRemoved()).toHaveLength(2)
   })
 })

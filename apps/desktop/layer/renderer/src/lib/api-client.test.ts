@@ -1,13 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { AuthClient } from "@follow/shared/auth"
+import { authClientContext, queryClientContext } from "@follow/store/context"
+import { whoami } from "@follow/store/user/getters"
+import { userActions } from "@follow/store/user/store"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { fetchWithElectronAuth, followClient } from "./api-client"
+import { followClient } from "./api-client"
+import { queryClient } from "./query-client"
 
-const ipc = vi.hoisted(() => {
+vi.hoisted(() => {
   vi.stubEnv("VITE_API_URL", "https://rss.example.com/api")
-  return { fetchWithAuth: vi.fn(), cancelFetch: vi.fn() }
 })
 
-vi.mock("./client", () => ({ ipcServices: { auth: ipc } }))
+vi.mock("@follow/database/db", async () =>
+  (await import("@follow/database/test-db")).createTestDB(),
+)
 
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
@@ -39,50 +45,30 @@ describe("followClient responses", () => {
   })
 })
 
-describe("fetchWithElectronAuth", () => {
-  const url = "https://rss.example.com/api/status/configs"
-
-  beforeEach(() => {
-    ;(window as { electron?: unknown }).electron = {}
-  })
-
+describe("requests the server refuses for lack of a session", () => {
   afterEach(() => {
-    delete (window as { electron?: unknown }).electron
-    ipc.fetchWithAuth.mockReset()
-    ipc.cancelFetch.mockReset()
+    vi.restoreAllMocks()
+    queryClient.clear()
   })
 
-  it("refuses a request aborted before it was sent", async () => {
-    const reason = new Error("gone")
+  it("have the session asked for once, and its end signs the app out", async () => {
+    // The session ended on the server: it knows nobody, and refuses everything else
+    const getSession = vi.fn(async () => ({ data: null, error: null }))
+    authClientContext.provide({ getSession } as unknown as AuthClient)
+    queryClientContext.provide(queryClient)
+    await userActions.upsertMany([{ id: "1", isMe: true }])
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      jsonResponse({ code: 1000, message: "Unauthorized" }, 401),
+    )
 
-    await expect(
-      fetchWithElectronAuth(new Request(url, { signal: AbortSignal.abort(reason) })),
-    ).rejects.toBe(reason)
-    expect(ipc.fetchWithAuth).not.toHaveBeenCalled()
-  })
+    await Promise.allSettled([
+      followClient.api.feeds.get({ id: "1" }),
+      followClient.api.feeds.get({ id: "2" }),
+      followClient.api.feeds.get({ id: "3" }),
+    ])
+    await vi.waitFor(() => expect(whoami()).toBeNull())
+    await followClient.api.feeds.get({ id: "4" }).catch(() => {})
 
-  it("rejects at once on abort and has the main process stop the request", async () => {
-    ipc.fetchWithAuth.mockReturnValue(new Promise(() => {}))
-    const controller = new AbortController()
-    const reason = new Error("timed out")
-
-    const sent = fetchWithElectronAuth(new Request(url, { signal: controller.signal }))
-    await vi.waitFor(() => expect(ipc.fetchWithAuth).toHaveBeenCalled())
-    controller.abort(reason)
-
-    await expect(sent).rejects.toBe(reason)
-    const { requestId } = ipc.fetchWithAuth.mock.calls[0]![0]
-    expect(ipc.cancelFetch).toHaveBeenCalledWith(requestId)
-  })
-
-  it("lets go of the signal once answered", async () => {
-    ipc.fetchWithAuth.mockResolvedValue({ body: "{}", headers: [], status: 200, statusText: "OK" })
-    const controller = new AbortController()
-
-    const response = await fetchWithElectronAuth(new Request(url, { signal: controller.signal }))
-    controller.abort()
-
-    expect(await response.text()).toBe("{}")
-    expect(ipc.cancelFetch).not.toHaveBeenCalled()
+    expect(getSession).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,160 +1,40 @@
-import { buildBetterAuthSessionTokenCookieHeader } from "@follow/shared/auth-cookie"
-import { IN_ELECTRON } from "@follow/shared/constants"
 import { env } from "@follow/shared/env.desktop"
 import { whoami } from "@follow/store/user/getters"
-import { userActions } from "@follow/store/user/store"
+import { fetchSessionUser } from "@follow/store/user/hooks"
 import { trackApiConnection } from "@follow/utils/api-connection"
-import { createDesktopAPIHeaders } from "@follow/utils/headers"
 import { FollowClient } from "@follow-app/client-sdk"
-import PKG from "@pkg"
 
 import { setApiUnreachable } from "~/atoms/api-connection"
-import { setLoginModalShow } from "~/atoms/user"
 
-import { ipcServices } from "./client"
-import { getAuthSessionToken, getClientId, getSessionId } from "./client-session"
-
-const isElectronRuntime = () => {
-  return IN_ELECTRON || (typeof window !== "undefined" && !!window.electron)
-}
-
-/**
- * The main process hands the body over as text, so a `204 No Content` arrives as an empty
- * string. `Response` refuses any body, even an empty one, for these statuses; passing one
- * threw, and a thrown fetch counts as "the server cannot be reached".
- */
-const NULL_BODY_STATUSES = new Set([101, 204, 205, 304])
-
-export const fetchWithElectronAuth = async (request: Request) => {
-  const requestURL = new URL(request.url)
-  const apiURL = new URL(env.VITE_API_URL)
-  const authService = ipcServices?.auth as
-    | (NonNullable<typeof ipcServices>["auth"] & {
-        fetchWithAuth?: (payload: {
-          body?: string
-          headers?: Record<string, string>
-          method: string
-          url: string
-          requestId: string
-        }) => Promise<{
-          body: string
-          headers: [string, string][]
-          status: number
-          statusText: string
-        }>
-        cancelFetch?: (requestId: string) => Promise<void>
-      })
-    | undefined
-
-  if (!isElectronRuntime() || requestURL.origin !== apiURL.origin || !authService?.fetchWithAuth) {
-    return fetch(request)
-  }
-
-  // The request's signal cannot cross IPC: on abort, give up here and have the main process stop it.
-  const { signal } = request
-  signal.throwIfAborted()
-  const requestId = crypto.randomUUID()
-  let onAbort = () => {}
-  const aborted = new Promise<never>((_, reject) => {
-    onAbort = () => {
-      reject(signal.reason)
-      void authService.cancelFetch?.(requestId)
-    }
-    signal.addEventListener("abort", onAbort, { once: true })
-  })
-
-  try {
-    const body =
-      request.method !== "GET" && request.method !== "HEAD"
-        ? await request.clone().text()
-        : undefined
-    const sent = authService.fetchWithAuth({
-      body,
-      headers: Object.fromEntries(request.headers.entries()),
-      method: request.method,
-      url: request.url,
-      requestId,
-    })
-    const response = await Promise.race([sent, aborted])
-
-    return new Response(NULL_BODY_STATUSES.has(response.status) ? null : response.body, {
-      headers: response.headers,
-      status: response.status,
-      statusText: response.statusText,
-    })
-  } finally {
-    signal.removeEventListener("abort", onAbort)
-  }
-}
-
+// The API is on the page's own origin: the server's in a browser, and in the desktop app the
+// main process answers there with what the server said. Either way the session is a cookie
+// that no script here gets to see.
 export const followClient = new FollowClient({
   credentials: "include",
   timeout: 60_000,
   baseURL: env.VITE_API_URL,
-  fetch: async (input, options = {}) => {
-    const request = new Request(input.toString(), {
-      ...options,
-      cache: "no-store",
-    })
-    return fetchWithElectronAuth(request)
-  },
+  fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }),
 })
 
 export const followApi = followClient.api
 
-followClient.addRequestInterceptor(async (ctx) => {
-  const { options } = ctx
-  const headers = new Headers(options.headers)
-  headers.set("X-Client-Id", getClientId())
-  headers.set("X-Session-Id", getSessionId())
-
-  const authSessionToken = isElectronRuntime() ? getAuthSessionToken() : null
-  if (authSessionToken && !headers.has("Cookie") && !headers.has("cookie")) {
-    headers.set(
-      "Cookie",
-      buildBetterAuthSessionTokenCookieHeader(env.VITE_API_URL, authSessionToken),
-    )
-  }
-
-  const apiHeader = createDesktopAPIHeaders({ version: PKG.version })
-  Object.entries(apiHeader).forEach(([key, value]) => {
-    headers.set(key, value)
-  })
-
-  options.headers = Object.fromEntries(headers.entries())
-  return ctx
-})
-
-followClient.addResponseInterceptor(async ({ response }) => {
-  if (response.status === 401) {
-    const authSessionToken = isElectronRuntime() ? getAuthSessionToken() : null
-    const shouldPromptForLogin =
-      response.url.includes("/better-auth/get-session") || (!whoami() && !authSessionToken)
-
-    if (!shouldPromptForLogin) {
-      return response
-    }
-
-    // Or we can present LoginModal here.
-    // router.navigate("/login")
-    // If any response status is 401, we can set auth fail. Maybe some bug, but if navigate to login page, had same issues
-    setLoginModalShow(true)
-    userActions.removeCurrentUser()
-  }
-
+// A refused request may mean that the session ended, by itself or from another device. The
+// server is asked, once however many requests it refuses at a time, and its answer signs the
+// app out (see `userSyncService.whoami`), which asks the user to sign in again.
+followClient.addResponseInterceptor(({ response }) => {
+  if (response.status === 401 && whoami()) void fetchSessionUser().catch(() => {})
   return response
 })
 
 /**
- * Whether the API answers at all, checked the way ordinary requests travel (through the main
- * process in Electron). Any HTTP status counts as an answer; the endpoint needs no session.
+ * Whether the API answers at all, checked the way ordinary requests travel. Any HTTP status
+ * counts as an answer; the endpoint needs no session.
  */
 const probeApiReachability = async () => {
-  const request = new Request(`${env.VITE_API_URL}/status/configs`, {
+  await fetch(`${env.VITE_API_URL}/status/configs`, {
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
   })
-  await fetchWithElectronAuth(request)
   return true
 }
 
