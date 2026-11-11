@@ -21,7 +21,8 @@ export interface NavigationControllerViewExtraProps extends Pick<
   | "transitionDuration"
 > {
   /**
-   * Unique identifier for the view.
+   * Makes the view a singleton: it is not pushed while a route of a view with this id is on the
+   * stack.
    */
   id?: string
 

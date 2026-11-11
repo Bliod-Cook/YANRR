@@ -82,5 +82,5 @@ export const useIsTopRouteInGroup = () => {
 
   if (!routeGroup || routeGroup.length === 0) return false
 
-  return routeGroup.at(0)?.screenOptions?.id === screenId
+  return routeGroup.at(0)?.id === screenId
 }

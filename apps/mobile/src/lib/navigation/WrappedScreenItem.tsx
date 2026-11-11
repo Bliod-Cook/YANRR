@@ -115,11 +115,8 @@ export const WrappedScreenItem: FC<
           dismissCount: number
         }>,
       ) => {
-        if (e.nativeEvent.dismissCount > 0) {
-          for (let i = 0; i < e.nativeEvent.dismissCount; i++) {
-            navigation.__internal_dismiss(screenId)
-          }
-        }
+        const { dismissCount } = e.nativeEvent
+        if (dismissCount > 0) navigation.__internal_dismiss(screenId, dismissCount)
       },
       [navigation, screenId],
     )
@@ -135,9 +132,7 @@ export const WrappedScreenItem: FC<
         const { dismissCount } = e.nativeEvent
         if (dismissCount <= 0) return
         confirmLeaveWithUnsavedChanges(() => {
-          for (let i = 0; i < dismissCount; i++) {
-            navigation.__internal_dismiss(screenId)
-          }
+          navigation.__internal_dismiss(screenId, dismissCount)
         })
       },
       [navigation, screenId],

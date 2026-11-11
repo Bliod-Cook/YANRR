@@ -9,6 +9,19 @@ import type {
   NavigationControllerViewType,
 } from "./types"
 
+/** Whether pushing these props again would show the same as the screen on top */
+const haveSameProps = (left: unknown, right: unknown) => {
+  if (Object.is(left, right)) return true
+  if (!left || !right || typeof left !== "object" || typeof right !== "object") return false
+  const leftProps = left as Record<string, unknown>
+  const rightProps = right as Record<string, unknown>
+  const keys = Object.keys(leftProps)
+  return (
+    keys.length === Object.keys(rightProps).length &&
+    keys.every((key) => Object.is(leftProps[key], rightProps[key]))
+  )
+}
+
 export class Navigation {
   private ctxValue: ChainNavigationContextType
   constructor(ctxValue: ChainNavigationContextType) {
@@ -25,31 +38,49 @@ export class Navigation {
     return this.ctxValue
   }
 
-  private viewIdCounter = 0
+  private routeCount = 0
 
   static readonly rootNavigation: Navigation = new Navigation({
     routesAtom: atom<Route[]>([]),
   })
 
-  private __push(route: Route) {
-    const routes = jotaiStore.get(this.ctxValue.routesAtom)
-    const hasRoute = routes.some((r) => r.id === route.id)
-    if (hasRoute && routes.at(-1)?.id === route.id) {
-      console.warn(`Top of stack is already ${route.id}`)
-      return
-    } else if (hasRoute) {
-      route.id = `${route.id}-${this.viewIdCounter++}`
+  private getRoutes() {
+    return jotaiStore.get(this.ctxValue.routesAtom)
+  }
+
+  /** The screens that left the stack disappear, the top one first, then the new ones appear. */
+  private setRoutes(routes: Route[]) {
+    const previousRoutes = this.getRoutes()
+    jotaiStore.set(this.ctxValue.routesAtom, routes)
+    for (const route of previousRoutes.filter((route) => !routes.includes(route)).reverse()) {
+      this.emit("screenChange", { screenId: route.id, type: "disappear", route })
     }
-    jotaiStore.set(this.ctxValue.routesAtom, [...routes, route])
-    this.emit("screenChange", { screenId: route.id, type: "appear", route })
+    for (const route of routes.filter((route) => !previousRoutes.includes(route))) {
+      this.emit("screenChange", { screenId: route.id, type: "appear", route })
+    }
+  }
+
+  private createRoute<T>(
+    view: NavigationControllerView<T>,
+    props: T | undefined,
+    type: NavigationControllerViewType,
+    screenOptions?: NavigationControllerViewExtraProps,
+  ): Route {
+    return {
+      // Its own for every push, as one screen may be on the stack several times
+      id: `${view.displayName || view.name || "view"}-${this.routeCount++}`,
+      type,
+      Component: view,
+      props,
+      screenOptions: { ...this.resolveScreenOptions(view), ...screenOptions },
+    }
   }
 
   private resolveScreenOptions<T>(
     view: NavigationControllerView<T>,
-  ): Required<NavigationControllerViewExtraProps> {
+  ): Required<Omit<NavigationControllerViewExtraProps, "id">> {
     return {
       transparent: view.transparent ?? false,
-      id: view.id ?? view.name ?? `view-${this.viewIdCounter++}`,
       title: view.title ?? "",
       // Form Sheet
       sheetAllowedDetents: view.sheetAllowedDetents ?? "fitToContents",
@@ -67,15 +98,21 @@ export class Navigation {
     }
   }
 
+  private __push<T>(
+    view: NavigationControllerView<T>,
+    props: T | undefined,
+    type: NavigationControllerViewType,
+  ) {
+    const routes = this.getRoutes()
+    const topRoute = routes.at(-1)
+    // A second tap before the screen showed asks for the same screen again
+    if (topRoute?.Component === view && haveSameProps(topRoute.props, props)) return
+    if (view.id && routes.some((route) => route.Component?.id === view.id)) return
+    this.setRoutes([...routes, this.createRoute(view, props, type)])
+  }
+
   pushControllerView<T>(view: NavigationControllerView<T>, props?: T) {
-    const screenOptions = this.resolveScreenOptions(view)
-    this.__push({
-      id: screenOptions.id,
-      type: "push",
-      Component: view,
-      props,
-      screenOptions,
-    })
+    this.__push(view, props, "push")
   }
 
   replaceControllerView<T>(
@@ -83,17 +120,11 @@ export class Navigation {
     props?: T,
     extractScreenOptions?: NavigationControllerViewExtraProps,
   ) {
-    const screenOptions = this.resolveScreenOptions(view)
-    this.__replace({
-      id: screenOptions.id,
-      type: "push",
-      Component: view,
-      props,
-      screenOptions: {
-        ...screenOptions,
-        ...extractScreenOptions,
-      },
-    })
+    const routes = this.getRoutes()
+    this.setRoutes([
+      ...routes.slice(0, -1),
+      this.createRoute(view, props, "push", extractScreenOptions),
+    ])
   }
 
   presentControllerView<T>(
@@ -101,59 +132,40 @@ export class Navigation {
     props?: T,
     type: Exclude<NavigationControllerViewType, "push"> = "modal",
   ) {
-    const screenOptions = this.resolveScreenOptions(view)
-    this.__push({
-      id: screenOptions.id,
-      type,
-      Component: view,
-      props,
-      screenOptions,
-    })
-  }
-
-  private __pop() {
-    const routes = jotaiStore.get(this.ctxValue.routesAtom)
-    const lastRoute = routes.at(-1)
-    if (!lastRoute) {
-      return
-    }
-    jotaiStore.set(this.ctxValue.routesAtom, routes.slice(0, -1))
-    this.emit("screenChange", { screenId: lastRoute.id, type: "disappear", route: lastRoute })
-  }
-
-  private __replace(route: Route) {
-    const routes = jotaiStore.get(this.ctxValue.routesAtom)
-    const hasRoute = routes.some((r) => r.id === route.id)
-    if (hasRoute) {
-      route.id = `${route.id}-${this.viewIdCounter++}`
-    }
-    jotaiStore.set(this.ctxValue.routesAtom, [...routes.slice(0, -1), route])
-    this.emit("screenChange", { screenId: route.id, type: "appear", route })
+    this.__push(view, props, type)
   }
 
   /**
    * Dismiss the current modal.
    */
   dismiss() {
-    const routes = jotaiStore.get(this.ctxValue.routesAtom)
+    const routes = this.getRoutes()
     const lastModalIndex = routes.findLastIndex((r) => r.type !== "push")
     if (lastModalIndex === -1) {
       return
     }
-    jotaiStore.set(this.ctxValue.routesAtom, routes.slice(0, lastModalIndex))
+    this.setRoutes(routes.slice(0, lastModalIndex))
   }
 
   back() {
-    return this.__pop()
-  }
-
-  __internal_dismiss(routeId: string) {
-    const routes = jotaiStore.get(this.ctxValue.routesAtom)
-    const lastModalIndex = routes.findLastIndex((r) => r.id === routeId)
-    if (lastModalIndex === -1) {
+    const routes = this.getRoutes()
+    if (routes.length === 0) {
       return
     }
-    jotaiStore.set(this.ctxValue.routesAtom, routes.slice(0, lastModalIndex))
+    this.setRoutes(routes.slice(0, -1))
+  }
+
+  /**
+   * Removes the route with the screens over it, and as many more below it as `count` says: a
+   * native back gesture can pop several screens at once and reports it on the top one.
+   */
+  __internal_dismiss(routeId: string, count = 1) {
+    const routes = this.getRoutes()
+    const index = routes.findIndex((r) => r.id === routeId)
+    if (index === -1) {
+      return
+    }
+    this.setRoutes(routes.slice(0, Math.max(0, index - count + 1)))
   }
 
   private bus = new EventEmitter<{
@@ -184,17 +196,15 @@ export class Navigation {
   }
 
   canGoBack() {
-    const routes = jotaiStore.get(this.ctxValue.routesAtom)
-    return routes.length > 0
+    return this.getRoutes().length > 0
   }
 
   hasControllerView<T>(view: NavigationControllerView<T>) {
-    const routes = jotaiStore.get(this.ctxValue.routesAtom)
-    return routes.some((route) => route.Component === view)
+    return this.getRoutes().some((route) => route.Component === view)
   }
 
   popToRoot() {
-    jotaiStore.set(this.ctxValue.routesAtom, [])
+    this.setRoutes([])
   }
 }
 
