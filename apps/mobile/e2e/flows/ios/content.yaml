@@ -4,10 +4,10 @@ name: iOS content journey
 - runFlow:
     file: ./dismiss-overlays.yaml
 - runFlow:
-    file: ./ensure-onboarding-unfollowed.yaml
+    file: ./ensure-feed-unfollowed.yaml
 - runFlow:
-    file: ./follow-onboarding.yaml
+    file: ./follow-feed.yaml
 - runFlow:
     file: ./timeline-entry.yaml
 - runFlow:
-    file: ./unfollow-onboarding.yaml
+    file: ./unfollow-feed.yaml

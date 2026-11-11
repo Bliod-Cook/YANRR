@@ -12,8 +12,6 @@ name: Android auth journey
 - runFlow:
     file: ./login.yaml
 - runFlow:
-    file: ./tab-navigation.yaml
-- runFlow:
     file: ./content.yaml
 - runFlow:
     file: ./deep-link.yaml

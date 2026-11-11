@@ -36,7 +36,8 @@ appId: io.github.bliodcook.yanrr
     notVisible:
       id: login-screen
     timeout: 30000
+# A new account follows nothing yet
 - extendedWaitUntil:
     visible:
-      id: timeline-entry-first
+      id: timeline-view-articles
     timeout: 30000

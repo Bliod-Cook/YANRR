@@ -10,8 +10,7 @@ name: Android tab registration and session persistence
           id: settings-general-link
       - tapOn:
           id: tab-SubscriptionsTabScreen
-      - assertVisible:
-          id: subscription-feed-url-yanrr-onboarding
+      - assertVisible: Yanrr E2E
       - tapOn:
           id: tab-DiscoverTabScreen
       - assertVisible:

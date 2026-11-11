@@ -46,7 +46,8 @@ appId: io.github.bliodcook.yanrr
           id: onboarding-next
       - tapOn:
           id: onboarding-next
+# A new account follows nothing yet
 - extendedWaitUntil:
     visible:
-      id: timeline-entry-first
+      id: timeline-view-articles
     timeout: 30000

@@ -4,7 +4,7 @@ appId: io.github.bliodcook.yanrr
     id: tab-DiscoverTabScreen
 - tapOn:
     id: discover-search-input
-- inputText: yanrr://onboarding
+- inputText: ${E2E_FEED_URL}
 - pressKey: Enter
 - extendedWaitUntil:
     visible:
@@ -21,8 +21,7 @@ appId: io.github.bliodcook.yanrr
 - tapOn:
     id: tab-SubscriptionsTabScreen
 - extendedWaitUntil:
-    visible: Welcome to Yanrr
+    visible: Yanrr E2E
     timeout: 20000
-- assertVisible: Welcome to Yanrr
 - assertVisible:
     id: tab-IndexTabScreen

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Yanrr E2E</title>
+    <link>https://example.com/</link>
+    <description>The feed the mobile end-to-end flows follow</description>
+    <item>
+      <title>The E2E article</title>
+      <link>https://example.com/e2e-article</link>
+      <guid isPermaLink="false">yanrr-e2e-article</guid>
+      <pubDate>Mon, 02 Nov 2026 08:00:00 GMT</pubDate>
+      <description><![CDATA[
+        <p>The first paragraph of the E2E article.</p>
+        <p>Filler paragraph one, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>Filler paragraph two, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>Filler paragraph three, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>Filler paragraph four, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>Filler paragraph five, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>Filler paragraph six, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>Filler paragraph seven, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>Filler paragraph eight, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>Filler paragraph nine, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>Filler paragraph ten, long enough to take a few lines on a phone screen, so that the article does not fit on one screen and the flows have to scroll to its end.</p>
+        <p>The last paragraph of the E2E article.</p>
+      ]]></description>
+    </item>
+  </channel>
+</rss>

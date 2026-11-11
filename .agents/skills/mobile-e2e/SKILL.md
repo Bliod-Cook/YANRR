@@ -51,19 +51,20 @@ open -a Simulator --args -CurrentDeviceUDID <IOS_UDID>
 
 - `MAESTRO_IOS_APP_PATH`
 - a local `build-*.tar.gz` in `apps/mobile`
-- an existing `DerivedData/.../Release-iphonesimulator/Folo.app`
+- an existing `DerivedData/.../Release-iphonesimulator/Yanrr.app`
 
-If none of those exist, build one first.
+If none of those exist, it builds one as below.
 
 ### Build simulator app when missing
 
-If `Folo.app` is not available yet:
+If `Yanrr.app` is not available yet, generate the iOS project (it is not committed) and build it:
 
 ```bash
-cd apps/mobile/ios
-pod install
-xcodebuild -workspace Folo.xcworkspace \
-  -scheme Folo \
+cd apps/mobile
+PROFILE=e2e-ios-simulator npx expo prebuild --platform ios
+cd ios
+xcodebuild -workspace Yanrr.xcworkspace \
+  -scheme Yanrr \
   -configuration Release \
   -sdk iphonesimulator \
   -destination 'id=<IOS_UDID>' \
@@ -85,7 +86,7 @@ Use this optimization only for local self-test / e2e simulator builds tied to th
 Expected output pattern:
 
 ```bash
-~/Library/Developer/Xcode/DerivedData/.../Build/Products/Release-iphonesimulator/Folo.app
+~/Library/Developer/Xcode/DerivedData/.../Build/Products/Release-iphonesimulator/Yanrr.app
 ```
 
 ### Run iOS auth flow
@@ -93,7 +94,7 @@ Expected output pattern:
 ```bash
 cd apps/mobile
 MAESTRO_IOS_DEVICE_ID=<IOS_UDID> \
-MAESTRO_IOS_APP_PATH=<PATH_TO_Folo.app> \
+MAESTRO_IOS_APP_PATH=<PATH_TO_Yanrr.app> \
 pnpm run e2e:ios
 ```
 

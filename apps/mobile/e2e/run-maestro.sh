@@ -10,9 +10,18 @@ mkdir -p "${debug_output}"
 
 : "${E2E_PASSWORD:=Password123!}"
 : "${E2E_EMAIL:=yanrr-e2e-${platform}-${run_suffix}@example.com}"
+: "${E2E_FIXTURE_PORT:=8787}"
+# The server fetches the feed the flows follow from here
+: "${E2E_FEED_URL:=http://127.0.0.1:${E2E_FIXTURE_PORT}/feed.xml}"
 
 export E2E_EMAIL
 export E2E_PASSWORD
+export E2E_FEED_URL
+
+# Logs each request of the server to stderr
+python3 -m http.server "${E2E_FIXTURE_PORT}" --directory e2e/fixtures >/dev/null &
+fixture_server=$!
+trap 'kill "${fixture_server}"' EXIT
 
 resolve_ios_device() {
   if [ -n "${MAESTRO_IOS_DEVICE_ID:-}" ]; then
@@ -37,7 +46,7 @@ extract_ios_app_from_tar() {
   dest_dir="${2:?destination is required}"
   mkdir -p "${dest_dir}"
   tar -xzf "${tar_path}" -C "${dest_dir}"
-  find "${dest_dir}" -maxdepth 3 -name 'Folo.app' | head -n1
+  find "${dest_dir}" -maxdepth 3 -name 'Yanrr.app' | head -n1
 }
 
 resolve_ios_app_path() {
@@ -62,7 +71,7 @@ resolve_ios_app_path() {
     return
   fi
 
-  existing_path="$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*Build/Products/Release-iphonesimulator/Folo.app' | head -n1)"
+  existing_path="$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*Build/Products/Release-iphonesimulator/Yanrr.app' | head -n1)"
   if [ -n "${existing_path}" ]; then
     printf '%s' "${existing_path}"
     return
@@ -124,14 +133,14 @@ append_ios_arch_args() {
 build_ios_simulator_app() {
   device_id="$1"
   (
+    PROFILE=e2e-ios-simulator npx expo prebuild --platform ios
     cd ios
-    pod install
     set -- $(append_ios_arch_args)
     PROFILE=e2e-ios-simulator \
     EXPO_PUBLIC_YANRR_SERVER_URL="${EXPO_PUBLIC_YANRR_SERVER_URL:-}" \
     EXPO_PUBLIC_E2E_LANGUAGE="${EXPO_PUBLIC_E2E_LANGUAGE:-en}" \
-    xcodebuild -workspace Folo.xcworkspace \
-      -scheme Folo \
+    xcodebuild -workspace Yanrr.xcworkspace \
+      -scheme Yanrr \
       -configuration Release \
       -sdk iphonesimulator \
       -destination "id=${device_id}" \
@@ -139,7 +148,7 @@ build_ios_simulator_app() {
       "$@"
   ) >&2
 
-  find "$HOME/Library/Developer/Xcode/DerivedData" -path '*Build/Products/Release-iphonesimulator/Folo.app' | head -n1
+  find "$HOME/Library/Developer/Xcode/DerivedData" -path '*Build/Products/Release-iphonesimulator/Yanrr.app' | head -n1
 }
 
 run_ios_bootstrap_auth() {
@@ -164,8 +173,8 @@ case "${platform}" in
     fi
 
     prepare_ios_simulator "${device_id}"
-    xcrun simctl install "${device_id}" "${app_path}" >/dev/null 2>&1 || true
-    xcrun simctl launch "${device_id}" io.github.bliodcook.yanrr >/dev/null 2>&1 || true
+    xcrun simctl install "${device_id}" "${app_path}"
+    xcrun simctl launch "${device_id}" io.github.bliodcook.yanrr >/dev/null
 
     case "${mode}" in
       full)
@@ -175,7 +184,8 @@ case "${platform}" in
           -e E2E_EMAIL="${E2E_EMAIL}" -e E2E_PASSWORD="${E2E_PASSWORD}" e2e/flows/ios/auth.yaml
         maestro test --format junit --platform ios --device "${device_id}" --debug-output "${debug_output}/content" \
           --output "${debug_output}/content/junit.xml" \
-          -e E2E_EMAIL="${E2E_EMAIL}" -e E2E_PASSWORD="${E2E_PASSWORD}" e2e/flows/ios/content.yaml
+          -e E2E_EMAIL="${E2E_EMAIL}" -e E2E_PASSWORD="${E2E_PASSWORD}" -e E2E_FEED_URL="${E2E_FEED_URL}" \
+          e2e/flows/ios/content.yaml
         ;;
       bootstrap-auth)
         run_ios_bootstrap_auth "${device_id}"
@@ -198,7 +208,8 @@ case "${platform}" in
     adb -s "${device_id}" shell pm clear io.github.bliodcook.yanrr >/dev/null 2>&1 || true
     adb -s "${device_id}" shell monkey -p io.github.bliodcook.yanrr -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
     maestro test --format junit --platform android --device "${device_id}" --debug-output "${debug_output}" \
-      -e E2E_EMAIL="${E2E_EMAIL}" -e E2E_PASSWORD="${E2E_PASSWORD}" "${flow_target}"
+      -e E2E_EMAIL="${E2E_EMAIL}" -e E2E_PASSWORD="${E2E_PASSWORD}" -e E2E_FEED_URL="${E2E_FEED_URL}" \
+      "${flow_target}"
     ;;
   *)
     echo "Unsupported platform: ${platform}" >&2

@@ -1,14 +1,13 @@
 appId: io.github.bliodcook.yanrr
 ---
+# An account that ran the flows before follows the feed still
 - tapOn:
     id: tab-SubscriptionsTabScreen
 - runFlow:
     when:
-      visible:
-        id: subscription-feed-url-yanrr-onboarding
+      visible: Yanrr E2E
     commands:
-      - longPressOn:
-          id: subscription-feed-url-yanrr-onboarding
+      - longPressOn: Yanrr E2E
       - extendedWaitUntil:
           visible: Unfollow
           timeout: 10000
@@ -16,8 +15,7 @@ appId: io.github.bliodcook.yanrr
       - tapOn:
           text: Unfollow
       - extendedWaitUntil:
-          notVisible:
-            id: subscription-feed-url-yanrr-onboarding
+          notVisible: Yanrr E2E
           timeout: 20000
 - assertVisible:
     id: tab-IndexTabScreen
