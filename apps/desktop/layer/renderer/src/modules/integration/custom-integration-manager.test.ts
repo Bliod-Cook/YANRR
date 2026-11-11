@@ -1,10 +1,11 @@
 import type { CustomIntegration, FetchTemplate } from "@follow/shared/settings/interface"
 import type { EntryModel } from "@follow/store/entry/types"
 import { toast } from "sonner"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest"
 
 import type { PlaceholderContext } from "./custom-integration-manager"
 import { CustomIntegrationManager } from "./custom-integration-manager"
+import { convertHtmlToIntegrationMarkdown } from "./entry-content-markdown"
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -29,6 +30,11 @@ const postTemplate = (headers: Record<string, string>): FetchTemplate => ({
 const ESCAPED_BODY = String.raw`{"text":"line1\n\"q\""}`
 
 describe("CustomIntegrationManager", () => {
+  // The first HTML conversion loads the markdown libraries, which can exceed a test's 5 s on a busy machine
+  beforeAll(async () => {
+    await convertHtmlToIntegrationMarkdown("<p>warm-up</p>")
+  }, 60_000)
+
   it("serializes HTML line breaks without markdown hard-break backslashes", async () => {
     const context = await CustomIntegrationManager.buildPlaceholderContext({
       id: "entry-id",
