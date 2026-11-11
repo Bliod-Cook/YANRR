@@ -5,24 +5,11 @@ import type { BlockSlice } from "./slices/block.slice"
 import { createBlockSlice } from "./slices/block.slice"
 import { createChatSlice } from "./slices/chat.slice"
 
-export type AiChatStore = BlockSlice &
-  ChatSlice & {
-    reset: () => void
-  }
+export type AiChatStore = BlockSlice & ChatSlice
 
 export const createAIChatStore = () => {
-  return createWithEqualityFn<AiChatStore>((...a) => {
-    const blockSlice = createBlockSlice()(...a)
-    const chatSlice = createChatSlice()(...a)
-
-    return {
-      ...blockSlice,
-      ...chatSlice,
-
-      reset: () => {
-        blockSlice.blockActions.resetContext()
-        chatSlice.chatActions.resetChat()
-      },
-    }
-  })
+  return createWithEqualityFn<AiChatStore>((...a) => ({
+    ...createBlockSlice()(...a),
+    ...createChatSlice()(...a),
+  }))
 }

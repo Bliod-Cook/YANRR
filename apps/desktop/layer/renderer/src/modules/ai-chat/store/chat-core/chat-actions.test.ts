@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { BizUIMessage } from "../types"
 import { ChatSliceActions } from "./chat-actions"
-import type { ZustandChat } from "./chat-instance"
 import type { ChatSlice } from "./types"
 
 const { ensureSessionMock, getChatSessionMock } = vi.hoisted(() => ({
@@ -13,18 +13,27 @@ vi.mock("../../services", () => ({
   AIPersistService: {
     ensureSession: ensureSessionMock,
     getChatSession: getChatSessionMock,
+    saveMessages: vi.fn(async () => {}),
   },
 }))
 
 type TestState = Pick<ChatSlice, "chatId" | "currentTitle">
 
-const createActions = (state: TestState, messages: unknown[] = [{ id: "m1", parts: [] }]) => {
+const message: BizUIMessage = {
+  id: "m1",
+  role: "user",
+  parts: [{ type: "text", text: "Hi" }],
+  createdAt: new Date(),
+}
+
+const createActions = (state: TestState, messages: BizUIMessage[] = [message]) => {
   const set = (updater: (state: TestState) => TestState) => {
     Object.assign(state, updater(state))
   }
   const get = () => state
-  const chatInstance = { chatState: { messages } } as unknown as ZustandChat
-  return new ChatSliceActions([set, get, {}] as never, chatInstance)
+  const actions = new ChatSliceActions([set, get, {}] as never, state.chatId)
+  actions.setMessages(messages)
+  return actions
 }
 
 describe("ChatSliceActions.adoptStoredTitle", () => {

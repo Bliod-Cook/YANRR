@@ -2,19 +2,15 @@ import type { ChatInit, ChatStatus } from "ai"
 import { AbstractChat } from "ai"
 
 import type { BizUIMessage } from "../types"
+import type { ChatStateStore } from "./chat-state"
 import { ZustandChatState } from "./chat-state"
-import type { ChatSlice } from "./types"
 
 // Custom Chat class that uses Zustand-integrated state
 export class ZustandChat extends AbstractChat<BizUIMessage> {
   override state: ZustandChatState
-  #unsubscribeFns: (() => void)[] = []
 
-  constructor(
-    { messages, ...init }: ChatInit<BizUIMessage>,
-    updateZustandState: (updater: (state: ChatSlice) => ChatSlice) => void,
-  ) {
-    const state = new ZustandChatState(messages, updateZustandState, init.id || "")
+  constructor({ messages = [], ...init }: ChatInit<BizUIMessage>, store: ChatStateStore) {
+    const state = new ZustandChatState(messages, store, init.id || "")
     super({ ...init, state })
     this.state = state
 
@@ -38,10 +34,6 @@ export class ZustandChat extends AbstractChat<BizUIMessage> {
   // Cleanup method
   async destroy(): Promise<void> {
     await this.stop()
-    // Unsubscribe from AI SDK callbacks
-    this.#unsubscribeFns.forEach((unsubscribe) => unsubscribe())
-    this.#unsubscribeFns = []
-
     this.state.destroy()
   }
 

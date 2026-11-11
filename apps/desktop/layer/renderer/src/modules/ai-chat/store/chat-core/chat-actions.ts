@@ -1,6 +1,4 @@
 import { autoBindThis } from "@follow/utils/bind-this"
-import { createDesktopAPIHeaders } from "@follow/utils/headers"
-import PKG from "@pkg"
 import type { ChatRequestOptions, ChatStatus } from "ai"
 import { merge } from "es-toolkit/compat"
 import { nanoid } from "nanoid"
@@ -44,9 +42,9 @@ export class ChatSliceActions {
   private switchToken = 0
   constructor(
     private params: Parameters<StateCreator<ChatSlice, [], [], ChatSlice>>,
-    chatInstance: ZustandChat,
+    chatId: string,
   ) {
-    this.chatInstance = chatInstance
+    this.chatInstance = this.createChat(chatId, [])
     return autoBindThis(this)
   }
 
@@ -149,14 +147,26 @@ export class ChatSliceActions {
     }
   }
 
-  private createTransportTitleHandler = (chatId: string) => {
-    return createChatTitleHandler({
-      chatId,
-      getActiveChatId: () => this.get().chatId,
-      onTitleChange: (title) => {
-        this.setCurrentTitle(title)
+  private createChat(chatId: string, messages: BizUIMessage[]) {
+    return new ZustandChat(
+      {
+        id: chatId,
+        messages,
+        transport: createChatTransport({
+          titleHandler: createChatTitleHandler({
+            chatId,
+            getActiveChatId: () => this.get().chatId,
+            onTitleChange: (title) => {
+              this.setCurrentTitle(title)
+            },
+          }),
+        }),
       },
-    })
+      {
+        update: this.set,
+        onIdle: () => void this.adoptStoredTitle(chatId),
+      },
+    )
   }
 
   // Edit chat title
@@ -189,7 +199,11 @@ export class ChatSliceActions {
   }
 
   // Core chat actions using AI SDK AbstractChat methods
-  sendMessage = async (message: string | SendingUIMessage, options?: ChatRequestOptions) => {
+  /** With a `messageId`, the message replaces that one and the messages after it */
+  sendMessage = async (
+    message: string | (SendingUIMessage & { messageId?: string }),
+    options?: ChatRequestOptions,
+  ) => {
     try {
       // Convert string to message object if needed
       const messageObj =
@@ -200,13 +214,7 @@ export class ChatSliceActions {
           : (message as Parameters<typeof this.chatInstance.sendMessage>[0])
 
       // Use the AI SDK's sendMessage method
-      const finalOptions = merge(
-        {
-          body: { scene: "general" },
-          headers: createDesktopAPIHeaders({ version: PKG.version }),
-        },
-        options,
-      )
+      const finalOptions = merge({ body: { scene: "general" } }, options)
 
       return await this.chatInstance.sendMessage(messageObj, finalOptions)
     } catch (error) {
@@ -218,12 +226,7 @@ export class ChatSliceActions {
   regenerate = async ({ messageId, ...options }: { messageId: string } & ChatRequestOptions) => {
     try {
       // Use the AI SDK's regenerate method
-      const finalOptions = merge(
-        {
-          body: { scene: "general" },
-        },
-        options,
-      )
+      const finalOptions = merge({ body: { scene: "general" } }, options)
       return await this.chatInstance.regenerate({ messageId, ...finalOptions })
     } catch (error) {
       this.setError(error as Error)
@@ -246,32 +249,13 @@ export class ChatSliceActions {
     }
   }
 
-  resetChat = () => {
-    // Reset through the chat instance state
-    this.chatInstance.chatState.messages = []
-    this.chatInstance.chatState.error = undefined
-    this.chatInstance.chatState.status = "ready"
-    // Reset title
-    this.setCurrentTitle(undefined)
-  }
-
   newChat = async () => {
     this.switchToken++
     const newChatId = nanoid()
     // Cleanup old chat instance
     await this.chatInstance.destroy()
 
-    // Create new chat instance
-    const newChatInstance = new ZustandChat(
-      {
-        id: newChatId,
-        messages: [],
-        transport: createChatTransport({
-          titleHandler: this.createTransportTitleHandler(newChatId),
-        }),
-      },
-      this.set,
-    )
+    const newChatInstance = this.createChat(newChatId, [])
 
     // Update store state
     this.set((state) => ({
@@ -305,17 +289,7 @@ export class ChatSliceActions {
         await AIPersistService.loadSessionWithMessages(chatId)
       if (isOutdated()) return
 
-      // Create new chat instance with loaded messages
-      const newChatInstance = new ZustandChat(
-        {
-          id: chatId,
-          messages,
-          transport: createChatTransport({
-            titleHandler: this.createTransportTitleHandler(chatId),
-          }),
-        },
-        this.set,
-      )
+      const newChatInstance = this.createChat(chatId, messages)
 
       // Update store state
       this.set((state) => ({

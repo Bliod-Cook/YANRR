@@ -1,13 +1,45 @@
-import { db } from "@follow/database/db"
+import { db, withTransaction } from "@follow/database/db"
 import type { AiChatMessagesModel } from "@follow/database/schemas/index"
 import { aiChatMessagesTable, aiChatTable } from "@follow/database/schemas/index"
-import { asc, eq, sql } from "drizzle-orm"
+import { and, asc, eq, notInArray, sql } from "drizzle-orm"
 
 import { getI18n } from "~/i18n"
 
 import type { BizUIMessage, BizUIMessagePart, BizUIMetadata } from "../store/types"
 import type { ChatSession } from "../types/ChatSession"
 import { isDataBlockPart, isFileAttachmentBlock } from "../utils/extractor"
+
+type MessageRow = typeof aiChatMessagesTable.$inferInsert & { createdAt: Date }
+
+/** The row of a message, none for a message without parts or one still streaming */
+const toMessageRow = (chatId: string, message: BizUIMessage): MessageRow | null => {
+  const isStreaming = message.parts.some((part) => "state" in part && part.state === "streaming")
+  if (message.parts.length === 0 || isStreaming) return null
+
+  // The data URL of a file is only needed to upload it
+  const messageParts = message.parts.map((part) => {
+    if (!isDataBlockPart(part)) return part
+    return {
+      ...part,
+      data: part.data.map((block) => {
+        if (!isFileAttachmentBlock(block)) return block
+        const { dataUrl: _dataUrl, ...attachment } = block.attachment
+        return { ...block, attachment }
+      }),
+    }
+  })
+
+  return {
+    id: message.id,
+    chatId,
+    role: message.role,
+    createdAt: message.createdAt,
+    status: "completed",
+    finishedAt: message.metadata?.finishTime ? new Date(message.metadata.finishTime) : undefined,
+    messageParts,
+    metadata: message.metadata,
+  }
+}
 
 class AIPersistServiceStatic {
   // Cache for session existence to avoid repeated queries
@@ -91,94 +123,67 @@ class AIPersistServiceStatic {
     return { session: { ...sessionRaw, title: resolvedTitle }, messages }
   }
 
-  async replaceAllMessages(chatId: string, messages: BizUIMessage[]) {
-    await db.delete(aiChatMessagesTable).where(eq(aiChatMessagesTable.chatId, chatId))
-    await this.upsertMessages(chatId, messages)
-  }
-
   /**
-   * Upsert specific messages (insert new, update existing)
-   * Ensures the chat session exists before inserting messages
+   * Stores the messages a chat has now, all or nothing: their rows are inserted or updated, and
+   * the rows of messages the chat no longer has are deleted. A message still streaming keeps its
+   * stored version.
    */
-  async upsertMessages(chatId: string, messages: BizUIMessage[]) {
-    if (messages.length === 0) {
-      return
-    }
+  async saveMessages(chatId: string, messages: BizUIMessage[]) {
+    const rows = messages.flatMap((message) => {
+      const row = toMessageRow(chatId, message)
+      return row ? [row] : []
+    })
+    const lastCreatedAt = rows.reduce<Date | undefined>(
+      (latest, row) => (!latest || row.createdAt > latest ? row.createdAt : latest),
+      undefined,
+    )
 
-    // Ensure the chat session exists first to avoid foreign key constraint failure
-    await this.ensureSession(chatId)
+    await withTransaction(async (tx) => {
+      const now = new Date()
+      await tx
+        .insert(aiChatTable)
+        .values({
+          chatId,
+          title: this.resolveSessionTitle(undefined, { createdAt: now }),
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoNothing()
 
-    const results = messages.reduce<(typeof aiChatMessagesTable.$inferInsert)[]>((acc, message) => {
-      if (message.parts.length === 0) return acc
-
-      const { createdAt } = message
-      const cleanParts = [] as typeof message.parts
-
-      for (const part of message.parts) {
-        // Skip streaming messages
-        if ("state" in part && part.state === "streaming") {
-          return acc
-        }
-        if (isDataBlockPart(part)) {
-          const nextPart = structuredClone(part)
-          for (const block of nextPart.data) {
-            if (isFileAttachmentBlock(block)) {
-              Reflect.deleteProperty(block.attachment, "dataUrl")
-            }
-          }
-
-          cleanParts.push(nextPart)
-        } else {
-          cleanParts.push(part)
-        }
+      if (rows.length > 0) {
+        await tx
+          .insert(aiChatMessagesTable)
+          .values(rows)
+          .onConflictDoUpdate({
+            target: [aiChatMessagesTable.id],
+            set: {
+              messageParts: sql`excluded.message_parts`,
+              metadata: sql`excluded.metadata`,
+              finishedAt: sql`excluded.finished_at`,
+              status: sql`excluded.status`,
+              createdAt: sql`excluded.created_at`,
+            },
+          })
       }
 
-      acc.push({
-        id: message.id,
-        chatId,
-        role: message.role,
-        createdAt,
-        status: "completed" as const,
-        finishedAt: message.metadata?.finishTime
-          ? new Date(message.metadata.finishTime)
-          : undefined,
-        messageParts: cleanParts,
-        metadata: message.metadata,
-      })
+      await tx.delete(aiChatMessagesTable).where(
+        and(
+          eq(aiChatMessagesTable.chatId, chatId),
+          notInArray(
+            aiChatMessagesTable.id,
+            messages.map((message) => message.id),
+          ),
+        ),
+      )
 
-      return acc
-    }, [])
-    if (results.length === 0) {
-      return
-    }
-    await db
-      .insert(aiChatMessagesTable)
-      .values(results)
-      .onConflictDoUpdate({
-        target: [aiChatMessagesTable.id],
-        set: {
-          messageParts: sql`excluded.message_parts`,
-          metadata: sql`excluded.metadata`,
-          finishedAt: sql`excluded.finished_at`,
-          status: sql`excluded.status`,
-          createdAt: sql`excluded.created_at`,
-        },
-      })
-
-    const date = results.reduce<Date | null>((latest, msg) => {
-      const date = msg.createdAt ? new Date(msg.createdAt) : null
-      if (date === null) {
-        return latest
+      if (lastCreatedAt) {
+        await tx
+          .update(aiChatTable)
+          .set({ updatedAt: lastCreatedAt })
+          .where(eq(aiChatTable.chatId, chatId))
       }
-      if (!latest || date > latest) {
-        return date
-      }
-      return latest
-    }, null)
-    if (date) {
-      // Update session time after successfully saving messages
-      await AIPersistService.updateSessionTime(chatId, date)
-    }
+    })
+    this.markSessionExists(chatId, true)
   }
 
   private resolveSessionTitle(
@@ -330,15 +335,6 @@ class AIPersistServiceStatic {
       .set({
         title,
         updatedAt: new Date(Date.now()),
-      })
-      .where(eq(aiChatTable.chatId, chatId))
-  }
-
-  async updateSessionTime(chatId: string, date: Date = new Date()) {
-    await db
-      .update(aiChatTable)
-      .set({
-        updatedAt: date,
       })
       .where(eq(aiChatTable.chatId, chatId))
   }

@@ -1,101 +1,56 @@
-import type { ChatState, ChatStatus } from "ai"
+import type { ChatState, ChatStatus, ReasoningUIPart, TextUIPart } from "ai"
 import { throttle } from "es-toolkit/compat"
-import { produce } from "immer"
-import { startTransition } from "react"
 
 import { AIPersistService } from "../../services"
-import { ChatStateEventEmitter } from "../event-system/event-emitter"
-import type { BizUIMessage, SendingUIMessage } from "../types"
+import type { BizUIMessage, BizUIMessagePart, SendingUIMessage } from "../types"
 import type { ChatSlice } from "./types"
+
+export interface ChatStateStore {
+  update: (updater: (state: ChatSlice) => ChatSlice) => void
+  /** Called whenever the chat becomes ready or fails, such as at the end of a reply */
+  onIdle: () => void
+}
+
+// While a reply streams, the store and so the rendered chat follow it at most this often
+const STREAMING_SYNC_INTERVAL = 50
+
+const isStreamingPart = (part: BizUIMessagePart): part is TextUIPart | ReasoningUIPart =>
+  "state" in part && part.state === "streaming"
+
+// A part in one of these states is final: the AI SDK no longer changes it
+const isFinishedPart = (part: BizUIMessagePart) => {
+  if (!("state" in part)) return false
+  switch (part.state) {
+    case "done":
+    case "output-error":
+    case "output-denied": {
+      return true
+    }
+    case "output-available": {
+      return !("preliminary" in part && part.preliminary)
+    }
+    default: {
+      return false
+    }
+  }
+}
 
 // Zustand Chat State that implements AI SDK ChatState interface
 export class ZustandChatState implements ChatState<BizUIMessage> {
   #messages: BizUIMessage[]
-  #status: ChatStatus
+  #status: ChatStatus = "ready"
   #error: Error | undefined
-  #eventEmitter: ChatStateEventEmitter
   #isResumingStream = false
+  #isDestroyed = false
+  // The snapshot of each finished part the AI SDK streamed, by the part it keeps changing in place
+  #finishedPartSnapshots = new WeakMap<BizUIMessagePart, BizUIMessagePart>()
 
   constructor(
-    initialMessages: BizUIMessage[] = [],
-    private updateZustandState: (updater: (state: ChatSlice) => ChatSlice) => void,
+    initialMessages: BizUIMessage[],
+    private store: ChatStateStore,
     private chatId: string,
   ) {
-    this.#eventEmitter = new ChatStateEventEmitter()
     this.#messages = initialMessages
-    this.#status = "ready"
-    this.#error = undefined
-    this.#setupEventHandlers()
-  }
-
-  #setupEventHandlers(): void {
-    // Setup event handlers for automatic Zustand synchronization
-    this.#eventEmitter.on("messages", ({ messages }) => {
-      this.updateZustandState(
-        produce((state) => {
-          const stateMessages = state.messages
-          for (let i = 0; i < messages.length; i++) {
-            const message = messages[i]!
-            if (!stateMessages[i]) {
-              stateMessages[i] = structuredClone(message) as any
-            } else {
-              const stateMessage = stateMessages[i]!
-              stateMessage.id = message.id
-
-              for (let j = 0; j < message.parts.length; j++) {
-                const statePart = stateMessage.parts[j] || {}
-                const messagePart = message.parts[j]!
-
-                Object.assign(statePart, messagePart)
-                stateMessage.parts[j] = statePart as any
-              }
-
-              stateMessage.parts.length = message.parts.length
-
-              stateMessage.role = message.role
-
-              stateMessage.metadata = stateMessage.metadata ?? {}
-              Object.assign(stateMessage.metadata, message.metadata)
-            }
-          }
-          stateMessages.length = messages.length
-        }),
-      )
-    })
-
-    this.#eventEmitter.on("status", ({ status }) => {
-      // Suppress the transient "submitted" status emitted when resumeStream probes for an active stream.
-      if (this.#isResumingStream && status === "submitted") {
-        return
-      }
-
-      this.updateZustandState((state) => {
-        const isStreaming = status === "streaming"
-        if (status === "ready" || status === "error") {
-          void state.chatActions.adoptStoredTitle(this.chatId)
-        }
-
-        if (
-          this.#isResumingStream &&
-          (status === "ready" || status === "streaming" || status === "error")
-        ) {
-          this.#isResumingStream = false
-        }
-
-        return {
-          ...state,
-          status,
-          isStreaming,
-        }
-      })
-    })
-
-    this.#eventEmitter.on("error", ({ error }) => {
-      this.updateZustandState((state) => ({
-        ...state,
-        error,
-      }))
-    })
   }
 
   //// AI SDK ChatState abstract override methods or properties
@@ -106,14 +61,24 @@ export class ZustandChatState implements ChatState<BizUIMessage> {
   set status(newStatus: ChatStatus) {
     if (this.#status === newStatus) return
 
-    const wasStreaming = this.#status === "streaming"
+    const streamEnded = this.#status === "streaming"
     this.#status = newStatus
-    this.#eventEmitter.emit("status", { status: newStatus })
 
-    // Messages are not persisted while an answer streams, so save the result once it ends
-    if (wasStreaming) {
-      this.#persistMessages()
+    // A reply that was stopped or failed keeps its last part streaming; it ends here
+    if (streamEnded) {
+      this.messages = this.#messages.map((message, index) =>
+        index === this.#messages.length - 1 && message.parts.some(isStreamingPart)
+          ? {
+              ...message,
+              parts: message.parts.map((part) =>
+                isStreamingPart(part) ? { ...part, state: "done" as const } : part,
+              ),
+            }
+          : message,
+      )
     }
+
+    this.#syncStatus(newStatus)
   }
 
   get error(): Error | undefined {
@@ -124,7 +89,9 @@ export class ZustandChatState implements ChatState<BizUIMessage> {
     if (this.#error === newError) return
 
     this.#error = newError
-    this.#eventEmitter.emit("error", { error: newError })
+    if (!this.#isDestroyed) {
+      this.store.update((state) => ({ ...state, error: newError }))
+    }
   }
 
   get messages(): BizUIMessage[] {
@@ -132,22 +99,21 @@ export class ZustandChatState implements ChatState<BizUIMessage> {
   }
 
   set messages(newMessages: BizUIMessage[]) {
-    startTransition(() => {
-      this.#messages = [...newMessages]
+    this.#messages = [...newMessages]
 
-      this.#eventEmitter.emit("messages", { messages: this.#messages })
-
-      // Auto-persist messages when they change. While an answer streams, every chunk replaces the
-      // last message, and the streaming parts are skipped anyway, so rewriting the whole chat
-      // each time only holds the database; the status setter saves once the stream ends.
-      if (this.#status !== "streaming") {
-        this.#persistMessages()
-      }
-    })
+    // Every chunk of a reply replaces its message, so it is synced at intervals and saved once
+    // the reply ends
+    if (this.#status === "streaming") {
+      this.#syncMessagesWhileStreaming()
+      return
+    }
+    this.#syncMessagesWhileStreaming.cancel()
+    this.#syncMessages()
+    this.#persistMessages()
   }
 
   pushMessage = (message: SendingUIMessage) => {
-    this.messages = this.#messages.concat(this.#fillMessageCreatedAt(message))
+    this.messages = this.#messages.concat(this.#snapshotMessage(message))
   }
 
   popMessage = () => {
@@ -161,7 +127,7 @@ export class ZustandChatState implements ChatState<BizUIMessage> {
 
     this.messages = [
       ...this.#messages.slice(0, index),
-      this.snapshot(this.#fillMessageCreatedAt(message)),
+      this.#snapshotMessage(message),
       ...this.#messages.slice(index + 1),
     ]
   }
@@ -170,15 +136,54 @@ export class ZustandChatState implements ChatState<BizUIMessage> {
   //// AI SDK ChatState abstract override methods or properties
   //// END
 
+  /**
+   * A copy of a message the AI SDK may still change in place. Finished parts keep the copy made
+   * before, so the components showing them don't render again for every chunk.
+   */
+  #snapshotMessage(message: SendingUIMessage | BizUIMessage): BizUIMessage {
+    const { parts, ...rest } = this.#fillMessageCreatedAt(message)
+    return {
+      ...structuredClone(rest),
+      parts: parts.map((part) => {
+        const finished = this.#finishedPartSnapshots.get(part)
+        if (finished) return finished
+
+        const snapshot = structuredClone(part)
+        if (isFinishedPart(part)) this.#finishedPartSnapshots.set(part, snapshot)
+        return snapshot
+      }),
+    }
+  }
+
+  #syncMessages = () => {
+    if (this.#isDestroyed) return
+    const messages = this.#messages
+    this.store.update((state) => ({ ...state, messages }))
+  }
+
+  #syncMessagesWhileStreaming = throttle(this.#syncMessages, STREAMING_SYNC_INTERVAL)
+
+  #syncStatus(status: ChatStatus) {
+    if (this.#isDestroyed) return
+    // Suppress the transient "submitted" status emitted when resumeStream probes for an active stream.
+    if (this.#isResumingStream && status === "submitted") return
+    if (status === "ready" || status === "streaming" || status === "error") {
+      this.#isResumingStream = false
+    }
+
+    this.store.update((state) => ({ ...state, status, isStreaming: status === "streaming" }))
+    if (status === "ready" || status === "error") {
+      this.store.onIdle()
+    }
+  }
+
   #persistMessages = throttle(
     async () => {
-      // Skip if no messages
+      // A chat is only stored once it has messages
       if (this.#messages.length === 0) return
 
       try {
-        await AIPersistService.ensureSession(this.chatId)
-        // Save messages using incremental updates
-        await AIPersistService.replaceAllMessages(this.chatId, this.#messages)
+        await AIPersistService.saveMessages(this.chatId, this.#messages)
       } catch (error) {
         console.error("Failed to persist messages:", error)
       }
@@ -188,7 +193,7 @@ export class ZustandChatState implements ChatState<BizUIMessage> {
   )
 
   #fillMessageCreatedAt(message: SendingUIMessage | BizUIMessage): BizUIMessage {
-    // we should directly edit the message object instead of creating a new one
+    // The AI SDK keeps streaming into this object, so the time stays on it for later chunks
     const nextMessage = message as BizUIMessage
 
     if (nextMessage.createdAt) return nextMessage
@@ -208,7 +213,8 @@ export class ZustandChatState implements ChatState<BizUIMessage> {
   }
 
   destroy(): void {
-    this.#eventEmitter.clear()
+    this.#syncMessagesWhileStreaming.cancel()
+    this.#isDestroyed = true
   }
 
   setResumingStream(isResuming: boolean) {
