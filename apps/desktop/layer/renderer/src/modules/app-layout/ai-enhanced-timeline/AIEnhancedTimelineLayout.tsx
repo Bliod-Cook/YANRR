@@ -1,6 +1,6 @@
 import { Spring } from "@follow/components/constants/spring.js"
 import { useMobile } from "@follow/components/hooks/useMobile.js"
-import { Logo } from "@follow/components/icons/logo.jsx"
+import { useViewport } from "@follow/components/hooks/useViewport.js"
 import { PanelSplitter } from "@follow/components/ui/divider/index.js"
 import { FeedViewType } from "@follow/constants"
 import { defaultUISettings } from "@follow/shared/settings/defaults"
@@ -8,31 +8,45 @@ import { cn } from "@follow/utils"
 import { isSafari } from "@follow/utils/utils"
 import { AnimatePresence } from "motion/react"
 import type { CSSProperties } from "react"
-import { memo, useCallback, useEffect, useMemo, useRef } from "react"
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef } from "react"
 import { useResizable } from "react-resizable-layout"
 
 import { AIChatPanelStyle, useAIChatPanelStyle, useAIPanelVisibility } from "~/atoms/settings/ai"
 import { getUISettings, setUISetting, useUISettingKey } from "~/atoms/settings/ui"
 import { m } from "~/components/common/Motion"
 import { ROUTE_ENTRY_PENDING } from "~/constants"
+import { useFeature } from "~/hooks/biz/useFeature"
 import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { useShowEntryDetailsColumn } from "~/hooks/biz/useShowEntryDetailsColumn"
-import { AIChatRoot } from "~/modules/ai-chat/components/layouts/AIChatRoot"
-import { AIChatFixedPanel } from "~/modules/app-layout/ai/AIChatFixedPanel"
-import { AIIndicator } from "~/modules/app-layout/ai/AISplineButton"
 import { EntryColumn } from "~/modules/entry-column"
 import { EntryContent } from "~/modules/entry-content/components/entry-content"
 import { AIEntryHeader } from "~/modules/entry-content/components/entry-header"
-import { AppLayoutGridContainerProvider } from "~/providers/app-grid-layout-container-provider"
 import { MainViewHotkeysProvider } from "~/providers/main-view-hotkeys-provider"
 
 import { MobileTimelineLayout } from "./MobileTimelineLayout"
+
+// The AI chat is only loaded with the AI feature on
+const AIChatRoot = lazy(() =>
+  import("~/modules/ai-chat/components/layouts/AIChatRoot").then((m) => ({
+    default: m.AIChatRoot,
+  })),
+)
+const AIChatFixedPanel = lazy(() =>
+  import("~/modules/app-layout/ai/AIChatFixedPanel").then((m) => ({
+    default: m.AIChatFixedPanel,
+  })),
+)
+const AIIndicator = lazy(() =>
+  import("~/modules/app-layout/ai/AISplineButton").then((m) => ({ default: m.AIIndicator })),
+)
+
+const selectViewportWidth = ({ w }: { w: number }) => w
 
 const MIN_ENTRY_WIDTH = isSafari() ? 356 : 300
 const splitterTitlebarExtension =
   "before:pointer-events-none before:absolute before:bottom-full before:left-0 before:h-[max(0px,calc(var(--fo-window-padding-top,0px)_-_10px))] before:w-px before:bg-border"
 
-const AIEnhancedTimelineLayoutImpl = () => {
+const AIEnhancedTimelineLayoutImpl = ({ aiEnabled }: { aiEnabled: boolean }) => {
   const { view, entryId } = useRouteParamsSelector((state) => ({
     view: state.view,
     entryId: state.entryId,
@@ -48,7 +62,7 @@ const AIEnhancedTimelineLayoutImpl = () => {
   // Compute derived values first
   const showEntryContentOnRight = showEntryDetailsColumn && hasSelectedEntry
   const isFixedPanelStyle = aiPanelStyle === AIChatPanelStyle.Fixed
-  const shouldShowFixedAI = isFixedPanelStyle && isAIPanelVisible
+  const shouldShowFixedAI = aiEnabled && isFixedPanelStyle && isAIPanelVisible
   const showEntryContentOnLeft = !showEntryDetailsColumn && hasSelectedEntry
   const shouldRenderRightColumn = showEntryDetailsColumn || shouldShowFixedAI
   const shouldShowEntryBorder = showEntryDetailsColumn || shouldShowFixedAI
@@ -59,11 +73,8 @@ const AIEnhancedTimelineLayoutImpl = () => {
 
   const layoutContainerRef = useRef<HTMLDivElement>(null)
   const feedColumnWidth = useUISettingKey("feedColWidth")
-
-  const timelineMaxWidth = useMemo(() => {
-    if (typeof window === "undefined") return 600
-    return Math.max((window.innerWidth - feedColumnWidth) / 2, 600)
-  }, [feedColumnWidth])
+  const viewportWidth = useViewport(selectViewportWidth)
+  const timelineMaxWidth = Math.max((viewportWidth - feedColumnWidth) / 2, 600)
 
   const entryColumnInitialWidth = useMemo(() => getUISettings().entryColWidth, [])
   const timelineStartDragPosition = useRef(0)
@@ -219,85 +230,83 @@ const AIEnhancedTimelineLayoutImpl = () => {
           isAllView ? "min-h-full w-full flex-none" : "flex-1",
         )}
       >
-        <AppLayoutGridContainerProvider>
-          <div ref={layoutContainerRef} className="flex h-full min-w-0">
-            <div
-              data-hide-in-print={showEntryDetailsColumn ? true : undefined}
-              className={cn(
-                "relative flex h-full flex-col overflow-hidden",
-                shouldShowEntryBorder && "border-r",
-                showEntryDetailsColumn
-                  ? "flex-none transition-[flex-basis] duration-200 ease-out will-change-[flex-basis]"
-                  : "min-w-0 flex-1",
-                showEntryDetailsColumn && isTimelineDragging && "transition-none",
-              )}
-              style={entryColumnStyle}
-            >
-              <EntryColumn />
+        <div ref={layoutContainerRef} className="flex h-full min-w-0">
+          <div
+            data-hide-in-print={showEntryDetailsColumn ? true : undefined}
+            className={cn(
+              "relative flex h-full flex-col overflow-hidden",
+              shouldShowEntryBorder && "border-r",
+              showEntryDetailsColumn
+                ? "flex-none transition-[flex-basis] duration-200 ease-out will-change-[flex-basis]"
+                : "min-w-0 flex-1",
+              showEntryDetailsColumn && isTimelineDragging && "transition-none",
+            )}
+            style={entryColumnStyle}
+          >
+            <EntryColumn />
 
-              {showEntryContentOnLeft && (
-                <>
-                  <AnimatePresence>
-                    {realEntryId && (
-                      <m.div
-                        key="entry-header"
-                        className="absolute inset-x-0 top-0 z-10"
-                        initial={{ translateY: "-50px", opacity: 0 }}
-                        animate={{ translateY: 0, opacity: 1 }}
-                        exit={{ translateY: "-50px", opacity: 0 }}
-                        transition={Spring.smooth(0.3)}
-                      >
-                        <AIEntryHeader entryId={realEntryId} />
-                      </m.div>
-                    )}
-                  </AnimatePresence>
-
-                  <AnimatePresence>
-                    {realEntryId && (
-                      <div className="pointer-events-none absolute inset-0 z-[9] flex flex-col overflow-hidden">
-                        <m.div
-                          key="entry-content"
-                          lcpOptimization
-                          initial={{ translateY: "50px", opacity: 0, scale: 0.98 }}
-                          animate={{ translateY: 0, opacity: 1, scale: 1 }}
-                          exit={{ translateY: "50px", opacity: 0, scale: 0.98 }}
-                          transition={Spring.smooth(0.3)}
-                          className="pointer-events-auto relative flex h-0 flex-1 flex-col bg-theme-background"
-                        >
-                          <EntryContent entryId={realEntryId} className="h-full" />
-                        </m.div>
-                      </div>
-                    )}
-                  </AnimatePresence>
-                </>
-              )}
-            </div>
-
-            {shouldRenderRightColumn && (
+            {showEntryContentOnLeft && (
               <>
-                {splitter}
-
-                <div
-                  data-hide-in-print={
-                    !showEntryContentOnRight && shouldShowFixedAI ? true : undefined
-                  }
-                  className={cn(
-                    "relative flex h-full min-w-0 flex-col overflow-hidden bg-theme-background",
-                    showEntryDetailsColumn ? "flex-1 print:w-full" : "flex-none",
+                <AnimatePresence>
+                  {realEntryId && (
+                    <m.div
+                      key="entry-header"
+                      className="absolute inset-x-0 top-0 z-10"
+                      initial={{ translateY: "-50px", opacity: 0 }}
+                      animate={{ translateY: 0, opacity: 1 }}
+                      exit={{ translateY: "-50px", opacity: 0 }}
+                      transition={Spring.smooth(0.3)}
+                    >
+                      <AIEntryHeader entryId={realEntryId} />
+                    </m.div>
                   )}
-                  style={rightColumnStyle}
-                >
-                  {showEntryContentOnRight && realEntryId ? (
-                    <div className="flex h-full flex-col overflow-hidden">
-                      <div className="absolute inset-x-0 top-0 z-10">
-                        <AIEntryHeader entryId={realEntryId} />
-                      </div>
-                      <div className="flex h-0 flex-1 flex-col overflow-hidden">
+                </AnimatePresence>
+
+                <AnimatePresence>
+                  {realEntryId && (
+                    <div className="pointer-events-none absolute inset-0 z-[9] flex flex-col overflow-hidden">
+                      <m.div
+                        key="entry-content"
+                        lcpOptimization
+                        initial={{ translateY: "50px", opacity: 0, scale: 0.98 }}
+                        animate={{ translateY: 0, opacity: 1, scale: 1 }}
+                        exit={{ translateY: "50px", opacity: 0, scale: 0.98 }}
+                        transition={Spring.smooth(0.3)}
+                        className="pointer-events-auto relative flex h-0 flex-1 flex-col bg-theme-background"
+                      >
                         <EntryContent entryId={realEntryId} className="h-full" />
-                      </div>
+                      </m.div>
                     </div>
-                  ) : shouldShowFixedAI ? (
-                    <div className="flex h-full flex-1 items-center justify-center">
+                  )}
+                </AnimatePresence>
+              </>
+            )}
+          </div>
+
+          {shouldRenderRightColumn && (
+            <>
+              {splitter}
+
+              <div
+                data-hide-in-print={showEntryContentOnRight ? undefined : true}
+                className={cn(
+                  "relative flex h-full min-w-0 flex-col overflow-hidden bg-theme-background",
+                  showEntryDetailsColumn ? "flex-1 print:w-full" : "flex-none",
+                )}
+                style={rightColumnStyle}
+              >
+                {showEntryContentOnRight && realEntryId ? (
+                  <div className="flex h-full flex-col overflow-hidden">
+                    <div className="absolute inset-x-0 top-0 z-10">
+                      <AIEntryHeader entryId={realEntryId} />
+                    </div>
+                    <div className="flex h-0 flex-1 flex-col overflow-hidden">
+                      <EntryContent entryId={realEntryId} className="h-full" />
+                    </div>
+                  </div>
+                ) : shouldShowFixedAI ? (
+                  <div className="flex h-full flex-1 items-center justify-center">
+                    <Suspense>
                       <AIChatFixedPanel
                         key="ai-chat-layout"
                         style={
@@ -309,29 +318,37 @@ const AIEnhancedTimelineLayoutImpl = () => {
                           } as CSSProperties
                         }
                       />
-                    </div>
-                  ) : (
-                    <div data-hide-in-print className="flex flex-1 items-center justify-center">
-                      <Logo aria-hidden className="size-16 opacity-40 grayscale" />
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </AppLayoutGridContainerProvider>
+                    </Suspense>
+                  </div>
+                ) : null}
+              </div>
+            </>
+          )}
+        </div>
       </div>
-      {!shouldShowFixedAI && <AIIndicator />}
+      {aiEnabled && !shouldShowFixedAI && (
+        <Suspense>
+          <AIIndicator />
+        </Suspense>
+      )}
     </div>
   )
 }
 
 export const AIEnhancedTimelineLayout = memo(function AIEnhancedTimelineLayout() {
-  return (
-    <AIChatRoot wrapFocusable={false}>
-      <AIEnhancedTimelineLayoutImpl />
+  const aiEnabled = useFeature("ai")
+  const layout = (
+    <>
+      <AIEnhancedTimelineLayoutImpl aiEnabled={aiEnabled} />
       <MainViewHotkeysProvider />
-    </AIChatRoot>
+    </>
+  )
+
+  if (!aiEnabled) return layout
+  return (
+    <Suspense>
+      <AIChatRoot wrapFocusable={false}>{layout}</AIChatRoot>
+    </Suspense>
   )
 })
 AIEnhancedTimelineLayout.displayName = "AIEnhancedTimelineLayout"

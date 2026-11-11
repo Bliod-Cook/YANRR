@@ -8,12 +8,21 @@ import { jotaiStore } from "~/lib/jotai"
 
 import { AIEnhancedTimelineLayout } from "./AIEnhancedTimelineLayout"
 
+const loadedAIModules = vi.hoisted(() => [] as string[])
+
 vi.mock("~/lib/auth", () => ({}))
-vi.mock("~/modules/ai-chat/components/layouts/AIChatRoot", () => ({
-  AIChatRoot: ({ children }: PropsWithChildren) => children,
-}))
-vi.mock("~/modules/app-layout/ai/AIChatFixedPanel", () => ({ AIChatFixedPanel: () => null }))
-vi.mock("~/modules/app-layout/ai/AISplineButton", () => ({ AIIndicator: () => null }))
+vi.mock("~/modules/ai-chat/components/layouts/AIChatRoot", () => {
+  loadedAIModules.push("AIChatRoot")
+  return { AIChatRoot: ({ children }: PropsWithChildren) => children }
+})
+vi.mock("~/modules/app-layout/ai/AIChatFixedPanel", () => {
+  loadedAIModules.push("AIChatFixedPanel")
+  return { AIChatFixedPanel: () => null }
+})
+vi.mock("~/modules/app-layout/ai/AISplineButton", () => {
+  loadedAIModules.push("AIIndicator")
+  return { AIIndicator: () => null }
+})
 vi.mock("~/modules/entry-column", () => ({ EntryColumn: () => null }))
 vi.mock("~/modules/entry-content/components/entry-content", () => ({
   EntryContent: ({ entryId }: { entryId: string }) => <div data-entry-id={entryId} />,
@@ -46,14 +55,18 @@ afterEach(() => {
   })
 })
 
-test("shows the muted Yanrr logo until an article is selected", () => {
+test("keeps the article pane blank until an article is selected", () => {
   const placeholder = renderLayout("pending")
-  const logo = placeholder.querySelector("svg")
+  const articlePane = placeholder.querySelector(".bg-theme-background")
 
-  expect(logo?.querySelector("title")?.textContent).toBe("Yanrr")
-  expect(logo?.classList.contains("grayscale")).toBe(true)
+  expect(articlePane?.innerHTML).toBe("")
 
   const selected = renderLayout("article-1")
-  expect(selected.querySelector("svg")).toBeNull()
   expect(selected.querySelector('[data-entry-id="article-1"]')).not.toBeNull()
+})
+
+test("loads no AI chat code while AI is off", () => {
+  renderLayout("pending")
+
+  expect(loadedAIModules).toEqual([])
 })

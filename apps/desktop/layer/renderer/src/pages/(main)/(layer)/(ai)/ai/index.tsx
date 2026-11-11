@@ -1,8 +1,11 @@
+import { Navigate } from "react-router"
+
+import { withFeature } from "~/lib/features"
 import { AIChatRoot } from "~/modules/ai-chat/components/layouts/AIChatRoot"
 import { ChatPageHeader } from "~/modules/ai-chat/components/layouts/ChatHeader"
 import { ChatInterface } from "~/modules/ai-chat/components/layouts/ChatInterface"
 
-export const Component = () => {
+const AIChatPage = () => {
   return (
     <div
       className="relative flex h-screen w-full flex-col [&_[data-testid=welcome-screen-header]]:-translate-y-24"
@@ -15,3 +18,7 @@ export const Component = () => {
     </div>
   )
 }
+
+const RedirectHome = () => <Navigate to="/" replace />
+
+export const Component = withFeature("ai")(AIChatPage, RedirectHome)
