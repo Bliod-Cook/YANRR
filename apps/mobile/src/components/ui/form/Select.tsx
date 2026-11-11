@@ -1,7 +1,6 @@
 import { cn } from "@follow/utils"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import type { StyleProp, ViewStyle } from "react-native"
 import { View } from "react-native"
 import * as DropdownMenu from "zeego/dropdown-menu"
 
@@ -10,22 +9,8 @@ import { MingcuteDownLineIcon } from "@/src/icons/mingcute_down_line"
 import { accentColor, useColor } from "@/src/theme/colors"
 
 import { FormLabel } from "./Label"
+import type { SelectProps } from "./Select.types"
 
-interface SelectProps<T> {
-  options: {
-    label: string
-    value: T
-    subLabel?: string
-  }[]
-  value: T
-  onValueChange: (value: T) => void
-  displayValue?: string
-  wrapperClassName?: string
-  wrapperStyle?: StyleProp<ViewStyle>
-  label?: string
-  disabled?: boolean
-  triggerTestID?: string
-}
 export function Select<T>({
   options,
   value,
@@ -35,13 +20,8 @@ export function Select<T>({
   wrapperStyle,
   label,
   disabled,
-  triggerTestID,
 }: SelectProps<T>) {
   const { t } = useTranslation()
-  const [currentValue, setCurrentValue] = useState(() => value)
-  useEffect(() => {
-    setCurrentValue(value)
-  }, [value])
   const valueToLabelMap = useMemo(() => {
     return options.reduce((acc, option) => {
       acc.set(option.value, option.label)
@@ -53,7 +33,6 @@ export function Select<T>({
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild disabled={disabled}>
         <View
-          testID={triggerTestID}
           // grow rather than flex-1: the menu wraps it in a view without a set height, where Yoga
           // kept the zero flex basis of flex-1 once the window resized and the value disappeared
           className={cn(
@@ -68,7 +47,7 @@ export function Select<T>({
             ellipsizeMode="tail"
             numberOfLines={1}
           >
-            {displayValue || valueToLabelMap.get(currentValue) || t("select.placeholder")}
+            {displayValue || valueToLabelMap.get(value) || t("select.placeholder")}
           </Text>
           <View className="ml-auto shrink-0 pl-1">
             <MingcuteDownLineIcon
@@ -82,16 +61,11 @@ export function Select<T>({
 
       <DropdownMenu.Content>
         {options.map((option) => {
-          const isSelected = currentValue === option.value
-          const handleSelect = () => {
-            setCurrentValue(option.value)
-            onValueChange(option.value)
-          }
           return (
             <DropdownMenu.CheckboxItem
               key={option.label}
-              value={isSelected}
-              onSelect={handleSelect}
+              value={value === option.value}
+              onSelect={() => onValueChange(option.value)}
             >
               <DropdownMenu.ItemTitle>{option.label}</DropdownMenu.ItemTitle>
               {!!option.subLabel && (

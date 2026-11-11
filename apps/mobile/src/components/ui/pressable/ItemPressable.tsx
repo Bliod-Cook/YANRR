@@ -1,8 +1,6 @@
-import { useTypeScriptHappyCallback } from "@follow/hooks"
 import { cn, composeEventHandlers } from "@follow/utils"
 import type { FC } from "react"
-import { Fragment, memo } from "react"
-import type { PressableProps } from "react-native"
+import { memo } from "react"
 import { StyleSheet } from "react-native"
 import Animated, {
   cancelAnimation,
@@ -18,11 +16,11 @@ import { useColor } from "@/src/theme/colors"
 
 import { ReAnimatedPressable } from "../../common/AnimatedComponents"
 import { ItemPressableStyle } from "./enum"
+import type { ItemPressableProps } from "./ItemPressable.types"
 
-export interface ItemPressableProps extends PressableProps {
-  itemStyle?: ItemPressableStyle
-  touchHighlight?: boolean
-}
+// This is a workaround to prevent context menu crash when release too quickly
+// https://github.com/nandorojo/zeego/issues/61
+const noopLongPress = () => {}
 
 export const ItemPressable: FC<ItemPressableProps> = memo(
   ({ children, itemStyle = ItemPressableStyle.Grouped, touchHighlight = true, ...props }) => {
@@ -53,31 +51,18 @@ export const ItemPressable: FC<ItemPressableProps> = memo(
             withSpring(0, gentleSpringPreset),
           )
         })}
-        // This is a workaround to prevent context menu crash when release too quickly
-        // https://github.com/nandorojo/zeego/issues/61
-        onLongPress={composeEventHandlers(props.onLongPress, () => {})}
+        onLongPress={noopLongPress}
         // Keep React Native's default threshold: a 100ms no-op long press
         // cancels ordinary taps before the native context menu opens.
-        delayLongPress={props.delayLongPress ?? 500}
+        delayLongPress={500}
         className={cn("relative overflow-hidden", props.className)}
         style={StyleSheet.flatten([
           props.style,
           !isUnStyled && { backgroundColor: itemNormalColor },
         ])}
       >
-        {useTypeScriptHappyCallback(
-          (props) => {
-            return (
-              <Fragment>
-                {touchHighlight && (
-                  <Animated.View className="absolute inset-0" style={colorStyle} />
-                )}
-                {typeof children === "function" ? children(props) : children}
-              </Fragment>
-            )
-          },
-          [children, colorStyle],
-        )}
+        {touchHighlight && <Animated.View className="absolute inset-0" style={colorStyle} />}
+        {children}
       </ReAnimatedPressable>
     )
   },

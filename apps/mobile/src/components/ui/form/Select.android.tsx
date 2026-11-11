@@ -2,7 +2,6 @@ import { cn } from "@follow/utils/utils"
 import { FlashList } from "@shopify/flash-list"
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
-import type { StyleProp, ViewStyle } from "react-native"
 import { Pressable, StyleSheet, View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
@@ -13,21 +12,8 @@ import { accentColor, useColor } from "@/src/theme/colors"
 
 import { BottomModal } from "../modal/BottomModal"
 import { FormLabel } from "./Label"
+import type { SelectProps } from "./Select.types"
 
-interface SelectProps<T> {
-  options: {
-    label: string
-    value: T
-    subLabel?: string
-  }[]
-  value: T
-  onValueChange: (value: T) => void
-  displayValue?: string
-  wrapperClassName?: string
-  wrapperStyle?: StyleProp<ViewStyle>
-  label?: string
-  disabled?: boolean
-}
 export function Select<T>({
   options,
   value,
