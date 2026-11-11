@@ -1,17 +1,7 @@
-/* eslint-disable react-hooks/rules-of-hooks */
 import { cn } from "@follow/utils"
 import { t } from "i18next"
-import type { Dispatch, FC, ReactElement, ReactNode, SetStateAction } from "react"
-import {
-  cloneElement,
-  createContext,
-  createElement,
-  isValidElement,
-  use,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
+import type { FC, ReactElement, ReactNode } from "react"
+import { cloneElement, createElement, isValidElement } from "react"
 import { Pressable, View } from "react-native"
 import Animated, { SlideInUp, SlideOutUp } from "react-native-reanimated"
 import RootSiblings from "react-native-root-siblings"
@@ -55,32 +45,12 @@ const entering = SlideInUp.springify()
 const exiting = SlideOutUp.duration(400)
 type DialogContextType = {
   dismiss: () => void
-  bizOnConfirm: (() => void) | null
-  bizOnCancel: (() => void) | null
 }
-const DialogDynamicButtonActionContext = createContext<{
-  onConfirm: (() => void) | null
-  onCancel: (() => void) | null
-}>({
-  onConfirm: null,
-  onCancel: null,
-})
-const SetDialogDynamicButtonActionContext = createContext<{
-  setOnConfirm: Dispatch<SetStateAction<(() => void) | null>>
-  setOnCancel: Dispatch<SetStateAction<(() => void) | null>>
-}>({
-  setOnConfirm: () => {},
-  setOnCancel: () => {},
-})
-const DialogContext = createContext<DialogContextType | null>(null)
 export type DialogComponent<Ctx = unknown> = FC<{
   ctx: Ctx
 }> &
   Omit<DialogProps<Ctx>, "content">
 class DialogStatic {
-  useDialogContext = () => {
-    return use(DialogContext)
-  }
   private currentStackedDialogs = new Set<string>()
   // Close handlers of the open dialogs, the topmost last
   private closeHandlers: Array<{ id: string; close: () => void }> = []
@@ -96,43 +66,6 @@ class DialogStatic {
     return true
   }
 
-  // Components
-  DialogConfirm: FC<{
-    onPress: () => void
-  }> = ({ onPress }) => {
-    const { setOnConfirm } = use(SetDialogDynamicButtonActionContext)
-
-    useEffect(() => {
-      setOnConfirm(() => {
-        return onPress
-      })
-    }, [onPress, setOnConfirm])
-    return null
-  }
-  DialogCancel: FC<{
-    onPress: () => void
-  }> = ({ onPress }) => {
-    const { setOnCancel } = use(SetDialogDynamicButtonActionContext)
-
-    const { dismiss } = use(DialogContext)!
-
-    useEffect(() => {
-      let timeout: NodeJS.Timeout
-      setOnCancel(() => {
-        return () => {
-          dismiss()
-          clearTimeout(timeout)
-          timeout = setTimeout(() => {
-            onPress()
-          }, 16)
-        }
-      })
-      return () => {
-        clearTimeout(timeout)
-      }
-    }, [onPress, setOnCancel, dismiss])
-    return null
-  }
   show<Ctx>(
     propsOrComponent: DialogProps<Ctx> | DialogComponent<Ctx>,
     options?: ShowDialogOptions<Ctx>,
@@ -147,22 +80,9 @@ class DialogStatic {
         ? propsOrComponent
         : (propsOrComponent as unknown as DialogProps<Ctx>)
     const dismiss = () => this.destroy(props.id, siblings)
-    const reactCtx: DialogContextType = {
-      dismiss,
-      get bizOnConfirm() {
-        return () => {
-          handleConfirm()
-        }
-      },
-      get bizOnCancel() {
-        return () => {
-          handleClose()
-        }
-      },
-    }
-    const mergeCtx = (ctx: Ctx) => ({
+    const mergeCtx = (ctx: Ctx): Ctx & DialogContextType => ({
       ...ctx,
-      ...reactCtx,
+      dismiss,
     })
     const ctx = {} as Ctx
     const children =
@@ -207,29 +127,23 @@ class DialogStatic {
             exiting={exiting}
           >
             <SafeInsetTop />
-            <DialogDynamicButtonActionProvider>
-              {Header}
-              <View className={cn("px-6 pb-4", Header ? "pt-4" : "pt-0")}>
-                <DialogContext value={reactCtx}>{children}</DialogContext>
-              </View>
+            {Header}
+            <View className={cn("px-6 pb-4", Header ? "pt-4" : "pt-0")}>{children}</View>
 
-              <View className="flex-row gap-4 px-6 pb-4">
-                <DialogDynamicButtonAction
-                  fallbackCaller={handleClose}
-                  text={override?.cancelText ?? props.cancelText ?? t("common:words.cancel")}
-                  type="cancel"
-                  textClassName={cn(props.variant === "destructive" && "font-bold")}
-                />
+            <View className="flex-row gap-4 px-6 pb-4">
+              <DialogButton
+                onPress={handleClose}
+                text={override?.cancelText ?? props.cancelText ?? t("common:words.cancel")}
+                textClassName={cn(props.variant === "destructive" && "font-bold")}
+              />
 
-                <DialogDynamicButtonAction
-                  fallbackCaller={handleConfirm}
-                  text={override?.confirmText ?? props.confirmText ?? t("common:words.confirm")}
-                  type="confirm"
-                  className={props.variant === "destructive" ? "bg-red" : "bg-accent"}
-                  textClassName={cn("text-white", props.variant !== "destructive" && "font-bold")}
-                />
-              </View>
-            </DialogDynamicButtonActionProvider>
+              <DialogButton
+                onPress={handleConfirm}
+                text={override?.confirmText ?? props.confirmText ?? t("common:words.confirm")}
+                className={props.variant === "destructive" ? "bg-red" : "bg-accent"}
+                textClassName={cn("text-white", props.variant !== "destructive" && "font-bold")}
+              />
+            </View>
           </Animated.View>
         </FullWindowOverlay>
       </NavigationInstanceContext>,
@@ -277,55 +191,21 @@ const DefaultHeader = (props: { title?: string; headerIcon?: ReactNode }) => {
     </View>
   )
 }
-const DialogDynamicButtonAction = (props: {
-  type: "confirm" | "cancel"
+const DialogButton = (props: {
   text: string
-  fallbackCaller: () => void
+  onPress: () => void
   className?: string
   textClassName?: string
-}) => {
-  const { onConfirm, onCancel } = use(DialogDynamicButtonActionContext)
-  const caller =
-    {
-      confirm: onConfirm,
-      cancel: onCancel,
-    }[props.type] || props.fallbackCaller
-  return (
-    <Pressable
-      className={cn(
-        "flex-1 items-center justify-center rounded-full bg-system-fill px-6 py-3",
-        props.className,
-      )}
-      onPress={caller}
-    >
-      <Text className={cn("text-base font-medium text-label", props.textClassName)}>
-        {props.text}
-      </Text>
-    </Pressable>
-  )
-}
-const DialogDynamicButtonActionProvider = (props: { children: ReactNode }) => {
-  const [onConfirm, setOnConfirm] = useState<(() => void) | null>(null)
-  const [onCancel, setOnCancel] = useState<(() => void) | null>(null)
-  const ctx1 = useMemo(
-    () => ({
-      onConfirm,
-      onCancel,
-    }),
-    [onConfirm, onCancel],
-  )
-  const ctx2 = useMemo(
-    () => ({
-      setOnConfirm,
-      setOnCancel,
-    }),
-    [setOnConfirm, setOnCancel],
-  )
-  return (
-    <DialogDynamicButtonActionContext value={ctx1}>
-      <SetDialogDynamicButtonActionContext value={ctx2}>
-        {props.children}
-      </SetDialogDynamicButtonActionContext>
-    </DialogDynamicButtonActionContext>
-  )
-}
+}) => (
+  <Pressable
+    className={cn(
+      "flex-1 items-center justify-center rounded-full bg-system-fill px-6 py-3",
+      props.className,
+    )}
+    onPress={props.onPress}
+  >
+    <Text className={cn("text-base font-medium text-label", props.textClassName)}>
+      {props.text}
+    </Text>
+  </Pressable>
+)

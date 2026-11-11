@@ -2,7 +2,6 @@ import type { AuthClientError } from "@follow/utils/auth-error"
 import { describeAuthError } from "@follow/utils/auth-error"
 import { ExceptionCodeMap, FollowAPIError, FollowTimeoutError } from "@follow-app/client-sdk"
 import { t } from "i18next"
-import { FetchError } from "ofetch"
 
 import { isConnectionFailure } from "./network-error"
 import { toast } from "./toast"
@@ -50,21 +49,6 @@ export const getFetchErrorInfo = (
   message: string
   code?: number
 } => {
-  if (error instanceof FetchError) {
-    try {
-      const json = JSON.parse(error.response?._data)
-
-      const { reason, code, message } = json
-      const i18nMessage = translateErrorCode(code, message)
-      return {
-        message: `${i18nMessage}${reason ? `: ${reason}` : ""}`,
-        code,
-      }
-    } catch {
-      return { message: error.message }
-    }
-  }
-
   if (isSignInRequired(error)) {
     return { message: t(SIGN_IN_REQUIRED_MESSAGE_KEY) }
   }
@@ -115,36 +99,7 @@ export const toastFetchError = (error: Error, { title: _title }: { title?: strin
   let message = fallbackMessage
   // What the server said, kept next to the translation of its error code
   let serverMessage = ""
-  let _reason = ""
   let code: number | undefined
-
-  if (error instanceof FetchError) {
-    try {
-      const json =
-        typeof error.response?._data === "string"
-          ? JSON.parse(error.response?._data)
-          : error.response?._data
-
-      const { reason, code: _code, message: _message } = json
-      if (_code != null) {
-        code = typeof _code === "number" ? _code : Number(_code)
-      }
-      message = typeof _message === "string" && _message.trim() ? _message : message
-      serverMessage = typeof _message === "string" ? _message : ""
-      if (code != null) {
-        const tValue = t(`errors:${code}` as any)
-        if (tValue !== `${code}`) {
-          message = tValue
-        }
-      }
-
-      if (typeof reason === "string" && reason.trim()) {
-        _reason = reason
-      }
-    } catch {
-      message = fallbackMessage
-    }
-  }
 
   if (error instanceof FollowAPIError) {
     code = getServerCode(error)
@@ -168,12 +123,8 @@ export const toastFetchError = (error: Error, { title: _title }: { title?: strin
       ? serverMessage
       : ""
 
-  if (!_reason) {
-    const title = _title || message || "Unknown error"
-    // A title of the caller's own says what failed, so the server's answer still has to say why
-    const description = _title && !detail && message !== _title ? message : detail
-    return description ? toast.error(title, { description }) : toast.error(title)
-  } else {
-    return toast.error(message || _title || "Unknown error")
-  }
+  const title = _title || message || "Unknown error"
+  // A title of the caller's own says what failed, so the server's answer still has to say why
+  const description = _title && !detail && message !== _title ? message : detail
+  return description ? toast.error(title, { description }) : toast.error(title)
 }

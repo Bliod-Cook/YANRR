@@ -1,7 +1,6 @@
 import { FollowAPIError } from "@follow-app/client-sdk"
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
 import { QueryClient } from "@tanstack/react-query"
-import { FetchError } from "ofetch"
 
 import { kv } from "./kv"
 import { isUnansweredRequestError } from "./network-error"
@@ -17,13 +16,6 @@ export const queryClient = new QueryClient({
       retryDelay: 1000,
       staleTime: defaultStaleTime,
       retry(failureCount, error) {
-        if (
-          error instanceof FetchError &&
-          (error.statusCode === undefined || DO_NOT_RETRY_CODES.has(error.statusCode))
-        ) {
-          return false
-        }
-
         if (error instanceof FollowAPIError && DO_NOT_RETRY_CODES.has(error.status)) {
           return false
         }
