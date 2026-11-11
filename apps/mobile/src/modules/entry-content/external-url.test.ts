@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { getExternalEntryUrl } from "./external-url"
 
-// The store itself needs the app's globals; the onboarding check only reads the URL
+// The store itself needs the app's globals; the URL helper only reads its arguments
 vi.mock("@follow/store/entry/getter", () => ({ getEntry: vi.fn() }))
 vi.mock("@follow/store/entry/hooks", () => ({ useEntry: vi.fn() }))
 vi.mock("@follow/store/feed/hooks", () => ({ useFeedById: vi.fn() }))
@@ -16,10 +16,6 @@ describe("getExternalEntryUrl", () => {
     expect(getExternalEntryUrl("mailto:editor@example.test", null)).toBe(
       "mailto:editor@example.test",
     )
-  })
-
-  it("has no link outside the app for the onboarding entries", () => {
-    expect(getExternalEntryUrl("yanrr://onboarding/entry/1", "https://example.com")).toBeNull()
   })
 
   it("resolves a relative link against the feed's site", () => {
@@ -36,7 +32,7 @@ describe("getExternalEntryUrl", () => {
 
   it("has no link when a relative one cannot be resolved to a web page", () => {
     expect(getExternalEntryUrl("/posts/relative-1", null)).toBeNull()
-    expect(getExternalEntryUrl("/posts/relative-1", "yanrr://onboarding")).toBeNull()
+    expect(getExternalEntryUrl("/posts/relative-1", "yanrr://app")).toBeNull()
     expect(getExternalEntryUrl("", "https://example.com")).toBeNull()
     expect(getExternalEntryUrl(null, "https://example.com")).toBeNull()
   })
