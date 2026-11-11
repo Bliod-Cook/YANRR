@@ -6,6 +6,7 @@ import type { FC } from "react"
 import { useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
+import { useAiEnabled } from "@/src/atoms/server-configs"
 import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { ErrorBoundary } from "@/src/components/common/ErrorBoundary"
 import { Text } from "@/src/components/ui/typography/Text"
@@ -14,38 +15,16 @@ import { renderMarkdown } from "@/src/lib/markdown"
 import { AISummary } from "../ai/summary"
 import { useEntryContentContext } from "./ctx"
 
-const ATTRIBUTION_PREFIX_PATTERNS = [
-  /^(?:(?:据|根据)\s*)?[^，。,:：\n]{1,40}(?:消息|报道|报告|监测|研究|统计|数据|分析)?(?:称|显示|指出|提到|认为|披露|公布)[，,:：]\s*/u,
-  /^[^\n,.:;]{1,80}\s+(?:reported|reports|said|says|stated|states|noted|notes)\s*[,.:;]\s*/i,
-  /^according to [^\n,.:;]{1,80}[,.:;]\s*/i,
-] as const
-
-const stripLeadingAttribution = (text: string) => {
-  let result = text
-  for (const pattern of ATTRIBUTION_PREFIX_PATTERNS) {
-    result = result.replace(pattern, "")
-  }
-  return result
-}
-
 const normalizeSummaryText = (source?: string | null) => {
   if (!source) return ""
 
-  const normalizedWhitespace = source
+  return source
     .replaceAll(/\r\n?/g, "\n")
     .split("\n")
     .map((line) => line.trim())
     .join("\n")
     .replaceAll(/[ \t]+/g, " ")
     .replaceAll(/\n{3,}/g, "\n\n")
-    .trim()
-
-  if (!normalizedWhitespace) return ""
-
-  const withoutAttribution = stripLeadingAttribution(normalizedWhitespace)
-
-  return withoutAttribution
-    .replace(/^[，。,:：\s]+/u, "")
     .replaceAll(/\s+([，。！？；：])/g, "$1")
     .trim()
 }
@@ -63,7 +42,9 @@ export const EntryAISummary: FC<{
   const ctx = useEntryContentContext()
   const showReadability = useAtomValue(ctx.showReadabilityAtom)
   const showAISummaryOnce = useAtomValue(ctx.showAISummaryAtom)
-  const showAISummary = useGeneralSettingKey("summary") || showAISummaryOnce
+  const aiEnabled = useAiEnabled()
+  const summarySetting = useGeneralSettingKey("summary")
+  const showAISummary = aiEnabled && (summarySetting || showAISummaryOnce)
   const entry = useEntry(
     entryId,
     useCallback(

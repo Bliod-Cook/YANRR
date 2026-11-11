@@ -2,14 +2,12 @@ import { FeedViewType } from "@follow/constants"
 import { useIsEntryStarred } from "@follow/store/collection/hooks"
 import { collectionSyncService } from "@follow/store/collection/store"
 import { useEntry } from "@follow/store/entry/hooks"
-import { entrySyncServices } from "@follow/store/entry/store"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useSubscriptionById } from "@follow/store/subscription/hooks"
-import { translationSyncService } from "@follow/store/translation/store"
 import { useIsLoggedIn } from "@follow/store/user/hooks"
 import { setStringAsync } from "expo-clipboard"
 import { useAtom } from "jotai"
-import { useCallback, useEffect, useState } from "react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Platform, Pressable, Share, View } from "react-native"
 import type { SharedValue } from "react-native-reanimated"
@@ -17,7 +15,8 @@ import Animated, { interpolate, useAnimatedStyle } from "react-native-reanimated
 import { useColor } from "react-native-uikit-colors"
 import type { MenuItemIconProps } from "zeego/lib/typescript/menu"
 
-import { getActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
+import { useAiEnabled } from "@/src/atoms/server-configs"
+import { useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { ActionBarItem } from "@/src/components/ui/action-bar/ActionBarItem"
 import { DropdownMenu } from "@/src/components/ui/context-menu"
 import { AiCuteReIcon } from "@/src/icons/ai_cute_re"
@@ -27,7 +26,7 @@ import { ShareForwardCuteReIcon } from "@/src/icons/share_forward_cute_re"
 import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
 import { StarCuteReIcon } from "@/src/icons/star_cute_re"
 import { Translate2CuteReIcon } from "@/src/icons/translate_2_cute_re"
-import { hideIntelligenceGlowEffect, openLink } from "@/src/lib/native"
+import { openLink } from "@/src/lib/native"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { createLinkShareContent } from "@/src/lib/share"
 import { toast } from "@/src/lib/toast"
@@ -80,17 +79,17 @@ const HeaderRightActionsImpl = ({
         settings: entry.settings,
       },
   )
-  // Onboarding entries have no link outside the app, and relative links resolve first
+  // Relative links resolve against the feed's site first
   const externalUrl = useEntryExternalUrl(entryId)
 
   const { showAISummaryAtom, showReadabilityAtom, showAITranslationAtom } = useEntryContentContext()
   const [showAISummary, setShowAISummary] = useAtom(showAISummaryAtom)
   const [showTranslation, setShowTranslation] = useAtom(showAITranslationAtom)
   const [showReadability, setShowReadability] = useAtom(showReadabilityAtom)
+  const aiEnabled = useAiEnabled()
   const showAISummarySetting = useGeneralSettingKey("summary") || !!entry?.settings?.summary
   const showAITranslationSetting =
     useGeneralSettingKey("translation") || !!entry?.settings?.translation
-  const translationMode = useGeneralSettingKey("translationMode")
   const showReadabilitySetting = !!entry?.settings?.readability
 
   const feed = useFeedById(entry?.feedId as string, (feed) => feed && { feedId: feed.id })
@@ -121,22 +120,6 @@ const HeaderRightActionsImpl = ({
     )
   }
 
-  const toggleAITranslation = () => {
-    translationSyncService.generateTranslation({
-      entryId,
-      language: getActionLanguage(),
-      withContent: true,
-      target: showReadability ? "readabilityContent" : "content",
-      mode: translationMode,
-    })
-    setShowTranslation((prev) => !prev)
-  }
-
-  const toggleReadability = useCallback(() => {
-    entrySyncServices.fetchEntryReadabilityContent(entryId)
-    setShowReadability((prev) => !prev)
-  }, [entryId, setShowReadability])
-
   const handleCopyLink = () => {
     if (!externalUrl) return
     setStringAsync(externalUrl)
@@ -147,10 +130,6 @@ const HeaderRightActionsImpl = ({
     if (!externalUrl) return
     openLink(externalUrl)
   }
-
-  useEffect(() => {
-    return () => hideIntelligenceGlowEffect()
-  }, [])
 
   // Define action items for reuse
   const actionItems = [
@@ -172,30 +151,32 @@ const HeaderRightActionsImpl = ({
       title: t("entry_content.header.show_readability"),
       icon: <DocmentCuteReIcon />,
       iconIOS: { name: "doc.text" },
-      onPress: toggleReadability,
+      // The entry screen fetches what it shows: readability, summary and translation
+      onPress: () => setShowReadability((prev) => !prev),
       active: showReadability,
       isCheckbox: true,
       // inMenu: true,
     },
-    isLoggedIn &&
+    aiEnabled &&
+      isLoggedIn &&
       !showAISummarySetting && {
         key: "ShowSummary",
         title: t("entry_content.header.show_summary"),
         icon: <AiCuteReIcon />,
         iconIOS: { name: "sparkles" },
-        // The summary card fetches the summary once it is shown
         onPress: () => setShowAISummary((prev) => !prev),
         active: showAISummary,
         isCheckbox: true,
         inMenu: true,
       },
-    isLoggedIn &&
+    aiEnabled &&
+      isLoggedIn &&
       !showAITranslationSetting && {
         key: "ShowTranslation",
         title: t("entry_content.header.show_translation"),
         icon: <Translate2CuteReIcon />,
         iconIOS: { name: "globe" },
-        onPress: toggleAITranslation,
+        onPress: () => setShowTranslation((prev) => !prev),
         active: showTranslation,
         isCheckbox: true,
         inMenu: true,

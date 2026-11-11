@@ -21,7 +21,6 @@ import { NavigationHeaderHeightContext } from "@/src/components/layouts/views/Na
 import { NavigationBlurEffectHeaderView } from "@/src/components/layouts/views/SafeNavigationScrollView"
 import { ScreenItemContext } from "@/src/lib/navigation/ScreenItemContext"
 
-import { useHeaderHeight } from "../screen/hooks/useHeaderHeight"
 import { EntryContentContext } from "./ctx"
 import { EntryContentHeaderRightActions } from "./EntryContentHeaderRightActions"
 
@@ -120,7 +119,7 @@ export const EntryNavigationHeader: FC<{
 }> = ({ entryId }) => {
   const opacityAnimatedValue = useSharedValue(0)
 
-  const headerHeight = useHeaderHeight()
+  const headerHeight = use(NavigationHeaderHeightContext)
   const { autoHideReaderHeader, headerContainerStyle, statusBarStripStyle, topInset } =
     useAutoHideHeader()
 
