@@ -4,7 +4,8 @@ import type { EntryModel } from "@follow/store/entry/types"
 
 import { SharedWebViewModule } from "./index"
 
-type WebViewEntryPayload = EntryModel & {
+/** What the page renders of an entry */
+export type WebViewEntry = Pick<EntryModel, "content" | "url" | "media" | "attachments"> & {
   spotlightRules?: SpotlightRule[]
 }
 
@@ -21,12 +22,14 @@ export const WebViewManager = {
   },
 
   /**
-   * Set the current entry data in WebView
+   * Set the current entry data in WebView. Takes a whole entry too, of which it sends only what
+   * the page renders.
    */
-  setEntry(entry?: WebViewEntryPayload | null): void {
+  setEntry(entry?: WebViewEntry | null): void {
     if (!entry) return
-    const json = JSON.stringify(entry)
-    SharedWebViewModule.dispatch?.("setEntry", json)
+    const { content, url, media, attachments, spotlightRules } = entry
+    const payload: WebViewEntry = { content, url, media, attachments, spotlightRules }
+    SharedWebViewModule.dispatch?.("setEntry", JSON.stringify(payload))
   },
 
   /**
@@ -62,13 +65,6 @@ export const WebViewManager = {
    */
   setReaderStyle(style: ReaderStylePayload): void {
     SharedWebViewModule.dispatch?.("setReaderStyle", JSON.stringify(style))
-  },
-
-  /**
-   * Execute custom JavaScript code in WebView
-   */
-  executeScript(script: string): void {
-    SharedWebViewModule.dispatch?.("executeScript", JSON.stringify(script))
   },
 
   /**

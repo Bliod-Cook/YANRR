@@ -1,10 +1,10 @@
+import { getEntry } from "@follow/store/entry/getter"
 import { getFeedById } from "@follow/store/feed/getter"
 import { EventBus } from "@follow/utils/event-bus"
 import { Portal } from "@gorhom/portal"
 import TrackPlayer from "@rntp/player"
-import { useAtom } from "jotai"
 import * as React from "react"
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Dimensions, Pressable, StyleSheet, View } from "react-native"
 import { runOnJS, runOnUI } from "react-native-reanimated"
@@ -17,13 +17,11 @@ import { getEntryArtwork } from "@/src/modules/player/artwork"
 import { useLightboxControls } from "../../ui/lightbox/lightboxState"
 import { PlatformActivityIndicator } from "../../ui/loading/PlatformActivityIndicator"
 import { Text } from "../../ui/typography/Text"
-import { sharedWebViewHeightAtom } from "./atom"
 import { DebugPanel } from "./DebugPanel"
 import { useWebViewEntry, useWebViewMode } from "./hooks"
 import type { AudioSeekEvent } from "./index"
 import { prepareEntryRenderWebView } from "./index"
 import { NativeWebView } from "./native-webview"
-import { WebViewManager } from "./webview-manager"
 
 type EntryContentWebViewProps = {
   entryId: string
@@ -39,23 +37,24 @@ type EntryContentWebViewProps = {
   onRetry?: () => void
 }
 
-// Export for backward compatibility
-
 export function EntryContentWebView(props: EntryContentWebViewProps) {
   const { t } = useTranslation()
-  const [contentHeight, setContentHeight] = useAtom(sharedWebViewHeightAtom)
+  // Only the page reports the height, once it rendered the content
+  const [contentHeight, setContentHeight] = useState(() => Dimensions.get("window").height)
   const { openLightbox } = useLightboxControls()
 
   // Use custom hooks for WebView management
-  const { entryInWebview, isLoading: isContentMissing } = useWebViewEntry(props)
+  const { isLoading: isContentMissing } = useWebViewEntry(props)
   const isLoading = isContentMissing && props.isContentPending !== false
   const { handleModeSwitch, mode } = useWebViewMode()
   const externalUrl = useEntryExternalUrl(props.entryId)
 
+  const { entryId } = props
   const handleSeekAudio = useCallback(
     async (e: AudioSeekEvent) => {
+      const entry = getEntry(entryId)
       const activeTrack = TrackPlayer.getActiveMediaItem()
-      const entryAudio = entryInWebview?.attachments?.find((attachment) =>
+      const entryAudio = entry?.attachments?.find((attachment) =>
         attachment.mime_type?.startsWith("audio/"),
       )
       if (!entryAudio) {
@@ -65,24 +64,17 @@ export function EntryContentWebView(props: EntryContentWebViewProps) {
       if (activeTrack?.mediaId !== entryAudio.url) {
         await player.play({
           url: entryAudio.url || "",
-          title: entryInWebview?.title || t("player.unknown_title"),
-          artist: entryInWebview?.author || t("player.unknown_artist"),
+          title: entry?.title || t("player.unknown_title"),
+          artist: entry?.author || t("player.unknown_artist"),
           artwork: getEntryArtwork(
-            entryInWebview?.media?.find((media) => media.type === "photo")?.url,
-            getFeedById(entryInWebview?.feedId),
+            entry?.media?.find((media) => media.type === "photo")?.url,
+            getFeedById(entry?.feedId),
           ),
         })
       }
       await player.seekTo(e.time)
     },
-    [
-      entryInWebview?.attachments,
-      entryInWebview?.author,
-      entryInWebview?.feedId,
-      entryInWebview?.media,
-      entryInWebview?.title,
-      t,
-    ],
+    [entryId, t],
   )
 
   // Handle audio seek events
@@ -126,11 +118,6 @@ export function EntryContentWebView(props: EntryContentWebViewProps) {
     handleModeSwitch(nextMode)
   }, [mode, handleModeSwitch])
 
-  useEffect(() => {
-    // Reset the shared container height before the next entry content arrives.
-    setContentHeight(Dimensions.get("window").height)
-  }, [props.entryId, props.showReadability, props.showTranslation, setContentHeight])
-
   return (
     <>
       {isContentMissing && !isLoading ? (
@@ -140,9 +127,6 @@ export function EntryContentWebView(props: EntryContentWebViewProps) {
         <View
           key={`${mode}-${props.entryId}`}
           style={{ width: "100%", height: contentHeight, transform: [{ translateY: 0 }] }}
-          onLayout={() => {
-            WebViewManager.setEntry(entryInWebview)
-          }}
         >
           <NativeWebView
             style={styles.webView}
@@ -161,7 +145,7 @@ export function EntryContentWebView(props: EntryContentWebViewProps) {
           </View>
         )}
       </Portal>
-      <DebugPanel mode={mode} onModeToggle={handleModeToggle} />
+      {__DEV__ && <DebugPanel mode={mode} onModeToggle={handleModeToggle} />}
     </>
   )
 }

@@ -21,6 +21,7 @@ const SimpleButton = ({ label, onPress }: { label: string; onPress: () => void }
   </Pressable>
 )
 
+/** Polls the native WebView every second, so it renders in development builds only */
 export function DebugPanel({ mode, onModeToggle }: DebugPanelProps) {
   const [visible, setVisible] = useState(false)
   const [debugState, setDebugState] = useState<WebViewDebugState | null>(null)
@@ -44,8 +45,6 @@ export function DebugPanel({ mode, onModeToggle }: DebugPanelProps) {
     const ready = debugState.ready && debugState.hasWebView
     return `${ready ? "✅" : "❌"} WV:${debugState.hasWebView} H:${Math.round(debugState.contentHeight)}`
   }, [debugState])
-
-  if (!__DEV__) return null
 
   return (
     <Portal>
