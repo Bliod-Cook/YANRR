@@ -19,7 +19,7 @@ export const SubscriptionColumnHeader = memo(() => {
   const navigateBackHome = useBackHome(timelineId)
   const navigate = useNavigate()
   const location = useLocation()
-  const normalStyle = !window.electron || window.electron.process.platform !== "darwin"
+  const normalStyle = !window.electron || window.platform !== "darwin"
   const { t } = useTranslation()
   return (
     <div
