@@ -16,7 +16,6 @@ import { Text } from "@/src/components/ui/typography/Text"
 import { WifiOffCuteReIcon } from "@/src/icons/wifi_off_cute_re"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
-import { selectFeed } from "@/src/modules/screen/atoms"
 import { FeedScreen } from "@/src/screens/(stack)/feeds/[feedId]/FeedScreen"
 
 import { SubscriptionFeedItemContextMenu } from "../../context-menu/feeds"
@@ -76,13 +75,7 @@ export const SubscriptionItem = memo(
               )}
               testID={feedTestID}
               onPress={() => {
-                selectFeed({
-                  type: "feed",
-                  feedId: id,
-                })
-                navigation.pushControllerView(FeedScreen, {
-                  feedId: id,
-                })
+                navigation.pushControllerView(FeedScreen, { type: "feed", id })
               }}
             >
               <View className="size-5 items-center justify-center overflow-hidden rounded border border-transparent dark:border-tertiary-system-background dark:bg-[#222]">

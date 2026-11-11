@@ -72,7 +72,7 @@ export function TimelineViewSelector() {
                 index={index}
                 view={view}
                 scrollViewRef={scrollViewRef}
-                isActive={selectedFeed?.type === "view" && selectedFeed.viewId === view.view}
+                isActive={selectedFeed.type === "view" && selectedFeed.viewId === view.view}
               />
             )
           })}

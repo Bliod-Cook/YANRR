@@ -26,7 +26,6 @@ import { Text } from "@/src/components/ui/typography/Text"
 import { VideoPlayer } from "@/src/components/ui/video/VideoPlayer"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useSocialAuthorTitle } from "@/src/modules/feed/feed-title"
-import { selectFeed } from "@/src/modules/screen/atoms"
 import { EntryDetailScreen } from "@/src/screens/(stack)/entries/[entryId]/EntryDetailScreen"
 import { FeedScreen } from "@/src/screens/(stack)/feeds/[feedId]/FeedScreen"
 
@@ -74,11 +73,7 @@ export const EntrySocialItem = memo(
     const autoExpandLongSocialMedia = useGeneralSettingKey("autoExpandLongSocialMedia")
     const navigationToFeedEntryList = useCallback(() => {
       if (!entry?.feedId) return
-      // FeedScreen shows the selected feed, not the one it is pushed with
-      selectFeed({ type: "feed", feedId: entry.feedId })
-      navigation.pushControllerView(FeedScreen, {
-        feedId: entry.feedId,
-      })
+      navigation.pushControllerView(FeedScreen, { type: "feed", id: entry.feedId })
     }, [entry?.feedId, navigation])
     const onPreviewImage = useCallback(
       (index: number, rect: MeasuredDimensions | null, thumbnail: ImageSource | undefined) => {

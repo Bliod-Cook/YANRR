@@ -14,16 +14,16 @@ import type {
   UseEntriesProps,
   UseEntriesReturn,
 } from "@follow/store/entry/types"
-import { fallbackReturn, isTimelineEntriesSource } from "@follow/store/entry/utils"
+import { isTimelineEntriesSource } from "@follow/store/entry/utils"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useInboxById } from "@follow/store/inbox/hooks"
 import { getSubscriptionByCategory } from "@follow/store/subscription/getter"
 import { useSubscriptionByFeedId, useViewWithSubscription } from "@follow/store/subscription/hooks"
 import { jotaiStore } from "@follow/utils"
 import { EventBus } from "@follow/utils/event-bus"
+import { useIsFetching } from "@tanstack/react-query"
 import { debounce } from "es-toolkit"
 import { atom, useAtomValue } from "jotai"
-import { selectAtom } from "jotai/utils"
 import type { ReactNode } from "react"
 import {
   createContext,
@@ -43,167 +43,138 @@ import { useFetchEntriesSettings } from "@/src/atoms/settings/general"
 import { views } from "@/src/constants/views"
 import { toastFetchError } from "@/src/lib/error-parser"
 
-import type { RemoteTimelineEntries } from "./timeline-entries"
-import { joinRefreshAttempt, pickTimelineEntries } from "./timeline-entries"
+import type { RemoteTimelineEntries, TimelineEntries } from "./timeline-entries"
+import {
+  getRemoteTimelineEntries,
+  joinRefreshAttempt,
+  pickTimelineEntries,
+} from "./timeline-entries"
 
 export type SelectedTimeline = {
   type: "view"
   viewId: FeedViewType
 }
 
-export type SelectedFeed =
-  | {
-      type: "feed"
-      feedId: string
-    }
-  | {
-      type: "category"
-      categoryName: string
-    }
-  | {
-      type: "inbox"
-      inboxId: string
-    }
-  | null
+/**
+ * What a feed screen lists: a feed (or the starred entries, `FEED_COLLECTION_LIST`), a category
+ * by its name, or an inbox
+ */
+export type SelectedFeed = {
+  type: "feed" | "category" | "inbox"
+  id: string
+}
 
 const selectedTimelineAtom = atom<SelectedTimeline>({
   type: "view",
   viewId: FeedViewType.Articles,
 })
+const selectedViewAtom = atom((get) => get(selectedTimelineAtom).viewId)
 
-const selectedFeedAtom = atom<SelectedFeed>(null)
-
-export const EntryListContext = createContext<{
-  type: "timeline" | "feed" | "subscriptions"
-  isPreview?: boolean
-  // The view of the subscription a feed screen shows, which wins over the view selected on Home
-  view?: FeedViewType
-}>({ type: "timeline" })
+export const EntryListContext = createContext<
+  | { type: "timeline" | "subscriptions" }
+  | {
+      type: "feed"
+      selectedFeed: SelectedFeed
+      isPreview: boolean
+      // The view of the subscription the screen shows, which wins over the view selected on Home
+      view?: FeedViewType
+    }
+>({ type: "timeline" })
 export const useEntryListContext = () => {
   return use(EntryListContext)
 }
 
+const useIsPreview = () => {
+  const entryListContext = useEntryListContext()
+  return entryListContext.type === "feed" && entryListContext.isPreview
+}
+
 export function useSelectedView() {
-  const { view } = useEntryListContext()
-  const selectedView = useAtomValue(
-    useMemo(() => selectAtom(selectedTimelineAtom, (state) => state.viewId), []),
-  )
-  return view ?? selectedView
+  const entryListContext = useEntryListContext()
+  const selectedView = useAtomValue(selectedViewAtom)
+  return (entryListContext.type === "feed" ? entryListContext.view : undefined) ?? selectedView
 }
 
 export const getSelectedView = () => {
   return jotaiStore.get(selectedTimelineAtom).viewId
 }
 
-export function useSelectedFeed(): SelectedTimeline | SelectedFeed
-export function useSelectedFeed<T>(
-  selector?: (selectedFeed: SelectedTimeline | SelectedFeed) => T,
-): T | null
-export function useSelectedFeed<T>(
-  selector?: (selectedFeed: SelectedTimeline | SelectedFeed) => T,
-) {
+/** What the list here shows: the view selected on Home, or what its feed screen was opened for */
+export function useSelectedFeed(): SelectedTimeline | SelectedFeed {
   const entryListContext = useEntryListContext()
-
-  const [stableSelector] = useState(() => selector)
-  return useAtomValue(
-    useMemo(
-      () =>
-        atom((get) => {
-          const selectedTimeline = get(selectedTimelineAtom)
-          const selectedFeed = get(selectedFeedAtom)
-          const result = entryListContext.type === "feed" ? selectedFeed : selectedTimeline
-          if (stableSelector) {
-            return stableSelector(result)
-          }
-          return result
-        }),
-      [entryListContext, stableSelector],
-    ),
-  )
+  const selectedTimeline = useAtomValue(selectedTimelineAtom)
+  return entryListContext.type === "feed" ? entryListContext.selectedFeed : selectedTimeline
 }
 
 export const getFetchEntryPayload = (
   selectedFeed: SelectedTimeline | SelectedFeed,
   view: FeedViewType = FeedViewType.Articles,
-): FetchEntriesProps | null => {
-  if (!selectedFeed) {
-    return null
-  }
-
-  let payload: FetchEntriesProps = {}
+): FetchEntriesProps => {
   switch (selectedFeed.type) {
     case "view": {
-      payload = { view: selectedFeed.viewId }
-      break
-    }
-    case "feed": {
-      payload = { feedId: selectedFeed.feedId }
-      break
+      return { view: selectedFeed.viewId }
     }
     case "category": {
-      payload = {
-        feedIdList: getSubscriptionByCategory({ category: selectedFeed.categoryName, view }),
-      }
-      break
+      return { feedIdList: getSubscriptionByCategory({ category: selectedFeed.id, view }) }
     }
     case "inbox": {
-      payload = { inboxId: selectedFeed.inboxId }
-      break
+      return { inboxId: selectedFeed.id }
     }
-    // No default
+    case "feed": {
+      return selectedFeed.id === FEED_COLLECTION_LIST
+        ? { feedId: selectedFeed.id, view, isCollection: true }
+        : { feedId: selectedFeed.id }
+    }
   }
-  const isCollection =
-    selectedFeed && selectedFeed.type === "feed" && selectedFeed?.feedId === FEED_COLLECTION_LIST
-  if (isCollection) {
-    payload.view = view
-    payload.isCollection = true
-  }
-
-  return payload
 }
 
+/** Timelines can be read oldest first; inboxes, the starred entries and previews cannot */
 export function useIsTimelineEntrySource() {
-  const entryListContext = useEntryListContext()
+  const isPreview = useIsPreview()
   const selectedFeed = useSelectedFeed()
-  const selectedView = useSelectedView()
-  const payload = getFetchEntryPayload(selectedFeed, selectedView)
-
-  return !entryListContext.isPreview && payload !== null && isTimelineEntriesSource(payload)
+  return !isPreview && isTimelineSelection(selectedFeed)
 }
 
-function useRemoteEntries(props?: UseEntriesProps): RemoteTimelineEntries {
-  const entryListContext = useEntryListContext()
+const isTimelineSelection = (selectedFeed: SelectedTimeline | SelectedFeed) =>
+  isTimelineEntriesSource({
+    feedId: selectedFeed.type === "feed" ? selectedFeed.id : undefined,
+    inboxId: selectedFeed.type === "inbox" ? selectedFeed.id : undefined,
+  })
+
+/** The entries list shown here, as the store's entries query takes it */
+function useEntriesQueryProps(viewId?: FeedViewType) {
+  const isPreview = useIsPreview()
   const selectedFeed = useSelectedFeed()
   const selectedView = useSelectedView()
-  const view = props?.viewId ?? selectedView
+  const view = viewId ?? selectedView
   const payload = getFetchEntryPayload(
-    selectedFeed?.type === "view"
-      ? {
-          type: "view",
-          viewId: view,
-        }
-      : selectedFeed,
+    selectedFeed.type === "view" ? { type: "view", viewId: view } : selectedFeed,
     view,
   )
   const options = useFetchEntriesSettings({
-    isTimelineSource:
-      !entryListContext.isPreview && payload !== null && isTimelineEntriesSource(payload),
-    unreadOnlyEnabled: !entryListContext.isPreview,
+    isTimelineSource: !isPreview && isTimelineSelection(selectedFeed),
+    unreadOnlyEnabled: !isPreview,
   })
+  return { view, payload, options }
+}
 
-  const query = useEntriesQuery(payload ? { ...payload, ...options } : undefined, {
-    subscribed: props?.active !== false,
-  })
+/**
+ * Whether the entries list shown here is loading, without loading it a second time. The store
+ * keys a list by where its entries come from first (`["entries", feedId, inboxId, view, limit,
+ * feedIdList, isCollection, …]`), then by the reading settings, so the first part names it.
+ */
+export function useIsFetchingEntries() {
+  const { feedId, inboxId, view, limit, feedIdList, isCollection } = useEntriesQueryProps().payload
+  return (
+    useIsFetching({
+      queryKey: ["entries", feedId, inboxId, view, limit, feedIdList, isCollection],
+    }) > 0
+  )
+}
 
-  // When the list was last loaded from its first page, which is what the footer marks as read
-  // before. Loading the next page shows older entries and must not move it.
-  const isFetchingFirstPage = query.isFetching && !query.isFetchingNextPage
-  const [fetchedTime, setFetchedTime] = useState<number>()
-  useEffect(() => {
-    if (!isFetchingFirstPage) {
-      setFetchedTime(Date.now())
-    }
-  }, [isFetchingFirstPage])
+function useRemoteEntries({ viewId, active }: UseEntriesProps): RemoteTimelineEntries {
+  const { payload, options } = useEntriesQueryProps(viewId)
+  const query = useEntriesQuery({ ...payload, ...options }, { subscribed: active !== false })
 
   const refetch = useCallback(async () => void query.refetch(), [query])
   const refreshAttemptRef = useRef<Promise<void> | null>(null)
@@ -217,62 +188,15 @@ function useRemoteEntries(props?: UseEntriesProps): RemoteTimelineEntries {
   )
   const fetchNextPage = useCallback(async () => void query.fetchNextPage(), [query])
 
-  if (!query.data || query.isLoading) {
-    // Without data yet, still report a failed first page and keep the remote refetch, so the
-    // timeline can fall back to the stored entries and pull to refresh tries the server again
-    return {
-      ...fallbackReturn,
-      refetch,
-      refetchReportingFailure,
-      fetchNextPage,
-      isLoading: !query.isError,
-      isRefetching: query.isRefetching,
-      isFetching: query.isFetching,
-      error: query.isError ? query.error : null,
-    }
-  }
-
-  return {
-    entriesIds: query.entriesIds,
-    hasNext: query.hasNextPage,
-    refetch,
-    refetchReportingFailure,
-    fetchNextPage,
-    isLoading: query.isFetching,
-    isRefetching: query.isRefetching,
-    isReady: query.isSuccess,
-    isFetchingNextPage: query.isFetchingNextPage,
-    isFetching: query.isFetching,
-    hasNextPage: query.hasNextPage,
-    error: query.isError ? query.error : null,
-    fetchedTime,
-  }
+  return getRemoteTimelineEntries(query, { refetch, refetchReportingFailure, fetchNextPage })
 }
 
 const NO_ENTRY_IDS: string[] = []
 
 /** The stored entries, shown until the server's list is in; computes nothing unless `enabled` */
-function useLocalEntries(props: UseEntriesProps | undefined, enabled: boolean): UseEntriesReturn {
-  const entryListContext = useEntryListContext()
-  const selectedFeed = useSelectedFeed()
-  const selectedView = useSelectedView()
-  const view = props?.viewId ?? selectedView
-  const payload = getFetchEntryPayload(
-    selectedFeed?.type === "view"
-      ? {
-          type: "view",
-          viewId: view,
-        }
-      : selectedFeed,
-    view,
-  )
-  const options = useFetchEntriesSettings({
-    isTimelineSource:
-      !entryListContext.isPreview && payload !== null && isTimelineEntriesSource(payload),
-    unreadOnlyEnabled: !entryListContext.isPreview,
-  })
-
-  const { feedId, feedIdList, inboxId, isCollection } = payload || {}
+function useLocalEntries(viewId: FeedViewType | undefined, enabled: boolean): UseEntriesReturn {
+  const { view, payload, options } = useEntriesQueryProps(viewId)
+  const { feedId, feedIdList, inboxId, isCollection } = payload
   const { sortOrder, unreadOnly } = options
 
   const entryIdsByView = useEntryIdsByView(view, enabled)
@@ -373,10 +297,9 @@ function getEntryIdsFromMultiplePlace(...entryIds: Array<string[] | undefined | 
   return entryIds.find((ids) => ids?.length) ?? []
 }
 
-export function useEntries(props?: UseEntriesProps): UseEntriesReturn {
-  const { viewId, active = true } = props || {}
+export function useEntries({ viewId, active = true }: UseEntriesProps = {}): TimelineEntries {
   const remoteQuery = useRemoteEntries({ viewId, active })
-  const localQuery = useLocalEntries({ viewId, active }, !remoteQuery.isReady)
+  const localQuery = useLocalEntries(viewId, !remoteQuery.isReady)
 
   return pickTimelineEntries(remoteQuery, localQuery)
 }
@@ -384,33 +307,24 @@ export function useEntries(props?: UseEntriesProps): UseEntriesReturn {
 export const useSelectedFeedTitle = () => {
   const selectedFeed = useSelectedFeed()
 
-  const viewDef = useViewDefinition(
-    selectedFeed && selectedFeed.type === "view" ? selectedFeed.viewId : undefined,
-  )
-  const feed = useFeedById(selectedFeed && selectedFeed.type === "feed" ? selectedFeed.feedId : "")
-  const feedSubscription = useSubscriptionByFeedId(
-    selectedFeed && selectedFeed.type === "feed" ? selectedFeed.feedId : "",
-  )
-  const inbox = useInboxById(
-    selectedFeed && selectedFeed.type === "inbox" ? selectedFeed.inboxId : "",
-  )
+  const viewDef = useViewDefinition(selectedFeed.type === "view" ? selectedFeed.viewId : undefined)
+  const feedId = selectedFeed.type === "feed" ? selectedFeed.id : ""
+  const feed = useFeedById(feedId)
+  const feedSubscription = useSubscriptionByFeedId(feedId)
+  const inbox = useInboxById(selectedFeed.type === "inbox" ? selectedFeed.id : "")
   const { t } = useTranslation("common")
-
-  if (!selectedFeed) {
-    return ""
-  }
 
   switch (selectedFeed.type) {
     case "view": {
       return viewDef?.name ? t(viewDef.name) : ""
     }
     case "feed": {
-      return selectedFeed.feedId === FEED_COLLECTION_LIST
+      return selectedFeed.id === FEED_COLLECTION_LIST
         ? t("words.starred")
         : feedSubscription?.title || feed?.title || ""
     }
     case "category": {
-      return selectedFeed.categoryName
+      return selectedFeed.id
     }
     case "inbox": {
       return inbox?.title ?? t("words.inbox")
@@ -435,10 +349,6 @@ export const selectTimeline = (state: SelectedTimeline, target?: string) => {
   })
 }
 
-export const selectFeed = (state: SelectedFeed) => {
-  jotaiStore.set(selectedFeedAtom, state)
-}
-
 export const useViewDefinition = (view?: FeedViewType) => {
   const viewDef = useMemo(() => views.find((v) => v.view === view), [view])
   return viewDef
@@ -448,7 +358,7 @@ const TimelineSelectorDragProgressContext = createContext<SharedValue<number> | 
 
 export const TimelineSelectorDragProgressProvider = ({ children }: { children: ReactNode }) => {
   const selectedFeed = useSelectedFeed()
-  const viewId = selectedFeed?.type === "view" ? selectedFeed.viewId : undefined
+  const viewId = selectedFeed.type === "view" ? selectedFeed.viewId : undefined
 
   const activeViews = useViewWithSubscription()
 

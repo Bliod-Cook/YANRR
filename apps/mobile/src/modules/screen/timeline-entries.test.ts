@@ -1,91 +1,149 @@
 import type { UseEntriesReturn } from "@follow/store/entry/types"
 import { fallbackReturn } from "@follow/store/entry/utils"
+import type { InfiniteData } from "@tanstack/react-query"
+import { InfiniteQueryObserver, QueryClient } from "@tanstack/react-query"
 import { describe, expect, it, vi } from "vitest"
 
-import type { RemoteTimelineEntries } from "./timeline-entries"
-import { joinRefreshAttempt, pickTimelineEntries } from "./timeline-entries"
+import {
+  getRemoteTimelineEntries,
+  joinRefreshAttempt,
+  pickTimelineEntries,
+} from "./timeline-entries"
 
-const remoteRefetch = async () => {}
-const reportingRefetch = async () => {}
-const localRefetch = async () => {}
+type Page = { data: { entries: { id: string } }[] }
 
-const remote = (overrides: Partial<UseEntriesReturn>): RemoteTimelineEntries => ({
-  ...fallbackReturn,
-  refetch: remoteRefetch,
-  refetchReportingFailure: reportingRefetch,
-  ...overrides,
-})
+const queryKey = ["entries", "feed-1"]
+const actions = {
+  refetch: async () => {},
+  refetchReportingFailure: async () => {},
+  fetchNextPage: async () => {},
+}
+
+/**
+ * The server's list as TanStack holds it: an observer of a list whose requests are answered in
+ * order by `answers`, the ids of a page or the error it fails with.
+ */
+const observeList = (answers: (string[] | Error)[]) => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const pending = [...answers]
+  return new InfiniteQueryObserver<Page, Error, InfiniteData<Page>, string[], number>(client, {
+    queryKey,
+    queryFn: async () => {
+      const answer = pending.shift()!
+      if (answer instanceof Error) throw answer
+      return { data: answer.map((id) => ({ entries: { id } })) }
+    },
+    initialPageParam: 0,
+    getNextPageParam: (_lastPage, pages) => pages.length,
+  })
+}
+
+/** The state of a list once its first page was asked for (again) */
+const load = async (list: ReturnType<typeof observeList>) => {
+  await list.refetch()
+  return list.getCurrentResult()
+}
+
+/** The state of a list on screen, which starts loading its first page */
+const showList = (answers: (string[] | Error)[]) => {
+  const list = observeList(answers)
+  list.subscribe(() => {})
+  return list.getCurrentResult()
+}
+
+/** What the timeline reads from an observer's state, with the ids the store derives from it */
+const toRemote = (result: ReturnType<ReturnType<typeof observeList>["getCurrentResult"]>) =>
+  getRemoteTimelineEntries(
+    {
+      ...result,
+      entriesIds:
+        result.data?.pages.flatMap((page) => page.data.map(({ entries }) => entries.id)) ?? [],
+      insertedBefore: result.data ? 1 : undefined,
+    },
+    actions,
+  )
 
 const local = (entriesIds: string[]): UseEntriesReturn => ({
   ...fallbackReturn,
   entriesIds,
-  refetch: localRefetch,
   isLoading: false,
   isReady: true,
 })
 
 describe("pickTimelineEntries", () => {
-  it("shows the server's entries once its first page is in", () => {
-    const loaded = remote({ entriesIds: ["new", "stored"], isReady: true, isLoading: false })
-    const shown = pickTimelineEntries(loaded, local(["stored"]))
+  it("shows the server's entries once its first page is in", async () => {
+    const result = await load(observeList([["new", "stored"]]))
+    const shown = pickTimelineEntries(toRemote(result), local(["stored"]))
 
     expect(shown.entriesIds).toEqual(["new", "stored"])
-    expect(shown.isReady).toBe(true)
     // A refresh that fails leaves them on screen, so it says so
-    expect(shown.refetch).toBe(reportingRefetch)
+    expect(shown.refetch).toBe(actions.refetchReportingFailure)
+  })
+
+  it("keeps the server's entries when the next page fails, and stops paging until asked", async () => {
+    const error = new Error("fetch failed: offline")
+    const list = observeList([["a", "b"], error])
+    await load(list)
+    const result = await list.fetchNextPage()
+    const shown = pickTimelineEntries(toRemote(result), local(["stored"]))
+
+    expect(shown.entriesIds).toEqual(["a", "b"])
+    expect(shown.error).toBe(error)
+    expect(shown.isFetchNextPageError).toBe(true)
+    expect(shown.hasNextPage).toBe(false)
+    expect(shown.insertedBefore).toBe(1)
+  })
+
+  it("keeps the server's entries when a refresh fails", async () => {
+    const error = new Error("fetch failed: offline")
+    const list = observeList([["a", "b"], error])
+    await load(list)
+    const result = await load(list)
+    const shown = pickTimelineEntries(toRemote(result), local(["stored"]))
+
+    expect(shown.entriesIds).toEqual(["a", "b"])
+    expect(shown.error).toBe(error)
+    expect(shown.isFetchNextPageError).toBe(false)
   })
 
   it("shows the stored entries while the first page loads", () => {
-    const shown = pickTimelineEntries(
-      remote({ isLoading: true, isFetching: true }),
-      local(["stored"]),
-    )
+    const shown = pickTimelineEntries(toRemote(showList([["new"]])), local(["stored"]))
 
     expect(shown.entriesIds).toEqual(["stored"])
     expect(shown.isReady).toBe(true)
     expect(shown.isFetching).toBe(true)
     expect(shown.error).toBeNull()
-    expect(shown.refetch).toBe(reportingRefetch)
+    expect(shown.insertedBefore).toBeUndefined()
   })
 
-  it("keeps the stored entries when a refresh after a failure starts over", () => {
-    // The query drops the error of a page that never loaded when it is fetched again
-    const shown = pickTimelineEntries(
-      remote({ isLoading: true, isFetching: true, error: null }),
-      local(["stored"]),
-    )
-
-    expect(shown.entriesIds).toEqual(["stored"])
-    expect(shown.isReady).toBe(true)
-  })
-
-  it("shows the stored entries and the error when the first page failed", () => {
+  it("shows the stored entries and the error when the first page failed", async () => {
     const error = new Error("fetch failed: offline")
-    const shown = pickTimelineEntries(remote({ isLoading: false, error }), local(["stored"]))
+    const result = await load(observeList([error]))
+    const shown = pickTimelineEntries(toRemote(result), local(["stored"]))
 
     expect(shown.entriesIds).toEqual(["stored"])
     expect(shown.error).toBe(error)
-    expect(shown.refetch).toBe(reportingRefetch)
+    expect(shown.refetch).toBe(actions.refetchReportingFailure)
   })
 
-  it("reports a failed first page without stored entries, so the empty list says why", () => {
+  it("reports a failed first page without stored entries, so the empty list says why", async () => {
     const error = new Error("fetch failed: offline")
-    const shown = pickTimelineEntries(remote({ isLoading: false, error }), local([]))
+    const result = await load(observeList([error]))
+    const shown = pickTimelineEntries(toRemote(result), local([]))
 
     expect(shown.entriesIds).toEqual([])
     expect(shown.isReady).toBe(true)
     expect(shown.error).toBe(error)
     // The empty list shows the error, so a refresh does not toast it as well
-    expect(shown.refetch).toBe(remoteRefetch)
+    expect(shown.refetch).toBe(actions.refetch)
   })
 
   it("shows placeholders while loading without stored entries", () => {
-    const shown = pickTimelineEntries(remote({ isLoading: true, isFetching: true }), local([]))
+    const shown = pickTimelineEntries(toRemote(showList([["new"]])), local([]))
 
     expect(shown.isReady).toBe(false)
-    expect(shown.entriesIds).toEqual([])
     expect(shown.isFetching).toBe(true)
-    expect(shown.refetch).toBe(remoteRefetch)
+    expect(shown.refetch).toBe(actions.refetch)
   })
 })
 

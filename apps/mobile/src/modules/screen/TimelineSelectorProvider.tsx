@@ -12,7 +12,7 @@ import Animated, {
 import { useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { FakeNativeHeaderTitle } from "@/src/components/layouts/header/FakeNativeHeaderTitle"
 import { DefaultHeaderBackButton } from "@/src/components/layouts/header/NavigationHeader"
-import { NavigationBlurEffectHeader } from "@/src/components/layouts/views/SafeNavigationScrollView"
+import { NavigationBlurEffectHeaderView } from "@/src/components/layouts/views/SafeNavigationScrollView"
 import { gentleSpringPreset } from "@/src/constants/spring"
 import { TIMELINE_VIEW_SELECTOR_HEIGHT } from "@/src/constants/ui"
 import { useIsTabletLayout } from "@/src/lib/responsive"
@@ -26,10 +26,10 @@ import {
 import { TimelineViewSelector } from "@/src/modules/screen/TimelineViewSelector"
 
 import {
-  EntryListContext,
-  useEntries,
   useEntryListContext,
+  useIsFetchingEntries,
   useIsTimelineEntrySource,
+  useSelectedFeed,
   useSelectedFeedTitle,
 } from "./atoms"
 
@@ -47,11 +47,12 @@ export function TimelineHeader() {
   const shouldShowEntrySort = isLoggedIn && unreadOnly && isTimelineSource && (isFeed || isTimeline)
   const isTablet = useIsTabletLayout()
 
-  const { isFetching } = useEntries()
+  const isFetching = useIsFetchingEntries()
   const shouldHideDuplicatedTitle = isTablet && (isTimeline || isSubscriptions)
+  const selectedFeed = useSelectedFeed()
 
   return (
-    <NavigationBlurEffectHeader
+    <NavigationBlurEffectHeaderView
       headerTitle={shouldHideDuplicatedTitle ? undefined : <AnimatedTitle title={viewTitle} />}
       isLoading={(isFeed || isTimeline) && isFetching}
       headerLeft={useMemo(
@@ -62,22 +63,20 @@ export function TimelineHeader() {
         [isTimeline, isSubscriptions],
       )}
       headerRight={useMemo(() => {
-        // The header renders in the screen's header slot, outside this entry list context, so the
-        // actions get it again; otherwise a feed screen marks the whole Home view as read
         return () => (
-          <EntryListContext value={entryListContext}>
-            <View className="flex-row items-center justify-end">
-              <ActionGroup>
-                {shouldShowEntrySort && <EntrySortOrderActionButton />}
-                {isLoggedIn && <UnreadOnlyActionButton />}
-                {isLoggedIn && <MarkAllAsReadActionButton />}
-              </ActionGroup>
-            </View>
-          </EntryListContext>
+          <View className="flex-row items-center justify-end">
+            <ActionGroup>
+              {shouldShowEntrySort && <EntrySortOrderActionButton />}
+              {isLoggedIn && <UnreadOnlyActionButton />}
+              {isLoggedIn && <MarkAllAsReadActionButton />}
+            </ActionGroup>
+          </View>
         )
-      }, [entryListContext, isLoggedIn, shouldShowEntrySort])}
+      }, [isLoggedIn, shouldShowEntrySort])}
       headerHideableBottom={isTimeline || isSubscriptions ? TimelineViewSelector : undefined}
       headerHideableBottomHeight={TIMELINE_VIEW_SELECTOR_HEIGHT}
+      // Each selection, even of the same view, is a new object
+      hideableBottomRevealKey={selectedFeed}
     />
   )
 }

@@ -13,7 +13,6 @@ import { Text } from "@/src/components/ui/typography/Text"
 import { RightCuteFiIcon } from "@/src/icons/right_cute_fi"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
-import { selectFeed } from "@/src/modules/screen/atoms"
 import { FeedScreen } from "@/src/screens/(stack)/feeds/[feedId]/FeedScreen"
 import { useColor } from "@/src/theme/colors"
 
@@ -71,13 +70,7 @@ export const CategoryGrouped = memo(
             <ItemPressable
               itemStyle={ItemPressableStyle.Grouped}
               onPress={() => {
-                selectFeed({
-                  type: "category",
-                  categoryName: category,
-                })
-                navigation.pushControllerView(FeedScreen, {
-                  feedId: category,
-                })
+                navigation.pushControllerView(FeedScreen, { type: "category", id: category })
               }}
               className={cn("h-12 flex-row items-center px-3", {
                 "rounded-t-[10px]": isFirst,

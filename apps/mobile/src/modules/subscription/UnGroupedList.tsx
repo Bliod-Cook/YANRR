@@ -3,20 +3,17 @@ import type { FC } from "react"
 
 import { useHideAllReadSubscriptions } from "@/src/atoms/settings/general"
 
-import { useFeedListSortMethod, useFeedListSortOrder } from "./atoms"
+import { SUBSCRIPTION_SORT } from "./constants"
 import { SubscriptionItem } from "./items/SubscriptionItem"
 
 export const UnGroupedList: FC<{
   subscriptionIds: string[]
   isLastGroup?: boolean
 }> = ({ subscriptionIds, isLastGroup }) => {
-  const sortBy = useFeedListSortMethod()
-  const sortOrder = useFeedListSortOrder()
   const hideAllReadSubscriptions = useHideAllReadSubscriptions()
   const sortedSubscriptionIds = useSortedUngroupedSubscription({
     ids: subscriptionIds,
-    sortBy,
-    sortOrder,
+    ...SUBSCRIPTION_SORT,
     hideAllReadSubscriptions,
   })
 

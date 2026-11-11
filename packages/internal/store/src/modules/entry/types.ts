@@ -40,7 +40,8 @@ export type UseEntriesReturn = {
   isFetchingNextPage: boolean
   hasNextPage: boolean
   error: Error | null
-  fetchedTime?: number
+  /** Marking the list read up to its end covers what was inserted before this */
+  insertedBefore?: number
   queryKey?: (string | number | boolean | string[] | undefined)[]
 }
 

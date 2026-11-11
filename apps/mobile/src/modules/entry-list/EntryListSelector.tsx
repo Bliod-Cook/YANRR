@@ -1,8 +1,7 @@
 import { FeedViewType } from "@follow/constants"
-import type { UseEntriesReturn } from "@follow/store/entry/types"
 import { useWhoami } from "@follow/store/user/hooks"
 import type { FlashListRef } from "@shopify/flash-list"
-import type { RefObject } from "react"
+import type { FC, RefObject } from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { useEffectiveEntrySortOrder, useGeneralSettingKey } from "@/src/atoms/settings/general"
@@ -15,10 +14,11 @@ import { EntryListContentPicture } from "@/src/modules/entry-list/EntryListConte
 import { EntryDetailScreen } from "@/src/screens/(stack)/entries/[entryId]/EntryDetailScreen"
 
 import { useEntryListContext, useIsTimelineEntrySource } from "../screen/atoms"
-import { shouldSuspendMarkReadForScrollReset } from "../screen/scroll-reset"
+import type { TimelineEntries } from "../screen/timeline-entries"
 import { EntryListContentArticle } from "./EntryListContentArticle"
 import { EntryListContentSocial } from "./EntryListContentSocial"
 import { EntryListContentVideo } from "./EntryListContentVideo"
+import type { EntryListContentProps } from "./types"
 
 const NoLoginGuard = ({ children }: { children: React.ReactNode }) => {
   const whoami = useWhoami()
@@ -32,7 +32,7 @@ const NoLoginGuard = ({ children }: { children: React.ReactNode }) => {
 }
 
 type EntryListSelectorProps = {
-  entries: UseEntriesReturn
+  entries: TimelineEntries
   viewId: FeedViewType
   active?: boolean
 }
@@ -42,10 +42,9 @@ function EntryListSelectorImpl({ entries, viewId, active = true }: EntryListSele
   const ref = useRegisterNavigationScrollView<FlashListRef<any>>(active)
   const [resetScrollSignal, setResetScrollSignal] = useState<number>()
   const [appliedResetScrollSignal, setAppliedResetScrollSignal] = useState<number>()
-  const isScrollResetPending = shouldSuspendMarkReadForScrollReset({
-    resetSignal: resetScrollSignal,
-    appliedResetSignal: appliedResetScrollSignal,
-  })
+  // Until the list is back at its top, what it reports visible belongs to the place it leaves
+  const isScrollResetPending =
+    resetScrollSignal !== undefined && resetScrollSignal !== appliedResetScrollSignal
   const requestScrollToTop = useCallback(() => {
     setResetScrollSignal((signal) => (signal ?? 0) + 1)
   }, [])
@@ -55,11 +54,7 @@ function EntryListSelectorImpl({ entries, viewId, active = true }: EntryListSele
     )
   }, [])
 
-  let ContentComponent:
-    | typeof EntryListContentSocial
-    | typeof EntryListContentPicture
-    | typeof EntryListContentVideo
-    | typeof EntryListContentArticle = EntryListContentArticle
+  let ContentComponent: FC<EntryListContentProps> = EntryListContentArticle
   switch (viewId) {
     case FeedViewType.SocialMedia: {
       ContentComponent = EntryListContentSocial

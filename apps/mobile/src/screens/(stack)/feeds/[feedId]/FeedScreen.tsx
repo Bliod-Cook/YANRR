@@ -13,14 +13,16 @@ import { useNavigation } from "@/src/lib/navigation/hooks"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
 import { EntryListSelector } from "@/src/modules/entry-list/EntryListSelector"
 import { useFloatingPlayerBarInset } from "@/src/modules/player/hooks"
+import type { SelectedFeed } from "@/src/modules/screen/atoms"
 import { EntryListContext, useEntries, useSelectedView } from "@/src/modules/screen/atoms"
 import { TimelineHeader } from "@/src/modules/screen/TimelineSelectorProvider"
 import { FollowScreen } from "@/src/screens/(modal)/FollowScreen"
 import { accentColor } from "@/src/theme/colors"
 
-export const FeedScreen: NavigationControllerView<{
-  feedId: string
-}> = ({ feedId: feedIdentifier }) => {
+export const FeedScreen: NavigationControllerView<SelectedFeed> = ({
+  type,
+  id: feedIdentifier,
+}) => {
   const insets = useSafeAreaInsets()
   const floatingPlayerBarInset = useFloatingPlayerBarInset()
   const navigation = useNavigation()
@@ -31,8 +33,13 @@ export const FeedScreen: NavigationControllerView<{
   const subscriptionView = useSubscriptionById(feedIdentifier)?.view
   const { t } = useTranslation("common")
   const entryListContextValue = useMemo(
-    () => ({ type: "feed" as const, isPreview, view: subscriptionView }),
-    [isPreview, subscriptionView],
+    () => ({
+      type: "feed" as const,
+      selectedFeed: { type, id: feedIdentifier },
+      isPreview,
+      view: subscriptionView,
+    }),
+    [type, feedIdentifier, isPreview, subscriptionView],
   )
 
   return (

@@ -14,7 +14,6 @@ import { Text } from "@/src/components/ui/typography/Text"
 import { InboxCuteFiIcon } from "@/src/icons/inbox_cute_fi"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
-import { selectFeed } from "@/src/modules/screen/atoms"
 import { FeedScreen } from "@/src/screens/(stack)/feeds/[feedId]/FeedScreen"
 
 import { InboxContextMenu } from "../../context-menu/inbox"
@@ -47,13 +46,7 @@ export const InboxItem = memo(({ id, isFirst, isLast }: SubscriptionItemBaseProp
           itemStyle={ItemPressableStyle.Grouped}
           className="h-12 flex-row items-center px-3"
           onPress={() => {
-            selectFeed({
-              type: "inbox",
-              inboxId: id,
-            })
-            navigation.pushControllerView(FeedScreen, {
-              feedId: id,
-            })
+            navigation.pushControllerView(FeedScreen, { type: "inbox", id })
           }}
         >
           <View className="ml-0.5 overflow-hidden rounded">

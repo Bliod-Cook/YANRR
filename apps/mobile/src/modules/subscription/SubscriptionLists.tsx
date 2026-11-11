@@ -30,12 +30,11 @@ import { Text } from "@/src/components/ui/typography/Text"
 import { StarCuteFiIcon } from "@/src/icons/star_cute_fi"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
-import { selectFeed } from "@/src/modules/screen/atoms"
 import { TimelineSelectorList } from "@/src/modules/screen/TimelineSelectorList"
 import { FeedScreen } from "@/src/screens/(stack)/feeds/[feedId]/FeedScreen"
 
-import { useFeedListSortMethod, useFeedListSortOrder } from "./atoms"
 import { CategoryGrouped } from "./CategoryGrouped"
+import { SUBSCRIPTION_SORT } from "./constants"
 import { InboxItem } from "./items/InboxItem"
 import { SubscriptionItem } from "./items/SubscriptionItem"
 
@@ -71,19 +70,15 @@ const SubscriptionListImpl = ({
     view,
     autoGroup,
   })
-  const sortBy = useFeedListSortMethod()
-  const sortOrder = useFeedListSortOrder()
   const sortedGrouped = useSortedGroupedSubscription({
     view,
     grouped,
-    sortBy,
-    sortOrder,
+    ...SUBSCRIPTION_SORT,
     hideAllReadSubscriptions,
   })
   const sortedUnGrouped = useSortedUngroupedSubscription({
     ids: unGrouped,
-    sortBy,
-    sortOrder,
+    ...SUBSCRIPTION_SORT,
     hideAllReadSubscriptions,
   })
   const data = useMemo(
@@ -229,13 +224,7 @@ const StarItem = () => {
       <ItemPressable
         itemStyle={ItemPressableStyle.Grouped}
         onPress={() => {
-          selectFeed({
-            type: "feed",
-            feedId: FEED_COLLECTION_LIST,
-          })
-          navigation.pushControllerView(FeedScreen, {
-            feedId: FEED_COLLECTION_LIST,
-          })
+          navigation.pushControllerView(FeedScreen, { type: "feed", id: FEED_COLLECTION_LIST })
         }}
         className="h-12 w-full flex-row items-center px-3"
       >

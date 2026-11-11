@@ -1,138 +1,94 @@
 import { useScrollMarkReadGracePeriod } from "@follow/hooks/shared"
 import { debouncedFetchEntryContentByStream } from "@follow/store/entry/store"
+import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { useIsLoggedIn } from "@follow/store/user/hooks"
 import type { ViewToken } from "@shopify/flash-list"
-import { useCallback, useEffect, useInsertionEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useInsertionEffect, useMemo, useRef, useState } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 
-import { useGeneralSettingKey } from "@/src/atoms/settings/general"
+import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 
-import {
-  getPendingMarkReadItems,
-  shouldCollectViewableItemsForMarkRead,
-} from "./viewable-mark-read"
+import type { TimelineEntries } from "../screen/timeline-entries"
+import { collectEntriesScrolledPast } from "./scrolled-past"
 
-const defaultIdExtractor = (item: ViewToken<string>) => item.key
-export function useOnViewableItemsChanged({
-  disabled,
-  idExtractor = defaultIdExtractor,
-  onScroll: onScrollProp,
-  refreshing,
+/**
+ * What a list of entries does with the entries on screen: it loads their content and
+ * translation, and marks them read once shown or once scrolled past, as the settings ask.
+ */
+export function useEntryListViewability({
+  entries,
+  active,
+  suspendMarkRead,
 }: {
-  disabled?: boolean
-  idExtractor?: (item: ViewToken<string>) => string
-  onScroll?: (e: NativeSyntheticEvent<NativeScrollEvent>) => void
-  refreshing?: boolean
-} = {}) {
-  const orientation = useRef<"down" | "up">("down")
-  const lastOffset = useRef(0)
+  entries: TimelineEntries
+  active?: boolean
+  suspendMarkRead?: boolean
+}) {
+  const { entriesIds, isFetching, isFetchingNextPage } = entries
   const isLoggedIn = useIsLoggedIn()
-
   const markAsReadWhenScrolling = useGeneralSettingKey("scrollMarkUnread")
   const markAsReadWhenRendering = useGeneralSettingKey("renderMarkUnread")
-  const pauseScrollMarkRead = useScrollMarkReadGracePeriod(refreshing ?? false)
-  const [viewableItems, setViewableItems] = useState<ViewToken<string>[]>([])
-  const [lastViewableItems, setLastViewableItems] = useState<ViewToken<string>[] | null>()
-  const [lastRemovedItems, setLastRemovedItems] = useState<ViewToken<string>[] | null>(null)
+  // Loading the next page only appends entries, so the ones scrolled past meanwhile still count
+  const isRefreshing = isFetching && !isFetchingNextPage
+  const disabled = active === false || isRefreshing || !!suspendMarkRead
+  // The list moves under the reader while it changes, as when entries arrive at its head, so
+  // what it reports visible right after a change does not count
+  const paused = useScrollMarkReadGracePeriod(isRefreshing, undefined, entriesIds)
 
-  const [stableIdExtractor] = useState(() => idExtractor)
+  const [visibleIds, setVisibleIds] = useState<string[]>([])
+  const seenRef = useRef<ReadonlySet<string>>(new Set())
+  const scrollRef = useRef({ offset: 0, isScrollingDown: false })
 
-  const onViewableItemsChanged: (info: {
-    viewableItems: ViewToken<string>[]
-    changed: ViewToken<string>[]
-  }) => void = useNonReactiveCallback(({ viewableItems, changed }) => {
-    setViewableItems(viewableItems)
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offset = e.nativeEvent.contentOffset.y
+    scrollRef.current = { offset, isScrollingDown: offset > scrollRef.current.offset }
+  }, [])
 
-    debouncedFetchEntryContentByStream(viewableItems.map((item) => stableIdExtractor(item)))
-    const removed = changed.filter((item) => !item.isViewable)
+  const onViewableItemsChanged = useNonReactiveCallback(
+    ({ viewableItems }: { viewableItems: ViewToken<string>[] }) => {
+      const ids = viewableItems.map((item) => item.key)
+      setVisibleIds(ids)
+      debouncedFetchEntryContentByStream(ids)
 
-    if (disabled) {
-      setLastRemovedItems(null)
-      setLastViewableItems(null)
-      return
-    }
-
-    // Only when the scroll direction is down and the current offset is a positive number, is it marked as read.
-    // This can avoid misjudgment during the rebound of the pull-to-refresh (because the offset will change from negative to zero during the rebound).
-    if (
-      shouldCollectViewableItemsForMarkRead({
-        disabled,
-        isScrollingDown: orientation.current === "down",
-        offset: lastOffset.current,
-      })
-    ) {
-      setLastViewableItems(viewableItems)
-      if (pauseScrollMarkRead) {
-        setLastRemovedItems(null)
+      if (disabled) {
+        seenRef.current = new Set()
         return
       }
+      if (paused || !isLoggedIn) return
 
-      if (removed.length > 0) {
-        setLastRemovedItems((prev) => {
-          if (prev) {
-            return prev.concat(removed)
-          } else {
-            return removed
-          }
-        })
+      // Scrolling down past the top, which leaves out the rebound of a pull to refresh
+      const { offset, isScrollingDown } = scrollRef.current
+      const isReadingOn = isScrollingDown && offset > 0
+      if (markAsReadWhenRendering && isReadingOn) {
+        void unreadSyncService.markEntriesAsRead(ids)
       }
-    } else {
-      setLastRemovedItems(null)
-      setLastViewableItems(null)
-    }
+
+      const { scrolledPast, seen } = collectEntriesScrolledPast({
+        seen: seenRef.current,
+        visible: ids,
+        entryIds: entriesIds,
+        // No entry on screen while reading on: only the end of the list is left
+        pastEnd: isReadingOn,
+      })
+      seenRef.current = seen
+      if (markAsReadWhenScrolling && scrolledPast.length > 0) {
+        void unreadSyncService.markEntriesAsRead(scrolledPast)
+      }
+    },
+  )
+
+  const translation = useGeneralSettingKey("translation")
+  const translationMode = useGeneralSettingKey("translationMode")
+  const actionLanguage = useActionLanguage()
+  usePrefetchEntryTranslation({
+    entryIds: active === false ? [] : visibleIds,
+    language: actionLanguage,
+    enabled: translation,
+    mode: translationMode,
   })
 
-  useEffect(() => {
-    if (!disabled && !pauseScrollMarkRead) {
-      return
-    }
-
-    setLastRemovedItems(null)
-  }, [disabled, pauseScrollMarkRead])
-
-  useEffect(() => {
-    if (disabled) return
-
-    if (isLoggedIn && markAsReadWhenScrolling && !pauseScrollMarkRead && lastRemovedItems) {
-      const entryIds = lastRemovedItems.map((item) => stableIdExtractor(item))
-      const entryIdSet = new Set(entryIds)
-      void unreadSyncService.queueEntriesAsRead(entryIds).then(() => {
-        setLastRemovedItems((prev) => getPendingMarkReadItems(prev, entryIdSet, stableIdExtractor))
-      })
-    }
-
-    if (isLoggedIn && markAsReadWhenRendering && lastViewableItems) {
-      void unreadSyncService.queueEntriesAsRead(
-        lastViewableItems.map((item) => stableIdExtractor(item)),
-      )
-    }
-  }, [
-    disabled,
-    isLoggedIn,
-    lastRemovedItems,
-    lastViewableItems,
-    markAsReadWhenRendering,
-    markAsReadWhenScrolling,
-    pauseScrollMarkRead,
-    stableIdExtractor,
-  ])
-
-  const onScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const currentOffset = e.nativeEvent.contentOffset.y
-      const currentOrientation = currentOffset > lastOffset.current ? "down" : "up"
-      orientation.current = currentOrientation
-      lastOffset.current = currentOffset
-      onScrollProp?.(e)
-    },
-    [onScrollProp],
-  )
-
-  return useMemo(
-    () => ({ onViewableItemsChanged, onScroll, viewableItems }),
-    [onScroll, onViewableItemsChanged, viewableItems],
-  )
+  return useMemo(() => ({ onViewableItemsChanged, onScroll }), [onScroll, onViewableItemsChanged])
 }
 
 function useNonReactiveCallback<T extends (...args: any[]) => any>(fn: T): T {

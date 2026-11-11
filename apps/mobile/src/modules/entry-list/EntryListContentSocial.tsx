@@ -1,28 +1,16 @@
-import type { FeedViewType } from "@follow/constants"
-import { shouldRenderScrollMarkReadEndSpacer } from "@follow/shared/scroll-mark-read"
-import type { UseEntriesReturn } from "@follow/store/entry/types"
-import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
-import type { FlashListRef, ListRenderItemInfo } from "@shopify/flash-list"
-import type { ElementRef } from "react"
-import { useCallback, useImperativeHandle, useMemo, useRef } from "react"
+import type { ListRenderItemInfo } from "@shopify/flash-list"
+import { useCallback, useMemo } from "react"
 import { View } from "react-native"
 
-import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { Skeleton, SkeletonPulse } from "@/src/components/ui/skeleton/Skeleton"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
 
-import { getResetScrollSignalForContent } from "../screen/scroll-reset"
 import { TimelineSelectorList } from "../screen/TimelineSelectorList"
-import { EntryListEndScrollSpacer } from "./EntryListEndScrollSpacer"
 import { EntryListFooter } from "./EntryListFooter"
-import { useOnViewableItemsChanged } from "./hooks"
+import { useEntryListViewability } from "./hooks"
 import { ItemSeparatorFullWidth } from "./ItemSeparator"
-import {
-  shouldAnimateLoadingPlaceholder,
-  shouldAnimateNextPagePlaceholder,
-} from "./placeholder-animation"
 import { EntrySocialItem } from "./templates/EntrySocialItem"
-import type { EntryExtraData } from "./types"
+import type { EntryExtraData, EntryListContentProps } from "./types"
 
 // The same centred column as the Articles view on iPad, so posts don't run the full screen width
 const READABLE_MAX_WIDTH = 860
@@ -37,36 +25,30 @@ const ReadableItemSeparator = () => {
   )
 }
 
+const PLACEHOLDER_IDS = Array.from({ length: 5 }).map((_, index) => `skeleton-${index}`)
+
 export const EntryListContentSocial = ({
-  ref: forwardRef,
+  ref,
   entries,
   active,
   onResetScrollSignalConsumed,
   resetScrollSignal,
   suspendMarkRead,
-}: { entries: UseEntriesReturn; active?: boolean; view: FeedViewType } & {
-  ref?: React.Ref<ElementRef<typeof TimelineSelectorList> | null>
-  onResetScrollSignalConsumed?: (signal: number) => void
-  resetScrollSignal?: number
-  suspendMarkRead?: boolean
-}) => {
-  const entryIds = entries.entriesIds
+}: EntryListContentProps) => {
   const {
-    error: entriesError,
+    entriesIds: entryIds,
+    error,
     fetchNextPage,
-    isFetching,
     isFetchingNextPage,
     refetch,
     isRefetching,
     hasNextPage,
     isReady,
-    fetchedTime,
   } = entries
   const extraData: EntryExtraData = useMemo(() => ({ entryIds }), [entryIds])
   const readableItemStyle = useReadableContainerStyle(READABLE_MAX_WIDTH, READABLE_GUTTER)
+  const viewability = useEntryListViewability({ entries, active, suspendMarkRead })
 
-  const ref = useRef<FlashListRef<any>>(null)
-  useImperativeHandle(forwardRef, () => ref.current!)
   const renderItem = useCallback(
     ({ item: id, extraData }: ListRenderItemInfo<string>) => (
       <View style={readableItemStyle}>
@@ -75,30 +57,8 @@ export const EntryListContentSocial = ({
     ),
     [readableItemStyle],
   )
-
-  const hasEndSpacer = shouldRenderScrollMarkReadEndSpacer({
-    entryCount: entryIds?.length ?? 0,
-    hasNextPage,
-  })
-  const animateNextPagePlaceholder = shouldAnimateNextPagePlaceholder({
-    active,
-    isFetchingNextPage,
-  })
-  const ListFooterComponent = useMemo(
-    () =>
-      hasNextPage ? (
-        <View style={readableItemStyle}>
-          <EntryItemSkeleton animated={animateNextPagePlaceholder} />
-        </View>
-      ) : (
-        <View>
-          <EntryListFooter fetchedTime={fetchedTime} />
-          {hasEndSpacer && <EntryListEndScrollSpacer />}
-        </View>
-      ),
-    [hasEndSpacer, hasNextPage, fetchedTime, animateNextPagePlaceholder, readableItemStyle],
-  )
-  const animateLoadingPlaceholder = shouldAnimateLoadingPlaceholder({ active })
+  // A page next to the shown one in the pager does not load, so its placeholders hold still
+  const animateLoadingPlaceholder = active !== false
   const renderLoadingSkeleton = useCallback(
     () => (
       <View style={readableItemStyle}>
@@ -108,43 +68,18 @@ export const EntryListContentSocial = ({
     [animateLoadingPlaceholder, readableItemStyle],
   )
 
-  const { onViewableItemsChanged, onScroll, viewableItems } = useOnViewableItemsChanged({
-    // Loading the next page only appends entries, so the ones scrolled past meanwhile still count
-    disabled: active === false || (isFetching && !isFetchingNextPage) || suspendMarkRead,
-    refreshing: isFetching && !isFetchingNextPage,
-  })
-
-  const translation = useGeneralSettingKey("translation")
-  const translationMode = useGeneralSettingKey("translationMode")
-  const actionLanguage = useActionLanguage()
-  usePrefetchEntryTranslation({
-    entryIds: active ? viewableItems.map((item) => item.key) : [],
-    language: actionLanguage,
-    enabled: translation,
-    mode: translationMode,
-  })
-
-  const contentResetScrollSignal = getResetScrollSignalForContent({
-    entryCount: entryIds?.length ?? 0,
-    hasScrollableSkeleton: true,
-    isReady,
-    resetScrollSignal,
-  })
-
   // Show loading skeleton when entries are not ready and no data yet
-  if (!isReady && (!entryIds || entryIds.length === 0)) {
+  if (!isReady && entryIds.length === 0) {
     return (
       <TimelineSelectorList
         // FlashList only listens for viewable items if it mounts with onViewableItemsChanged, so
         // the entries list must mount on its own instead of taking over this one, or scrolling
-        // it never marks entries read
+        // it never marks entries read. A pending scroll reset waits for the entries list too.
         key="placeholder"
         onRefresh={() => {}}
         isRefetching={false}
-        onResetScrollSignalConsumed={onResetScrollSignalConsumed}
-        resetScrollSignal={contentResetScrollSignal}
-        data={Array.from({ length: 5 }).map((_, index) => `skeleton-${index}`)}
-        keyExtractor={(id) => id}
+        data={PLACEHOLDER_IDS}
+        keyExtractor={defaultKeyExtractor}
         renderItem={renderLoadingSkeleton}
         ItemSeparatorComponent={ReadableItemSeparator}
       />
@@ -154,25 +89,34 @@ export const EntryListContentSocial = ({
   return (
     <TimelineSelectorList
       ref={ref}
-      onRefresh={() => {
-        refetch()
-      }}
+      onRefresh={refetch}
       isRefetching={isRefetching}
-      emptyError={entriesError}
+      emptyError={error}
       onResetScrollSignalConsumed={onResetScrollSignalConsumed}
-      resetScrollSignal={contentResetScrollSignal}
+      resetScrollSignal={resetScrollSignal}
       data={entryIds}
       extraData={extraData}
-      keyExtractor={(id) => id}
+      keyExtractor={defaultKeyExtractor}
       renderItem={renderItem}
-      onEndReached={fetchNextPage}
-      onViewableItemsChanged={onViewableItemsChanged}
-      onScroll={onScroll}
+      onEndReached={hasNextPage ? fetchNextPage : undefined}
+      {...viewability}
       ItemSeparatorComponent={ReadableItemSeparator}
-      ListFooterComponent={ListFooterComponent}
+      ListFooterComponent={
+        hasNextPage ? (
+          <View style={readableItemStyle}>
+            {/* Kept far below the screen as long as there is a next page, so it moves only
+                while that page loads */}
+            <EntryItemSkeleton animated={active !== false && isFetchingNextPage} />
+          </View>
+        ) : (
+          <EntryListFooter entries={entries} separator />
+        )
+      }
     />
   )
 }
+
+const defaultKeyExtractor = (id: string) => id
 
 export function EntryItemSkeleton({ animated }: { animated?: boolean }) {
   return (

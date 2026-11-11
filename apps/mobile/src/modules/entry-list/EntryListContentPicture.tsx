@@ -1,30 +1,17 @@
-import type { FeedViewType } from "@follow/constants"
 import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
-import { shouldRenderScrollMarkReadEndSpacer } from "@follow/shared/scroll-mark-read"
-import type { UseEntriesReturn } from "@follow/store/entry/types"
-import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
-import type { FlashListProps, FlashListRef } from "@shopify/flash-list"
-import type { ElementRef } from "react"
-import { useImperativeHandle, useRef } from "react"
 import { StyleSheet, View } from "react-native"
 
-import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { useBottomTabBarHeight } from "@/src/components/layouts/tabbar/hooks"
 import { PlatformActivityIndicator } from "@/src/components/ui/loading/PlatformActivityIndicator"
 import { Skeleton, SkeletonPulse } from "@/src/components/ui/skeleton/Skeleton"
 import { useIsTabletLayout } from "@/src/lib/responsive"
 import { useHeaderHeight } from "@/src/modules/screen/hooks/useHeaderHeight"
 
-import { TimelineSelectorMasonryList } from "../screen/TimelineSelectorList"
-import { EntryListEndScrollSpacer } from "./EntryListEndScrollSpacer"
-import { GridEntryListFooter } from "./EntryListFooter"
-import { useOnViewableItemsChanged } from "./hooks"
-import {
-  shouldAnimateLoadingPlaceholder,
-  shouldAnimateNextPagePlaceholder,
-} from "./placeholder-animation"
-// import type { MasonryItem } from "./templates/EntryGridItem"
+import { TimelineSelectorList } from "../screen/TimelineSelectorList"
+import { EntryListFooter } from "./EntryListFooter"
+import { useEntryListViewability } from "./hooks"
 import { EntryPictureItem } from "./templates/EntryPictureItem"
+import type { EntryListContentProps } from "./types"
 
 const PICTURE_SKELETON_COLUMN_KEYS = [
   "picture-skeleton-1",
@@ -34,68 +21,37 @@ const PICTURE_SKELETON_COLUMN_KEYS = [
 ] as const
 
 export const EntryListContentPicture = ({
-  ref: forwardRef,
+  ref,
   entries,
   active,
-  view,
   onResetScrollSignalConsumed,
   resetScrollSignal,
   suspendMarkRead,
-  ...rest
-}: { entries: UseEntriesReturn; active?: boolean; view: FeedViewType } & Omit<
-  FlashListProps<string>,
-  "data" | "renderItem"
-> & {
-    ref?: React.Ref<ElementRef<typeof TimelineSelectorMasonryList> | null>
-    onResetScrollSignalConsumed?: (signal: number) => void
-    resetScrollSignal?: number
-    suspendMarkRead?: boolean
-  }) => {
-  const entryIds = entries.entriesIds
-  const ref = useRef<FlashListRef<any>>(null)
-  const isTablet = useIsTabletLayout()
-
-  useImperativeHandle(forwardRef, () => ref.current!)
+}: EntryListContentProps) => {
   const {
-    error: entriesError,
+    entriesIds: entryIds,
+    error,
     fetchNextPage,
     refetch,
     isRefetching,
     hasNextPage,
-    isFetching,
     isFetchingNextPage,
     isReady,
-    fetchedTime,
   } = entries
-  const { onViewableItemsChanged, onScroll, viewableItems } = useOnViewableItemsChanged({
-    // Loading the next page only appends entries, so the ones scrolled past meanwhile still count
-    disabled: active === false || (isFetching && !isFetchingNextPage) || suspendMarkRead,
-    refreshing: isFetching && !isFetchingNextPage,
-  })
-  const translation = useGeneralSettingKey("translation")
-  const translationMode = useGeneralSettingKey("translationMode")
-  const actionLanguage = useActionLanguage()
-  usePrefetchEntryTranslation({
-    entryIds: active ? viewableItems.map((item) => item.key) : [],
-    language: actionLanguage,
-    enabled: translation,
-    mode: translationMode,
-  })
+  const isTablet = useIsTabletLayout()
+  const viewability = useEntryListViewability({ entries, active, suspendMarkRead })
 
   const renderItem = useTypeScriptHappyCallback(({ item }: { item: string }) => {
     return <EntryPictureItem id={item} />
   }, [])
-  const hasEndSpacer = shouldRenderScrollMarkReadEndSpacer({
-    entryCount: entryIds?.length ?? 0,
-    hasNextPage,
-  })
 
   const headerHeight = useHeaderHeight()
   const tabBarHeight = useBottomTabBarHeight()
 
   // Show loading skeleton when entries are not ready and no data yet
-  if (!isReady && (!entryIds || entryIds.length === 0)) {
-    const animateLoadingPlaceholder = shouldAnimateLoadingPlaceholder({ active })
+  if (!isReady && entryIds.length === 0) {
+    // A page next to the shown one in the pager does not load, so its placeholders hold still
+    const animateLoadingPlaceholder = active !== false
     return (
       <View
         className="flex-1 px-2"
@@ -126,37 +82,31 @@ export const EntryListContentPicture = ({
   }
 
   return (
-    <TimelineSelectorMasonryList
+    <TimelineSelectorList
       ref={ref}
+      masonry
+      onRefresh={refetch}
       isRefetching={isRefetching}
-      emptyError={entriesError}
+      emptyError={error}
       onResetScrollSignalConsumed={onResetScrollSignalConsumed}
       resetScrollSignal={resetScrollSignal}
       data={entryIds}
       renderItem={renderItem}
       keyExtractor={defaultKeyExtractor}
-      onViewableItemsChanged={onViewableItemsChanged}
-      onScroll={onScroll}
-      onEndReached={fetchNextPage}
+      onEndReached={hasNextPage ? fetchNextPage : undefined}
+      {...viewability}
       numColumns={isTablet ? 3 : 2}
       contentContainerStyle={isTablet ? styles.tabletContentContainer : styles.contentContainer}
       ListFooterComponent={
         hasNextPage ? (
           <View className="h-20 items-center justify-center">
             {/* The list keeps the footer far below the screen, so it spins only while loading */}
-            {shouldAnimateNextPagePlaceholder({ active, isFetchingNextPage }) && (
-              <PlatformActivityIndicator />
-            )}
+            {active !== false && isFetchingNextPage && <PlatformActivityIndicator />}
           </View>
         ) : (
-          <View>
-            <GridEntryListFooter fetchedTime={fetchedTime} />
-            {hasEndSpacer && <EntryListEndScrollSpacer />}
-          </View>
+          <EntryListFooter entries={entries} />
         )
       }
-      {...rest}
-      onRefresh={refetch}
     />
   )
 }

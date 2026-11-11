@@ -1,103 +1,39 @@
-import type { FeedViewType } from "@follow/constants"
 import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
-import { shouldRenderScrollMarkReadEndSpacer } from "@follow/shared/scroll-mark-read"
-import type { UseEntriesReturn } from "@follow/store/entry/types"
-import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
-import type { FlashListProps, FlashListRef } from "@shopify/flash-list"
-import type { ElementRef } from "react"
-import { useImperativeHandle, useMemo, useRef } from "react"
 import { StyleSheet, View } from "react-native"
 
-import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { useBottomTabBarHeight } from "@/src/components/layouts/tabbar/hooks"
 import { Skeleton, SkeletonPulse } from "@/src/components/ui/skeleton/Skeleton"
 import { useIsTabletLayout } from "@/src/lib/responsive"
 import { useHeaderHeight } from "@/src/modules/screen/hooks/useHeaderHeight"
 
-import { TimelineSelectorMasonryList } from "../screen/TimelineSelectorList"
-import { EntryListEndScrollSpacer } from "./EntryListEndScrollSpacer"
-import { GridEntryListFooter } from "./EntryListFooter"
-import { useOnViewableItemsChanged } from "./hooks"
-import {
-  shouldAnimateLoadingPlaceholder,
-  shouldAnimateNextPagePlaceholder,
-} from "./placeholder-animation"
+import { TimelineSelectorList } from "../screen/TimelineSelectorList"
+import { EntryListFooter } from "./EntryListFooter"
+import { useEntryListViewability } from "./hooks"
 import { EntryVideoItem } from "./templates/EntryVideoItem"
+import type { EntryListContentProps } from "./types"
 
 const VIDEO_SKELETON_KEYS = ["video-skeleton-1", "video-skeleton-2", "video-skeleton-3"] as const
 
 export const EntryListContentVideo = ({
-  ref: forwardRef,
+  ref,
   entries,
   active,
-  view,
   onResetScrollSignalConsumed,
   resetScrollSignal,
   suspendMarkRead,
-  ...rest
-}: { entries: UseEntriesReturn; active?: boolean; view: FeedViewType } & Omit<
-  FlashListProps<string>,
-  "data" | "renderItem"
-> & {
-    ref?: React.Ref<ElementRef<typeof TimelineSelectorMasonryList> | null>
-    onResetScrollSignalConsumed?: (signal: number) => void
-    resetScrollSignal?: number
-    suspendMarkRead?: boolean
-  }) => {
-  const entryIds = entries.entriesIds
-  const ref = useRef<FlashListRef<any>>(null)
-  useImperativeHandle(forwardRef, () => ref.current!)
-  const isTablet = useIsTabletLayout()
+}: EntryListContentProps) => {
   const {
-    error: entriesError,
+    entriesIds: entryIds,
+    error,
     fetchNextPage,
     refetch,
     isRefetching,
-    isFetching,
     isFetchingNextPage,
     hasNextPage,
     isReady,
-    fetchedTime,
   } = entries
-  const { onViewableItemsChanged, onScroll, viewableItems } = useOnViewableItemsChanged({
-    // Loading the next page only appends entries, so the ones scrolled past meanwhile still count
-    disabled: active === false || (isFetching && !isFetchingNextPage) || suspendMarkRead,
-    refreshing: isFetching && !isFetchingNextPage,
-  })
-
-  const translation = useGeneralSettingKey("translation")
-  const translationMode = useGeneralSettingKey("translationMode")
-  const actionLanguage = useActionLanguage()
-  usePrefetchEntryTranslation({
-    entryIds: active ? viewableItems.map((item) => item.key) : [],
-    language: actionLanguage,
-    enabled: translation,
-    mode: translationMode,
-  })
-
-  const hasEndSpacer = shouldRenderScrollMarkReadEndSpacer({
-    entryCount: entryIds?.length ?? 0,
-    hasNextPage,
-  })
-  const animateNextPagePlaceholder = shouldAnimateNextPagePlaceholder({
-    active,
-    isFetchingNextPage,
-  })
-  const ListFooterComponent = useMemo(
-    () =>
-      hasNextPage ? (
-        <View className="flex flex-row justify-between">
-          <EntryVideoItemSkeleton animated={animateNextPagePlaceholder} />
-          <EntryVideoItemSkeleton animated={animateNextPagePlaceholder} />
-        </View>
-      ) : (
-        <View>
-          <GridEntryListFooter fetchedTime={fetchedTime} />
-          {hasEndSpacer && <EntryListEndScrollSpacer />}
-        </View>
-      ),
-    [animateNextPagePlaceholder, hasEndSpacer, hasNextPage, fetchedTime],
-  )
+  const isTablet = useIsTabletLayout()
+  const viewability = useEntryListViewability({ entries, active, suspendMarkRead })
 
   const renderItem = useTypeScriptHappyCallback(({ item }: { item: string }) => {
     return <EntryVideoItem id={item} />
@@ -107,8 +43,9 @@ export const EntryListContentVideo = ({
   const tabBarHeight = useBottomTabBarHeight()
 
   // Show loading skeleton when entries are not ready and no data yet
-  if (!isReady && (!entryIds || entryIds.length === 0)) {
-    const animateLoadingPlaceholder = shouldAnimateLoadingPlaceholder({ active })
+  if (!isReady && entryIds.length === 0) {
+    // A page next to the shown one in the pager does not load, so its placeholders hold still
+    const animateLoadingPlaceholder = active !== false
     return (
       <View
         className="flex-1 px-2"
@@ -130,24 +67,35 @@ export const EntryListContentVideo = ({
     )
   }
 
+  // Kept far below the screen as long as there is a next page, so it moves only while that
+  // page loads
+  const animateNextPagePlaceholder = active !== false && isFetchingNextPage
   return (
-    <TimelineSelectorMasonryList
+    <TimelineSelectorList
       ref={ref}
+      masonry
+      onRefresh={refetch}
       isRefetching={isRefetching}
-      emptyError={entriesError}
+      emptyError={error}
       onResetScrollSignalConsumed={onResetScrollSignalConsumed}
       resetScrollSignal={resetScrollSignal}
       data={entryIds}
       renderItem={renderItem}
       keyExtractor={defaultKeyExtractor}
-      onViewableItemsChanged={onViewableItemsChanged}
-      onScroll={onScroll}
-      onEndReached={fetchNextPage}
+      onEndReached={hasNextPage ? fetchNextPage : undefined}
+      {...viewability}
       numColumns={isTablet ? 3 : 2}
-      ListFooterComponent={ListFooterComponent}
-      {...rest}
-      onRefresh={refetch}
       contentContainerStyle={isTablet ? styles.tabletContentContainer : styles.contentContainer}
+      ListFooterComponent={
+        hasNextPage ? (
+          <View className="flex flex-row justify-between">
+            <EntryVideoItemSkeleton animated={animateNextPagePlaceholder} />
+            <EntryVideoItemSkeleton animated={animateNextPagePlaceholder} />
+          </View>
+        ) : (
+          <EntryListFooter entries={entries} />
+        )
+      }
     />
   )
 }

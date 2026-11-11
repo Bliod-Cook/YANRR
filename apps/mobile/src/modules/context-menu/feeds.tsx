@@ -10,7 +10,7 @@ import dayjs from "dayjs"
 import { setStringAsync } from "expo-clipboard"
 import { t } from "i18next"
 import type { CSSProperties, FC, PropsWithChildren } from "react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import type { ListRenderItemInfo } from "react-native"
 import { Alert, FlatList, View } from "react-native"
@@ -30,7 +30,7 @@ import { FeedScreen } from "@/src/screens/(stack)/feeds/[feedId]/FeedScreen"
 
 import { ItemSeparator } from "../entry-list/ItemSeparator"
 import { EntryNormalItem } from "../entry-list/templates/EntryNormalItem"
-import { getSelectedView, selectFeed, useSelectedView } from "../screen/atoms"
+import { useSelectedView } from "../screen/atoms"
 
 export const SubscriptionFeedItemContextMenu: FC<
   PropsWithChildren & {
@@ -73,11 +73,7 @@ const generateSubscriptionContextMenu = (
         <ContextMenu.Preview
           size="STRETCH"
           onPress={() => {
-            // FeedScreen shows the selected feed, not the one it is pushed with
-            selectFeed({ type: "feed", feedId: id })
-            navigation.pushControllerView(FeedScreen, {
-              feedId: id,
-            })
+            navigation.pushControllerView(FeedScreen, { type: "feed", id })
           }}
         >
           {() => <PreviewFeeds id={id} view={view!} />}
@@ -131,10 +127,12 @@ const generateSubscriptionContextMenu = (
                 if (!subscription) return
 
                 // add to category
-                subscriptionSyncService.edit({
-                  ...subscription,
-                  category,
-                })
+                subscriptionSyncService
+                  .edit({
+                    ...subscription,
+                    category,
+                  })
+                  .catch(toastFetchError)
               }
               return (
                 <ContextMenu.Item key={`SubContent/${category}`} onSelect={onSelect}>
@@ -158,10 +156,12 @@ const generateSubscriptionContextMenu = (
                   // and an older copy would write those fields back.
                   const subscription = getSubscriptionById(id)
                   if (!subscription) return
-                  subscriptionSyncService.edit({
-                    ...subscription,
-                    category: text,
-                  })
+                  subscriptionSyncService
+                    .edit({
+                      ...subscription,
+                      category: text,
+                    })
+                    .catch(toastFetchError)
                 },
               )
             }}
@@ -235,13 +235,8 @@ const generateSubscriptionContextMenu = (
             {
               text: t("operation.unfollow"),
               style: "destructive",
-              onPress: async () => {
-                try {
-                  await subscriptionSyncService.unsubscribe(id)
-                } catch (error) {
-                  // The store puts the feed back, which alone would not say why
-                  toastFetchError(error instanceof Error ? error : new Error(String(error)))
-                }
+              onPress: () => {
+                subscriptionSyncService.unsubscribe(id).catch(toastFetchError)
               },
             },
           ])
@@ -273,16 +268,11 @@ export const SubscriptionFeedCategoryContextMenu = ({
   style?: CSSProperties
 }>) => {
   const { t } = useTranslation()
-  const [currentView, setCurrentView] = useState<FeedViewType>(FeedViewType.Articles)
+  // Read on every change: Android shows the items the menu had before it opens
+  const currentView = useSelectedView()
 
   return (
-    <ContextMenu.Root
-      onOpenChange={(open) => {
-        if (open) {
-          setCurrentView(getSelectedView())
-        }
-      }}
-    >
+    <ContextMenu.Root>
       <ContextMenu.Trigger asChild={asChild} style={style}>
         {children}
       </ContextMenu.Trigger>
@@ -315,11 +305,13 @@ export const SubscriptionFeedCategoryContextMenu = ({
                   key={`SubContent/${view.name}`}
                   value={isSelected}
                   onSelect={() => {
-                    subscriptionSyncService.changeCategoryView({
-                      category,
-                      currentView,
-                      newView: view.view,
-                    })
+                    subscriptionSyncService
+                      .changeCategoryView({
+                        category,
+                        currentView,
+                        newView: view.view,
+                      })
+                      .catch(toastFetchError)
                   }}
                 >
                   <ContextMenu.ItemTitle>{t(view.name, { ns: "common" })}</ContextMenu.ItemTitle>
@@ -334,14 +326,15 @@ export const SubscriptionFeedCategoryContextMenu = ({
           onSelect={() => {
             const prompt = isIOS ? Alert.prompt : modalPrompt
 
-            const handleRenameCategory = async (newCategory: string) => {
+            const handleRenameCategory = (newCategory: string) => {
               if (!newCategory) return
-              await subscriptionSyncService.renameCategory({
-                lastCategory: category,
-                newCategory,
-                view: currentView,
-              })
-              toast.success(t("operation.rename_category_success"))
+              subscriptionSyncService
+                .renameCategory({
+                  lastCategory: category,
+                  newCategory,
+                  view: currentView,
+                })
+                .then(() => toast.success(t("operation.rename_category_success")), toastFetchError)
             }
             prompt(
               t("operation.rename_category"),
@@ -377,7 +370,9 @@ export const SubscriptionFeedCategoryContextMenu = ({
                   text: t("words.delete", { ns: "common" }),
                   style: "destructive",
                   onPress: () => {
-                    subscriptionSyncService.deleteCategory({ category, view: currentView })
+                    subscriptionSyncService
+                      .deleteCategory({ category, view: currentView })
+                      .catch(toastFetchError)
                   },
                 },
               ],

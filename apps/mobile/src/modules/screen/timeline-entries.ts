@@ -1,9 +1,73 @@
+import type { useEntriesQuery } from "@follow/store/entry/hooks"
 import type { UseEntriesReturn } from "@follow/store/entry/types"
 import { fallbackReturn } from "@follow/store/entry/utils"
 
-export type RemoteTimelineEntries = UseEntriesReturn & {
+/** What a list of entries shows, from the server or from the entries stored on the device */
+export type TimelineEntries = UseEntriesReturn & {
+  /** The request `error` tells of asked for the next page, not for the first one */
+  isFetchNextPageError?: boolean
+}
+
+export type RemoteTimelineEntries = TimelineEntries & {
   /** Fetches the first page again and tells the user when that fails */
   refetchReportingFailure: () => Promise<void>
+}
+
+type EntriesQuery = Pick<
+  ReturnType<typeof useEntriesQuery>,
+  | "entriesIds"
+  | "error"
+  | "hasNextPage"
+  | "insertedBefore"
+  | "isError"
+  | "isFetchNextPageError"
+  | "isFetching"
+  | "isFetchingNextPage"
+  | "isRefetching"
+> & { data: unknown }
+
+type RemoteActions = Pick<
+  RemoteTimelineEntries,
+  "fetchNextPage" | "refetch" | "refetchReportingFailure"
+>
+
+/**
+ * The server's list as the timeline reads it. It is ready once a page is in, and stays when a
+ * later request fails, which `error` tells of. After a failed page, paging waits until that page
+ * is asked for again.
+ */
+export const getRemoteTimelineEntries = (
+  query: EntriesQuery,
+  actions: RemoteActions,
+): RemoteTimelineEntries => {
+  if (query.data === undefined) {
+    // Without data yet, still report a failed first page and keep the remote refetch, so the
+    // timeline can fall back to the stored entries and pull to refresh tries the server again
+    return {
+      ...fallbackReturn,
+      ...actions,
+      isLoading: !query.isError,
+      isRefetching: query.isRefetching,
+      isFetching: query.isFetching,
+      error: query.error,
+    }
+  }
+
+  const hasNextPage = query.hasNextPage && !query.isFetchNextPageError
+  return {
+    ...actions,
+    entriesIds: query.entriesIds,
+    hasNext: hasNextPage,
+    isLoading: query.isFetching,
+    isRefetching: query.isRefetching,
+    isReady: true,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isFetching: query.isFetching,
+    hasNextPage,
+    error: query.error,
+    isFetchNextPageError: query.isFetchNextPageError,
+    insertedBefore: query.insertedBefore,
+  }
 }
 
 /**
@@ -26,9 +90,9 @@ export const joinRefreshAttempt = (
  * not say that it failed. An empty list says why itself.
  */
 const reportFailedRefresh = (
-  shown: UseEntriesReturn,
+  shown: TimelineEntries,
   remote: RemoteTimelineEntries,
-): UseEntriesReturn =>
+): TimelineEntries =>
   shown.entriesIds.length > 0 ? { ...shown, refetch: remote.refetchReportingFailure } : shown
 
 /**
@@ -41,7 +105,7 @@ const reportFailedRefresh = (
 export const pickTimelineEntries = (
   remote: RemoteTimelineEntries,
   local: UseEntriesReturn,
-): UseEntriesReturn => {
+): TimelineEntries => {
   if (remote.isReady) {
     return reportFailedRefresh(remote, remote)
   }

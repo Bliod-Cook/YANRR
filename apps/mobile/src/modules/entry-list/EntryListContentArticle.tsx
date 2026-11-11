@@ -1,28 +1,17 @@
-import type { FeedViewType } from "@follow/constants"
-import { shouldRenderScrollMarkReadEndSpacer } from "@follow/shared/scroll-mark-read"
-import type { UseEntriesReturn } from "@follow/store/entry/types"
-import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
-import type { FlashListRef, ListRenderItemInfo } from "@shopify/flash-list"
-import type { ElementRef } from "react"
-import { useCallback, useImperativeHandle, useMemo, useRef } from "react"
+import type { ListRenderItemInfo } from "@shopify/flash-list"
+import { useCallback, useMemo } from "react"
 import { View } from "react-native"
 
-import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { useBottomTabBarHeight } from "@/src/components/layouts/tabbar/hooks"
 import { Skeleton, SkeletonPulse } from "@/src/components/ui/skeleton/Skeleton"
 import { useReadableContainerStyle } from "@/src/lib/responsive"
 import { useHeaderHeight } from "@/src/modules/screen/hooks/useHeaderHeight"
 
 import { TimelineSelectorList } from "../screen/TimelineSelectorList"
-import { EntryListEndScrollSpacer } from "./EntryListEndScrollSpacer"
 import { EntryListFooter } from "./EntryListFooter"
-import { useOnViewableItemsChanged } from "./hooks"
-import {
-  shouldAnimateLoadingPlaceholder,
-  shouldAnimateNextPagePlaceholder,
-} from "./placeholder-animation"
+import { useEntryListViewability } from "./hooks"
 import { EntryNormalItem } from "./templates/EntryNormalItem"
-import type { EntryExtraData } from "./types"
+import type { EntryExtraData, EntryListContentProps } from "./types"
 
 const ARTICLE_SKELETON_KEYS = [
   "article-skeleton-1",
@@ -35,34 +24,27 @@ const ARTICLE_SKELETON_KEYS = [
 ] as const
 
 export const EntryListContentArticle = ({
-  ref: forwardRef,
+  ref,
   entries,
   active,
   view,
   onResetScrollSignalConsumed,
   resetScrollSignal,
   suspendMarkRead,
-}: { entries: UseEntriesReturn; active?: boolean; view: FeedViewType } & {
-  ref?: React.Ref<ElementRef<typeof TimelineSelectorList> | null>
-  onResetScrollSignalConsumed?: (signal: number) => void
-  resetScrollSignal?: number
-  suspendMarkRead?: boolean
-}) => {
-  const entryIds = entries.entriesIds
-  const extraData: EntryExtraData = useMemo(() => ({ entryIds }), [entryIds])
-  const readableItemStyle = useReadableContainerStyle(860, 16)
-
+}: EntryListContentProps) => {
   const {
-    error: entriesError,
+    entriesIds: entryIds,
+    error,
     fetchNextPage,
-    isFetching,
     isFetchingNextPage,
     refetch,
     isRefetching,
     hasNextPage,
-    fetchedTime,
     isReady,
   } = entries
+  const extraData: EntryExtraData = useMemo(() => ({ entryIds }), [entryIds])
+  const readableItemStyle = useReadableContainerStyle(860, 16)
+  const viewability = useEntryListViewability({ entries, active, suspendMarkRead })
 
   const renderItem = useCallback(
     ({ item: id, extraData, index }: ListRenderItemInfo<string>) => (
@@ -79,58 +61,17 @@ export const EntryListContentArticle = ({
     [readableItemStyle, view],
   )
 
-  const hasEndSpacer = shouldRenderScrollMarkReadEndSpacer({
-    entryCount: entryIds?.length ?? 0,
-    hasNextPage,
-  })
-  const animateNextPagePlaceholder = shouldAnimateNextPagePlaceholder({
-    active,
-    isFetchingNextPage,
-  })
-  const ListFooterComponent = useMemo(
-    () =>
-      hasNextPage ? (
-        <EntryItemSkeleton animated={animateNextPagePlaceholder} />
-      ) : (
-        <View>
-          <EntryListFooter fetchedTime={fetchedTime} />
-          {hasEndSpacer && <EntryListEndScrollSpacer />}
-        </View>
-      ),
-    [hasEndSpacer, hasNextPage, fetchedTime, animateNextPagePlaceholder],
-  )
-
-  const ref = useRef<FlashListRef<any>>(null)
-
-  const { onViewableItemsChanged, onScroll, viewableItems } = useOnViewableItemsChanged({
-    // Loading the next page only appends entries, so the ones scrolled past meanwhile still count
-    disabled: active === false || (isFetching && !isFetchingNextPage) || suspendMarkRead,
-    refreshing: isFetching && !isFetchingNextPage,
-  })
-
-  useImperativeHandle(forwardRef, () => ref.current!)
-
-  const translation = useGeneralSettingKey("translation")
-  const translationMode = useGeneralSettingKey("translationMode")
-  const actionLanguage = useActionLanguage()
-
-  usePrefetchEntryTranslation({
-    entryIds: active ? viewableItems.map((item) => item.key) : [],
-    language: actionLanguage,
-    enabled: translation,
-    mode: translationMode,
-  })
-
   const headerHeight = useHeaderHeight()
   const tabBarHeight = useBottomTabBarHeight()
 
   // Show loading skeleton when entries are not ready and no data yet
-  if (!isReady && (!entryIds || entryIds.length === 0)) {
+  if (!isReady && entryIds.length === 0) {
     return (
       <View className="flex-1" style={{ paddingTop: headerHeight, paddingBottom: tabBarHeight }}>
         {ARTICLE_SKELETON_KEYS.map((key) => (
           <View key={key} style={readableItemStyle}>
-            <EntryItemSkeleton animated={shouldAnimateLoadingPlaceholder({ active })} />
+            {/* A page next to the shown one in the pager does not load, so it holds still */}
+            <EntryItemSkeleton animated={active !== false} />
           </View>
         ))}
       </View>
@@ -142,17 +83,24 @@ export const EntryListContentArticle = ({
       ref={ref}
       onRefresh={refetch}
       isRefetching={isRefetching}
-      emptyError={entriesError}
+      emptyError={error}
       onResetScrollSignalConsumed={onResetScrollSignalConsumed}
       resetScrollSignal={resetScrollSignal}
       data={entryIds}
       extraData={extraData}
       keyExtractor={defaultKeyExtractor}
       renderItem={renderItem}
-      onEndReached={fetchNextPage}
-      onScroll={onScroll}
-      onViewableItemsChanged={onViewableItemsChanged}
-      ListFooterComponent={ListFooterComponent}
+      onEndReached={hasNextPage ? fetchNextPage : undefined}
+      {...viewability}
+      ListFooterComponent={
+        hasNextPage ? (
+          // Kept far below the screen as long as there is a next page, so it moves only while
+          // that page loads
+          <EntryItemSkeleton animated={active !== false && isFetchingNextPage} />
+        ) : (
+          <EntryListFooter entries={entries} separator />
+        )
+      }
     />
   )
 }

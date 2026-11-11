@@ -30,7 +30,7 @@ export function PagerList({
   style?: StyleProp<ViewStyle> | undefined
 }) {
   const selectedFeed = useSelectedFeed()
-  const viewId = selectedFeed?.type === "view" ? selectedFeed.viewId : undefined
+  const viewId = selectedFeed.type === "view" ? selectedFeed.viewId : undefined
 
   const activeViews = useViewWithSubscription()
 

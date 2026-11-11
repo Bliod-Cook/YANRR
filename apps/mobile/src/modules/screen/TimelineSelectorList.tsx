@@ -1,6 +1,4 @@
 import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
-import { usePrefetchSubscription } from "@follow/store/subscription/hooks"
-import { usePrefetchUnread } from "@follow/store/unread/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { nextFrame } from "@follow/utils"
 import type { FlashListProps, FlashListRef } from "@shopify/flash-list"
@@ -9,7 +7,6 @@ import * as Haptics from "expo-haptics"
 import { use, useCallback, useEffect, useImperativeHandle, useRef } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import { RefreshControl, ScrollView, View } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useColor } from "react-native-uikit-colors"
 
 import { useBottomTabBarHeight } from "@/src/components/layouts/tabbar/hooks"
@@ -17,7 +14,6 @@ import { ScreenItemContext } from "@/src/lib/navigation/ScreenItemContext"
 import { useHeaderHeight } from "@/src/modules/screen/hooks/useHeaderHeight"
 
 import { EntryListEmpty } from "../entry-list/EntryListEmpty"
-import { shouldApplyScrollResetSignal } from "./scroll-reset"
 
 /**
  * FlashList keeps the first visible entry in place when entries arrive above it, as the server's
@@ -46,10 +42,8 @@ const usePendingScrollReset = (
   const flushPendingScrollReset = useCallback(() => {
     if (!canApplyScrollResetRef.current) return
     if (
-      !shouldApplyScrollResetSignal({
-        resetSignal: resetScrollSignal,
-        appliedResetSignal: appliedResetScrollSignalRef.current,
-      })
+      resetScrollSignal === undefined ||
+      resetScrollSignal === appliedResetScrollSignalRef.current
     ) {
       return
     }
@@ -57,9 +51,7 @@ const usePendingScrollReset = (
     requestAnimationFrame(() => {
       if (scrollToTop()) {
         appliedResetScrollSignalRef.current = resetScrollSignal
-        if (resetScrollSignal !== undefined) {
-          onResetScrollSignalConsumed?.(resetScrollSignal)
-        }
+        onResetScrollSignalConsumed?.(resetScrollSignal)
       }
     })
   }, [onResetScrollSignalConsumed, resetScrollSignal, scrollToTop])
@@ -74,6 +66,10 @@ const usePendingScrollReset = (
   }, [flushPendingScrollReset])
 }
 
+/**
+ * A list under the timeline header and above the tab bar, which pulls to refresh and scrolls back
+ * to its top on a reset signal. With `masonry`, items fill columns by their own heights.
+ */
 export const TimelineSelectorList = ({
   ref: forwardedRef,
   onRefresh,
@@ -86,8 +82,6 @@ export const TimelineSelectorList = ({
   Omit<FlashListProps<any>, "onRefresh"> & { ref?: React.Ref<FlashListRef<any> | null> }) => {
   const ref = useRef<FlashListRef<any>>(null)
   useImperativeHandle(forwardedRef, () => ref.current!)
-  const { refetch: unreadRefetch } = usePrefetchUnread()
-  const { refetch: subscriptionRefetch } = usePrefetchSubscription()
 
   const headerHeight = useHeaderHeight()
   const { scrollViewHeight, scrollViewContentHeight, reAnimatedScrollY } = use(ScreenItemContext)!
@@ -154,9 +148,8 @@ export const TimelineSelectorList = ({
       // // FIXME: not sure why we need set tintColor manually here, otherwise we can not see the refresh indicator
       tintColor={systemFill}
       onRefresh={() => {
-        unreadRefetch()
+        // The sync engine brings the subscriptions up to date along with the unread counts
         void unreadSyncService.refresh({ calibrate: true })
-        subscriptionRefetch()
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
         onRefresh()
       }}
@@ -186,12 +179,15 @@ export const TimelineSelectorList = ({
           top: headerHeight,
           bottom: tabBarHeight,
         }}
-        contentContainerStyle={{
-          paddingTop: headerHeight,
-          paddingBottom: tabBarHeight,
-        }}
         maintainVisibleContentPosition={keepTopWhenEntriesArriveAbove}
         {...props}
+        contentContainerStyle={[
+          {
+            paddingTop: headerHeight,
+            paddingBottom: tabBarHeight,
+          },
+          props.contentContainerStyle,
+        ]}
         onLayout={onLayout}
         onLoad={onLoad}
         onCommitLayoutEffect={onCommitLayoutEffect}
@@ -204,129 +200,6 @@ export const TimelineSelectorList = ({
         }}
       />
     </View>
-  )
-}
-
-export const TimelineSelectorMasonryList = ({
-  ref: forwardedRef,
-  onRefresh,
-  isRefetching,
-  onResetScrollSignalConsumed,
-  resetScrollSignal,
-  emptyError,
-  ...props
-}: Props &
-  Omit<FlashListProps<any>, "onRefresh"> & {
-    ref?: React.Ref<FlashListRef<any> | null>
-  }) => {
-  const { refetch: unreadRefetch } = usePrefetchUnread()
-  const { refetch: subscriptionRefetch } = usePrefetchSubscription()
-  const ref = useRef<FlashListRef<any>>(null)
-  useImperativeHandle(forwardedRef, () => ref.current!)
-
-  const insets = useSafeAreaInsets()
-
-  const headerHeight = useHeaderHeight()
-
-  const { reAnimatedScrollY } = use(ScreenItemContext)!
-  const scrollToTop = useCallback(() => {
-    const scroller = ref.current
-    if (!scroller) return false
-
-    scroller.scrollToOffset({
-      offset: 0,
-      animated: false,
-    })
-    reAnimatedScrollY.value = 0
-    return true
-  }, [reAnimatedScrollY])
-  const markScrollResetReady = usePendingScrollReset(
-    resetScrollSignal,
-    scrollToTop,
-    onResetScrollSignalConsumed,
-  )
-
-  const onScroll = useCallback(
-    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      props.onScroll?.(e)
-      reAnimatedScrollY.value = e.nativeEvent.contentOffset.y
-    },
-    [props, reAnimatedScrollY],
-  )
-
-  const tabBarHeight = useBottomTabBarHeight()
-  const onContentSizeChange = useTypeScriptHappyCallback(
-    (w, h) => {
-      props.onContentSizeChange?.(w, h)
-      markScrollResetReady()
-    },
-    [markScrollResetReady, props],
-  ) as FlashListProps<any>["onContentSizeChange"]
-  const onLoad = useTypeScriptHappyCallback(
-    (info) => {
-      props.onLoad?.(info)
-      markScrollResetReady()
-    },
-    [markScrollResetReady, props],
-  ) as FlashListProps<any>["onLoad"]
-  const onCommitLayoutEffect = useTypeScriptHappyCallback(() => {
-    props.onCommitLayoutEffect?.()
-    markScrollResetReady()
-  }, [markScrollResetReady, props]) as FlashListProps<any>["onCommitLayoutEffect"]
-
-  const systemFill = useColor("secondaryLabel")
-
-  const refreshControl = (
-    <RefreshControl
-      progressViewOffset={headerHeight}
-      // // FIXME: not sure why we need set tintColor manually here, otherwise we can not see the refresh indicator
-      tintColor={systemFill}
-      onRefresh={() => {
-        unreadRefetch()
-        void unreadSyncService.refresh({ calibrate: true })
-        subscriptionRefetch()
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
-        onRefresh()
-      }}
-      refreshing={isRefetching}
-    />
-  )
-
-  if (props.data?.length === 0) {
-    return (
-      <RefreshableEmptyList
-        refreshControl={refreshControl}
-        headerHeight={headerHeight}
-        tabBarHeight={tabBarHeight}
-        error={emptyError}
-      />
-    )
-  }
-
-  return (
-    <FlashList
-      ref={ref}
-      masonry
-      refreshControl={refreshControl}
-      maintainVisibleContentPosition={keepTopWhenEntriesArriveAbove}
-      {...props}
-      onLoad={onLoad}
-      onCommitLayoutEffect={onCommitLayoutEffect}
-      onContentSizeChange={onContentSizeChange}
-      contentContainerStyle={[
-        {
-          paddingTop: headerHeight,
-          paddingBottom: tabBarHeight,
-        },
-        props.contentContainerStyle,
-      ]}
-      scrollIndicatorInsets={{
-        top: headerHeight - insets.top,
-        bottom: tabBarHeight ? tabBarHeight - insets.bottom : undefined,
-        ...props.scrollIndicatorInsets,
-      }}
-      onScroll={onScroll}
-    />
   )
 }
 
