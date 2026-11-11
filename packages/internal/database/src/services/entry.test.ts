@@ -53,14 +53,12 @@ describe("EntryService.getEntriesToHydrate", () => {
       .insert(subscriptionsTable)
       .values({ ...follow("news"), inboxId: "news", type: "inbox" })
     // An inbox entry has the handle as its feed id too
-    await db
-      .insert(entriesTable)
-      .values(
-        Array.from({ length: 25 }, (_, index) => ({
-          ...entry("news", index),
-          inboxHandle: "news",
-        })),
-      )
+    await db.insert(entriesTable).values(
+      Array.from({ length: 25 }, (_, index) => ({
+        ...entry("news", index),
+        inboxHandle: "news",
+      })),
+    )
 
     expect(await keptIds()).toHaveLength(20)
   })

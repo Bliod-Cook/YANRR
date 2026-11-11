@@ -78,16 +78,14 @@ describe("useEntryContextMenu", () => {
     expect(jotaiStore.get(contextMenuAtom).open).toBe(false)
 
     await act(async () => {
-      host
-        ?.querySelector("[data-testid=row]")
-        ?.dispatchEvent(
-          new MouseEvent("contextmenu", {
-            bubbles: true,
-            cancelable: true,
-            clientX: 7,
-            clientY: 9,
-          }),
-        )
+      host?.querySelector("[data-testid=row]")?.dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 7,
+          clientY: 9,
+        }),
+      )
     })
 
     const state = jotaiStore.get(contextMenuAtom)
