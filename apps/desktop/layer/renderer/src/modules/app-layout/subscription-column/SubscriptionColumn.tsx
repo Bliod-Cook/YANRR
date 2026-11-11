@@ -29,8 +29,6 @@ import { useCommandBinding } from "~/modules/command/hooks/use-command-binding"
 import { CornerPlayer } from "~/modules/player/corner-player"
 import { SubscriptionColumn } from "~/modules/subscription-column"
 import { getSelectedFeedIds, resetSelectedFeedIds } from "~/modules/subscription-column/atom"
-import { UpdateNotice } from "~/modules/update-notice/UpdateNotice"
-import { AppLayoutGridContainerProvider } from "~/providers/app-grid-layout-container-provider"
 
 export const SubscriptionColumnContainer = () => {
   const sensors = useSensors(
@@ -75,22 +73,18 @@ export const SubscriptionColumnContainer = () => {
   )
 
   return (
-    <AppLayoutGridContainerProvider>
-      <FeedResponsiveResizerContainer>
-        <DndContext
-          autoScroll={{ threshold: { x: 0, y: 0.2 } }}
-          sensors={sensors}
-          collisionDetection={pointerWithin}
-          onDragEnd={handleDragEnd}
-        >
-          <SubscriptionColumn>
-            <CornerPlayer />
-
-            <UpdateNotice />
-          </SubscriptionColumn>
-        </DndContext>
-      </FeedResponsiveResizerContainer>
-    </AppLayoutGridContainerProvider>
+    <FeedResponsiveResizerContainer>
+      <DndContext
+        autoScroll={{ threshold: { x: 0, y: 0.2 } }}
+        sensors={sensors}
+        collisionDetection={pointerWithin}
+        onDragEnd={handleDragEnd}
+      >
+        <SubscriptionColumn>
+          <CornerPlayer />
+        </SubscriptionColumn>
+      </DndContext>
+    </FeedResponsiveResizerContainer>
   )
 }
 

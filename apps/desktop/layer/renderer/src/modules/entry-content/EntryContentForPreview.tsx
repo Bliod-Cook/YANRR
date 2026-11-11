@@ -47,7 +47,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({ entryId, noMedia, comp
         {!content && !isInReadabilityMode && (isPending || error) ? (
           <EntryContentPlaceholder entryId={entryId} error={error} />
         ) : (
-          <WrappedElementProvider boundingDetection>
+          <WrappedElementProvider>
             <div className="mx-auto my-8 max-w-full cursor-auto">
               <ErrorBoundary fallback={EntryRenderError}>
                 {content || isInReadabilityMode ? (

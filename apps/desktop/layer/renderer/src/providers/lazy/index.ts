@@ -11,18 +11,6 @@ const LazyPopoverProvider = lazy(() =>
   })),
 )
 
-const LazyExtensionExposeProvider = lazy(() =>
-  import("./../extension-expose-provider").then((res) => ({
-    default: res.ExtensionExposeProvider,
-  })),
-)
-
-const LazyReloadPrompt = lazy(() =>
-  import("~/components/common/ReloadPrompt").then((module) => ({
-    default: module.ReloadPrompt,
-  })),
-)
-
 const LazyPWAPromptImport = lazy(() => import("react-ios-pwa-prompt"))
 
 const LazyPWAPrompt = () => {
@@ -43,17 +31,4 @@ const LazyPWAPrompt = () => {
   )
 }
 
-export {
-  LazyContextMenuProvider,
-  LazyExtensionExposeProvider,
-  LazyPopoverProvider,
-  LazyPWAPrompt,
-  LazyReloadPrompt,
-}
-
-const LazyExternalJumpInProvider = lazy(() =>
-  import("../external-jump-in-provider").then((res) => ({
-    default: res.ExternalJumpInProvider,
-  })),
-)
-export { LazyExternalJumpInProvider }
+export { LazyContextMenuProvider, LazyPopoverProvider, LazyPWAPrompt }

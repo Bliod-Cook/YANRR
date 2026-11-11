@@ -12,8 +12,7 @@ import { useEventListener } from "usehooks-ts"
 
 import { FocusablePresets } from "~/components/common/Focusable"
 import { COMMAND_ID } from "~/modules/command/commands/id"
-import { useRunCommandFn } from "~/modules/command/hooks/use-command"
-import { useCommandBinding, useCommandShortcuts } from "~/modules/command/hooks/use-command-binding"
+import { useCommandBinding } from "~/modules/command/hooks/use-command-binding"
 
 const useRegisterAppGlobalHotkeys = () => {
   const notInFloatingLayerScope = useGlobalFocusableScopeSelector(
@@ -57,10 +56,6 @@ export const GlobalHotkeysProvider = () => {
     }
   })
 
-  const commandShortcuts = useCommandShortcuts()
-
-  const runCommandFn = useRunCommandFn()
-  const isNormalLayer = useGlobalFocusableScopeSelector(FocusablePresets.isNotFloatingLayerScope)
   useEffect(() => {
     const preHandler = (e: Event) => {
       stopPropagation(e)
@@ -73,7 +68,7 @@ export const GlobalHotkeysProvider = () => {
         highlightElement(document.activeElement as HTMLElement)
       },
     })
-  }, [commandShortcuts, runCommandFn, isNormalLayer])
+  }, [])
 
   return null
 }

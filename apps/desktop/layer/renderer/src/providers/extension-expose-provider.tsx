@@ -1,7 +1,6 @@
 import { getStableRouterNavigate } from "@follow/components/atoms/route.js"
 import { Routes } from "@follow/constants"
 import { registerGlobalContext } from "@follow/shared/bridge"
-import { env } from "@follow/shared/env.desktop"
 import { invalidateUserSession } from "@follow/store/user/hooks"
 import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
@@ -9,13 +8,10 @@ import { useLocation } from "react-router"
 import { toast } from "sonner"
 
 import { setWindowState } from "~/atoms/app"
-import { getGeneralSettings } from "~/atoms/settings/general"
-import { getUISettings } from "~/atoms/settings/ui"
 import { useDialog, useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { useDiscoverRSSHubRouteModal } from "~/hooks/biz/useDiscoverRSSHubRoute"
 import { useFollow } from "~/hooks/biz/useFollow"
 import { navigateEntry } from "~/hooks/biz/useNavigateEntry"
-import { queryClient } from "~/lib/query-client"
 import type { SettingModalOptions } from "~/modules/settings/modal/usePresentSettingModal"
 import { usePresentSettingModal } from "~/modules/settings/modal/usePresentSettingModal"
 
@@ -44,22 +40,7 @@ export const ExtensionExposeProvider = () => {
   useEffect(() => {
     registerGlobalContext({
       showSetting: (path) => window.router.showSettings(path),
-      getGeneralSettings,
-      getUISettings,
-
       toast,
-      getApiUrl() {
-        return env.VITE_API_URL
-      },
-      getWebUrl() {
-        return env.VITE_WEB_URL
-      },
-
-      invalidateQuery(queryKey: string | string[]) {
-        queryClient.invalidateQueries({
-          queryKey: Array.isArray(queryKey) ? queryKey : [queryKey],
-        })
-      },
       navigateEntry,
     })
   }, [])
@@ -95,7 +76,7 @@ export const ExtensionExposeProvider = () => {
     registerGlobalContext({
       refreshSession: invalidateUserSession,
     })
-  }, [dialog])
+  }, [])
 
   return null
 }
