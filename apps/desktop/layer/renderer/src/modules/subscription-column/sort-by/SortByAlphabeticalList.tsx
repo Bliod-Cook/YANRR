@@ -1,9 +1,8 @@
-import { isOnboardingFeedUrl } from "@follow/store/constants/onboarding"
 import { useFeedStore } from "@follow/store/feed/store"
 import { useSubscriptionStore } from "@follow/store/subscription/store"
 import { getInboxHandleOrFeedIdFromFeedId } from "@follow/store/unread/utils"
 import { sortByAlphabet } from "@follow/utils/utils"
-import { Fragment, useCallback } from "react"
+import { Fragment, useCallback, useMemo } from "react"
 
 import { getPreferredTitle } from "~/store/feed/hooks"
 
@@ -69,48 +68,18 @@ export const SortByAlphabeticalFeedList = ({
 
   const isDesc = useFeedListSortSelector((s) => s.order === "desc")
 
-  // Separate categories with onboarding feeds and regular categories
-  const sortedByAlphabetical = useFeedStore(
-    useCallback(
-      (state) => {
-        const onboardingCategories: string[] = []
-        const regularCategories: string[] = []
-
-        // First, separate categories
-        for (const category of Object.keys(data)) {
-          const ids = data[category]!
-          const hasOnboardingFeed = ids.some((id) => {
-            const feed = state.feeds[id]
-            return feed && isOnboardingFeedUrl(feed.url)
-          })
-
-          if (hasOnboardingFeed) {
-            onboardingCategories.push(category)
-          } else {
-            regularCategories.push(category)
-          }
-        }
-
-        // Sort each group alphabetically
-        const sortCategories = (categories: string[]) => {
-          const sorted = categories.sort((a, b) => {
-            const nameA = categoryName2RealDisplayNameMap[a]
-            const nameB = categoryName2RealDisplayNameMap[b]
-            if (typeof nameA !== "string" || typeof nameB !== "string") {
-              return 0
-            }
-            return sortByAlphabet(nameA, nameB)
-          })
-          // sortByAlphabet orders A to Z, which is ascending
-          return isDesc ? sorted.reverse() : sorted
-        }
-
-        // Return onboarding categories first, then regular categories
-        return [...sortCategories(onboardingCategories), ...sortCategories(regularCategories)]
-      },
-      [data, categoryName2RealDisplayNameMap, isDesc],
-    ),
-  )
+  const sortedByAlphabetical = useMemo(() => {
+    const sorted = Object.keys(data).sort((a, b) => {
+      const nameA = categoryName2RealDisplayNameMap[a]
+      const nameB = categoryName2RealDisplayNameMap[b]
+      if (typeof nameA !== "string" || typeof nameB !== "string") {
+        return 0
+      }
+      return sortByAlphabet(nameA, nameB)
+    })
+    // sortByAlphabet orders A to Z, which is ascending
+    return isDesc ? sorted.reverse() : sorted
+  }, [data, categoryName2RealDisplayNameMap, isDesc])
 
   return (
     <Fragment>

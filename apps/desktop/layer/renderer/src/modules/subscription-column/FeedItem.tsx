@@ -1,32 +1,22 @@
-import { useGlobalFocusableScopeSelector } from "@follow/components/common/Focusable/hooks.js"
 import { useMobile } from "@follow/components/hooks/useMobile.js"
 import { Button } from "@follow/components/ui/button/index.js"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipPortal,
-  TooltipTrigger,
-} from "@follow/components/ui/tooltip/index.jsx"
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/index.js"
 import { FeedViewType, getViewList } from "@follow/constants"
-import { isOnboardingFeedUrl } from "@follow/store/constants/onboarding"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useInboxById } from "@follow/store/inbox/hooks"
 import { getSubscriptionByFeedId } from "@follow/store/subscription/getter"
 import { useSubscriptionByFeedId } from "@follow/store/subscription/hooks"
 import { useUnreadById } from "@follow/store/unread/hooks"
 import { cn, isKeyForMultiSelectPressed } from "@follow/utils/utils"
-import { createElement, memo, use, useCallback, useState } from "react"
+import { createElement, memo, use, useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import { useEventCallback } from "usehooks-ts"
 
-import { MenuItemSeparator, MenuItemText, useShowContextMenu } from "~/atoms/context-menu"
+import { MenuItemSeparator, MenuItemText } from "~/atoms/context-menu"
 import { useHideAllReadSubscriptions } from "~/atoms/settings/general"
 import { ErrorTooltip } from "~/components/common/ErrorTooltip"
-import { FocusablePresets } from "~/components/common/Focusable"
-import { useContextMenuActionShortCutTrigger } from "~/hooks/biz/useContextMenuActionShortCutTrigger"
 import { useFeedActions, useInboxActions } from "~/hooks/biz/useFeedActions"
 import { useFollow } from "~/hooks/biz/useFollow"
+import { useLazyContextMenu, useShowContextMenuOnMount } from "~/hooks/biz/useLazyContextMenu"
 import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { useBatchUpdateSubscription } from "~/hooks/biz/useSubscriptionActions"
@@ -80,6 +70,69 @@ const DraggableItemWrapper: Component<
     </div>
   )
 }
+interface FeedMenuTarget {
+  feedId: string
+  feedIds?: string[]
+  view?: number
+}
+
+/** Built when the menu is requested, not for every row. */
+const FeedContextMenu = ({
+  event,
+  onClosed,
+  ...target
+}: FeedMenuTarget & { event: MouseEvent | React.MouseEvent; onClosed: () => void }) => {
+  const { t } = useTranslation()
+  const items = useFeedActions(target)
+  const { mutate: changeFeedView } = useBatchUpdateSubscription()
+  const subscription = useSubscriptionByFeedId(target.feedId)
+
+  useShowContextMenuOnMount(
+    () => {
+      const nextItems = items.concat()
+
+      // Add "Switch to Another View" menu item
+      if (subscription && typeof subscription.view === "number") {
+        // Like the other items of a multi-selection menu, it moves every selected feed
+        const targetFeedIds = target.feedIds ?? [target.feedId]
+        const currentViews = new Set(
+          targetFeedIds.map((id) => getSubscriptionByFeedId(id)?.view ?? subscription.view),
+        )
+        nextItems.push(
+          MenuItemSeparator.default,
+          new MenuItemText({
+            label: t("sidebar.feed_column.context_menu.change_to_other_view"),
+            submenu: getViewList()
+              // Hide only the view every target feed is already in
+              .filter((v) => v.switchable && !(currentViews.size === 1 && currentViews.has(v.view)))
+              .map(
+                (v) =>
+                  new MenuItemText({
+                    label: t(v.name, { ns: "common" }),
+                    shortcut: (v.view + 1).toString(),
+                    icon: v.icon,
+                    click() {
+                      return changeFeedView({
+                        feedIdList: targetFeedIds,
+                        view: v.view,
+                      })
+                    },
+                    requiresLogin: true,
+                  }),
+              ),
+            requiresLogin: true,
+          }),
+        )
+      }
+      return nextItems
+    },
+    event,
+    onClosed,
+  )
+
+  return null
+}
+
 const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => {
   const { t } = useTranslation()
   const subscription = useSubscriptionByFeedId(feedId)
@@ -98,7 +151,6 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
       url: feed.url,
       image: feed.image,
       siteUrl: feed.siteUrl,
-      ownerUserId: feed.ownerUserId,
     }
   })
 
@@ -138,76 +190,31 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
 
   const isActive = useRouteParamsSelector((routerParams) => routerParams.feedId === feedId)
 
-  const items = useFeedActions({
-    feedIds: multipleSelectedFeedIds,
+  const feedMenuTarget = {
     feedId,
+    feedIds: multipleSelectedFeedIds,
     // A folder in the All view can hold feeds from other views than the one it is listed with,
     // and moving a feed to a category must not move it to that view
     view: subscription?.view ?? view,
-  })
+  }
 
-  const when = useGlobalFocusableScopeSelector(FocusablePresets.isSubscriptionList)
-
-  const whenTrigger = when && isActive
-  useContextMenuActionShortCutTrigger(items, whenTrigger)
-
-  const { mutate: changeFeedView } = useBatchUpdateSubscription()
-
-  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
-  const showContextMenu = useShowContextMenu()
+  const {
+    event: contextMenuEvent,
+    open: openContextMenu,
+    close: closeContextMenu,
+  } = useLazyContextMenu()
   const contextMenuProps = useContextMenu({
-    onContextMenu: useEventCallback(async (e) => {
-      const nextItems = items.concat()
-
+    onContextMenu: (e) => {
       if (!feed) return
-
-      // Add "Switch to Another View" menu item
-      if (subscription && typeof subscription.view === "number") {
-        // Like the other items of a multi-selection menu, it moves every selected feed
-        const targetFeedIds = multipleSelectedFeedIds ?? [feedId]
-        const currentViews = new Set(
-          targetFeedIds.map((id) => getSubscriptionByFeedId(id)?.view ?? subscription.view),
-        )
-        nextItems.push(
-          MenuItemSeparator.default,
-          new MenuItemText({
-            label: t("sidebar.feed_column.context_menu.change_to_other_view"),
-            submenu: getViewList()
-              // Hide only the view every target feed is already in
-              .filter((v) => v.switchable && !(currentViews.size === 1 && currentViews.has(v.view)))
-              .map(
-                (v) =>
-                  new MenuItemText({
-                    label: t(v.name, { ns: "common" }),
-                    shortcut: (v.view + 1).toString(),
-                    icon: v.icon,
-                    click() {
-                      return changeFeedView({
-                        feedIdList: targetFeedIds,
-                        view: v.view,
-                      })
-                    },
-                    requiresLogin: true,
-                  }),
-              ),
-            requiresLogin: true,
-          }),
-        )
-      }
-
-      setIsContextMenuOpen(true)
-      await showContextMenu(nextItems, e)
-      setIsContextMenuOpen(false)
-    }),
+      openContextMenu(e)
+    },
   })
   const follow = useFollow()
 
   if (!feed) return null
 
   const isFeed = feed.type === "feed" || !feed.type
-  const isOnboardingFeed = isOnboardingFeedUrl(feed.url)
-  const showFeedErrorIndicator =
-    isFeed && !isOnboardingFeed && shouldShowFeedErrorIndicator(feed.errorAt)
+  const showFeedErrorIndicator = isFeed && shouldShowFeedErrorIndicator(feed.errorAt)
 
   return (
     <DraggableItemWrapper
@@ -218,7 +225,7 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
       data-active={
         isMultiSelectingButNotSelected
           ? false
-          : isActive || isContextMenuOpen || isInMultipleSelection
+          : isActive || contextMenuEvent !== null || isInMultipleSelection
       }
       className={cn(
         feedColumnStyles.item,
@@ -230,6 +237,9 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
       onClick={handleClick}
       {...contextMenuProps}
     >
+      {contextMenuEvent && (
+        <FeedContextMenu {...feedMenuTarget} event={contextMenuEvent} onClosed={closeContextMenu} />
+      )}
       <div className={cn("flex min-w-0 items-center", showFeedErrorIndicator && "text-red")}>
         <FeedIcon fallback target={feed} size={16} />
         <FeedTitle feed={feed} />
@@ -239,37 +249,23 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
           </ErrorTooltip>
         )}
       </div>
-      {isOnboardingFeed && (
-        <Tooltip delayDuration={300}>
-          <TooltipTrigger aria-label={t("feed_item.onboarding_feed")}>
-            <i className="i-mingcute-sparkles-line shrink-0 text-base text-text-tertiary" />
-          </TooltipTrigger>
-          <TooltipPortal>
-            <TooltipContent>{t("feed_item.onboarding_feed")}</TooltipContent>
-          </TooltipPortal>
-        </Tooltip>
-      )}
-      {!isOnboardingFeed && (
-        <>
-          {isPreview ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              buttonClassName="!p-1 mr-0.5"
-              aria-label={t("words.follow", { ns: "common" })}
-              onClick={() => {
-                follow({
-                  id: feedId,
-                  url: feed.url,
-                })
-              }}
-            >
-              <i className="i-mgc-add-cute-re text-base text-accent" />
-            </Button>
-          ) : (
-            <UnreadNumber unread={feedUnread} className="ml-2" />
-          )}
-        </>
+      {isPreview ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          buttonClassName="!p-1 mr-0.5"
+          aria-label={t("words.follow", { ns: "common" })}
+          onClick={() => {
+            follow({
+              id: feedId,
+              url: feed.url,
+            })
+          }}
+        >
+          <i className="i-mgc-add-cute-re text-base text-accent" />
+        </Button>
+      ) : (
+        <UnreadNumber unread={feedUnread} className="ml-2" />
       )}
     </DraggableItemWrapper>
   )
@@ -290,6 +286,20 @@ export const FeedItemAutoHideUnread: Component<FeedItemProps> = memo((props) => 
   return createElement(FeedItemImpl, props)
 })
 
+const InboxContextMenu = ({
+  inboxId,
+  event,
+  onClosed,
+}: {
+  inboxId: string
+  event: MouseEvent | React.MouseEvent
+  onClosed: () => void
+}) => {
+  const { items } = useInboxActions({ inboxId })
+  useShowContextMenuOnMount(() => items, event, onClosed)
+  return null
+}
+
 interface InboxItemProps {
   inboxId: string
   view: FeedViewType
@@ -299,14 +309,14 @@ const InboxItemImpl: Component<InboxItemProps> = ({ view, inboxId, className, ic
   const inbox = useInboxById(inboxId)
 
   const isActive = useRouteParamsSelector((routerParams) => routerParams.inboxId === inboxId)
-  const { items } = useInboxActions({ inboxId })
-
-  const when = useGlobalFocusableScopeSelector(FocusablePresets.isSubscriptionList)
-  useContextMenuActionShortCutTrigger(items, when && isActive)
 
   const inboxUnread = useUnreadById(inboxId)
 
-  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
+  const {
+    event: contextMenuEvent,
+    open: openContextMenu,
+    close: closeContextMenu,
+  } = useLazyContextMenu()
   const navigate = useNavigateEntry()
 
   // Use current route view for navigation to stay in current view (e.g., All view)
@@ -325,20 +335,12 @@ const InboxItemImpl: Component<InboxItemProps> = ({ view, inboxId, className, ic
     },
     [inboxId, navigate, navigationView],
   )
-  const showContextMenu = useShowContextMenu()
-
-  const contextMenuProps = useContextMenu({
-    onContextMenu: async (e) => {
-      setIsContextMenuOpen(true)
-      await showContextMenu(items, e)
-      setIsContextMenuOpen(false)
-    },
-  })
+  const contextMenuProps = useContextMenu({ onContextMenu: openContextMenu })
   if (!inbox) return null
   return (
     <div
       aria-current={isActive ? "page" : undefined}
-      data-active={isActive || isContextMenuOpen}
+      data-active={isActive || contextMenuEvent !== null}
       data-sub={`inbox-${inboxId}`}
       data-inbox-id={inboxId}
       className={cn(
@@ -350,6 +352,9 @@ const InboxItemImpl: Component<InboxItemProps> = ({ view, inboxId, className, ic
       onClick={handleNavigate}
       {...contextMenuProps}
     >
+      {contextMenuEvent && (
+        <InboxContextMenu inboxId={inboxId} event={contextMenuEvent} onClosed={closeContextMenu} />
+      )}
       <div className={"flex min-w-0 items-center"}>
         <FeedIcon fallback target={inbox} size={iconSize} />
         <EllipsisHorizontalTextWithTooltip className="truncate">
