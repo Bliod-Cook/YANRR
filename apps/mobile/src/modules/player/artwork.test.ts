@@ -10,7 +10,6 @@ vi.mock("../../lib/server-env", () => ({
 
 const createFeed = (overrides?: Partial<FeedIconFeed>): FeedIconFeed => ({
   id: "feed-1",
-  ownerUserId: null,
   title: "NPR News Now",
   url: "https://feeds.npr.org/500005/podcast.xml",
   image: "https://media.npr.org/podcast-tile.jpg",
