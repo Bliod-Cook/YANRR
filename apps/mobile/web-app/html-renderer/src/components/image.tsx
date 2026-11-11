@@ -1,15 +1,15 @@
 import clsx from "clsx"
 import { useAtomValue } from "jotai"
+import type { ComponentProps } from "react"
 import { useMemo, useRef, useState } from "react"
 import { Blurhash } from "react-blurhash"
 
 import { entryAtom } from "~/atoms"
 import { useWrappedElementSize } from "~/common/WrappedElementProvider"
-import type { HTMLProps } from "~/HTML"
 
 import { calculateDimensions } from "./__internal/calculateDimensions"
 
-export const MarkdownImage = (props: HTMLProps<"img">) => {
+export const MarkdownImage = (props: ComponentProps<"img">) => {
   const { src, ...rest } = props
 
   const imageRef = useRef<HTMLImageElement>(null)

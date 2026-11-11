@@ -1,3 +1,4 @@
+import { WEBVIEW_BRIDGE_VERSION } from "@follow/shared/webview-bridge"
 import { act, useLayoutEffect } from "react"
 import { createRoot } from "react-dom/client"
 import { renderToStaticMarkup } from "react-dom/server"
@@ -15,60 +16,86 @@ const postedMessages = vi.hoisted(() => {
 
 const coverImageUrl = "https://example.com/images/cover.jpg"
 
+// The apps parse their JSON before they call in
 const renderEntry = (entry: EntryModel) => {
-  window.__FO_BRIDGE__.dispatch("setEntry", JSON.stringify(entry))
+  window.__FO_BRIDGE__.dispatch("setEntry", { ...entry })
   const container = document.createElement("div")
   container.innerHTML = renderToStaticMarkup(<App />)
   return container.querySelector("article")
 }
 
-describe("onboarding Markdown", () => {
+beforeEach(() => {
+  window.__FO_BRIDGE__.dispatch("setNoMedia", false)
+})
+
+describe("links", () => {
+  const audio = [{ url: "https://example.com/episode.mp3", mime_type: "audio/mpeg" }]
+
+  test("keeps links whose text holds a colon links", () => {
+    const article = renderEntry({
+      attachments: audio,
+      content:
+        '<p><a href="https://example.com/a">https://example.com/a</a> <a href="https://example.com/b">Part 2: The end</a></p>',
+    })
+
+    expect(article?.querySelectorAll("a")).toHaveLength(2)
+    expect(article?.querySelector("button")).toBeNull()
+  })
+
+  test("turns a timestamp into a seek button only in an entry with audio", () => {
+    const content = '<p><a href="https://example.com/t">12:30</a></p>'
+
+    expect(renderEntry({ attachments: audio, content })?.querySelector("button")?.textContent).toBe(
+      "12:30",
+    )
+    expect(renderEntry({ content })?.querySelector("button")).toBeNull()
+  })
+
+  test("resolves relative addresses against the entry, and drops them without one", () => {
+    const content = '<p><a href="/post/2">Next</a></p><p><img src="images/a.png"></p>'
+
+    const article = renderEntry({ url: "https://example.com/articles/entry", content })
+    expect(article?.querySelector("a")?.getAttribute("href")).toBe("https://example.com/post/2")
+    expect(article?.querySelector("img")?.getAttribute("src")).toBe(
+      "https://example.com/articles/images/a.png",
+    )
+
+    const withoutUrl = renderEntry({ content })
+    expect(withoutUrl?.querySelector("a")?.hasAttribute("href")).toBe(false)
+    expect(withoutUrl?.querySelector("img")?.hasAttribute("src")).toBe(false)
+  })
+})
+
+describe("article styles", () => {
+  const renderStyles = async (renderInlineStyle: boolean) => {
+    window.__FO_BRIDGE__.dispatch("setReaderRenderInlineStyle", renderInlineStyle)
+    window.__FO_BRIDGE__.dispatch("setEntry", {
+      content: '<style>p::after { content: "<b>x</b>" }</style><p>Body</p>',
+    })
+    const container = document.createElement("div")
+    const root = createRoot(container)
+    await act(async () => root.render(<App />))
+    const styles = [...container.querySelectorAll("article style")].map((style) => ({
+      text: style.textContent,
+      elements: style.children.length,
+    }))
+    await act(async () => root.unmount())
+    return styles
+  }
+
   beforeEach(() => {
-    vi.stubGlobal("bridge", { measure: vi.fn() })
-    window.__FO_BRIDGE__.dispatch("setNoMedia", "false")
+    vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true)
   })
 
-  test("renders headings, emphasis and images through the regular article renderer", () => {
-    const article = renderEntry({
-      url: "yanrr://onboarding/1",
-      content: `Welcome to **Yanrr**.\n\n### Your Subscriptions\n\n![Guide](${coverImageUrl})`,
-    })
-
-    expect(article?.querySelector("h3")?.textContent).toBe("Your Subscriptions")
-    expect(article?.querySelector("strong")?.textContent).toBe("Yanrr")
-    expect(article?.querySelector("button img")?.getAttribute("src")).toBe(coverImageUrl)
-    expect(article?.textContent).not.toContain("###")
-  })
-
-  test("keeps media hiding and HTML sanitization for onboarding content", () => {
-    window.__FO_BRIDGE__.dispatch("setNoMedia", "true")
-    const article = renderEntry({
-      url: "yanrr://onboarding/1",
-      content: `### Guide\n\n![Guide](${coverImageUrl})\n\n[Unsafe](javascript:alert(1))`,
-    })
-
-    expect(article?.querySelector("h3")?.textContent).toBe("Guide")
-    expect(article?.querySelector("img")).toBeNull()
-    expect(article?.innerHTML).not.toContain("javascript:")
-  })
-
-  test("leaves ordinary HTML article text unchanged", () => {
-    const article = renderEntry({
-      url: "https://example.com/article",
-      content: "<p>Literal **asterisks** and ### hashes</p>",
-    })
-
-    expect(article?.querySelector("p")?.textContent).toBe("Literal **asterisks** and ### hashes")
-    expect(article?.querySelector("strong, h3")).toBeNull()
+  test("renders a style block as text, and only with inline styles on", async () => {
+    expect(await renderStyles(true)).toEqual([
+      { text: 'p::after { content: "<b>x</b>" }', elements: 0 },
+    ])
+    expect(await renderStyles(false)).toEqual([])
   })
 })
 
 describe("entry cover image", () => {
-  beforeEach(() => {
-    vi.stubGlobal("bridge", { measure: vi.fn() })
-    window.__FO_BRIDGE__.dispatch("setNoMedia", "false")
-  })
-
   test("renders a cover without body content through the image preview component", () => {
     const article = renderEntry({
       media: [{ type: "photo", url: coverImageUrl }],
@@ -103,7 +130,7 @@ describe("entry cover image", () => {
   })
 
   test("respects the media visibility setting for a cover-only entry", () => {
-    window.__FO_BRIDGE__.dispatch("setNoMedia", "true")
+    window.__FO_BRIDGE__.dispatch("setNoMedia", true)
 
     const article = renderEntry({
       media: [{ type: "photo", url: coverImageUrl }],
@@ -114,23 +141,15 @@ describe("entry cover image", () => {
 })
 
 describe("reader style", () => {
-  beforeEach(() => {
-    vi.stubGlobal("bridge", { measure: vi.fn() })
-    window.__FO_BRIDGE__.dispatch("setNoMedia", "false")
-  })
-
   test("applies font family, line height and text color variables to the article", () => {
-    window.__FO_BRIDGE__.dispatch(
-      "setReaderStyle",
-      JSON.stringify({
-        fontFamily: "ui-serif, serif",
-        lineHeight: 1.5,
-        textColor: {
-          light: { body: "#111111", strong: "#000000" },
-          dark: { body: "#eeeeee", strong: "#ffffff" },
-        },
-      }),
-    )
+    window.__FO_BRIDGE__.dispatch("setReaderStyle", {
+      fontFamily: "ui-serif, serif",
+      lineHeight: 1.5,
+      textColor: {
+        light: { body: "#111111", strong: "#000000" },
+        dark: { body: "#eeeeee", strong: "#ffffff" },
+      },
+    })
     const article = renderEntry({ content: "<p>Body</p>" })
     const style = article?.getAttribute("style") ?? ""
 
@@ -142,10 +161,11 @@ describe("reader style", () => {
   })
 
   test("keeps renderer defaults when the reader style is reset", () => {
-    window.__FO_BRIDGE__.dispatch(
-      "setReaderStyle",
-      JSON.stringify({ fontFamily: "inherit", lineHeight: 1.75, textColor: null }),
-    )
+    window.__FO_BRIDGE__.dispatch("setReaderStyle", {
+      fontFamily: "inherit",
+      lineHeight: 1.75,
+      textColor: null,
+    })
     const article = renderEntry({ content: "<p>Body</p>" })
     const style = article?.getAttribute("style") ?? ""
 
@@ -157,11 +177,6 @@ describe("reader style", () => {
 })
 
 describe("embedded YouTube videos", () => {
-  beforeEach(() => {
-    vi.stubGlobal("bridge", { measure: vi.fn() })
-    window.__FO_BRIDGE__.dispatch("setNoMedia", "false")
-  })
-
   test("replaces a YouTube player with a thumbnail that opens the video", () => {
     const article = renderEntry({
       url: "https://example.com/article",
@@ -176,35 +191,49 @@ describe("embedded YouTube videos", () => {
     )
   })
 
-  test("keeps other iframes and YouTube playlists as they are", () => {
+  test("keeps other iframes and YouTube playlists, in the reader's own sandbox", () => {
     const article = renderEntry({
       url: "https://example.com/article",
       content:
-        '<iframe src="https://player.vimeo.com/video/1"></iframe><iframe src="https://www.youtube.com/embed/videoseries?list=PL1"></iframe>',
+        '<iframe src="https://player.vimeo.com/video/1" sandbox="allow-scripts allow-top-navigation"></iframe><iframe src="https://www.youtube.com/embed/videoseries?list=PL1"></iframe>',
     })
 
-    expect(article?.querySelectorAll("iframe")).toHaveLength(2)
+    const iframes = [...(article?.querySelectorAll("iframe") ?? [])]
+    expect(iframes.map((iframe) => iframe.getAttribute("sandbox"))).toEqual([
+      "allow-scripts allow-same-origin allow-popups allow-forms",
+      "allow-scripts allow-same-origin allow-popups allow-forms",
+    ])
   })
 })
 
 describe("bridge", () => {
   beforeEach(() => {
-    vi.stubGlobal("bridge", { measure: vi.fn() })
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true)
   })
 
-  test("tells the app once it takes messages, before the app injected its bridge", () => {
-    expect(postedMessages).toEqual([JSON.stringify({ type: "bridgeReady" })])
+  test("tells the app its bridge version once it takes messages, before the app injected its bridge", () => {
+    expect(postedMessages).toEqual([
+      JSON.stringify({ type: "bridgeReady", payload: { version: WEBVIEW_BRIDGE_VERSION } }),
+    ])
+  })
+
+  test("takes the booleans and numbers iOS replays as JSON text", () => {
+    window.__FO_BRIDGE__.dispatch("setNoMedia", true)
+    window.__FO_BRIDGE__.applyState({
+      setNoMedia: "false",
+      setEntry: { media: [{ type: "photo", url: coverImageUrl }] },
+    })
+    const container = document.createElement("div")
+    container.innerHTML = renderToStaticMarkup(<App />)
+
+    expect(container.querySelector("article img")?.getAttribute("src")).toBe(coverImageUrl)
   })
 
   test("shows an entry the app sends while the page mounts", async () => {
     // Lands after the page rendered and before it subscribed, as a message from the app can
     const SendEntry = () => {
       useLayoutEffect(() => {
-        window.__FO_BRIDGE__.dispatch(
-          "setEntry",
-          JSON.stringify({ content: "<p>Sent on mount</p>" }),
-        )
+        window.__FO_BRIDGE__.dispatch("setEntry", { content: "<p>Sent on mount</p>" })
       }, [])
       return null
     }

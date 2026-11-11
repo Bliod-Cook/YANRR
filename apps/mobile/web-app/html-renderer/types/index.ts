@@ -9,11 +9,16 @@ export interface MediaModel {
   blurhash?: string
 }
 
+export interface AttachmentModel {
+  url: string
+  mime_type?: string
+}
+
 export interface EntryModel {
   content?: string
-  title?: string
   url?: string | null
   media?: MediaModel[]
+  attachments?: AttachmentModel[] | null
   spotlightRules?: SpotlightRule[]
 }
 

@@ -1,7 +1,7 @@
-import { MemoedDangerousHTMLStyle } from "@follow/components/common/MemoedDangerousHTMLStyle.jsx"
-import { Checkbox } from "@follow/components/ui/checkbox/index.jsx"
 import type { SpotlightRule } from "@follow/shared/spotlight"
+import { resolveContentUrl } from "@follow/utils/content-url"
 import { parseHtml as parseHtmlGeneral } from "@follow/utils/html"
+import type { Parent } from "hast"
 import type { Components } from "hast-util-to-jsx-runtime"
 import { createElement } from "react"
 import { renderToString } from "react-dom/server"
@@ -13,11 +13,34 @@ import { ShikiHighLighter } from "./components/shiki"
 import { getYouTubeEmbedVideoId, YouTubeEmbedCard } from "./components/youtube-embed"
 import { applySpotlightToHtmlRendererTree } from "./spotlight"
 
+// As children, React writes the text as text: the style never parses into markup
 const renderStyleTag: Components["style"] = ({ node, ...props }) => {
   if (typeof props.children === "string") {
-    return createElement(MemoedDangerousHTMLStyle, null, props.children)
+    return createElement("style", null, props.children)
   }
   return null
+}
+
+const urlProperties: Record<string, string[]> = {
+  a: ["href"],
+  img: ["src"],
+  video: ["src", "poster"],
+  source: ["src"],
+  iframe: ["src"],
+}
+
+/** The page itself is a local file, so relative addresses only work once made absolute */
+const resolveUrls = (parent: Parent, base: string | undefined) => {
+  for (const child of parent.children) {
+    if (child.type !== "element") continue
+    for (const property of urlProperties[child.tagName] ?? []) {
+      const value = child.properties[property]
+      if (typeof value === "string") {
+        child.properties[property] = resolveContentUrl(value, base)
+      }
+    }
+    resolveUrls(child, base)
+  }
 }
 
 export const parseHtml = (
@@ -35,6 +58,7 @@ export const parseHtml = (
   return parseHtmlGeneral(content, {
     ...options,
     hastTransform: (tree) => {
+      resolveUrls(tree, options?.baseUrl)
       applySpotlightToHtmlRendererTree(tree, spotlightRules)
     },
     components: {
@@ -52,7 +76,7 @@ export const parseHtml = (
           // Return only the image element
           return props.children
         }
-        return createElement(MarkdownLink, { ...props } as any)
+        return createElement(MarkdownLink, props)
       },
 
       h1: (props) => {
@@ -75,7 +99,7 @@ export const parseHtml = (
       },
       style: renderStyleTag,
       img: ({ node, ...props }) => {
-        return createElement(MarkdownImage, props as any)
+        return createElement(MarkdownImage, props)
       },
 
       p: ({ node, ...props }) => {
@@ -89,7 +113,9 @@ export const parseHtml = (
         return createElement(MarkdownP, props, props.children)
       },
 
+      // The sandbox comes from the sanitizer, whatever the article set
       iframe: ({ node, ...props }) => {
+        if (!props.src) return null
         const videoId = getYouTubeEmbedVideoId(props.src)
         if (videoId) {
           return createElement(YouTubeEmbedCard, { videoId, title: props.title })
@@ -102,16 +128,8 @@ export const parseHtml = (
           ...props,
           className: "scale-x-50",
         }),
-      input: ({ node, ...props }) => {
-        if (props.type === "checkbox") {
-          return createElement(Checkbox, {
-            ...props,
-            disabled: false,
-            className: "pointer-events-none mr-2",
-          })
-        }
-        return createElement("input", props)
-      },
+      // The sanitizer lets only disabled checkboxes through, for task lists
+      input: ({ node, ...props }) => createElement("input", { ...props, className: "mr-2" }),
       pre: ({ node, ...props }) => {
         if (!props.children) return null
 

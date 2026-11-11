@@ -1,65 +1,46 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipPortal,
-  TooltipTrigger,
-} from "@follow/components/ui/tooltip/index.jsx"
 import { timeStringToSeconds } from "@follow/utils/utils"
-import { useCallback } from "react"
+import { useAtomValue } from "jotai"
+
+import { entryAtom } from "~/atoms"
 
 export interface LinkProps {
-  href: string
-  title: string
-  children: React.ReactNode
-  target: string
+  href?: string
+  title?: string
+  children?: React.ReactNode
 }
 
-export const MarkdownLink = (props: LinkProps) => {
-  // TODO should populate the href with the populatedFullHref
-
-  const populatedFullHref = props.href
-
-  const childrenText = typeof props.children === "string" ? props.children : null
-  const time = childrenText ? timeStringToSeconds(childrenText) : null
-
-  const handleTimestampClick = useCallback(() => {
-    if (time === null) return
-    bridge.seekAudio(time)
-  }, [time])
+export const MarkdownLink = ({ href, title, children }: LinkProps) => {
+  const hasAudio = useAtomValue(entryAtom)?.attachments?.some((attachment) =>
+    attachment.mime_type?.startsWith("audio/"),
+  )
+  const time = hasAudio && typeof children === "string" ? timeStringToSeconds(children) : null
 
   if (time !== null) {
     return (
-      <button className="text-accent underline" onClick={handleTimestampClick} type="button">
-        {props.children}
+      <button
+        className="text-accent underline"
+        onClick={() => bridge.seekAudio(time)}
+        type="button"
+      >
+        {children}
       </button>
     )
   }
 
   return (
-    <Tooltip delayDuration={0}>
-      <TooltipTrigger asChild>
-        <a
-          draggable="false"
-          className="font-semibold text-text no-underline"
-          href={populatedFullHref}
-          title={props.title}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {props.children}
+    <a
+      draggable="false"
+      className="font-semibold text-text no-underline"
+      href={href}
+      title={title}
+      target="_blank"
+      rel="noreferrer"
+    >
+      {children}
 
-          {typeof props.children === "string" && (
-            <i className="i-mgc-arrow-right-up-cute-re size-[0.9em] translate-y-[2px] opacity-70" />
-          )}
-        </a>
-      </TooltipTrigger>
-      {!!props.href && (
-        <TooltipPortal>
-          <TooltipContent align="start" className="break-all" side="bottom">
-            {populatedFullHref}
-          </TooltipContent>
-        </TooltipPortal>
+      {typeof children === "string" && (
+        <i className="i-mgc-arrow-right-up-cute-re size-[0.9em] translate-y-[2px] opacity-70" />
       )}
-    </Tooltip>
+    </a>
   )
 }
