@@ -7,8 +7,10 @@ import { defineProject } from "vitest/config"
 
 import { astPlugin } from "../../plugins/vite/ast"
 
-const pkg = JSON.parse(readFileSync("package.json", "utf8"))
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
+// The desktop app's package, which `@pkg` stands for in the builds
+const pkgPath = resolve(__dirname, "../../package.json")
+const pkg = JSON.parse(readFileSync(pkgPath, "utf8"))
 
 export default defineProject({
   root: "./",
@@ -17,14 +19,14 @@ export default defineProject({
     setupFiles: [resolve(__dirname, "./setup-file.ts")],
     environment: "happy-dom",
     alias: {
-      "@pkg": resolve(__dirname, "./package.json"),
+      "@pkg": pkgPath,
       "@locales": resolve(__dirname, "../../../../locales"),
     },
   },
 
   define: {
     APP_VERSION: JSON.stringify(pkg.version),
-    APP_NAME: JSON.stringify(pkg.name),
+    APP_NAME: JSON.stringify(pkg.productName),
     APP_DEV_CWD: JSON.stringify(process.cwd()),
 
     GIT_COMMIT_SHA: "'SHA'",
