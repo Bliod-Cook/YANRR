@@ -1,18 +1,14 @@
 import { Button } from "@follow/components/ui/button/index.js"
-import { Label } from "@follow/components/ui/label/index.jsx"
-import { Switch } from "@follow/components/ui/switch/index.jsx"
 import { cn } from "@follow/utils/utils"
 import { useCallback, useMemo, useState } from "react"
 import { jsx } from "react/jsx-runtime"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 
-import { setAISetting, useAISettingKey } from "~/atoms/settings/ai"
 import { GlassButton } from "~/components/ui/button/GlassButton"
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
 
 import { OpmlAbstractGraphic } from "../discover/OpmlAbstractGraphic"
-import { AICopilotMedia } from "./AICopilotMedia"
 import { AppTipMediaPreview } from "./AppTipMediaPreview"
 import { OverviewMedia } from "./OverviewMedia"
 import type { AppTipStep } from "./types"
@@ -43,33 +39,6 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
     [completeOnboarding, navigate],
   )
 
-  const handleLaunchAiGuide = useCallback(() => {
-    completeOnboarding()
-    // Import and show AI onboarding modal
-    Promise.all([
-      import("~/modules/ai-onboarding/ai-onboarding-modal-content"),
-      import("~/components/ui/modal/stacked/custom-modal"),
-      import("~/modules/ai-onboarding/store"),
-    ]).then(([m, { PlainModal }, { resetAiOnboarding }]) => {
-      resetAiOnboarding()
-      window.presentModal({
-        title: t("new_user_guide.title"),
-        content: ({ dismiss }) => (
-          <m.AiOnboardingModalContent
-            onClose={() => {
-              dismiss()
-            }}
-          />
-        ),
-        CustomModalComponent: PlainModal,
-        modalContainerClassName: "flex items-center justify-center",
-        canClose: false,
-        clickOutsideToDismiss: false,
-        overlay: true,
-      })
-    })
-  }, [completeOnboarding, t])
-
   const steps = useMemo<AppTipStep[]>(() => {
     return [
       {
@@ -88,22 +57,6 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
         onPrimaryAction: () => handleNavigateAndClose("/discover?type=search"),
       },
       {
-        id: "ai",
-        title: t("new_user_dialog.ai.title"),
-        description: t("new_user_dialog.ai.description"),
-        highlights: [
-          t("new_user_dialog.ai.highlight_1"),
-          t("new_user_dialog.ai.highlight_2"),
-          t("new_user_dialog.ai.highlight_3"),
-        ],
-        media: {
-          reactNode: jsx(AICopilotMedia, {}),
-        },
-        primaryActionLabel: t("new_user_dialog.ai.primary"),
-        onPrimaryAction: handleLaunchAiGuide,
-        extra: jsx(AiSplineIndicatorToggle, {}),
-      },
-      {
         id: "import",
         title: t("new_user_dialog.import.title"),
         description: t("new_user_dialog.import.description"),
@@ -119,7 +72,7 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
         onPrimaryAction: () => handleNavigateAndClose("/discover?type=import"),
       },
     ]
-  }, [handleLaunchAiGuide, handleNavigateAndClose, t])
+  }, [handleNavigateAndClose, t])
 
   const activeStepData = steps[activeStep] ?? steps[0] ?? null
   const hasNextStep = activeStep < steps.length - 1
@@ -149,7 +102,6 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
       <div className="relative flex w-[500px] flex-col border-t border-border bg-background lg:border-l lg:border-t-0">
         <GlassButton
           onClick={completeOnboarding}
-          variant="flat"
           className="absolute right-4 top-4 z-10"
           aria-label={t("new_user_dialog.actions.close")}
         >
@@ -215,30 +167,5 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
         </div>
       </div>
     </section>
-  )
-}
-
-const AiSplineIndicatorToggle = () => {
-  const { t } = useTranslation("ai")
-  const showSplineButton = useAISettingKey("showSplineButton")
-
-  return (
-    <div className="border-t pt-4">
-      <div className="flex items-center justify-between gap-4">
-        <div className="space-y-1">
-          <Label className="text-sm font-medium text-text">
-            {t("settings.showSplineButton.label")}
-          </Label>
-          <p className="text-xs leading-relaxed text-text-secondary">
-            {t("settings.showSplineButton.description")}
-          </p>
-        </div>
-
-        <Switch
-          checked={showSplineButton}
-          onCheckedChange={(v) => setAISetting("showSplineButton", v)}
-        />
-      </div>
-    </div>
   )
 }

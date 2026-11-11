@@ -265,29 +265,3 @@ DebugRegistry.add("App Tip Dialog", () => {
     })
   })
 })
-
-DebugRegistry.add("AI Onboarding", () => {
-  Promise.all([
-    import("~/modules/ai-onboarding/ai-onboarding-modal-content"),
-    import("~/modules/ai-onboarding/store"),
-  ]).then(([m, { resetAiOnboarding }]) => {
-    resetAiOnboarding()
-    window.presentModal({
-      title: getI18n().t("new_user_guide.title"),
-      content: ({ dismiss }) => (
-        <m.AiOnboardingModalContent
-          onClose={() => {
-            dismiss()
-          }}
-        />
-      ),
-
-      CustomModalComponent: PlainModal,
-      modalContainerClassName: "flex items-center justify-center",
-
-      canClose: false,
-      clickOutsideToDismiss: false,
-      overlay: true,
-    })
-  })
-})

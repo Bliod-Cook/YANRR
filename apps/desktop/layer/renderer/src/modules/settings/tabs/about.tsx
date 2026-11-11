@@ -72,7 +72,7 @@ export const SettingAbout = () => {
     }
   }
 
-  const handleOpenAiOnboarding = () => {
+  const handleOpenAppTip = () => {
     present({
       title: t("about.appTip"),
       content: () => <AppTipModalContent />,
@@ -141,7 +141,7 @@ export const SettingAbout = () => {
       <div className="-mx-3 space-y-1 px-2">
         <button
           type="button"
-          onClick={handleOpenAiOnboarding}
+          onClick={handleOpenAppTip}
           className="group flex w-full items-center justify-between rounded-lg p-3 text-left transition-all hover:bg-fill-secondary hover:shadow-sm"
         >
           <div>
