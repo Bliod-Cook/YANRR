@@ -2,8 +2,6 @@ import { Button } from "@follow/components/ui/button/index.js"
 import { Checkbox } from "@follow/components/ui/checkbox/index.jsx"
 import { Input } from "@follow/components/ui/input/index.js"
 import { ScrollArea } from "@follow/components/ui/scroll-area/index.js"
-import { getFeedById } from "@follow/store/feed/getter"
-import { getAllFeedSubscription } from "@follow/store/subscription/getter"
 import { importOpmlInBatches } from "@follow/store/subscription/opml-import"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
 import { cn } from "@follow/utils/utils"
@@ -15,58 +13,51 @@ import { Trans, useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
+import { followClient } from "~/lib/api-client"
 import { toastFetchError } from "~/lib/error-parser"
-
-import type { OpmlImportResult } from "./opml-import"
-import { addFollowedToImportResult, splitFollowedOpmlItems } from "./opml-import"
-import type { ParsedFeedItem } from "./types"
-
-const getFollowedFeedIdByUrl = () => {
-  const feedIdByUrl = new Map<string, string>()
-  for (const { feedId } of getAllFeedSubscription()) {
-    const url = getFeedById(feedId)?.url
-    if (feedId && url) feedIdByUrl.set(url, feedId)
-  }
-  return feedIdByUrl
-}
 
 export const OpmlSelectionModal = ({
   parsedData,
-
-  file,
 }: {
   parsedData: ExtractResponseData<SubscriptionParseOpmlResponse>
-
-  file: File
 }) => {
   const { dismiss } = useCurrentModal()
   const [progress, setProgress] = useState<{ done: number; total: number }>()
 
+  // Indices of the items the server could not import
+  const [failedItems, setFailedItems] = useState<Set<string>>(() => new Set())
+
   const importMutation = useMutation({
-    mutationFn: async (selectedItems: ParsedFeedItem[]): Promise<OpmlImportResult> => {
-      const { followed, rest } = splitFollowedOpmlItems(selectedItems, getFollowedFeedIdByUrl())
-      // Nothing new to import, and the server fails on an import without a new feed
-      if (rest.length === 0) {
-        return { successfulItems: [], conflictItems: followed, parsedErrorItems: [] }
-      }
-
-      const total = rest.length
+    mutationFn: async (indices: string[]) => {
+      const items = indices.map((index) => {
+        const { url, title, category } = parsedData.subscriptions[Number(index)]!
+        return { url, title: title ?? undefined, category: category ?? undefined }
+      })
+      const total = items.length
       setProgress({ done: 0, total })
-      const data = await importOpmlInBatches(
-        file,
-        rest.map((item) => item.url),
-        (done) => setProgress({ done, total }),
+      const result = await importOpmlInBatches(followClient, items, (done) =>
+        setProgress({ done, total }),
       )
-
-      return addFollowedToImportResult(data, followed)
+      const failedUrls = new Set(result.parsedErrorItems.map((item) => item.url))
+      return {
+        ...result,
+        failedIndices: indices.filter((index) =>
+          failedUrls.has(parsedData.subscriptions[Number(index)]!.url),
+        ),
+      }
+    },
+    onSettled: () => {
+      // The import is logged per feed, so the delta feed delivers exactly what was added, also
+      // of the batches that went through before a request failed.
+      void subscriptionSyncService.refresh(undefined, { afterServerChange: true })
     },
     onSuccess: (data) => {
-      // The import is logged per feed, so the delta feed delivers exactly what was added.
-      void subscriptionSyncService.refresh(undefined, { afterServerChange: true })
-
       const { successfulItems, conflictItems, parsedErrorItems } = data
 
+      setFailedItems(new Set(data.failedIndices))
       if (parsedErrorItems.length > 0) {
+        // Keep the failed ones selected, so that retrying sends just those
+        setSelectedItems(new Set(data.failedIndices))
         toast.warning(t("discover.import.import_completed_with_issues"), {
           description: (
             <Trans
@@ -165,11 +156,8 @@ export const OpmlSelectionModal = ({
   )
 
   const handleImport = useCallback(() => {
-    const selected = parsedData.subscriptions.filter((_, index) =>
-      selectedItems.has(index.toString()),
-    )
-    importMutation.mutate(selected)
-  }, [parsedData.subscriptions, selectedItems, importMutation])
+    importMutation.mutate([...selectedItems])
+  }, [selectedItems, importMutation])
 
   // Calculate selection states for filtered items
   const filteredSelectedCount = filteredSubscriptions.filter(({ refIndex }) =>
@@ -257,6 +245,11 @@ export const OpmlSelectionModal = ({
                       {item.title || t("discover.import.untitled_feed")}
                     </div>
                     <div className="truncate text-sm text-text-secondary">{item.url}</div>
+                    {failedItems.has(refIndex.toString()) && (
+                      <div className="mt-1 text-xs text-red">
+                        {t("discover.import.failed_item")}
+                      </div>
+                    )}
                     {item.category && (
                       <div className="mt-1 text-xs text-text-secondary opacity-80">
                         {item.category}
