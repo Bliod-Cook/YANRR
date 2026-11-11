@@ -1,3 +1,5 @@
+import { PROD } from "@follow/shared/constants"
+
 import { getDebugFeatureValue, useDebugFeatureValue } from "~/atoms/debug-feature"
 import { getServerConfigs, useServerConfigs } from "~/atoms/server-configs"
 import { featureConfigMap } from "~/lib/features"
@@ -23,7 +25,8 @@ const checkFeatureEnabled = (
   debugFeatureValue: DebugFeatureValue,
   serverConfigs: ReturnType<typeof getServerConfigs>,
 ): boolean => {
-  const override = !!debugFeatureValue.__override
+  // A switch for development: in a release it would turn on a feature the server does not offer
+  const override = !PROD && !!debugFeatureValue.__override
 
   if (override) {
     return !!debugFeatureValue[feature]

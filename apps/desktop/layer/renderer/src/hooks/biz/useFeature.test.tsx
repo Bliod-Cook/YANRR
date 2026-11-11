@@ -59,4 +59,16 @@ describe("useFeature", () => {
       "true",
     ])
   })
+
+  test("ignores the stored debug overrides in a production build", async () => {
+    vi.stubEnv("PROD", true)
+    vi.resetModules()
+    try {
+      const { getFeature } = await import("./useFeature")
+
+      expect(getFeature("ai")).toBe(false)
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
 })
