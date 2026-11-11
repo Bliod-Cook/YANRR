@@ -1,7 +1,6 @@
 import { Button } from "@follow/components/ui/button/index.js"
 import { cn } from "@follow/utils/utils"
 import { useCallback, useMemo, useState } from "react"
-import { jsx } from "react/jsx-runtime"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 
@@ -9,34 +8,22 @@ import { GlassButton } from "~/components/ui/button/GlassButton"
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
 
 import { OpmlAbstractGraphic } from "../discover/OpmlAbstractGraphic"
-import { AppTipMediaPreview } from "./AppTipMediaPreview"
 import { OverviewMedia } from "./OverviewMedia"
 import type { AppTipStep } from "./types"
-import { useNewUserGuideState } from "./useNewUserGuideState"
 
-type AppTipModalContentProps = {
-  initialStep?: number
-}
-
-export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps) {
+export function AppTipModalContent() {
   const { dismiss } = useCurrentModal()
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { persistDismissState } = useNewUserGuideState()
 
-  const [activeStep, setActiveStep] = useState(initialStep)
-
-  const completeOnboarding = useCallback(() => {
-    dismiss()
-    persistDismissState(true)
-  }, [dismiss, persistDismissState])
+  const [activeStep, setActiveStep] = useState(0)
 
   const handleNavigateAndClose = useCallback(
     (path: string) => {
-      completeOnboarding()
+      dismiss()
       navigate(path)
     },
-    [completeOnboarding, navigate],
+    [dismiss, navigate],
   )
 
   const steps = useMemo<AppTipStep[]>(() => {
@@ -50,9 +37,7 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
           t("new_user_dialog.overview.highlight_2"),
           t("new_user_dialog.overview.highlight_3"),
         ],
-        media: {
-          reactNode: jsx(OverviewMedia, {}),
-        },
+        media: <OverviewMedia />,
         primaryActionLabel: t("new_user_dialog.overview.primary"),
         onPrimaryAction: () => handleNavigateAndClose("/discover?type=search"),
       },
@@ -65,9 +50,7 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
           t("new_user_dialog.import.highlight_2"),
           t("new_user_dialog.import.highlight_3"),
         ],
-        media: {
-          reactNode: jsx(OpmlAbstractGraphic, {}),
-        },
+        media: <OpmlAbstractGraphic />,
         primaryActionLabel: t("new_user_dialog.import.primary"),
         onPrimaryAction: () => handleNavigateAndClose("/discover?type=import"),
       },
@@ -83,25 +66,21 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
     if (hasNextStep) {
       setActiveStep(activeStep + 1)
     } else {
-      completeOnboarding()
+      dismiss()
     }
   }
 
   return (
     <section className="shadow-modal relative grid min-h-[500px] overflow-hidden rounded-lg border border-border bg-background text-text lg:grid-cols-[1.2fr,1fr]">
       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-background">
-        {activeStepData.media?.reactNode ? (
-          <div className="absolute inset-0 aspect-square w-full overflow-hidden bg-material-medium">
-            {activeStepData.media?.reactNode}
-          </div>
-        ) : (
-          <AppTipMediaPreview media={activeStepData.media} />
-        )}
+        <div className="absolute inset-0 aspect-square w-full overflow-hidden bg-material-medium">
+          {activeStepData.media}
+        </div>
       </div>
 
       <div className="relative flex w-[500px] flex-col border-t border-border bg-background lg:border-l lg:border-t-0">
         <GlassButton
-          onClick={completeOnboarding}
+          onClick={dismiss}
           className="absolute right-4 top-4 z-10"
           aria-label={t("new_user_dialog.actions.close")}
         >
@@ -125,8 +104,6 @@ export function AppTipModalContent({ initialStep = 0 }: AppTipModalContentProps)
               </li>
             ))}
           </ul>
-
-          {activeStepData.extra}
         </div>
 
         <div className="border-t border-border p-4">
