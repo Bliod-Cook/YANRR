@@ -12,6 +12,8 @@ const spring: Transition = {
 export const springScrollTo = (
   y: number,
   scrollerElement: HTMLElement = document.documentElement,
+  // How far the target has moved since the scroll started
+  getTargetShift = () => 0,
 ) => {
   const scrollTop = scrollerElement?.scrollTop
 
@@ -41,7 +43,7 @@ export const springScrollTo = (
         return
       }
 
-      el.scrollTo(0, latest)
+      el.scrollTo(0, latest + getTargetShift())
     },
   })
 
@@ -63,7 +65,12 @@ export const springScrollToElement = (
 
   const to = y + delta
 
-  return springScrollTo(to, scrollerElement || document.documentElement)
+  // Images that load above the element while scrolling push it down, so follow it
+  return springScrollTo(
+    to,
+    scrollerElement || document.documentElement,
+    () => calculateElementTop(element) - y,
+  )
 }
 
 const calculateElementTop = (el: HTMLElement) => {
