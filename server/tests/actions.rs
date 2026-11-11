@@ -241,9 +241,12 @@ async fn settings_and_rewrites_follow_current_rules() {
         "readability": true,
         "rewriteRules": [{ "from": "Sponsored: ", "to": "" }, { "from": " Sponsored", "to": "" }],
     });
+    // Only the content has the closing tag; the description made from it has none.
+    let sponsored =
+        json!([[{ "field": "entry_content", "operator": "contains", "value": "Sponsored</p>" }]]);
     let collected = json!([[{ "field": "status", "operator": "eq", "value": "collected" }]]);
     let rules = json!([
-        { "name": "Rewrite", "condition": title_is("sponsored: rust 2.0"), "result": rewrite },
+        { "name": "Rewrite", "condition": sponsored, "result": rewrite },
         { "name": "Source", "condition": collected, "result": { "sourceContent": true } },
     ]);
     app.put("/api/actions", json!({ "rules": rules })).await;

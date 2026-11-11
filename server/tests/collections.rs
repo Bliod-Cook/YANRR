@@ -15,12 +15,13 @@ async fn collect_and_uncollect() {
     let feed_id = subscribe(&app, &fixtures.url("/rss"), json!({})).await;
     let entry_id = timeline(&app, json!({})).await[0]["entries"]["id"].clone();
 
-    let collect = json!({ "entryId": entry_id, "view": 0 });
+    // Collected in another view than the feed's.
+    let collect = json!({ "entryId": entry_id, "view": 1 });
     let collected = json(app.post("/api/collections", collect.clone()).await).await;
     let again = json(app.post("/api/collections", collect).await).await;
     assert_eq!(again["lastSyncId"], collected["lastSyncId"]);
 
-    let starred = timeline(&app, json!({ "isCollection": true, "view": 0 })).await;
+    let starred = timeline(&app, json!({ "isCollection": true, "view": 1 })).await;
     assert_eq!(starred.len(), 1);
     assert_eq!(starred[0]["entries"]["id"], entry_id);
     let created_at = starred[0]["collections"]["createdAt"].clone();
@@ -31,6 +32,9 @@ async fn collect_and_uncollect() {
         .map(|item| item.get("collections").is_some())
         .collect();
     assert_eq!(marked, [true, false]);
+    assert_eq!(all[0]["view"], 0);
+    let collection = json!({ "createdAt": created_at, "view": 1 });
+    assert_eq!(all[0]["collections"], collection);
 
     app.delete("/api/collections", json!({ "entryId": entry_id }))
         .await;
@@ -53,7 +57,7 @@ async fn collect_and_uncollect() {
         })
         .collect();
     let inserted =
-        json!({ "entryId": entry_id, "feedId": feed_id, "view": 0, "createdAt": created_at });
+        json!({ "entryId": entry_id, "feedId": feed_id, "view": 1, "createdAt": created_at });
     assert_eq!(
         logged,
         [

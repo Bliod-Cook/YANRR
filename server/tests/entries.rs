@@ -130,8 +130,13 @@ async fn entry_detail_and_content_stream() {
 
     let detail = json(app.get(&format!("/api/entries?id={first_id}")).await).await;
     assert_eq!(detail["data"]["feeds"]["id"], feed_id);
+    assert_eq!(detail["data"]["read"], false);
     let content = detail["data"]["entries"]["content"].as_str().unwrap();
     assert!(content.contains("rebuilt our reader"));
+    app.post("/api/reads", json!({ "entryIds": [first_id] }))
+        .await;
+    let detail = json(app.get(&format!("/api/entries?id={first_id}")).await).await;
+    assert_eq!(detail["data"]["read"], true);
     let unknown = json(app.get("/api/entries?id=1").await).await;
     assert_eq!(unknown, json!({ "code": 0, "data": null }));
 

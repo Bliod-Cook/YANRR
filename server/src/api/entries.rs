@@ -7,14 +7,14 @@ use axum::{Json, extract::State, http::header, response::IntoResponse};
 use chrono::{DateTime, Utc};
 use sea_orm::{
     ColumnTrait, ConnectionTrait, DatabaseConnection, DbBackend, DbErr, EntityTrait,
-    FromQueryResult, QueryFilter, QueryResult, Statement, TransactionTrait, TryGetable,
-    Value as SqlValue,
+    FromQueryResult, IdenStatic, Iterable, QueryFilter, QueryResult, Statement, TransactionTrait,
+    TryGetable, Value as SqlValue,
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::{
-    error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode},
+    error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode, single_view},
     inboxes,
     response::ok,
     session::AuthUser,
@@ -43,14 +43,46 @@ pub const TIMELINE: &str = "FROM entries e
     LEFT JOIN unreads u ON u.user_id = $1 AND u.entry_id = e.id
     LEFT JOIN blocked_entries b ON b.user_id = $1 AND b.entry_id = e.id";
 
-/// The columns of an entry and its [`Marks`] on [`TIMELINE`].
-const MARKED: &str = "e.*, u.entry_id IS NULL AS read, COALESCE(s.view, c.view) AS view,
-    c.created_at AS collected_at, s.title AS subscription_title, s.category";
+/// The [`Marks`] of an entry on [`TIMELINE`].
+const MARKS: &str = "u.entry_id IS NULL AS read, COALESCE(s.view, c.view) AS view,
+    c.created_at AS collected_at, c.view AS collected_view, s.title AS subscription_title, s.category";
 
 /// The user's inbox entries, named `e` like [`TIMELINE`]'s so that cursors and order fit both; `i` is the inbox
 /// and `$1` the user id. The join is the ownership check.
 pub const INBOX_TIMELINE: &str =
     "FROM inbox_entries e JOIN inboxes i ON i.handle = e.inbox_handle AND i.user_id = $1";
+
+/// `columns` of `e`, with a null content unless `content`: timelines rarely show it, and it is the largest one.
+fn entry_columns(columns: impl Iterator<Item = impl IdenStatic>, content: bool) -> String {
+    let columns: Vec<_> = columns
+        .map(|column| match column.as_str() {
+            "content" if !content => "NULL AS content".to_string(),
+            name => format!("e.{name}"),
+        })
+        .collect();
+    columns.join(", ")
+}
+
+/// The columns of an entry, with its content only if `content`, and its [`Marks`] on [`TIMELINE`].
+fn marked_columns(content: bool) -> String {
+    format!("{}, {MARKS}", entry_columns(entry::Column::iter(), content))
+}
+
+/// The columns of an inbox entry on [`INBOX_TIMELINE`], with its content only if `content`, and of its inbox as
+/// `i_<column>`.
+fn inboxed_columns(content: bool) -> String {
+    let entry = entry_columns(inbox_entry::Column::iter(), content);
+    let inbox: Vec<_> = inbox::Column::iter()
+        .map(|column| format!("i.{0} AS i_{0}", column.as_str()))
+        .collect();
+    format!("{entry}, {}", inbox.join(", "))
+}
+
+/// An inbox entry and its inbox from a row selecting [`inboxed_columns`].
+fn inboxed(row: &QueryResult) -> Result<(inbox_entry::Model, inbox::Model), DbErr> {
+    let entry = inbox_entry::Model::from_query_result(row, "")?;
+    Ok((entry, inbox::Model::from_query_result(row, "i_")?))
+}
 
 /// Values bound to a statement as `$1`, `$2`, …
 pub struct Params(pub Vec<SqlValue>);
@@ -100,7 +132,7 @@ impl Scope {
         if self.list_id.is_some() || self.inbox_id.is_some() {
             return None;
         }
-        let view = self.view.filter(|view| *view != -1);
+        let view = single_view(self.view);
         let feed_ids = self.feed_ids();
         let mut conditions = vec!["b.entry_id IS NULL".to_string()];
         if self.is_collection() {
@@ -140,7 +172,7 @@ impl Scope {
         db: &impl ConnectionTrait,
         user_id: &str,
     ) -> Result<Option<search::Within>, DbErr> {
-        let view = self.view.filter(|view| *view != -1);
+        let view = single_view(self.view);
         let mut params = Params(vec![user_id.into()]);
         let mut sources = Vec::new();
         if self.list_id.is_none() && self.inbox_id.is_none() {
@@ -297,6 +329,7 @@ pub(super) struct Marks {
     read: bool,
     view: Option<i16>,
     collected_at: Option<DateTime<Utc>>,
+    collected_view: Option<i16>,
     subscription_title: Option<String>,
     category: Option<String>,
 }
@@ -320,19 +353,19 @@ impl Marks {
     }
 }
 
-/// An entry and its marks from a row selecting [`MARKED`].
+/// An entry and its marks from a row selecting [`marked_columns`].
 fn marked(row: &QueryResult) -> Result<(entry::Model, Marks), DbErr> {
     let entry = entry::Model::from_query_result(row, "")?;
     Ok((entry, Marks::from_query_result(row, "")?))
 }
 
-/// The entry and what the user did with it, or `None` if there is no such entry.
+/// The entry with its content and what the user did with it, or `None` if there is no such entry.
 pub(super) async fn find_marked(
     db: &impl ConnectionTrait,
     user_id: &str,
     id: i64,
 ) -> Result<Option<(entry::Model, Marks)>, DbErr> {
-    let sql = format!("SELECT {MARKED} {TIMELINE} WHERE e.id = $2");
+    let sql = format!("SELECT {} {TIMELINE} WHERE e.id = $2", marked_columns(true));
     let values = [user_id.into(), id.into()];
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
     db.query_one_raw(statement)
@@ -412,17 +445,20 @@ async fn found(
     );
     let found = find.await.map_err(|err| {
         tracing::error!("search failed: {err}");
-        ApiError::new(ExceptionCode::InternalError, "Internal error")
+        ApiError::internal()
     })?;
     let ids: Vec<i64> = found.iter().map(|found| found.id).collect();
     let values = || [user_id.into(), ids.clone().into()];
-    let sql = format!("SELECT {MARKED}, e.published_at AS time {TIMELINE} WHERE e.id = ANY($2)");
+    let rules = Rules::load(&state.db, user_id).await?;
+    let columns = marked_columns(body.with_content || rules.reads_content());
+    let sql = format!("SELECT {columns}, e.published_at AS time {TIMELINE} WHERE e.id = ANY($2)");
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values());
     let view = body.scope.view;
-    let mut items = feed_items_from(&state.db, user_id, statement, view, body.with_content).await?;
-    let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = ANY($2)");
+    let mut items = feed_items_from(&state.db, &rules, statement, view, body.with_content).await?;
+    let columns = inboxed_columns(body.with_content);
+    let sql = format!("SELECT {columns} {INBOX_TIMELINE} WHERE e.id = ANY($2)");
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values());
-    items.extend(inbox_items_from(&state.db, user_id, statement, body.with_content).await?);
+    items.extend(inbox_items_from(&state.db, statement, body.with_content).await?);
     let mut places: HashMap<i64, (usize, search::Highlight)> = found
         .into_iter()
         .enumerate()
@@ -456,17 +492,19 @@ async fn feed_items(
         true => "c.created_at",
         false => "e.published_at",
     };
-    let mut sql = format!("SELECT {MARKED}, {time} AS time {TIMELINE} WHERE {scope}");
+    let rules = Rules::load(db, user_id).await?;
+    let columns = marked_columns(body.with_content || rules.reads_content());
+    let mut sql = format!("SELECT {columns}, {time} AS time {TIMELINE} WHERE {scope}");
     body.paginate(&mut sql, &mut params, time, "u.entry_id IS NULL", limit);
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
-    feed_items_from(db, user_id, statement, body.scope.view, body.with_content).await
+    feed_items_from(db, &rules, statement, body.scope.view, body.with_content).await
 }
 
-/// Items of the feed entries `statement` selects with [`MARKED`] and the `time` they are ordered by; `view` is
-/// the one of entries the user neither follows nor collected.
+/// Items of the feed entries `statement` selects with [`marked_columns`] and the `time` they are ordered by, as
+/// the user's `rules` show them; `view` is the one of entries the user neither follows nor collected.
 async fn feed_items_from(
     db: &DatabaseConnection,
-    user_id: &str,
+    rules: &Rules,
     statement: Statement,
     view: Option<i16>,
     with_content: bool,
@@ -478,12 +516,11 @@ async fn feed_items_from(
         entries.push((marked(row)?, time));
     }
     let feeds = feeds(db, entries.iter().map(|((entry, _), _)| entry.feed_id)).await?;
-    let rules = Rules::load(db, user_id).await?;
     let items = entries
         .into_iter()
         .map(|((entry, marks), time)| {
             let feed = &feeds[&entry.feed_id];
-            let (entry, settings) = personalize(&rules, feed, entry, &marks);
+            let (entry, settings) = personalize(rules, feed, entry, &marks);
             let id = entry.id;
             let mut data = json!({
                 "read": marks.read,
@@ -494,7 +531,8 @@ async fn feed_items_from(
             });
             // Clients drop their star when the key is missing; `null` would keep it.
             if let Some(collected_at) = marks.collected_at {
-                data["collections"] = json!({ "createdAt": iso(collected_at) });
+                data["collections"] =
+                    json!({ "createdAt": iso(collected_at), "view": marks.collected_view });
             }
             if let Some(settings) = settings {
                 data["settings"] = json!(settings);
@@ -516,44 +554,36 @@ async fn inbox_items(
     let Some(scope) = body.scope.inbox_condition(&mut params) else {
         return Ok(Vec::new());
     };
-    let mut sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE {scope}");
+    let columns = inboxed_columns(body.with_content);
+    let mut sql = format!("SELECT {columns} {INBOX_TIMELINE} WHERE {scope}");
     body.paginate(&mut sql, &mut params, "e.published_at", "e.read", limit);
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
-    inbox_items_from(db, user_id, statement, body.with_content).await
+    inbox_items_from(db, statement, body.with_content).await
 }
 
-/// Items of the user's inbox entries `statement` selects.
+/// Items of the inbox entries `statement` selects with [`inboxed_columns`].
 async fn inbox_items_from(
     db: &DatabaseConnection,
-    user_id: &str,
     statement: Statement,
     with_content: bool,
 ) -> Result<Vec<Item>, DbErr> {
-    let entries = inbox_entry::Model::find_by_statement(statement)
-        .all(db)
-        .await?;
-    let inboxes: HashMap<_, _> = inbox::Entity::find()
-        .filter(inbox::Column::UserId.eq(user_id))
-        .all(db)
-        .await?
-        .into_iter()
-        .map(|inbox| (inbox.handle.clone(), inbox))
-        .collect();
-    let items = entries
-        .into_iter()
-        .map(|entry| Item {
-            time: entry.published_at,
-            id: entry.id,
-            data: json!({
-                "read": entry.read,
-                "view": 0,
-                "from": ["inbox"],
-                "feeds": wire::Inbox::from(&inboxes[&entry.inbox_handle]),
-                "entries": wire::InboxEntry::new(entry, with_content),
-            }),
+    let rows = db.query_all_raw(statement).await?;
+    rows.iter()
+        .map(|row| {
+            let (entry, inbox) = inboxed(row)?;
+            Ok(Item {
+                time: entry.published_at,
+                id: entry.id,
+                data: json!({
+                    "read": entry.read,
+                    "view": 0,
+                    "from": ["inbox"],
+                    "feeds": wire::Inbox::from(&inbox),
+                    "entries": wire::InboxEntry::new(entry, with_content),
+                }),
+            })
         })
-        .collect();
-    Ok(items)
+        .collect()
 }
 
 #[derive(Deserialize)]
@@ -581,8 +611,11 @@ pub async fn get(
     };
     let rules = Rules::load(&state.db, &user.id).await?;
     let (entry, settings) = personalize(&rules, &feed, entry, &marks);
-    let mut data =
-        json!({ "feeds": wire::Feed::from(&feed), "entries": wire::Entry::new(entry, true) });
+    let mut data = json!({
+        "read": marks.read,
+        "feeds": wire::Feed::from(&feed),
+        "entries": wire::Entry::new(entry, true),
+    });
     if let Some(settings) = settings {
         data["settings"] = json!(settings);
     }
@@ -634,7 +667,10 @@ pub(super) async fn texts(
     user_id: &str,
     ids: &[i64],
 ) -> Result<Vec<EntryText>, DbErr> {
-    let sql = format!("SELECT {MARKED} {TIMELINE} WHERE e.id = ANY($2)");
+    let sql = format!(
+        "SELECT {} {TIMELINE} WHERE e.id = ANY($2)",
+        marked_columns(true)
+    );
     let values = [user_id.into(), ids.to_vec().into()];
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
     let rows = db.query_all_raw(statement).await?;
@@ -703,21 +739,17 @@ pub async fn get_inbox_entry(
     let Some(id) = id::parse(&query.id) else {
         return Ok(ok(Value::Null));
     };
-    let sql = format!("SELECT e.* {INBOX_TIMELINE} WHERE e.id = $2");
+    let sql = format!(
+        "SELECT {} {INBOX_TIMELINE} WHERE e.id = $2",
+        inboxed_columns(true)
+    );
     let statement =
         Statement::from_sql_and_values(DbBackend::Postgres, sql, [user.id.into(), id.into()]);
-    let Some(entry) = inbox_entry::Model::find_by_statement(statement)
-        .one(&state.db)
-        .await?
-    else {
+    let Some(row) = state.db.query_one_raw(statement).await? else {
         return Ok(ok(Value::Null));
     };
-    let inbox = inbox::Entity::find_by_id(&entry.inbox_handle)
-        .one(&state.db)
-        .await?;
-    let data = inbox.map(|inbox| {
-        json!({ "feeds": wire::Inbox::from(&inbox), "entries": wire::InboxEntry::new(entry, true) })
-    });
+    let (entry, inbox) = inboxed(&row)?;
+    let data = json!({ "feeds": wire::Inbox::from(&inbox), "entries": wire::InboxEntry::new(entry, true) });
     Ok(ok(data))
 }
 

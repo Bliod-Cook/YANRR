@@ -104,6 +104,15 @@ impl Rules {
             .collect()
     }
 
+    /// Whether an enabled rule's condition reads the entry's content, so entries must be loaded with it.
+    pub fn reads_content(&self) -> bool {
+        self.rules
+            .iter()
+            .filter(|rule| rule.result.disabled != Some(true))
+            .flat_map(|rule| rule.condition.0.iter().flatten())
+            .any(|item| item.field == Field::EntryContent)
+    }
+
     /// What the enabled rules matching the entry do together, or `None` when none matches.
     pub fn apply(&self, subject: &Subject) -> Option<EntrySettings> {
         combine(self.matching(subject))

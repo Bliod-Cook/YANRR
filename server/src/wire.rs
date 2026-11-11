@@ -88,27 +88,34 @@ pub struct Entry {
     inserted_at: String,
 }
 
+/// The [`Entry`] of `$entry`, a feed or inbox entry, which have these fields in common.
+macro_rules! wire_entry {
+    ($entry:ident, $with_content:expr) => {
+        Entry {
+            id: $entry.id.to_string(),
+            guid: $entry.guid,
+            title: $entry.title,
+            url: $entry.url,
+            description: $entry.description,
+            content: $with_content.then_some($entry.content),
+            summary: (),
+            author: $entry.author,
+            author_url: $entry.author_url,
+            author_avatar: $entry.author_avatar,
+            categories: $entry.categories,
+            media: $entry.media,
+            attachments: $entry.attachments,
+            extra: $entry.extra,
+            language: $entry.language,
+            published_at: iso($entry.published_at),
+            inserted_at: iso($entry.inserted_at),
+        }
+    };
+}
+
 impl Entry {
     pub fn new(entry: entry::Model, with_content: bool) -> Self {
-        Self {
-            id: entry.id.to_string(),
-            guid: entry.guid,
-            title: entry.title,
-            url: entry.url,
-            description: entry.description,
-            content: with_content.then_some(entry.content),
-            summary: (),
-            author: entry.author,
-            author_url: entry.author_url,
-            author_avatar: entry.author_avatar,
-            categories: entry.categories,
-            media: entry.media,
-            attachments: entry.attachments,
-            extra: entry.extra,
-            language: entry.language,
-            published_at: iso(entry.published_at),
-            inserted_at: iso(entry.inserted_at),
-        }
+        wire_entry!(entry, with_content)
     }
 }
 
@@ -127,25 +134,7 @@ impl InboxEntry {
         Self {
             read: entry.read,
             inbox_handle: entry.inbox_handle,
-            entry: Entry {
-                id: entry.id.to_string(),
-                guid: entry.guid,
-                title: entry.title,
-                url: entry.url,
-                description: entry.description,
-                content: with_content.then_some(entry.content),
-                summary: (),
-                author: entry.author,
-                author_url: entry.author_url,
-                author_avatar: entry.author_avatar,
-                categories: entry.categories,
-                media: entry.media,
-                attachments: entry.attachments,
-                extra: entry.extra,
-                language: entry.language,
-                published_at: iso(entry.published_at),
-                inserted_at: iso(entry.inserted_at),
-            },
+            entry: wire_entry!(entry, with_content),
         }
     }
 }
