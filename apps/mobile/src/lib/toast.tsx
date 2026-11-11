@@ -7,7 +7,7 @@ import type { ToastProps } from "../components/ui/toast/types"
 export const toastInstance = new ToastManager()
 
 type CommandToastOptions = Partial<
-  Pick<ToastProps, "duration" | "icon" | "render" | "message" | "description" | "position">
+  Pick<ToastProps, "duration" | "icon" | "message" | "description">
 >
 type Toast = {
   // [key in "error" | "success" | "info"]: (message: string) => void;
@@ -45,7 +45,6 @@ export const toast = {
         ...(options.description ? { title: message, message: options.description } : { message }),
         type,
         duration: duration / 1000,
-        position: options.position,
       } as NativeToasterOptions)
       return
     }
@@ -53,7 +52,6 @@ export const toast = {
     toastInstance.show({
       type,
       message,
-      variant: "center-replace",
       ...options,
       duration,
     })

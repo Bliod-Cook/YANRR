@@ -3,107 +3,44 @@ import { atom, Provider } from "jotai"
 import RootSiblings from "react-native-root-siblings"
 
 import { FullWindowOverlay } from "../../common/FullWindowOverlay"
-import { ToastActionContext, ToastContainerContext } from "./ctx"
+import { dismissToast } from "./state"
 import { ToastContainer } from "./ToastContainer"
-import type { BottomToastProps, CenterToastProps, ToastProps, ToastRef } from "./types"
+import type { ToastProps } from "./types"
 
 export class ToastManager {
-  private stackAtom = atom<ToastProps[]>([])
+  private toastAtom = atom<ToastProps | null>(null)
   private portal: RootSiblings | null = null
+  private lastId = 0
 
-  private propsMap = {} as Record<number, ToastProps>
-  private currentIndex = 0
-
-  private defaultProps: Omit<ToastProps, "currentIndex"> = {
-    duration: 3000,
-    action: [],
-    type: "info",
-    variant: "bottom-stack",
-    message: "",
-    render: null,
-    icon: null,
-    canClose: true,
-  }
-
-  private toastRefs = {} as Record<number, ToastRef>
-
-  private register(currentIndex: number, ref: ToastRef) {
-    if (currentIndex in this.toastRefs) {
-      console.warn("Conflict toast ref", currentIndex, this.toastRefs[currentIndex], ref)
-    }
-    this.toastRefs[currentIndex] = ref
-    return () => {
-      delete this.toastRefs[currentIndex]
-    }
-  }
-
-  mount() {
+  private mount() {
     this.portal = new RootSiblings(
       <FullWindowOverlay>
         <Provider store={jotaiStore}>
-          <ToastContainerContext value={this.stackAtom}>
-            <ToastActionContext value={{ register: this.register.bind(this) }}>
-              <ToastContainer />
-            </ToastActionContext>
-          </ToastContainerContext>
+          <ToastContainer toastAtom={this.toastAtom} />
         </Provider>
       </FullWindowOverlay>,
     )
   }
 
-  private push(props: ToastProps) {
-    this.propsMap[props.currentIndex] = props
-    jotaiStore.set(this.stackAtom, [...jotaiStore.get(this.stackAtom), props])
-  }
-
-  private remove(index: number) {
-    delete this.propsMap[index]
-    jotaiStore.set(
-      this.stackAtom,
-      jotaiStore.get(this.stackAtom).filter((toast) => toast.currentIndex !== index),
-    )
-  }
-
-  private scheduleDismiss(index: number) {
-    const props = this.propsMap[index]!
-
-    if (props.duration === Infinity) {
-      return
-    }
-
-    setTimeout(async () => {
-      await this.toastRefs[index]?.dismiss()
-      this.remove(index)
-    }, props.duration)
-  }
-
-  // @ts-expect-error
-  show(props: CenterToastProps): Promise<() => void>
-  show(props: BottomToastProps): Promise<() => void>
-  show(props: Omit<Partial<ToastProps>, "currentIndex">) {
+  /** Shows a toast in the middle of the screen, in place of the one shown before. */
+  show(props: Partial<Omit<ToastProps, "id">>) {
     if (!this.portal) {
       this.mount()
     }
 
-    const nextProps = { ...this.defaultProps, ...props }
-
-    if (nextProps.canClose === false) {
-      nextProps.duration = Infinity
+    const toast: ToastProps = {
+      duration: 3000,
+      type: "info",
+      message: "",
+      ...props,
+      id: ++this.lastId,
     }
+    jotaiStore.set(this.toastAtom, toast)
 
-    if (nextProps.variant === "center-replace") {
-      // Find and remove the toast if it exists
-      const index = jotaiStore
-        .get(this.stackAtom)
-        .findIndex((toast) => toast.variant === "center-replace")
-      if (index !== -1) {
-        this.remove(index)
-      }
+    const dismiss = () => jotaiStore.set(this.toastAtom, (shown) => dismissToast(shown, toast.id))
+    if (toast.duration !== Infinity) {
+      setTimeout(dismiss, toast.duration)
     }
-
-    const currentIndex = ++this.currentIndex
-    this.push({ ...nextProps, currentIndex })
-    this.scheduleDismiss(currentIndex)
-    return () => this.remove(currentIndex)
+    return dismiss
   }
 }

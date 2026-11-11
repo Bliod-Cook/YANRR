@@ -1,16 +1,15 @@
 import { withOpacity } from "@follow/utils"
-import { createElement, use, useEffect, useState } from "react"
+import { createElement, useState } from "react"
 import { StyleSheet, View } from "react-native"
 import Animated, { FadeOut } from "react-native-reanimated"
 
 import { Text } from "@/src/components/ui/typography/Text"
 
 import { toastTypeToIcons } from "./constants"
-import { ToastActionContext } from "./ctx"
 import type { ToastProps } from "./types"
 
 export const CenteredToast = (props: ToastProps) => {
-  const renderMessage = props.render ? null : props.message ? (
+  const renderMessage = props.message ? (
     <View className="shrink">
       <Text className="font-semibold text-white">{props.message}</Text>
       {!!props.description && (
@@ -18,15 +17,6 @@ export const CenteredToast = (props: ToastProps) => {
       )}
     </View>
   ) : null
-  const { register } = use(ToastActionContext)
-  useEffect(() => {
-    const disposer = register(props.currentIndex, {
-      dismiss: async () => {},
-    })
-    return () => {
-      disposer()
-    }
-  }, [props.currentIndex, register])
   const renderIcon =
     props.icon === false
       ? null
