@@ -106,6 +106,7 @@ const VirtualGridImpl: FC<
     Footer,
     hasNextPage,
     listRef,
+    scrollToEntryRef,
     measureRef,
     containerWidth,
     appliedResetScrollSignal,
@@ -210,6 +211,15 @@ const VirtualGridImpl: FC<
     if (!listRef) return
     listRef.current = rowVirtualizer
   }, [rowVirtualizer, listRef])
+
+  useEffect(() => {
+    if (!scrollToEntryRef) return
+    scrollToEntryRef.current = (index) =>
+      rowVirtualizer.scrollToIndex(Math.floor(index / columns.length))
+    return () => {
+      scrollToEntryRef.current = undefined
+    }
+  }, [columns.length, rowVirtualizer, scrollToEntryRef])
 
   useLayoutEffect(() => {
     if (!scrollRef) return

@@ -76,23 +76,13 @@ const useRemoteEntries = (): RemoteEntriesReturn => {
   )
   const query = useEntriesQuery(entriesOptions)
 
-  // "Mark above as read" sends this as `insertedBefore`, so it must only move
-  // when the top of the list is (re)loaded. Loading the next page doesn't show
-  // entries inserted after the first page was fetched.
-  const isFetchingFirstPage = query.isFetching && !query.isFetchingNextPage
-  const [fetchedTime, setFetchedTime] = useState<number>()
-  useEffect(() => {
-    if (!isFetchingFirstPage) {
-      setFetchedTime(Date.now())
-    }
-  }, [isFetchingFirstPage])
-
   const refetch = useCallback(async () => void query.refetch(), [query])
   const fetchNextPage = useCallback(async () => void query.fetchNextPage(), [query])
 
-  if (!query.data || query.isLoading) {
+  if (!query.data) {
     return getRemoteEntriesFallback(query, refetch)
   }
+  // Once in, the list stays when a later request fails, which `error` tells of
   return {
     entriesIds: query.entriesIds,
     hasNext: query.hasNextPage,
@@ -101,12 +91,13 @@ const useRemoteEntries = (): RemoteEntriesReturn => {
     fetchNextPage,
     isLoading: query.isFetching,
     isRefetching: query.isRefetching,
-    isReady: query.isSuccess,
+    isReady: true,
     isFetchingNextPage: query.isFetchingNextPage,
     isFetching: query.isFetching,
     hasNextPage: query.hasNextPage,
-    error: query.isError ? query.error : null,
-    fetchedTime,
+    error: query.error,
+    isFetchNextPageError: query.isFetchNextPageError,
+    insertedBefore: query.insertedBefore,
     queryKey: query.queryKey,
   }
 }
@@ -332,6 +323,9 @@ export const useEntriesByView = ({ onReset }: { onReset?: () => void }) => {
     isLoading: remoteQuery.isLoading,
     isOffline: remoteQuery.isOffline === true,
     error: remoteQuery.error,
+    isFetchNextPageError: remoteQuery.isFetchNextPageError === true,
+    // Only the server's list can be marked read up to its end: the stored one has no bound
+    insertedBefore: remoteQuery.isReady ? remoteQuery.insertedBefore : undefined,
   }
 }
 

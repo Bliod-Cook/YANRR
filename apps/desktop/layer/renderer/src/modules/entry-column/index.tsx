@@ -26,6 +26,7 @@ import { AITimelineLoadingOverlay } from "./components/ai-timeline-loading/AITim
 import { EntryColumnWrapper } from "./components/entry-column-wrapper/EntryColumnWrapper"
 import { FooterMarkItem } from "./components/FooterMarkItem"
 import { useEntriesActions, useEntriesState } from "./context/EntriesContext"
+import { EntryColumnShortcutHandler } from "./EntryColumnShortcutHandler"
 import { EntryItemSkeleton } from "./EntryItemSkeleton"
 import { EntryColumnGrid } from "./grid"
 import { useAttachScrollBeyond } from "./hooks/useAttachScrollBeyond"
@@ -33,9 +34,7 @@ import { useSnapEntryIdList } from "./hooks/useEntryIdListSnap"
 import { useEntryMarkReadHandler } from "./hooks/useEntryMarkReadHandler"
 import { useNavigateFirstEntry } from "./hooks/useNavigateFirstEntry"
 import { EntryListHeader } from "./layouts/EntryListHeader"
-import { EntryEmptyList, EntryList } from "./list"
-import { canFetchNextPage } from "./next-page"
-import { shouldScrollTimelineToTopOnRefreshStateChange } from "./refresh-reset"
+import { EntryEmptyList, EntryList, EntryLoadFailedRow } from "./list"
 import {
   shouldResetScrollOnTimelineIdentityChange,
   shouldSuspendMarkReadForScrollReset,
@@ -44,6 +43,8 @@ import { EntryRootStateContext } from "./store/EntryColumnContext"
 
 function EntryColumnContent() {
   const listRef = useRef<Virtualizer<HTMLElement, Element>>(undefined)
+  const scrollToEntryRef = useRef<(index: number) => void>(undefined)
+  const scrollToEntry = useCallback((index: number) => scrollToEntryRef.current?.(index), [])
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const { t } = useTranslation()
   const state = useEntriesState()
@@ -153,16 +154,8 @@ function EntryColumnContent() {
   useEffect(() => {
     const wasRefreshing = wasRefreshingRef.current
     wasRefreshingRef.current = isRefreshing
-
-    if (
-      !shouldScrollTimelineToTopOnRefreshStateChange({
-        wasRefreshing,
-        isRefreshing,
-      })
-    ) {
-      return
-    }
-    scrollTimelineToTop()
+    // Only when a refresh starts
+    if (!wasRefreshing && isRefreshing) scrollTimelineToTop()
   }, [isRefreshing, scrollTimelineToTop])
 
   const { handleRenderMarkRead, handleScrollMarkRead } = useEntryMarkReadHandler(entriesIds, {
@@ -247,12 +240,15 @@ function EntryColumnContent() {
     [flushScrollMarkRead, handleRenderMarkRead, isScrollResetPending, renderAsRead, view],
   )
 
-  // Changes when a fetch ends, so the list asks again for a page it asked for meanwhile
+  // With the server's entries on screen, a failed page or refresh is offered again where the next
+  // page loads, instead of being asked for over and over
+  const loadFailed = state.type === "remote" && state.error != null
+  const hasNextPage = state.hasNextPage && !loadFailed
+  // Waits while the list loads. This changes when the fetch ends, so the list asks again for a
+  // page it asked for meanwhile.
   const fetchNextPage = useCallback(() => {
-    if (canFetchNextPage({ hasNextPage: state.hasNextPage, isFetching: state.isFetching })) {
-      actions.fetchNextPage()
-    }
-  }, [actions, state.hasNextPage, state.isFetching])
+    if (hasNextPage && !state.isFetching) actions.fetchNextPage()
+  }, [actions, hasNextPage, state.isFetching])
 
   const ListComponent = getView(view)?.gridMode ? EntryColumnGrid : EntryList
 
@@ -303,13 +299,13 @@ function EntryColumnContent() {
           <ListComponent
             gap={view === FeedViewType.SocialMedia ? 10 : undefined}
             listRef={listRef}
+            scrollToEntryRef={scrollToEntryRef}
             onRangeChange={handleRangeChange}
-            hasNextPage={state.hasNextPage}
+            hasNextPage={hasNextPage}
             view={view}
             feedId={routeFeedId || ""}
             entriesIds={entriesIds}
             fetchNextPage={fetchNextPage}
-            refetch={actions.refetch}
             groupCounts={groupedCounts}
             appliedResetScrollSignal={appliedResetScrollSignal}
             onResetScrollSignalConsumed={handleResetScrollSignalConsumed}
@@ -317,10 +313,23 @@ function EntryColumnContent() {
             suspendMarkRead={isScrollResetPending}
             syncType={state.type}
             Footer={
-              isCollection ? void 0 : <FooterMarkItem view={view} fetchedTime={state.fetchedTime} />
+              loadFailed ? (
+                <EntryLoadFailedRow
+                  isRetrying={state.isFetching}
+                  onRetry={state.isFetchNextPageError ? actions.fetchNextPage : actions.refetch}
+                />
+              ) : isCollection || state.insertedBefore === undefined ? undefined : (
+                <FooterMarkItem view={view} insertedBefore={state.insertedBefore} />
+              )
             }
           />
         )}
+        {/* Here for every layout and an empty list, and in the scroll area it focuses */}
+        <EntryColumnShortcutHandler
+          refetch={actions.refetch}
+          data={entriesIds}
+          handleScrollTo={scrollToEntry}
+        />
       </EntryColumnWrapper>
 
       <AITimelineLoadingOverlay

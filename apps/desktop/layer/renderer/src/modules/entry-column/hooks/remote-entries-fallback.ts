@@ -5,6 +5,10 @@ import type { FetchStatus } from "@tanstack/react-query"
 export type RemoteEntriesReturn = UseEntriesReturn & {
   /** The first page waits for the browser to come back online. */
   isOffline?: boolean
+  /** The request `error` tells of asked for the next page, not for the first one */
+  isFetchNextPageError?: boolean
+  /** Marking the list read up to its end covers what was inserted before this */
+  insertedBefore?: number
 }
 
 interface FirstPageQuery {

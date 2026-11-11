@@ -64,6 +64,8 @@ describe("EntriesProvider", () => {
       isLoading: false,
       isOffline: false,
       error: null,
+      isFetchNextPageError: false,
+      insertedBefore: undefined,
       refetch,
       fetchNextPage: vi.fn(),
       hasNext: false,

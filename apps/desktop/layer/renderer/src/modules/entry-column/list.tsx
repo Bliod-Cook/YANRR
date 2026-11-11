@@ -11,14 +11,12 @@ import type { HTMLMotionProps } from "motion/react"
 import type { FC, MutableRefObject, ReactNode } from "react"
 import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { useEventCallback } from "usehooks-ts"
 
 import { useGeneralSettingKey } from "~/atoms/settings/general"
 import { m } from "~/components/common/Motion"
 import { useFeedHeaderTitle } from "~/store/feed/hooks"
 
 import { VirtualRowItem } from "./components/VirtualRowItem"
-import { EntryColumnShortcutHandler } from "./EntryColumnShortcutHandler"
 import { EntryItemSkeleton } from "./EntryItemSkeleton"
 import { useScrollMarkReadEndPadding } from "./hooks/useScrollMarkReadEndPadding"
 import { getInitialScrollOffset, shouldApplyScrollResetSignal } from "./scroll-reset"
@@ -77,6 +75,26 @@ export const EntryEmptyList = ({
   )
 }
 
+/** Where the next page loads, after a page or a refresh failed */
+export const EntryLoadFailedRow = ({
+  isRetrying,
+  onRetry,
+}: {
+  isRetrying: boolean
+  onRetry: () => void
+}) => {
+  const { t } = useTranslation()
+  return (
+    <div className="flex items-center justify-center gap-3 py-6 text-sm text-text-secondary">
+      <i className="i-mgc-warning-cute-re text-base text-red" />
+      <span>{t("entry_list.load_failed")}</span>
+      <Button variant="outline" size="sm" isLoading={isRetrying} onClick={onRetry}>
+        {t("retry", { ns: "common" })}
+      </Button>
+    </div>
+  )
+}
+
 export type EntryListProps = {
   syncType: "remote" | "local"
   feedId: string
@@ -85,7 +103,6 @@ export type EntryListProps = {
 
   hasNextPage: boolean
   fetchNextPage: () => void
-  refetch: () => void
 
   groupCounts?: number[]
   gap?: number
@@ -95,6 +112,8 @@ export type EntryListProps = {
   onRangeChange?: (range: Range) => void
 
   listRef?: MutableRefObject<Virtualizer<HTMLElement, Element> | undefined>
+  /** Set by the layout to bring the entry at an index into view */
+  scrollToEntryRef?: MutableRefObject<((index: number) => void) | undefined>
   appliedResetScrollSignal?: number
   onResetScrollSignalConsumed?: (signal: number) => void
   resetScrollSignal?: number
@@ -116,11 +135,11 @@ export const EntryList: FC<EntryListProps> = memo(
     view,
     entriesIds,
     fetchNextPage,
-    refetch,
     hasNextPage,
     groupCounts,
     Footer,
     listRef,
+    scrollToEntryRef,
     onRangeChange,
     gap,
     syncType,
@@ -195,6 +214,14 @@ export const EntryList: FC<EntryListProps> = memo(
       listRef.current = rowVirtualizer
     }, [rowVirtualizer, listRef])
 
+    useEffect(() => {
+      if (!scrollToEntryRef) return
+      scrollToEntryRef.current = (index) => rowVirtualizer.scrollToIndex(index)
+      return () => {
+        scrollToEntryRef.current = undefined
+      }
+    }, [rowVirtualizer, scrollToEntryRef])
+
     useLayoutEffect(() => {
       if (!scrollRef) return
       if (!isResetScrollPending) return
@@ -213,10 +240,6 @@ export const EntryList: FC<EntryListProps> = memo(
       rowVirtualizer,
       scrollRef,
     ])
-
-    const handleScrollTo = useEventCallback((index: number) => {
-      rowVirtualizer.scrollToIndex(index)
-    })
 
     const activeStickyIndexRef = useRef(0)
     const checkIsActiveSticky = (index: number) => activeStickyIndexRef.current === index
@@ -263,70 +286,62 @@ export const EntryList: FC<EntryListProps> = memo(
     const currentFeedTitle = useFeedHeaderTitle()!
 
     return (
-      <>
-        <div
-          onKeyDown={handleKeyDown}
-          className={"relative w-full select-none"}
-          style={{
-            height: `${rowVirtualizer.getTotalSize() + endSpacerHeight}px`,
-          }}
-        >
-          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-            if (!ready) return null
-            // Last placeholder row
-            const isLoaderRow = virtualRow.index === entriesIds.length
+      <div
+        onKeyDown={handleKeyDown}
+        className={"relative w-full select-none"}
+        style={{
+          height: `${rowVirtualizer.getTotalSize() + endSpacerHeight}px`,
+        }}
+      >
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          if (!ready) return null
+          // Last placeholder row
+          const isLoaderRow = virtualRow.index === entriesIds.length
 
-            const transform = `translateY(${virtualRow.start}px)`
-            if (isLoaderRow) {
-              const Content = hasNextPage ? (
-                <EntryItemSkeleton view={view} count={6} />
-              ) : Footer ? (
-                typeof Footer === "function" ? (
-                  <Footer />
-                ) : (
-                  Footer
-                )
-              ) : null
-
-              return (
-                <div
-                  ref={rowVirtualizer.measureElement}
-                  className="absolute left-0 top-0 w-full will-change-transform"
-                  key={virtualRow.key}
-                  data-index={virtualRow.index}
-                  style={{
-                    transform,
-                  }}
-                >
-                  {Content}
-                </div>
+          const transform = `translateY(${virtualRow.start}px)`
+          if (isLoaderRow) {
+            const Content = hasNextPage ? (
+              <EntryItemSkeleton view={view} count={6} />
+            ) : Footer ? (
+              typeof Footer === "function" ? (
+                <Footer />
+              ) : (
+                Footer
               )
-            }
-            const isStickyItem = checkIsStickyItem(virtualRow.index)
-            const isActiveStickyItem = !isScrollTop && checkIsActiveSticky(virtualRow.index)
-            return (
-              <VirtualRowItem
-                key={virtualRow.key}
-                virtualRowKey={virtualRow.key}
-                entriesIds={entriesIds}
-                virtualRowIndex={virtualRow.index}
-                view={view}
-                transform={transform}
-                isStickyItem={isStickyItem}
-                isActiveStickyItem={isActiveStickyItem}
-                measureElement={rowVirtualizer.measureElement}
-                currentFeedTitle={currentFeedTitle}
-              />
-            )
-          })}
-        </div>
+            ) : null
 
-        <EntryColumnShortcutHandler
-          refetch={refetch}
-          data={entriesIds}
-          handleScrollTo={handleScrollTo}
-        />
-      </>
+            return (
+              <div
+                ref={rowVirtualizer.measureElement}
+                className="absolute left-0 top-0 w-full will-change-transform"
+                key={virtualRow.key}
+                data-index={virtualRow.index}
+                style={{
+                  transform,
+                }}
+              >
+                {Content}
+              </div>
+            )
+          }
+          const isStickyItem = checkIsStickyItem(virtualRow.index)
+          const isActiveStickyItem = !isScrollTop && checkIsActiveSticky(virtualRow.index)
+          return (
+            <VirtualRowItem
+              key={virtualRow.key}
+              virtualRowKey={virtualRow.key}
+              entriesIds={entriesIds}
+              virtualRowIndex={virtualRow.index}
+              view={view}
+              transform={transform}
+              isStickyItem={isStickyItem}
+              isActiveStickyItem={isActiveStickyItem}
+              measureElement={rowVirtualizer.measureElement}
+              currentFeedTitle={currentFeedTitle}
+            />
+          )
+        })}
+      </div>
     )
   },
 )

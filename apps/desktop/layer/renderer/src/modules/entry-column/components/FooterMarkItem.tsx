@@ -6,16 +6,13 @@ import { FlatMarkAllReadButton } from "./mark-all-button"
 
 export const FooterMarkItem = ({
   view,
-  fetchedTime,
+  insertedBefore,
 }: {
   view: FeedViewType
-  fetchedTime?: number
+  /** Leaves out what arrived after the list on screen was loaded */
+  insertedBefore: number
 }) => {
-  const filter = fetchedTime
-    ? {
-        insertedBefore: fetchedTime,
-      }
-    : undefined
+  const filter = { insertedBefore }
 
   if (view === FeedViewType.SocialMedia) {
     return <SocialMediaFooterMarkItem filter={filter} />
@@ -26,7 +23,7 @@ export const FooterMarkItem = ({
 }
 
 interface FooterMarkItemProps {
-  filter?: {
+  filter: {
     insertedBefore: number
   }
 }

@@ -16,8 +16,11 @@ type EntriesStateContextValue = {
   /** Nothing is cached and the first page waits for the browser to come back online. */
   isOffline: boolean
   error: unknown | null
+  /** The request `error` tells of asked for the next page, not for the first one */
+  isFetchNextPageError: boolean
   view: FeedViewType
-  fetchedTime?: number
+  /** Marking the list read up to its end covers what was inserted before this */
+  insertedBefore?: number
 }
 
 type EntriesActionsContextValue = {
@@ -116,8 +119,9 @@ export const EntriesProvider: React.FC<React.PropsWithChildren> = ({ children })
       isLoading: entries.isLoading,
       isOffline: entries.isOffline,
       error: entries.error ?? null,
+      isFetchNextPageError: entries.isFetchNextPageError,
       view: view!,
-      fetchedTime: entries.fetchedTime,
+      insertedBefore: entries.insertedBefore,
     }),
     [entries, view, syncType],
   )
