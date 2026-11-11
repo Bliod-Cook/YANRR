@@ -1,3 +1,4 @@
+import { resolveContentUrl } from "@follow/utils/content-url"
 import { createContext as reactCreateContext } from "react"
 import { createContext } from "use-context-selector"
 
@@ -8,7 +9,7 @@ export const MarkdownRenderContainerRefContext = reactCreateContext<HTMLElement 
 export const MarkdownImageRecordContext = createContext<Record<string, MarkdownImage>>({})
 
 export const MarkdownRenderActionContext = reactCreateContext<MarkdownRenderActions>({
-  transformUrl: (url) => url ?? "",
+  transformUrl: (url) => url && resolveContentUrl(url, undefined),
   isAudio: () => false,
   ensureAndRenderTimeStamp: () => false,
 })
