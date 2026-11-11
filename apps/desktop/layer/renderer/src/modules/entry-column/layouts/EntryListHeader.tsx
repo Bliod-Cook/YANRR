@@ -4,7 +4,6 @@ import { RotatingRefreshIcon } from "@follow/components/ui/loading/index.jsx"
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/index.js"
 import { FeedViewType, getView } from "@follow/constants"
 import { useIsOnline } from "@follow/hooks"
-import { DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID } from "@follow/shared/settings/defaults"
 import { getFeedById } from "@follow/store/feed/getter"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useIsLoggedIn } from "@follow/store/user/hooks"
@@ -12,7 +11,7 @@ import { stopPropagation } from "@follow/utils/dom"
 import { clsx, cn, isBizId } from "@follow/utils/utils"
 import { useAtom, useAtomValue } from "jotai"
 import type { FC } from "react"
-import { useCallback } from "react"
+import { lazy, Suspense, useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 
@@ -24,7 +23,6 @@ import { useFollow } from "~/hooks/biz/useFollow"
 import { getPreviewBackPath } from "~/hooks/biz/useNavigateEntry"
 import { getRouteParams, useRouteParams } from "~/hooks/biz/useRouteParams"
 import { useLoginModal } from "~/hooks/common"
-import { useSendAIShortcut } from "~/modules/ai-chat/hooks/useSendAIShortcut"
 import { COMMAND_ID } from "~/modules/command/commands/id"
 import { useRunCommandFn } from "~/modules/command/hooks/use-command"
 import { useCommandShortcut } from "~/modules/command/hooks/use-command-binding"
@@ -43,6 +41,10 @@ import { useIsPreviewFeed } from "../hooks/useIsPreviewFeed"
 import { useEntryRootState } from "../store/EntryColumnContext"
 import { AppendTaildingDivider } from "./AppendTaildingDivider"
 import { SwitchToMasonryButton } from "./buttons/SwitchToMasonryButton"
+
+const TimelineSummaryButton = lazy(() =>
+  import("./TimelineSummaryButton").then((m) => ({ default: m.TimelineSummaryButton })),
+)
 
 export const EntryListHeader: FC<{
   refetch: () => void
@@ -180,7 +182,11 @@ export const EntryListHeader: FC<{
                   {(showAiTimelineToggle || showTimelineSummaryButton) && (
                     <div className="flex items-center gap-2">
                       {aiTimelineEnabled && renderAiTimelineButton()}
-                      {showTimelineSummaryButton && <TimelineSummaryButton />}
+                      {showTimelineSummaryButton && (
+                        <Suspense>
+                          <TimelineSummaryButton />
+                        </Suspense>
+                      )}
                     </div>
                   )}
                   <DividerVertical className="mx-2 w-px" />
@@ -257,25 +263,6 @@ export const EntryListHeader: FC<{
         )}
       </div>
     </div>
-  )
-}
-
-/** Apart from the header, so the AI chat it starts is only set up with the AI feature on */
-const TimelineSummaryButton = () => {
-  const { t } = useTranslation()
-  const { sendAIShortcut } = useSendAIShortcut()
-  return (
-    <ActionButton
-      tooltip={t("entry_list_header.timeline_summary")}
-      onClick={() =>
-        void sendAIShortcut({
-          shortcutId: DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID,
-          ensureNewChat: true,
-        })
-      }
-    >
-      <i className="i-mgc-paint-brush-ai-cute-re text-purple-600 dark:text-purple-400" />
-    </ActionButton>
   )
 }
 

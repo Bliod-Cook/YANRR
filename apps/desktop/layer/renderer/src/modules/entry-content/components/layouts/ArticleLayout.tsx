@@ -4,23 +4,21 @@ import { useFeedById } from "@follow/store/feed/hooks"
 import { useIsInbox } from "@follow/store/inbox/hooks"
 import { cn } from "@follow/utils"
 import { useAtomValue } from "jotai"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react"
 
 import { useEntryIsInReadability } from "~/atoms/readability"
-import { AIChatPanelStyle, useAIChatPanelStyle, useAIPanelVisibility } from "~/atoms/settings/ai"
 import { customCSSPreviewAtom, useUISettingKey } from "~/atoms/settings/ui"
 import { ErrorBoundary } from "~/components/common/ErrorBoundary"
 import { ShadowDOM } from "~/components/common/ShadowDOM"
 import type { TocRef } from "~/components/ui/markdown/components/Toc"
 import { useInPeekModal } from "~/components/ui/modal/inspire/InPeekModal"
 import { readableContentMaxWidthClassName } from "~/constants/ui"
+import { useFeature } from "~/hooks/biz/useFeature"
 import { useRenderStyle } from "~/hooks/biz/useRenderStyle"
-import { useOptionalChatHasMessages } from "~/modules/ai-chat/store/hooks"
 import { EntryContentHTMLRenderer } from "~/modules/renderer/html"
 import { WrappedElementProvider } from "~/providers/wrapped-element-provider"
 
 import { useEntryContent, useEntryMediaInfo } from "../../hooks"
-import { AISummary } from "../AISummary"
 import { ContainerToc } from "../entry-content/accessories/ContainerToc"
 import { EntryNoContent } from "../entry-content/EntryNoContent"
 import { EntryRenderError } from "../entry-content/EntryRenderError"
@@ -30,6 +28,10 @@ import { EntryTitle } from "../EntryTitle"
 import { MediaTranscript, TranscriptToggle, useSubtitles } from "./shared"
 import { ArticleAudioPlayer } from "./shared/AudioPlayer"
 import type { EntryLayoutProps } from "./types"
+
+const ArticleAISummary = lazy(() =>
+  import("./ArticleAISummary").then((m) => ({ default: m.ArticleAISummary })),
+)
 
 export const ArticleLayout: React.FC<EntryLayoutProps> = ({
   entryId,
@@ -54,13 +56,7 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
   const customCSSPreview = useAtomValue(customCSSPreviewAtom)
   const customCSS = customCSSPreview ?? savedCustomCSS
 
-  const aiChatPanelStyle = useAIChatPanelStyle()
-  const isAIPanelVisible = useAIPanelVisibility()
-  const chatHasMessages = useOptionalChatHasMessages()
-
-  // The fixed panel shows the summary on the welcome screen of an empty chat instead
-  const shouldShowAISummary =
-    aiChatPanelStyle === AIChatPanelStyle.Floating || !isAIPanelVisible || chatHasMessages
+  const aiEnabled = useFeature("ai")
 
   if (!entry) return null
 
@@ -79,7 +75,11 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
 
       <WrappedElementProvider>
         <div className="mx-auto mb-32 mt-6 max-w-full cursor-auto text-[0.94rem]">
-          {shouldShowAISummary && <AISummary entryId={entryId} />}
+          {aiEnabled && (
+            <Suspense>
+              <ArticleAISummary entryId={entryId} />
+            </Suspense>
+          )}
           <ErrorBoundary fallback={EntryRenderError}>
             <ReadabilityNotice entryId={entryId} />
             {showTranscript ? (
