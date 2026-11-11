@@ -150,4 +150,19 @@ describe("SharePanel", () => {
     })
     expect(mocks.dismissPopover).toHaveBeenCalledOnce()
   })
+
+  test("leaves the clipboard alone when the system share sheet is closed", async () => {
+    const share = vi.fn().mockRejectedValue(new DOMException("Share canceled", "AbortError"))
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: share,
+    })
+    ;({ container, root } = await renderSharePanel())
+
+    await clickAction(container, "share.system_share")
+
+    expect(share).toHaveBeenCalledOnce()
+    expect(mocks.copyToClipboard).not.toHaveBeenCalled()
+    expect(mocks.dismissPopover).not.toHaveBeenCalled()
+  })
 })

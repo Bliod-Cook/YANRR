@@ -125,7 +125,10 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
         toast.success(t("share.link_copied"))
       }
       dismissPopover()
-    } catch {
+    } catch (error) {
+      // Closing the system share sheet is a choice, not a failure
+      if (error instanceof DOMException && error.name === "AbortError") return
+
       // If sharing fails, copy link as fallback
       try {
         await copyToClipboard(shareContent.url)
