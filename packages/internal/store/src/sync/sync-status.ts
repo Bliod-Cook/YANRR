@@ -3,8 +3,8 @@
  * without imports, so hooks can read it without pulling in the engine and its stores.
  *
  * While it is active the delta feed keeps subscriptions, unread counts and read state fresh,
- * so the legacy "refetch when things look wrong" heuristics stand down. They stay in place
- * as the fallback for servers that do not expose the sync endpoints yet.
+ * so the "refetch when things look wrong" heuristics stand down. They stay in place for the
+ * moments without a cursor: signed out, or before the first bootstrap went through.
  */
 let active = false
 let bootstrapping = false
@@ -35,7 +35,7 @@ export const willSyncEngineDeliver = () => active || bootstrapping
  */
 export interface SyncEngineHandle {
   ensureSynced: () => Promise<boolean>
-  catchUp: (delayMs?: number) => Promise<boolean>
+  catchUp: () => Promise<boolean>
   requestUnreadCalibration: () => Promise<void>
   /** A full unread snapshot was taken; the counters logged up to this id are inside it. */
   recordUnreadSnapshot: (lastSyncId: number) => Promise<void>
@@ -54,8 +54,7 @@ export const registerSyncEngine = (next: SyncEngineHandle | null) => {
 export const ensureSyncedThroughEngine = () => engine?.ensureSynced() ?? Promise.resolve(false)
 
 /** Pick up a change the server made outside the transaction queue. `false`: use a full request. */
-export const catchUpThroughEngine = (delayMs?: number) =>
-  engine?.catchUp(delayMs) ?? Promise.resolve(false)
+export const catchUpThroughEngine = () => engine?.catchUp() ?? Promise.resolve(false)
 
 export const requestUnreadCalibration = () =>
   engine?.requestUnreadCalibration() ?? Promise.resolve()

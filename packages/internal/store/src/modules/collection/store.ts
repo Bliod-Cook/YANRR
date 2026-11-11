@@ -1,14 +1,17 @@
-import type { FeedViewType } from "@follow/constants"
+import { FeedViewType } from "@follow/constants"
 import type { CollectionSchema } from "@follow/database/schemas/types"
 import { CollectionService } from "@follow/database/services/collection"
+import type { WithLastSyncId } from "@follow-app/client-sdk"
 
 import { api } from "../../context"
 import type { Hydratable, Resetable } from "../../lib/base"
 import { createTransaction, createZustandStore } from "../../lib/helper"
 import { collectionOverlayKey, isCollectionOverlayKey } from "../../sync/overlay-keys"
+import type { ServerSuccess } from "../../sync/transaction-queue"
 import { defineTransactionKind, transactionQueue } from "../../sync/transaction-queue"
 import { getEntry } from "../entry/getter"
 import { invalidateEntriesQuery } from "../entry/hooks"
+import { getSubscriptionByEntryId } from "../subscription/getter"
 import type { RemoteCollectionModel } from "./types"
 
 interface CollectionState {
@@ -36,9 +39,7 @@ interface UnstarPayload {
   snapshot: CollectionSchema | null
 }
 
-interface SyncedResult {
-  lastSyncId?: number
-}
+type SyncedResult = ServerSuccess & WithLastSyncId
 
 export const starEntryTransaction = defineTransactionKind<CollectionSchema, SyncedResult>({
   kind: "collections.star",
@@ -48,10 +49,9 @@ export const starEntryTransaction = defineTransactionKind<CollectionSchema, Sync
   rollback(payload) {
     collectionActions.deleteInSession(payload.entryId)
   },
-  async execute(payloads) {
+  execute(payloads) {
     const payload = payloads[0]!
-    const res = await api().collections.post({ entryId: payload.entryId, view: payload.view })
-    return { lastSyncId: res.lastSyncId }
+    return api().collections.post({ entryId: payload.entryId, view: payload.view })
   },
   syncIdOf: (result) => result.lastSyncId,
   async persist(payloads) {
@@ -70,9 +70,8 @@ export const unstarEntryTransaction = defineTransactionKind<UnstarPayload, Synce
       collectionActions.upsertManyInSession([payload.snapshot])
     }
   },
-  async execute(payloads) {
-    const res = await api().collections.delete({ entryId: payloads[0]!.entryId })
-    return { lastSyncId: res.lastSyncId }
+  execute(payloads) {
+    return api().collections.delete({ entryId: payloads[0]!.entryId })
   },
   syncIdOf: (result) => result.lastSyncId,
   async persist(payloads) {
@@ -86,6 +85,7 @@ export const unstarEntryTransaction = defineTransactionKind<UnstarPayload, Synce
 // ---------------------------------------------------------------------------
 
 class CollectionSyncService {
+  /** `view` is the timeline the star was made in. The All timeline is no view a star can carry. */
   async starEntry({
     entryId,
     view,
@@ -104,7 +104,10 @@ class CollectionSyncService {
       createdAt: new Date().toISOString(),
       entryId,
       feedId: entry.feedId,
-      view,
+      view:
+        view === FeedViewType.All
+          ? (getSubscriptionByEntryId(entryId)?.view ?? FeedViewType.Articles)
+          : view,
     })
 
     if (invalidate) {

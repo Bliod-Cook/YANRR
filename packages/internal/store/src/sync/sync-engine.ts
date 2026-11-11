@@ -1,16 +1,15 @@
 import { FeedViewType } from "@follow/constants"
+import { withTransaction } from "@follow/database/db"
 import { EntryService } from "@follow/database/services/entry"
 import { InboxService } from "@follow/database/services/inbox"
 import { SubscriptionService } from "@follow/database/services/subscription"
 import { SyncMetaService } from "@follow/database/services/sync-meta"
-import { FollowAPIError } from "@follow-app/client-sdk"
 
 import { syncApi } from "../context"
-import type { Resetable } from "../lib/base"
 import { collectionActions } from "../modules/collection/store"
 import { invalidateEntriesQuery, refreshEntriesHead } from "../modules/entry/hooks"
 import { entryActions } from "../modules/entry/store"
-import { setFeedUnreadDirty, setFeedUnreadDirtyMany } from "../modules/feed/hooks"
+import { setFeedUnreadDirtyMany } from "../modules/feed/hooks"
 import { feedActions } from "../modules/feed/store"
 import { inboxActions, useInboxStore } from "../modules/inbox/store"
 import { getSubscriptionById } from "../modules/subscription/getter"
@@ -26,6 +25,7 @@ import {
   getSubscriptionStoreId,
 } from "../modules/subscription/utils"
 import { unreadActions, unreadSyncService } from "../modules/unread/store"
+import type { UnreadStoreModel } from "../modules/unread/types"
 import { whoami } from "../modules/user/getters"
 import { useUserStore } from "../modules/user/store"
 import { apiMorph } from "../morph/api"
@@ -69,9 +69,11 @@ const SUBSCRIPTIONS_CALIBRATION_INTERVAL_MS = 24 * 60 * 60_000
 const REQUESTED_CALIBRATION_MIN_INTERVAL_MS = 60_000
 /** `ensureSynced` callers arriving within this window share the previous pull. */
 const FRESH_PULL_WINDOW_MS = 5000
-/** The server hides actions younger than one second; wait a bit longer after an ack. */
+/** The queue acknowledges one batch at a time; one pull after the last of them covers them all. */
 const ACK_PULL_DELAY_MS = 1500
 const MAX_PAGES_PER_PULL = 20
+/** An action that failed this many pulls in a row is given up on: the engine loads everything again. */
+const MAX_ACTION_FAILURES = 3
 // Below SQLite's oldest default limit of 999 bound variables
 const READS_PER_WRITE = 500
 
@@ -88,20 +90,6 @@ interface PullSummary {
   newEntryViews: Set<FeedViewType>
   /** When the newest of those entries was logged, to skip lists fetched after it. */
   newestEntryAt: number
-  /**
-   * Unread increments of consecutive new-entry actions, applied together. They commute, but the
-   * other actions may set counts outright, so they are applied before any other action.
-   */
-  pendingUnreadDeltas: Record<string, number>
-  /** Feeds of those actions whose unread entries need fetching again. */
-  pendingDirtyFeedIds: Set<string>
-  /**
-   * The read state each entry ends with after consecutive read actions, applied together: a
-   * device catching up on another's reading gets hundreds of them.
-   */
-  pendingReads: Map<string, boolean>
-  /** The counter moves of those actions, in their order, since each stops at zero */
-  pendingReadDeltas: Record<string, number>[]
 }
 
 const createPullSummary = (): PullSummary => ({
@@ -109,14 +97,37 @@ const createPullSummary = (): PullSummary => ({
   invalidateViews: new Set(),
   newEntryViews: new Set(),
   newestEntryAt: 0,
-  pendingUnreadDeltas: {},
-  pendingDirtyFeedIds: new Set(),
-  pendingReads: new Map(),
-  pendingReadDeltas: [],
 })
 
-const isNewEntriesAction = (action: SyncAction) =>
-  action.model === "timeline" && action.action === "N"
+/** What applying one page of the change log did so far */
+interface PageProgress {
+  /** The last action whose effects were all applied: the cursor may move up to it. */
+  appliedThrough: number
+  /** Counters the applied actions moved, confirmed once they are stored with the cursor. */
+  unread: UnreadStoreModel
+  /** Feeds and inboxes whose unread entries need fetching again */
+  dirtyFeedIds: Set<string>
+  /**
+   * The read state each entry ends with after the run of read actions collected last, applied
+   * together: a device catching up on another's reading gets hundreds of them.
+   */
+  reads: Map<string, boolean>
+  /** The counter moves of those actions, in their order, since each stops at zero */
+  readDeltas: UnreadStoreModel[]
+  /** The ids of the first and the last action of that run, `null` without one */
+  readsFrom: number | null
+  readsThrough: number
+}
+
+const createPageProgress = (cursor: number): PageProgress => ({
+  appliedThrough: cursor,
+  unread: {},
+  dirtyFeedIds: new Set(),
+  reads: new Map(),
+  readDeltas: [],
+  readsFrom: null,
+  readsThrough: cursor,
+})
 
 const isReadAction = (action: SyncAction) => action.model === "timeline" && action.action === "U"
 
@@ -128,9 +139,6 @@ const addView = (views: Set<FeedViewType>, view: FeedViewType | undefined) => {
   views.add(view)
   views.add(FeedViewType.All)
 }
-
-const isCountRecord = (value: unknown): value is Record<string, number> =>
-  isRecord(value) && Object.values(value).every((count) => typeof count === "number")
 
 /**
  * The row was logged before a follow or unfollow of the same feed that the server already
@@ -144,14 +152,16 @@ const isOlderThanConfirmedChange = (action: SyncAction) => {
   return change.syncId === undefined || action.id < change.syncId
 }
 
-class SyncEngine implements Resetable {
+class SyncEngine {
   private lastSyncId: number | null = null
   private loaded = false
-  private unavailable = false
   private unreadCalibratedAt = 0
   private unreadSnapshotSyncId = 0
   private subscriptionsCalibratedAt = 0
   private lastPullFinishedAt = 0
+  /** The action the last pull stopped at, and how many pulls in a row it failed */
+  private failedActionId: number | null = null
+  private actionFailures = 0
   /** Models whose actions were skipped this session because nobody handled them yet. */
   private unhandledModels = new Set<string>()
   /**
@@ -161,18 +171,14 @@ class SyncEngine implements Resetable {
   private pendingNewEntryViews = new Set<FeedViewType>()
   private pendingNewestEntryAt = 0
   private pulling: Promise<void> | null = null
+  /** Pulls and recounts asked for by the UI, one after the other */
+  private exclusiveTasks: Promise<unknown> = Promise.resolve()
   private pullTimer: ReturnType<typeof setTimeout> | null = null
   private intervalTimer: ReturnType<typeof setInterval> | null = null
   private listenersAttached = false
-  private detachQueueListener: (() => void) | null = null
 
   getLastSyncId() {
     return this.lastSyncId
-  }
-
-  /** False once the server answered 404 for the sync endpoints; the app then keeps its full refetch behaviour. */
-  isAvailable() {
-    return !this.unavailable
   }
 
   /** Load the cursor, attach the triggers and run the first pull. Call once after hydration. */
@@ -231,7 +237,7 @@ class SyncEngine implements Resetable {
 
   pull(reason: SyncPullReason = "manual"): Promise<void> {
     if (this.pulling) return this.pulling
-    this.pulling = this.runPull(reason)
+    this.pulling = this.exclusively(() => this.runPull(reason))
       .catch((error) => {
         console.error("[sync-engine] pull failed", error)
       })
@@ -247,50 +253,60 @@ class SyncEngine implements Resetable {
    *
    * `true` means the local stores are the state: either the delta feed was applied on top of
    * the local snapshot, or a bootstrap just loaded everything. Callers must not fetch their
-   * own snapshot then. `false` means the engine cannot help (logged out, or the server has no
-   * sync endpoints) and the caller has to fall back to its full request.
+   * own snapshot then. `false` means the engine cannot help, as when signed out or before the
+   * first bootstrap went through, and the caller has to fall back to its full request.
    *
    * A pull that fails with a cursor in place still answers `true`: the local snapshot is the
    * best state there is, and the next trigger retries.
    */
   async ensureSynced(): Promise<boolean> {
-    if (this.unavailable || !whoami()) return false
+    if (!whoami()) return false
     if (this.pulling || Date.now() - this.lastPullFinishedAt > FRESH_PULL_WINDOW_MS) {
       await this.pull("manual")
     }
-    return !this.unavailable && this.lastSyncId !== null
+    return this.lastSyncId !== null
   }
 
   /**
-   * Pick up a change the server made outside the transaction queue, for instance an import.
-   * The delay covers the second during which the server hides fresh actions.
+   * Pick up a change the server made outside the transaction queue, for instance an import. A
+   * pull already running may have read its last page before the change, so another follows it.
    */
-  async catchUp(delayMs = ACK_PULL_DELAY_MS): Promise<boolean> {
-    if (this.unavailable || this.lastSyncId === null) return false
-    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  async catchUp(): Promise<boolean> {
+    if (this.lastSyncId === null) return false
+    await this.pulling
     await this.pull("manual")
-    return !this.unavailable && this.lastSyncId !== null
+    return this.lastSyncId !== null
   }
 
   /**
    * The UI noticed counters that cannot be right. Recount, but not more often than once a
-   * minute: the usual cause is a list that is simply ahead of the next pull.
+   * minute: the usual cause is a list that is simply ahead of the next pull. Never while a pull
+   * applies the change log, whose counts an older snapshot would overwrite.
    */
-  async requestUnreadCalibration() {
-    if (Date.now() - this.unreadCalibratedAt < REQUESTED_CALIBRATION_MIN_INTERVAL_MS) return
-    await this.calibrateUnread()
+  requestUnreadCalibration() {
+    return this.exclusively(async () => {
+      if (Date.now() - this.unreadCalibratedAt < REQUESTED_CALIBRATION_MIN_INTERVAL_MS) return
+      await this.calibrateUnread()
+    })
+  }
+
+  /** Runs `task` once the pulls and recounts started before it are done */
+  private exclusively<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.exclusiveTasks.then(task)
+    this.exclusiveTasks = result.catch(() => {})
+    return result
   }
 
   /** Take the server's current id, then load full snapshots. Later pulls are incremental. */
-  async bootstrap() {
-    let lastSyncId: number
-    try {
-      const response = await syncApi().state()
-      lastSyncId = response.data.lastSyncId
-    } catch (error) {
-      if (this.markUnavailableIfMissing(error)) return
-      throw error
-    }
+  private async bootstrap() {
+    const { lastSyncId } = (await syncApi().state()).data
+
+    // The new cursor is below the old one when the server's change log started over, as after
+    // a restored backup. What was applied or counted up to the old one says nothing about it.
+    this.unreadSnapshotSyncId = 0
+    await SyncMetaService.delete(UNREAD_SNAPSHOT_SYNC_ID_KEY)
+    transactionQueue.resetSyncPosition()
+    this.failedActionId = null
 
     // A change acknowledged from now on is after the cursor, so the first pull delivers its
     // real effect. Committing its own prediction as well would count it twice, as when an
@@ -299,11 +315,11 @@ class SyncEngine implements Resetable {
     try {
       await subscriptionSyncService.fetch()
       await this.markCalibrated(SUBSCRIPTIONS_CALIBRATED_AT_KEY)
-      // The snapshot reflects at least the id read above; the response may name a later one.
-      await unreadSyncService.resetFromRemote({ fallbackSyncId: lastSyncId })
+      // The snapshot reflects at least the id read above, and names the one it does.
+      await unreadSyncService.resetFromRemote()
       await this.markCalibrated(UNREAD_CALIBRATED_AT_KEY)
       await this.bootstrapRegisteredModels({ force: true })
-      await this.setLastSyncId(lastSyncId)
+      await this.storeCursor(lastSyncId)
     } finally {
       setSyncEngineBootstrapping(false)
     }
@@ -331,29 +347,17 @@ class SyncEngine implements Resetable {
     )
   }
 
-  private async calibrateUnread() {
-    // Claim the slot first so concurrent triggers do not recount twice.
-    await this.markCalibrated(UNREAD_CALIBRATED_AT_KEY)
-    await this.takeUnreadSnapshot().catch((error) => {
-      console.error("[sync-engine] failed to recount unread entries", error)
-    })
-  }
-
   /**
    * Recount through `/reads`. The snapshot is paired with the sync id it reflects, so the
    * counters of actions logged before it are not added on top when the log delivers them
-   * later. That happens whenever the snapshot runs ahead of the pull that carries those
-   * actions: a poll answered from a stale head, or new-entry hints logged seconds earlier.
-   *
-   * A server that does not name the id in its answer gets the state read just before: every
-   * action visible then has its change inside a snapshot taken afterwards.
+   * later, as when new-entry hints logged seconds earlier arrive with the next pull.
    */
-  private async takeUnreadSnapshot() {
-    const fallbackSyncId = await syncApi()
-      .state()
-      .then((response) => response.data.lastSyncId)
-      .catch(() => undefined)
-    await unreadSyncService.resetFromRemote({ fallbackSyncId })
+  private async calibrateUnread() {
+    // Claim the slot first so concurrent triggers do not recount twice.
+    await this.markCalibrated(UNREAD_CALIBRATED_AT_KEY)
+    await unreadSyncService.resetFromRemote().catch((error) => {
+      console.error("[sync-engine] failed to recount unread entries", error)
+    })
   }
 
   /** Remember how far the log was reflected by the last unread snapshot. */
@@ -386,16 +390,7 @@ class SyncEngine implements Resetable {
     })
   }
 
-  /** Forget the cursor. Used on logout; the next start bootstraps again. */
-  async reset() {
-    this.clearInSession()
-    // Every key in the table belongs to the signed-in account: the cursor, calibration times,
-    // the bootstrap flags and documents of registered models, and the feed store's resolved URLs.
-    await SyncMetaService.reset().catch((error) => {
-      console.error("[sync-engine] failed to clear the sync cursor", error)
-    })
-  }
-
+  /** Forget everything in memory, as when the app quits. */
   clearInSession() {
     if (this.pullTimer) {
       clearTimeout(this.pullTimer)
@@ -403,11 +398,12 @@ class SyncEngine implements Resetable {
     }
     this.lastSyncId = null
     this.loaded = false
-    this.unavailable = false
     this.unreadCalibratedAt = 0
     this.unreadSnapshotSyncId = 0
     this.subscriptionsCalibratedAt = 0
     this.lastPullFinishedAt = 0
+    this.failedActionId = null
+    this.actionFailures = 0
     this.unhandledModels.clear()
     this.pendingNewEntryViews.clear()
     this.pendingNewestEntryAt = 0
@@ -416,7 +412,7 @@ class SyncEngine implements Resetable {
   }
 
   private async runPull(reason: SyncPullReason) {
-    if (this.unavailable || !whoami() || !isNavigatorOnline()) return
+    if (!whoami() || !isNavigatorOnline()) return
     await this.loadCursor()
 
     if (this.lastSyncId === null) {
@@ -428,35 +424,48 @@ class SyncEngine implements Resetable {
     let cursor = this.lastSyncId
 
     for (let page = 0; page < MAX_PAGES_PER_PULL; page++) {
-      let response: Awaited<ReturnType<ReturnType<typeof syncApi>["delta"]>>
-      try {
-        response = await syncApi().delta({ lastSyncId: cursor })
-      } catch (error) {
-        if (this.markUnavailableIfMissing(error)) return
-        throw error
-      }
-
-      const { data } = response
+      const { data } = await syncApi().delta({ lastSyncId: cursor })
       if (data.reset) {
         await this.bootstrap()
         return
       }
 
-      if (data.actions.length > 0) {
-        await this.applyActions(data.actions, summary)
+      const progress = createPageProgress(cursor)
+      const failedAt = await this.applyActions(data.actions, summary, progress)
+      const through = failedAt === undefined ? data.lastSyncId : progress.appliedThrough
+      if (through > cursor) {
+        await this.storeCursor(through, progress.unread)
+        cursor = through
+        if (progress.dirtyFeedIds.size > 0) setFeedUnreadDirtyMany(progress.dirtyFeedIds)
       }
 
-      if (data.lastSyncId > cursor) {
-        cursor = data.lastSyncId
-        await this.setLastSyncId(cursor)
+      if (failedAt !== undefined) {
+        // The next pull starts with it again. One that keeps failing would hold the log up for
+        // good, so the engine gives up on it and loads everything again.
+        if (this.countFailure(failedAt)) {
+          await this.bootstrap()
+          return
+        }
+        break
       }
-
+      this.failedActionId = null
       if (!data.hasMore) break
     }
 
     // After the delta, so a snapshot taken now is never overwritten by an older action.
     await this.bootstrapRegisteredModels()
     await this.finishPull(summary, reason)
+  }
+
+  /** Counts a failure of the action; `true` once it failed too often in a row */
+  private countFailure(actionId: number) {
+    if (this.failedActionId === actionId) {
+      this.actionFailures += 1
+    } else {
+      this.failedActionId = actionId
+      this.actionFailures = 1
+    }
+    return this.actionFailures >= MAX_ACTION_FAILURES
   }
 
   private async finishPull(summary: PullSummary, reason: SyncPullReason) {
@@ -501,34 +510,67 @@ class SyncEngine implements Resetable {
     })
   }
 
-  private async applyActions(actions: SyncAction[], summary: PullSummary) {
+  /**
+   * Store the cursor together with the counters the actions up to it moved, in one
+   * transaction: a restart between the two would apply those actions again and count them
+   * twice. Then settle the transactions the change log caught up with, and only after that
+   * derive the displayed counts, which would otherwise take a reported flip off twice.
+   */
+  private async storeCursor(cursor: number, unread: UnreadStoreModel = {}) {
+    await withTransaction(async (tx) => {
+      await unreadActions.storeConfirmed(unread, tx)
+      await SyncMetaService.set(LAST_SYNC_ID_KEY, String(cursor), tx)
+    })
+    unreadActions.confirm(unread)
+    this.lastSyncId = cursor
+    setSyncEngineActive(true)
+    // Everything up to this id is reflected in what the server returns from now on.
+    transactionQueue.markSynced(cursor)
+    unreadActions.syncDisplayedCounts(Object.keys(unread))
+  }
+
+  /**
+   * Apply a page of actions in their order and return the id of the one that failed, if one
+   * did. Nothing after it is applied: the cursor stops before it, and the next pull starts
+   * with it again. Applying an action again is safe, except for the counters it moves, which
+   * are only confirmed with the cursor.
+   */
+  private async applyActions(
+    actions: SyncAction[],
+    summary: PullSummary,
+    page: PageProgress,
+  ): Promise<number | undefined> {
     for (const action of actions) {
+      if (isReadAction(action)) {
+        try {
+          this.collectReadAction(action, page)
+        } catch (error) {
+          console.error(`[sync-engine] failed to apply timeline/U ${action.id}`, error)
+          return action.id
+        }
+        continue
+      }
+
+      const failedRead = await this.flushReads(page)
+      if (failedRead !== undefined) return failedRead
       try {
-        if (!isReadAction(action)) {
-          await this.flushReads(summary)
-        }
-        if (!isNewEntriesAction(action)) {
-          await this.flushNewEntryCounters(summary)
-        }
-        if (isReadAction(action)) {
-          this.collectReadAction(action, summary)
-        } else {
-          await this.applyAction(action, summary)
-        }
+        await this.applyAction(action, summary, page)
+        page.appliedThrough = action.id
       } catch (error) {
-        console.error(`[sync-engine] failed to apply ${action.model}/${action.action}`, error)
+        console.error(
+          `[sync-engine] failed to apply ${action.model}/${action.action} ${action.id}`,
+          error,
+        )
+        return action.id
       }
     }
-    try {
-      await this.flushReads(summary)
-      await this.flushNewEntryCounters(summary)
-    } catch (error) {
-      console.error("[sync-engine] failed to apply read states and counters", error)
-    }
+    return this.flushReads(page)
   }
 
   /** Adds a read action to those applied together by `flushReads`. */
-  private collectReadAction(action: SyncAction, summary: PullSummary) {
+  private collectReadAction(action: SyncAction, page: PageProgress) {
+    page.readsFrom ??= action.id
+    page.readsThrough = action.id
     if (!isRecord(action.data) || !Array.isArray(action.data.entryIds)) return
     const data = action.data as unknown as TimelineReadActionData
     // A pending local transaction on the same entry wins over the remote change.
@@ -537,7 +579,7 @@ class SyncEngine implements Resetable {
       const override = overlays.get(entryReadOverlayKey(entryId))
       if (typeof override !== "boolean" || override === data.read) {
         // Map keeps the first position, but the last state
-        summary.pendingReads.set(entryId, data.read)
+        page.reads.set(entryId, data.read)
       }
     }
 
@@ -546,56 +588,51 @@ class SyncEngine implements Resetable {
 
     // The counters follow the server even when a local transaction keeps an entry's read
     // state: that transaction is rebased on top of the confirmed counts.
-    if (isCountRecord(data.feeds)) {
-      const sign = data.read ? -1 : 1
-      summary.pendingReadDeltas.push(
-        Object.fromEntries(Object.entries(data.feeds).map(([id, count]) => [id, sign * count])),
-      )
-    } else {
-      summary.refreshUnread = true
-    }
-  }
-
-  /** One store update and one write per read state for the collected read actions */
-  private async flushReads(summary: PullSummary) {
-    const reads = summary.pendingReads
-    const deltas = summary.pendingReadDeltas
-    summary.pendingReads = new Map()
-    summary.pendingReadDeltas = []
-
-    if (reads.size > 0) {
-      entryActions.setEntriesReadInSession(reads)
-      for (const read of [true, false]) {
-        const entryIds = Array.from(reads.keys()).filter((entryId) => reads.get(entryId) === read)
-        for (let i = 0; i < entryIds.length; i += READS_PER_WRITE) {
-          await EntryService.patchMany({
-            entry: { read },
-            entryIds: entryIds.slice(i, i + READS_PER_WRITE),
-          })
-        }
-      }
-    }
-    await unreadActions.applyConfirmedDeltas(deltas)
+    const sign = data.read ? -1 : 1
+    page.readDeltas.push(
+      Object.fromEntries(Object.entries(data.feeds).map(([id, count]) => [id, sign * count])),
+    )
   }
 
   /**
-   * A night away can bring thousands of new-entry actions, so their counters are written in one
-   * store update and one database write per run instead of one per action.
+   * One store update and one write per read state for the collected read actions. When that
+   * fails, returns the id of the first of them, where the page stops.
    */
-  private async flushNewEntryCounters(summary: PullSummary) {
-    const deltas = summary.pendingUnreadDeltas
-    const dirtyFeedIds = summary.pendingDirtyFeedIds
-    summary.pendingUnreadDeltas = {}
-    summary.pendingDirtyFeedIds = new Set()
+  private async flushReads(page: PageProgress): Promise<number | undefined> {
+    if (page.readsFrom === null) return
+    const { reads } = page
 
-    if (dirtyFeedIds.size > 0) setFeedUnreadDirtyMany(dirtyFeedIds)
-    await unreadActions.applyConfirmedDelta(deltas)
+    try {
+      if (reads.size > 0) {
+        entryActions.setEntriesReadInSession(reads)
+        for (const read of [true, false]) {
+          const entryIds = Array.from(reads.keys()).filter((entryId) => reads.get(entryId) === read)
+          for (let i = 0; i < entryIds.length; i += READS_PER_WRITE) {
+            await EntryService.patchMany({
+              entry: { read },
+              entryIds: entryIds.slice(i, i + READS_PER_WRITE),
+            })
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[sync-engine] failed to apply read states", error)
+      return page.readsFrom
+    }
+
+    for (const deltas of page.readDeltas) {
+      unreadActions.moveCounts(page.unread, deltas)
+    }
+    page.appliedThrough = page.readsThrough
+    page.reads = new Map()
+    page.readDeltas = []
+    page.readsFrom = null
   }
 
-  private async applyAction(action: SyncAction, summary: PullSummary) {
+  private async applyAction(action: SyncAction, summary: PullSummary, page: PageProgress) {
     switch (action.model) {
       case "subscription": {
-        await this.applySubscriptionAction(action, summary)
+        await this.applySubscriptionAction(action, summary, page)
         return
       }
       case "collection": {
@@ -603,15 +640,15 @@ class SyncEngine implements Resetable {
         return
       }
       case "timeline": {
-        await this.applyTimelineAction(action, summary)
+        this.applyNewEntriesAction(action, summary, page)
         return
       }
       case "inbox": {
-        await this.applyInboxAction(action, summary)
+        await this.applyInboxAction(action, summary, page)
         return
       }
       case "inbox_entry": {
-        await this.applyInboxEntryAction(action, summary)
+        await this.applyInboxEntryAction(action, page)
         return
       }
       default: {
@@ -634,7 +671,11 @@ class SyncEngine implements Resetable {
     await SyncMetaService.delete(modelBootstrappedKey(action.model)).catch(() => {})
   }
 
-  private async applySubscriptionAction(action: SyncAction, summary: PullSummary) {
+  private async applySubscriptionAction(
+    action: SyncAction,
+    summary: PullSummary,
+    page: PageProgress,
+  ) {
     if (!action.modelId || isOlderThanConfirmedChange(action)) return
 
     if (action.action === "I") {
@@ -674,10 +715,12 @@ class SyncEngine implements Resetable {
     }
 
     if (action.action === "D") {
-      subscriptionActions.removeManyInSession([getSubscriptionStoreId(current)])
+      // The row first: once the subscription is gone from memory, applying this again finds
+      // nothing to delete.
       await SubscriptionService.delete([getSubscriptionDBId(current)])
+      subscriptionActions.removeManyInSession([getSubscriptionStoreId(current)])
       if (current.feedId) {
-        await unreadActions.updateById(current.feedId, 0)
+        page.unread[current.feedId] = 0
       }
       addView(summary.invalidateViews, current.view)
     }
@@ -705,36 +748,29 @@ class SyncEngine implements Resetable {
     }
   }
 
-  private async applyTimelineAction(action: SyncAction, summary: PullSummary) {
-    // Read actions ("U") are collected by `applyActions`
-    if (action.action === "N") {
-      if (!isRecord(action.data)) return
-      const data = action.data as unknown as TimelineNewEntriesActionData
-      const id = data.isInbox ? (data.inboxId ?? action.modelId) : (data.feedId ?? action.modelId)
-      if (!id) return
+  /** New entries ("N"); read actions ("U") are collected by `applyActions` */
+  private applyNewEntriesAction(action: SyncAction, summary: PullSummary, page: PageProgress) {
+    if (action.action !== "N" || !isRecord(action.data)) return
+    const data = action.data as unknown as TimelineNewEntriesActionData
+    const id = data.isInbox ? (data.inboxId ?? action.modelId) : (data.feedId ?? action.modelId)
+    if (!id) return
+    // A feed unfollowed here since then has no counter to add to.
+    const subscription = data.isInbox ? undefined : getSubscriptionById(id)
+    if (!data.isInbox && !subscription) return
 
-      summary.pendingDirtyFeedIds.add(id)
-      if (data.isInbox) {
-        addView(summary.newEntryViews, FeedViewType.Articles)
-      } else {
-        addView(summary.newEntryViews, getSubscriptionById(id)?.view)
-      }
-      const loggedAt = Date.parse(action.createdAt)
-      if (Number.isFinite(loggedAt)) {
-        summary.newestEntryAt = Math.max(summary.newestEntryAt, loggedAt)
-      }
-
-      // The last snapshot already counted everything logged up to its id.
-      if (action.id <= this.unreadSnapshotSyncId) return
-      if (typeof data.unread === "number") {
-        summary.pendingUnreadDeltas[id] = (summary.pendingUnreadDeltas[id] ?? 0) + data.unread
-      } else {
-        summary.refreshUnread = true
-      }
+    page.dirtyFeedIds.add(id)
+    addView(summary.newEntryViews, data.isInbox ? FeedViewType.Articles : subscription?.view)
+    const loggedAt = Date.parse(action.createdAt)
+    if (Number.isFinite(loggedAt)) {
+      summary.newestEntryAt = Math.max(summary.newestEntryAt, loggedAt)
     }
+
+    // The last snapshot already counted everything logged up to its id.
+    if (action.id <= this.unreadSnapshotSyncId) return
+    unreadActions.moveCounts(page.unread, { [id]: data.unread })
   }
 
-  private async applyInboxAction(action: SyncAction, summary: PullSummary) {
+  private async applyInboxAction(action: SyncAction, summary: PullSummary, page: PageProgress) {
     const inboxId = action.modelId
     if (!inboxId) return
 
@@ -766,60 +802,32 @@ class SyncEngine implements Resetable {
     if (action.action === "D") {
       const subscription = getSubscriptionById(getInboxStoreId(inboxId))
       if (subscription) {
-        subscriptionActions.removeManyInSession([getSubscriptionStoreId(subscription)])
         await SubscriptionService.delete([getSubscriptionDBId(subscription)])
+        subscriptionActions.removeManyInSession([getSubscriptionStoreId(subscription)])
       }
-      inboxActions.deleteById(inboxId)
       await InboxService.deleteById(inboxId)
-      await unreadActions.updateById(inboxId, 0)
+      inboxActions.deleteById(inboxId)
+      page.unread[inboxId] = 0
       addView(summary.invalidateViews, FeedViewType.Articles)
     }
   }
 
-  private async applyInboxEntryAction(action: SyncAction, summary: PullSummary) {
-    if (action.action !== "D" || !action.modelId) return
+  private async applyInboxEntryAction(action: SyncAction, page: PageProgress) {
+    if (action.action !== "D" || !action.modelId || !isRecord(action.data)) return
 
-    const data = isRecord(action.data) ? (action.data as InboxEntryActionData) : {}
-    entryActions.deleteInboxEntryById(action.modelId)
+    const data = action.data as unknown as InboxEntryActionData
     await EntryService.deleteMany([action.modelId])
-    if (data.inboxId) {
-      setFeedUnreadDirty(data.inboxId)
-    }
-    if (action.id <= this.unreadSnapshotSyncId) return
-    if (typeof data.unread !== "boolean" || !data.inboxId) {
-      summary.refreshUnread = true
-    } else if (data.unread) {
-      await unreadActions.applyConfirmedDelta({ [data.inboxId]: -1 })
-    }
-  }
-
-  private async setLastSyncId(lastSyncId: number) {
-    this.lastSyncId = lastSyncId
-    setSyncEngineActive(true)
-    // Everything up to this id is reflected in what the server returns from now on.
-    transactionQueue.markSynced(lastSyncId)
-    try {
-      await SyncMetaService.set(LAST_SYNC_ID_KEY, String(lastSyncId))
-    } catch (error) {
-      console.error("[sync-engine] failed to persist the sync cursor", error)
-    }
-  }
-
-  private markUnavailableIfMissing(error: unknown) {
-    if (error instanceof FollowAPIError && error.status === 404) {
-      this.unavailable = true
-      setSyncEngineActive(false)
-      console.info("[sync-engine] the server has no sync endpoints; keeping full refetch behaviour")
-      return true
-    }
-    return false
+    entryActions.deleteInboxEntryById(action.modelId)
+    page.dirtyFeedIds.add(data.inboxId)
+    if (action.id <= this.unreadSnapshotSyncId || !data.unread) return
+    unreadActions.moveCounts(page.unread, { [data.inboxId]: -1 })
   }
 
   private attachListeners() {
     if (this.listenersAttached) return
     this.listenersAttached = true
 
-    this.detachQueueListener = transactionQueue.onAcknowledged(() => {
+    transactionQueue.onAcknowledged(() => {
       this.schedulePull("ack", ACK_PULL_DELAY_MS)
     })
 

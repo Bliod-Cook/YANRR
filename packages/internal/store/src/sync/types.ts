@@ -1,68 +1,25 @@
+import type { SyncAction as SdkSyncAction } from "@follow-app/client-sdk"
+
+import type { FollowAPI } from "../types"
+
+/** The server's `/sync` endpoints: the apps hand `followApi.sync` to the store through `syncApiContext`. */
+export type SyncAPI = FollowAPI["sync"]
+
 /**
- * Wire types of the server's `/sync` endpoints. They mirror the `sync` module of the client
- * SDK, so the apps hand `followApi.sync` to the store through `syncApiContext`.
+ * A change-log row. Besides the models the SDK names, there are those handled through
+ * `registerSyncModel`: "action", "setting", "messaging", ...
  */
-
-export type SyncActionModelName =
-  | "subscription"
-  | "collection"
-  | "timeline"
-  | "inbox"
-  | "inbox_entry"
-  // Models handled through `registerSyncModel`: "action", "setting", "messaging", ...
-  | (string & {})
-
-export type SyncActionType = "I" | "U" | "D" | "N"
-
-export interface SyncAction {
-  /** Global, monotonically increasing sync id */
-  id: number
-  model: SyncActionModelName
-  /** feedId or entryId; null for batch timeline updates */
-  modelId: string | null
-  action: SyncActionType
-  data: unknown
-  createdAt: string
-}
-
-export interface SyncStateResponse {
-  code: 0
-  data: {
-    lastSyncId: number
-  }
-}
-
-export interface SyncDeltaQuery {
-  lastSyncId: number
-  limit?: number
-}
-
-export interface SyncDeltaResponse {
-  code: 0
-  data: {
-    actions: SyncAction[]
-    lastSyncId: number
-    hasMore: boolean
-    /** The cursor predates the retained log; fetch a fresh snapshot and start over */
-    reset: boolean
-  }
-}
-
-export interface SyncAPI {
-  state: () => Promise<SyncStateResponse>
-  delta: (query: SyncDeltaQuery) => Promise<SyncDeltaResponse>
+export type SyncAction = Omit<SdkSyncAction, "model"> & {
+  model: SdkSyncAction["model"] | (string & {})
 }
 
 export interface TimelineReadActionData {
   /** Entries whose read state really flipped on the server. */
   entryIds: string[]
   read: boolean
-  isInbox?: boolean
-  /**
-   * Flipped rows per feed id or inbox handle. Absent on actions logged by older servers,
-   * which leaves a recount as the only way to learn the unread counters.
-   */
-  feeds?: Record<string, number>
+  isInbox: boolean
+  /** Flipped rows per feed id or inbox handle */
+  feeds: Record<string, number>
 }
 
 export interface TimelineNewEntriesActionData {
@@ -73,16 +30,16 @@ export interface TimelineNewEntriesActionData {
   isInbox?: boolean
   /** Rows really written to the user's timeline. */
   count: number
-  /** How many of them arrived unread. Absent on actions logged by older servers. */
-  unread?: number
+  /** How many of them arrived unread */
+  unread: number
   latestPublishedAt: string
   from: string[]
 }
 
 export interface InboxEntryActionData {
-  inboxId?: string
-  /** Whether the deleted entry was unread. Absent on actions logged by older servers. */
-  unread?: boolean
+  inboxId: string
+  /** Whether the deleted entry was unread */
+  unread: boolean
 }
 
 export interface CollectionActionData {

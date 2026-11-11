@@ -22,16 +22,27 @@ export interface TransactionOverlay {
   value: unknown
 }
 
-export interface TransactionKind<P, R = unknown> {
+/** The body of this server's answer to a request it carried out */
+export interface ServerSuccess {
+  code: 0
+}
+
+const isServerSuccess = (result: unknown): result is ServerSuccess =>
+  typeof result === "object" && result !== null && (result as { code?: unknown }).code === 0
+
+export interface TransactionKind<P, R extends ServerSuccess = ServerSuccess> {
   kind: string
   /**
-   * Apply the optimistic effect to the in-memory stores.
+   * Apply the optimistic effect to the in-memory stores. The transaction is queued already.
    * Must be idempotent: it is replayed after a restart.
    */
   apply: (payload: P) => void
-  /** Undo the optimistic effect. Only called when the server definitively rejects the transaction. */
+  /**
+   * Undo the optimistic effect, once the transaction left the queue. Only called when the server
+   * definitively rejects the transaction.
+   */
   rollback: (payload: P) => void | Promise<void>
-  /** Send a batch of payloads to the server. */
+  /** Send a batch of payloads to the server, resolving to its answer as it came. */
   execute: (payloads: P[]) => Promise<R>
   /** Write the confirmed state to the local database after the server acknowledged the batch. */
   persist?: (payloads: P[], result: R, context: TransactionPersistContext) => void | Promise<void>
@@ -107,7 +118,7 @@ export interface TransactionSettledEvent {
 export type TransactionSettledListener = (event: TransactionSettledEvent) => void
 
 interface QueuedTransaction<P = unknown> extends TransactionRecord<P> {
-  definition: TransactionKind<P, unknown>
+  definition: TransactionKind<P, ServerSuccess>
   settled: Promise<void>
   resolve: () => void
   reject: (error: unknown) => void
@@ -115,7 +126,7 @@ interface QueuedTransaction<P = unknown> extends TransactionRecord<P> {
 
 /** An acknowledged transaction keeps its record and the hooks that read its payload. */
 interface AcknowledgedRecord extends TransactionRecord {
-  definition: Pick<TransactionKind<unknown, unknown>, "overlays" | "rebaseUnread">
+  definition: Pick<TransactionKind<unknown>, "overlays" | "rebaseUnread">
 }
 
 interface AcknowledgedTransaction {
@@ -153,19 +164,20 @@ export const isNavigatorOnline = () =>
 const isOnline = isNavigatorOnline
 
 /**
- * Only an answer from the server can reject a change. A request that got no answer (no
- * connection, a timeout, the API down) or an answer that means "not now" (5xx, 408, 425,
- * 429) is retried until it goes through, however long the outage lasts: giving up would
- * throw away what the user did.
+ * Only an answer from the server can reject a change, and only the server's own error body
+ * carries its code: an error page of a proxy, a gateway or a firewall does not. A request that
+ * got no answer from the server (no connection, a timeout, such an error page) or an answer
+ * that means "not now" (5xx, 408, 425, 429) is retried until it goes through, however long the
+ * outage lasts: giving up would throw away what the user did.
  */
 export const classifyTransactionError = (error: unknown): ErrorDecision => {
   if (!(error instanceof FollowAPIError)) return "retry"
   if (error.status === 401) return "pause"
-  if (error.status >= 500 || RETRYABLE_STATUS.has(error.status)) return "retry"
-  return error.status >= 400 ? "fail" : "retry"
+  if (error.serverCode === undefined || error.status < 400) return "retry"
+  return error.status >= 500 || RETRYABLE_STATUS.has(error.status) ? "retry" : "fail"
 }
 
-export const defineTransactionKind = <P, R = unknown>(
+export const defineTransactionKind = <P, R extends ServerSuccess>(
   definition: TransactionKind<P, R>,
 ): TransactionKind<P, R> => {
   transactionQueue.register(definition)
@@ -173,7 +185,7 @@ export const defineTransactionKind = <P, R = unknown>(
 }
 
 class TransactionQueue {
-  private definitions = new Map<string, TransactionKind<unknown, unknown>>()
+  private definitions = new Map<string, TransactionKind<unknown>>()
   private queued: QueuedTransaction[] = []
   private inFlight = new Set<string>()
   private acknowledged: AcknowledgedTransaction[] = []
@@ -194,27 +206,35 @@ class TransactionQueue {
   private settledListeners = new Set<TransactionSettledListener>()
   private environmentListenersAttached = false
 
-  register<P, R>(definition: TransactionKind<P, R>) {
-    this.definitions.set(definition.kind, definition as TransactionKind<unknown, unknown>)
+  register<P, R extends ServerSuccess>(definition: TransactionKind<P, R>) {
+    this.definitions.set(definition.kind, definition as unknown as TransactionKind<unknown>)
   }
 
   /**
-   * Apply the transaction optimistically, write it to the outbox and schedule a flush.
+   * Queue the transaction, apply it optimistically, write it to the outbox and schedule a flush.
    * Resolves once the intent is safely recorded, not when the server acknowledges it.
    */
-  async enqueue<P, R>(definition: TransactionKind<P, R>, payload: P): Promise<string> {
+  async enqueue<P, R extends ServerSuccess>(
+    definition: TransactionKind<P, R>,
+    payload: P,
+  ): Promise<string> {
     this.register(definition)
-    definition.apply(payload)
-
     const record = this.createQueuedTransaction(
-      definition as TransactionKind<unknown, unknown>,
+      definition as unknown as TransactionKind<unknown>,
       payload,
       createTransactionId(),
       Date.now(),
       getLocalDataOwner(),
     )
+    // Queued first, so the effects derived from the queue, such as unread counts, include it.
     this.queued.push(record)
     this.touch()
+    try {
+      definition.apply(payload)
+    } catch (error) {
+      this.removeFromQueue([record])
+      throw error
+    }
 
     try {
       await SyncTransactionService.insert({
@@ -254,11 +274,6 @@ class TransactionQueue {
         orphaned.push(row.id)
         continue
       }
-      try {
-        definition.apply(row.payload)
-      } catch (error) {
-        console.error(`[transaction-queue] failed to replay ${row.kind}`, error)
-      }
       restored.push(
         this.createQueuedTransaction(
           definition,
@@ -270,12 +285,19 @@ class TransactionQueue {
       )
     }
 
+    this.queued = [...restored, ...this.queued]
+    this.touch()
+    for (const record of restored) {
+      try {
+        record.definition.apply(record.payload)
+      } catch (error) {
+        console.error(`[transaction-queue] failed to replay ${record.kind}`, error)
+      }
+    }
+
     if (orphaned.length > 0) {
       await SyncTransactionService.deleteMany(orphaned).catch(noop)
     }
-
-    this.queued = [...restored, ...this.queued]
-    this.touch()
     this.attachEnvironmentListeners()
     if (this.queued.length > 0) {
       this.scheduleFlush()
@@ -447,15 +469,17 @@ class TransactionQueue {
     }
   }
 
-  /** Drop every pending transaction from memory and from the outbox. Used on logout. */
-  async reset() {
-    this.clearInSession()
-    await SyncTransactionService.reset().catch((error) => {
-      console.error("[transaction-queue] failed to clear the outbox", error)
-    })
+  /**
+   * The sync engine starts over from a new cursor, which can be lower than the old one when the
+   * server's change log started over. How far the old log was applied or counted says nothing
+   * about the ids from now on.
+   */
+  resetSyncPosition() {
+    this.syncedThrough = 0
+    this.unreadSnapshotThrough = 0
   }
 
-  /** Drop in-memory state only. */
+  /** Drop in-memory state, as when the app quits. */
   clearInSession() {
     this.clearFlushTimer()
     this.clearRetryTimer()
@@ -513,9 +537,14 @@ class TransactionQueue {
       this.inFlight = new Set(batch.map((record) => record.id))
       this.touch()
 
-      let result: unknown
+      let result: ServerSuccess
       try {
-        result = await definition.execute(batch.map((record) => record.payload))
+        const answer: unknown = await definition.execute(batch.map((record) => record.payload))
+        // Such as the HTML of a sign-in page or a captive portal, after following a redirect
+        if (!isServerSuccess(answer)) {
+          throw new Error("[transaction-queue] the answer is not the server's")
+        }
+        result = answer
       } catch (error) {
         this.inFlight.clear()
         this.touch()
@@ -565,7 +594,7 @@ class TransactionQueue {
     return record.userId ?? getLocalDataOwner()
   }
 
-  private async completeBatch(batch: QueuedTransaction[], result: unknown) {
+  private async completeBatch(batch: QueuedTransaction[], result: ServerSuccess) {
     const { definition } = batch[0]!
     const syncId = definition.syncIdOf?.(result)
     const awaitsSync = syncId !== undefined && willSyncEngineDeliver()
@@ -653,7 +682,7 @@ class TransactionQueue {
   }
 
   private createQueuedTransaction(
-    definition: TransactionKind<unknown, unknown>,
+    definition: TransactionKind<unknown>,
     payload: unknown,
     id: string,
     createdAt: number,

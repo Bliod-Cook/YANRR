@@ -1,13 +1,27 @@
 import { FeedViewType } from "@follow/constants"
-import { FollowAPIError } from "@follow-app/client-sdk"
+import { db } from "@follow/database/db"
+import { CollectionService } from "@follow/database/services/collection"
+import { EntryService } from "@follow/database/services/entry"
+import { FeedService } from "@follow/database/services/feed"
+import { InboxService } from "@follow/database/services/inbox"
+import { SubscriptionService } from "@follow/database/services/subscription"
+import { SyncMetaService } from "@follow/database/services/sync-meta"
+import { SyncTransactionService } from "@follow/database/services/sync-transaction"
+import { UnreadService } from "@follow/database/services/unread"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { apiContext, syncApiContext } from "../context"
-import { useCollectionStore } from "../modules/collection/store"
-import { useEntryStore } from "../modules/entry/store"
+import { collectionActions, useCollectionStore } from "../modules/collection/store"
+import { entryActions, useEntryStore } from "../modules/entry/store"
 import type { EntryModel } from "../modules/entry/types"
 import { useInboxStore } from "../modules/inbox/store"
-import { useSubscriptionStore } from "../modules/subscription/store"
+import {
+  getConfirmedSubscriptionChange,
+  subscriptionActions,
+  subscriptionSyncService,
+  useSubscriptionStore,
+} from "../modules/subscription/store"
+import type { SubscriptionModel } from "../modules/subscription/types"
 import { unreadActions, unreadSyncService, useUnreadStore } from "../modules/unread/store"
 import { useUserStore } from "../modules/user/store"
 import type { FollowAPI } from "../types"
@@ -18,105 +32,19 @@ import { isSyncEngineActive } from "./sync-status"
 import { transactionQueue } from "./transaction-queue"
 import type { SyncAction, SyncAPI } from "./types"
 
-const {
-  syncMetaStore,
-  syncMetaGetMock,
-  syncMetaSetMock,
-  entryPatchManyMock,
-  subscriptionPatchMock,
-  subscriptionDeleteMock,
-  collectionUpsertManyMock,
-  collectionDeleteManyMock,
-  inboxDeleteByIdMock,
-  entryDeleteManyMock,
-  unreadUpsertManyMock,
-  invalidateEntriesQueryMock,
-  refreshEntriesHeadMock,
-  setFeedUnreadDirtyMock,
-} = vi.hoisted(() => {
-  const syncMetaStore = new Map<string, string>()
-  return {
-    syncMetaStore,
-    syncMetaGetMock: vi.fn(async (key: string) => syncMetaStore.get(key) ?? null),
-    syncMetaSetMock: vi.fn(async (key: string, value: string) => {
-      syncMetaStore.set(key, value)
-    }),
-    entryPatchManyMock: vi.fn(async () => {}),
-    subscriptionPatchMock: vi.fn(async () => {}),
-    subscriptionDeleteMock: vi.fn(async () => {}),
-    collectionUpsertManyMock: vi.fn(async () => {}),
-    collectionDeleteManyMock: vi.fn(async () => {}),
-    inboxDeleteByIdMock: vi.fn(async () => {}),
-    entryDeleteManyMock: vi.fn(async () => {}),
-    unreadUpsertManyMock: vi.fn(async () => {}),
+vi.mock("@follow/database/db", async () =>
+  (await import("@follow/database/test-db")).createTestDB(),
+)
+
+const { invalidateEntriesQueryMock, refreshEntriesHeadMock, setFeedUnreadDirtyMock } = vi.hoisted(
+  () => ({
     invalidateEntriesQueryMock: vi.fn(),
     refreshEntriesHeadMock: vi.fn(async () => {}),
     setFeedUnreadDirtyMock: vi.fn(),
-  }
-})
+  }),
+)
 
-vi.mock("@follow/database/services/sync-meta", () => ({
-  SyncMetaService: {
-    get: syncMetaGetMock,
-    set: syncMetaSetMock,
-    delete: vi.fn(async (key: string) => {
-      syncMetaStore.delete(key)
-    }),
-    reset: vi.fn(async () => syncMetaStore.clear()),
-  },
-}))
-vi.mock("@follow/database/services/sync-transaction", () => ({
-  SyncTransactionService: {
-    insert: vi.fn(async () => {}),
-    deleteMany: vi.fn(async () => {}),
-    getAll: vi.fn(async () => []),
-    reset: vi.fn(async () => {}),
-  },
-}))
-vi.mock("@follow/database/services/entry", () => ({
-  EntryService: {
-    patchMany: entryPatchManyMock,
-    getEntryMany: vi.fn(async () => []),
-    upsertMany: vi.fn(async () => {}),
-    deleteMany: entryDeleteManyMock,
-  },
-}))
-vi.mock("@follow/database/services/subscription", () => ({
-  SubscriptionService: {
-    getSubscriptionAll: vi.fn(async () => []),
-    upsertMany: vi.fn(async () => {}),
-    patch: subscriptionPatchMock,
-    delete: subscriptionDeleteMock,
-    reset: vi.fn(async () => {}),
-  },
-}))
-vi.mock("@follow/database/services/feed", () => ({
-  FEED_EXTRA_DATA_KEYS: [],
-  FeedService: {
-    upsertMany: vi.fn(async () => {}),
-    reset: vi.fn(async () => {}),
-  },
-}))
-vi.mock("@follow/database/services/inbox", () => ({
-  InboxService: {
-    upsertMany: vi.fn(async () => {}),
-    deleteById: inboxDeleteByIdMock,
-    reset: vi.fn(async () => {}),
-  },
-}))
-vi.mock("@follow/database/services/collection", () => ({
-  CollectionService: {
-    upsertMany: collectionUpsertManyMock,
-    deleteMany: collectionDeleteManyMock,
-    reset: vi.fn(async () => {}),
-  },
-}))
-vi.mock("@follow/database/services/unread", () => ({
-  UnreadService: {
-    upsertMany: unreadUpsertManyMock,
-    reset: vi.fn(async () => {}),
-  },
-}))
+// The query cache and the UI state of the lists, which this test has none of
 vi.mock("../modules/entry/hooks", () => ({
   invalidateEntriesQuery: invalidateEntriesQueryMock,
   refreshEntriesHead: refreshEntriesHeadMock,
@@ -139,6 +67,18 @@ const createEntry = (id: string, feedId: string, read = false): EntryModel => ({
   read,
 })
 
+const feedSubscription = (feedId: string, view = FeedViewType.Articles): SubscriptionModel => ({
+  feedId,
+  inboxId: null,
+  userId: "user-1",
+  view,
+  hideFromTimeline: null,
+  title: null,
+  category: null,
+  createdAt: "2026-01-01T00:00:00.000Z",
+  type: "feed",
+})
+
 const createAction = (overrides: Partial<SyncAction> & Pick<SyncAction, "id">): SyncAction => ({
   model: "timeline",
   modelId: null,
@@ -148,11 +88,76 @@ const createAction = (overrides: Partial<SyncAction> & Pick<SyncAction, "id">): 
   ...overrides,
 })
 
+const readAction = (id: number, entryIds: string[], feeds: Record<string, number>, read = true) =>
+  createAction({ id, data: { entryIds, read, isInbox: false, feeds } })
+
+const newEntriesAction = (id: number, feedId: string, unread: number, createdAt?: string) =>
+  createAction({
+    id,
+    model: "timeline",
+    modelId: feedId,
+    action: "N",
+    ...(createdAt && { createdAt }),
+    data: {
+      feedId,
+      count: unread,
+      unread,
+      latestPublishedAt: "2026-09-16T00:00:00.000Z",
+      from: ["feed"],
+    },
+  })
+
+const seedEntries = (...entries: EntryModel[]) => entryActions.upsertMany(entries)
+
+const seedUnread = (counts: Record<string, number>) =>
+  unreadActions.upsertMany(
+    Object.entries(counts).map(([id, count]) => ({ id, count })),
+    { reset: true },
+  )
+
+const follow = (...subscriptions: SubscriptionModel[]) =>
+  subscriptionActions.upsertMany(subscriptions)
+
 /** A client that already bootstrapped and calibrated recently: pulls are purely incremental. */
-const seedCursor = (lastSyncId: number, calibratedAt = Date.now()) => {
-  syncMetaStore.set("lastSyncId", String(lastSyncId))
-  syncMetaStore.set("unreadCalibratedAt", String(calibratedAt))
-  syncMetaStore.set("subscriptionsCalibratedAt", String(calibratedAt))
+const seedCursor = async (lastSyncId: number, calibratedAt = Date.now()) => {
+  await SyncMetaService.set("lastSyncId", String(lastSyncId))
+  await SyncMetaService.set("unreadCalibratedAt", String(calibratedAt))
+  await SyncMetaService.set("subscriptionsCalibratedAt", String(calibratedAt))
+}
+
+const storedCursor = () => SyncMetaService.get("lastSyncId")
+
+const storedUnread = async () =>
+  Object.fromEntries((await UnreadService.getUnreadAll()).map(({ id, count }) => [id, count]))
+
+const storedRead = async () =>
+  Object.fromEntries(
+    (await db.query.entriesTable.findMany({ columns: { id: true, read: true } })).map(
+      ({ id, read }) => [id, read],
+    ),
+  )
+
+const resetStores = () => {
+  useEntryStore.setState(useEntryStore.getInitialState(), true)
+  useSubscriptionStore.setState(useSubscriptionStore.getInitialState(), true)
+  useCollectionStore.setState(useCollectionStore.getInitialState(), true)
+  useInboxStore.setState(useInboxStore.getInitialState(), true)
+  useUnreadStore.setState(useUnreadStore.getInitialState(), true)
+  unreadActions.upsertManyInSession([], { reset: true })
+}
+
+/** The app quits and starts again on the same database. */
+const restart = async () => {
+  syncEngine.clearInSession()
+  transactionQueue.clearInSession()
+  resetStores()
+  await Promise.all([
+    subscriptionActions.hydrate(),
+    unreadActions.hydrate(),
+    entryActions.hydrate(),
+    collectionActions.hydrate(),
+  ])
+  await transactionQueue.restore()
 }
 
 const deltaResponse = (
@@ -174,74 +179,47 @@ describe("syncEngine", () => {
   const subscriptionsGetMock = vi.fn()
   const readsGetMock = vi.fn()
 
-  beforeEach(() => {
+  const provideApi = (extra: { reads?: object; subscriptions?: object } = {}) =>
+    apiContext.provide({
+      subscriptions: { get: subscriptionsGetMock, ...extra.subscriptions },
+      reads: { get: readsGetMock, ...extra.reads },
+    } as unknown as FollowAPI)
+
+  beforeEach(async () => {
     vi.clearAllMocks()
-    syncMetaStore.clear()
     syncEngine.clearInSession()
     transactionQueue.clearInSession()
+    await Promise.all([
+      SyncMetaService.reset(),
+      SyncTransactionService.reset(),
+      EntryService.reset(),
+      SubscriptionService.reset(),
+      UnreadService.reset(),
+      CollectionService.reset(),
+      InboxService.reset(),
+      FeedService.reset(),
+    ])
+    resetStores()
 
     useUserStore.setState((state) => ({ ...state, whoami: { id: "user-1" } as never }))
     clearAccountInSession()
     startSessionCheck().confirm("user-1")
-    useEntryStore.setState({
-      data: {},
-      entryIdByView: {
-        [FeedViewType.All]: new Set(),
-        [FeedViewType.Articles]: new Set(),
-        [FeedViewType.Audios]: new Set(),
-        [FeedViewType.Notifications]: new Set(),
-        [FeedViewType.Pictures]: new Set(),
-        [FeedViewType.SocialMedia]: new Set(),
-        [FeedViewType.Videos]: new Set(),
-      },
-      entryIdByCategory: {},
-      entryIdByFeed: {},
-      entryIdByInbox: {},
-      entryIdSet: new Set(),
-    })
-    useSubscriptionStore.setState((state) => ({
-      ...state,
-      data: {},
-      subscriptionIdSet: new Set(),
-      feedIdByView: {
-        [FeedViewType.All]: new Set(),
-        [FeedViewType.Articles]: new Set(),
-        [FeedViewType.Audios]: new Set(),
-        [FeedViewType.Notifications]: new Set(),
-        [FeedViewType.Pictures]: new Set(),
-        [FeedViewType.SocialMedia]: new Set(),
-        [FeedViewType.Videos]: new Set(),
-      },
-      categories: {
-        [FeedViewType.All]: new Set(),
-        [FeedViewType.Articles]: new Set(),
-        [FeedViewType.Audios]: new Set(),
-        [FeedViewType.Notifications]: new Set(),
-        [FeedViewType.Pictures]: new Set(),
-        [FeedViewType.SocialMedia]: new Set(),
-        [FeedViewType.Videos]: new Set(),
-      },
-    }))
-    useCollectionStore.setState({ collections: {} })
-    useInboxStore.setState({ inboxes: {} })
-    unreadActions.upsertManyInSession([], { reset: true })
 
-    subscriptionsGetMock.mockResolvedValue({ data: [] })
-    readsGetMock.mockResolvedValue({ data: {} })
-    apiContext.provide({
-      subscriptions: { get: subscriptionsGetMock },
-      reads: { get: readsGetMock },
-    } as unknown as FollowAPI)
-    syncApiContext.provide({ state: stateMock, delta: deltaMock } as SyncAPI)
+    subscriptionsGetMock.mockResolvedValue({ code: 0, data: [] })
+    readsGetMock.mockResolvedValue({ code: 0, data: {}, lastSyncId: 0 })
+    provideApi()
+    syncApiContext.provide({ state: stateMock, delta: deltaMock } as unknown as SyncAPI)
   })
 
   afterEach(() => {
     syncEngine.clearInSession()
     transactionQueue.clearInSession()
+    vi.restoreAllMocks()
   })
 
   it("bootstraps on the first pull and stores the server's sync id", async () => {
     stateMock.mockResolvedValue({ code: 0, data: { lastSyncId: 42 } })
+    readsGetMock.mockResolvedValue({ code: 0, data: { "feed-1": 3 }, lastSyncId: 42 })
 
     await syncEngine.pull("launch")
 
@@ -250,7 +228,8 @@ describe("syncEngine", () => {
     expect(readsGetMock).toHaveBeenCalledTimes(1)
     expect(deltaMock).not.toHaveBeenCalled()
     expect(syncEngine.getLastSyncId()).toBe(42)
-    expect(syncMetaStore.get("lastSyncId")).toBe("42")
+    expect(await storedCursor()).toBe("42")
+    expect(await storedUnread()).toEqual({ "feed-1": 3 })
     expect(isSyncEngineActive()).toBe(true)
   })
 
@@ -276,7 +255,7 @@ describe("syncEngine", () => {
   })
 
   it("applies the inbox lifecycle, new inbox entries and inbox entry deletions", async () => {
-    seedCursor(50)
+    await seedCursor(50)
     deltaMock.mockResolvedValueOnce(
       deltaResponse([
         createAction({
@@ -292,7 +271,6 @@ describe("syncEngine", () => {
             inboxId: "news",
             view: 0,
             category: null,
-            isPrivate: false,
             hideFromTimeline: null,
             createdAt: "",
           },
@@ -313,9 +291,9 @@ describe("syncEngine", () => {
             inboxId: "news",
             isInbox: true,
             count: 1,
-            entryIds: ["mail-1"],
+            unread: 1,
             latestPublishedAt: "2026-09-17T00:00:00.000Z",
-            from: [],
+            from: ["inbox"],
           },
         }),
       ]),
@@ -334,14 +312,10 @@ describe("syncEngine", () => {
       title: "Daily",
     })
     expect(setFeedUnreadDirtyMock).toHaveBeenCalledWith("news")
-    expect(readsGetMock).toHaveBeenCalledTimes(1)
+    expect(useUnreadStore.getState().data.news).toBe(1)
+    expect(readsGetMock).not.toHaveBeenCalled()
 
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: { "mail-1": { ...createEntry("mail-1", ""), feedId: null, inboxHandle: "news" } },
-      entryIdSet: new Set(["mail-1"]),
-      entryIdByInbox: { news: new Set(["mail-1"]) },
-    }))
+    await seedEntries({ ...createEntry("mail-1", "news"), inboxHandle: "news" })
     deltaMock.mockResolvedValueOnce(
       deltaResponse([
         createAction({
@@ -349,7 +323,7 @@ describe("syncEngine", () => {
           model: "inbox_entry",
           modelId: "mail-1",
           action: "D",
-          data: { inboxId: "news" },
+          data: { inboxId: "news", unread: true },
         }),
         createAction({ id: 55, model: "inbox", modelId: "news", action: "D" }),
       ]),
@@ -357,14 +331,15 @@ describe("syncEngine", () => {
     await syncEngine.pull("interval")
 
     expect(useEntryStore.getState().data["mail-1"]).toBeUndefined()
-    expect(entryDeleteManyMock).toHaveBeenCalledWith(["mail-1"])
+    expect(await storedRead()).toEqual({})
     expect(useInboxStore.getState().inboxes.news).toBeUndefined()
     expect(useSubscriptionStore.getState().data["inbox/news"]).toBeUndefined()
-    expect(inboxDeleteByIdMock).toHaveBeenCalledWith("news")
+    expect(await db.query.inboxesTable.findMany()).toEqual([])
+    expect(await storedUnread()).toEqual({ news: 0 })
   })
 
   it("tells the transaction queue how far the change log was applied", async () => {
-    seedCursor(60)
+    await seedCursor(60)
     const markSyncedSpy = vi.spyOn(transactionQueue, "markSynced")
     deltaMock.mockResolvedValueOnce(
       deltaResponse([
@@ -375,36 +350,11 @@ describe("syncEngine", () => {
     await syncEngine.pull("interval")
 
     expect(markSyncedSpy).toHaveBeenCalledWith(61)
-    markSyncedSpy.mockRestore()
   })
 
   it("applies subscription updates and deletes from the delta", async () => {
-    seedCursor(10)
-    const { subscriptionActions } = await import("../modules/subscription/store")
-    subscriptionActions.upsertManyInSession([
-      {
-        feedId: "feed-1",
-        inboxId: null,
-        userId: "user-1",
-        view: FeedViewType.Articles,
-        hideFromTimeline: null,
-        title: null,
-        category: null,
-        createdAt: "2026-01-01T00:00:00.000Z",
-        type: "feed",
-      },
-      {
-        feedId: "feed-2",
-        inboxId: null,
-        userId: "user-1",
-        view: FeedViewType.Articles,
-        hideFromTimeline: null,
-        title: null,
-        category: null,
-        createdAt: "2026-01-01T00:00:00.000Z",
-        type: "feed",
-      },
-    ])
+    await seedCursor(10)
+    await follow(feedSubscription("feed-1"), feedSubscription("feed-2"))
     deltaMock.mockResolvedValue(
       deltaResponse([
         createAction({
@@ -427,13 +377,10 @@ describe("syncEngine", () => {
     expect(state.feedIdByView[FeedViewType.Videos].has("feed-1")).toBe(true)
     expect(state.feedIdByView[FeedViewType.Articles].has("feed-1")).toBe(false)
     expect(state.data["feed-2"]).toBeUndefined()
-    expect(subscriptionPatchMock).toHaveBeenCalledWith({
-      id: "feed/feed-1",
-      view: FeedViewType.Videos,
-      category: "Clips",
-    })
-    expect(subscriptionDeleteMock).toHaveBeenCalledWith(["feed/feed-2"])
-    expect(syncEngine.getLastSyncId()).toBe(12)
+    expect(await db.query.subscriptionsTable.findMany()).toEqual([
+      expect.objectContaining({ feedId: "feed-1", view: FeedViewType.Videos, category: "Clips" }),
+    ])
+    expect(await storedCursor()).toBe("12")
     expect(invalidateEntriesQueryMock).toHaveBeenCalledTimes(1)
     // Marks the lists only; fetching every loaded page again would also jump them to the top
     expect(invalidateEntriesQueryMock.mock.calls[0]).toEqual([
@@ -442,50 +389,32 @@ describe("syncEngine", () => {
   })
 
   it("keeps an unfollow and its undo against older rows that the delta still returns", async () => {
-    seedCursor(10)
+    await seedCursor(10)
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 10 }))
     await syncEngine.pull("interval")
 
-    const { subscriptionActions, subscriptionSyncService } =
-      await import("../modules/subscription/store")
     const feed = {
       type: "feed" as const,
       id: "feed-1",
       url: "https://example.com/feed.xml",
       title: "Example",
     }
-    const feedSubscription = {
-      feedId: "feed-1",
-      inboxId: null,
-      userId: "user-1",
-      view: FeedViewType.Articles,
-      hideFromTimeline: null,
-      title: null,
-      category: null,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      type: "feed" as const,
-    }
     // Followed on this device at 11, which the cursor has not reached yet.
-    subscriptionActions.upsertManyInSession([feedSubscription])
+    subscriptionActions.upsertManyInSession([feedSubscription("feed-1")])
     const followRow = (id: number) =>
       createAction({
         id,
         model: "subscription",
         modelId: "feed-1",
         action: "I",
-        data: { ...feedSubscription, feeds: feed },
+        data: { ...feedSubscription("feed-1"), feeds: feed },
       })
-    const deleteMock = vi.fn(async () => ({ code: 0, lastSyncId: 12 }))
-    const createMock = vi.fn(async () => ({
-      code: 0,
-      feed,
-      unread: {},
-      lastSyncId: 13,
-    }))
-    apiContext.provide({
-      subscriptions: { get: subscriptionsGetMock, delete: deleteMock, create: createMock },
-      reads: { get: readsGetMock },
-    } as unknown as FollowAPI)
+    provideApi({
+      subscriptions: {
+        delete: vi.fn(async () => ({ code: 0, lastSyncId: 12 })),
+        create: vi.fn(async () => ({ code: 0, feed, unread: {}, lastSyncId: 13 })),
+      },
+    })
 
     await subscriptionSyncService.unsubscribe("feed-1")
     // The delta lags behind the unfollow and still returns the follow before it.
@@ -528,36 +457,17 @@ describe("syncEngine", () => {
   })
 
   it("keeps a confirmed unfollow out of a subscription list read from a lagging replica", async () => {
-    seedCursor(10)
+    await seedCursor(10)
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 10 }))
     await syncEngine.pull("interval")
 
-    const { subscriptionActions, subscriptionSyncService } =
-      await import("../modules/subscription/store")
-    const feedSubscription = {
-      feedId: "feed-1",
-      inboxId: null,
-      userId: "user-1",
-      view: FeedViewType.Articles,
-      hideFromTimeline: null,
-      title: null,
-      category: null,
-      createdAt: "2026-01-01T00:00:00.000Z",
-      type: "feed" as const,
-    }
-    subscriptionActions.upsertManyInSession([feedSubscription])
+    await follow(feedSubscription("feed-1"))
     const feedRow = {
-      ...feedSubscription,
+      ...feedSubscription("feed-1"),
       feeds: { id: "feed-1", url: "https://example.com/feed.xml", title: "Example" },
     }
-    subscriptionsGetMock.mockResolvedValue({ data: [feedRow] })
-    apiContext.provide({
-      subscriptions: {
-        get: subscriptionsGetMock,
-        delete: vi.fn(async () => ({ code: 0, lastSyncId: 11 })),
-      },
-      reads: { get: readsGetMock },
-    } as unknown as FollowAPI)
+    subscriptionsGetMock.mockResolvedValue({ code: 0, data: [feedRow] })
+    provideApi({ subscriptions: { delete: vi.fn(async () => ({ code: 0, lastSyncId: 11 })) } })
 
     await subscriptionSyncService.unsubscribe("feed-1")
     await subscriptionSyncService.fetch()
@@ -575,32 +485,15 @@ describe("syncEngine", () => {
   })
 
   it("confirms nothing for a failed unfollow and keeps the cursor when the delta lags behind it", async () => {
-    seedCursor(20)
+    await seedCursor(20)
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 20 }))
     await syncEngine.pull("interval")
 
-    const { getConfirmedSubscriptionChange, subscriptionActions, subscriptionSyncService } =
-      await import("../modules/subscription/store")
-    subscriptionActions.upsertManyInSession([
-      {
-        feedId: "feed-2",
-        inboxId: null,
-        userId: "user-1",
-        view: FeedViewType.Articles,
-        hideFromTimeline: null,
-        title: null,
-        category: null,
-        createdAt: "2026-01-01T00:00:00.000Z",
-        type: "feed",
-      },
-    ])
+    await follow(feedSubscription("feed-2"))
     const deleteMock = vi.fn(async (): Promise<{ code: 0; lastSyncId: number }> => {
       throw new TypeError("Failed to fetch")
     })
-    apiContext.provide({
-      subscriptions: { get: subscriptionsGetMock, delete: deleteMock },
-      reads: { get: readsGetMock },
-    } as unknown as FollowAPI)
+    provideApi({ subscriptions: { delete: deleteMock } })
 
     // Offline: the unfollow is rolled back, and nothing overrides the change log
     await expect(subscriptionSyncService.unsubscribe("feed-2")).rejects.toThrow("Failed to fetch")
@@ -630,23 +523,10 @@ describe("syncEngine", () => {
   })
 
   it("applies collection and read-state changes while pending local marks win", async () => {
-    seedCursor(20)
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: {
-        entry1: createEntry("entry1", "feed-1"),
-        entry2: createEntry("entry2", "feed-1"),
-      },
-      entryIdSet: new Set(["entry1", "entry2"]),
-    }))
-    apiContext.provide({
-      subscriptions: { get: subscriptionsGetMock },
-      reads: { get: readsGetMock, markAsUnread: vi.fn(() => new Promise(() => {})) },
-    } as unknown as FollowAPI)
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: { ...state.data, entry2: createEntry("entry2", "feed-1", true) },
-    }))
+    await seedCursor(20)
+    await seedEntries(createEntry("entry1", "feed-1"), createEntry("entry2", "feed-1", true))
+    await seedUnread({ "feed-1": 2 })
+    provideApi({ reads: { markAsUnread: vi.fn(() => new Promise(() => {})) } })
     await unreadSyncService.markEntryAsUnread("entry2")
 
     deltaMock.mockResolvedValue(
@@ -663,12 +543,7 @@ describe("syncEngine", () => {
             createdAt: "2026-09-16T00:00:00.000Z",
           },
         }),
-        createAction({
-          id: 22,
-          model: "timeline",
-          action: "U",
-          data: { entryIds: ["entry1", "entry2"], read: true, isInbox: false },
-        }),
+        readAction(22, ["entry1"], { "feed-1": 1 }),
         createAction({ id: 23, model: "collection", modelId: "entry1", action: "D" }),
       ]),
     )
@@ -677,38 +552,20 @@ describe("syncEngine", () => {
 
     expect(useEntryStore.getState().data.entry1?.read).toBe(true)
     expect(useEntryStore.getState().data.entry2?.read).toBe(false)
-    expect(entryPatchManyMock).toHaveBeenCalledWith({
-      entry: { read: true },
-      entryIds: ["entry1"],
-    })
-    expect(collectionUpsertManyMock).toHaveBeenCalledTimes(1)
-    expect(collectionDeleteManyMock).toHaveBeenCalledWith(["entry1"])
+    expect(await storedRead()).toEqual({ entry1: true, entry2: true })
     expect(useCollectionStore.getState().collections.entry1).toBeUndefined()
-    expect(readsGetMock).toHaveBeenCalledTimes(1)
+    expect(await db.query.collectionsTable.findMany()).toEqual([])
+    // The flip of the change log, with the pending unread mark on top
+    expect(await storedUnread()).toEqual({ "feed-1": 1 })
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(2)
+    expect(readsGetMock).not.toHaveBeenCalled()
   })
 
-  it("marks feeds dirty and refreshes unread counts on new entries, paging through the delta", async () => {
-    seedCursor(30)
+  it("marks feeds dirty and counts new entries, paging through the delta", async () => {
+    await seedCursor(30)
+    await follow(feedSubscription("feed-1"))
     deltaMock
-      .mockResolvedValueOnce(
-        deltaResponse(
-          [
-            createAction({
-              id: 31,
-              model: "timeline",
-              modelId: "feed-1",
-              action: "N",
-              data: {
-                feedId: "feed-1",
-                count: 3,
-                latestPublishedAt: "2026-09-16T00:00:00.000Z",
-                from: ["feed"],
-              },
-            }),
-          ],
-          { hasMore: true },
-        ),
-      )
+      .mockResolvedValueOnce(deltaResponse([newEntriesAction(31, "feed-1", 3)], { hasMore: true }))
       .mockResolvedValueOnce(deltaResponse([], { lastSyncId: 31 }))
 
     await syncEngine.pull("interval")
@@ -716,30 +573,22 @@ describe("syncEngine", () => {
     expect(deltaMock).toHaveBeenCalledTimes(2)
     expect(deltaMock).toHaveBeenLastCalledWith({ lastSyncId: 31 })
     expect(setFeedUnreadDirtyMock).toHaveBeenCalledWith("feed-1")
-    expect(readsGetMock).toHaveBeenCalledTimes(1)
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(3)
+    expect(readsGetMock).not.toHaveBeenCalled()
     expect(invalidateEntriesQueryMock).not.toHaveBeenCalled()
   })
 
   it("applies a run of read actions with one store update and one write per read state", async () => {
-    seedCursor(100)
-    unreadActions.upsertManyInSession([{ id: "feed-1", count: 1200 }])
+    await seedCursor(100)
     const ids = Array.from({ length: 1200 }, (_, index) => `entry${index}`)
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: Object.fromEntries(ids.map((id) => [id, createEntry(id, "feed-1")])),
-      entryIdSet: new Set(ids),
-    }))
+    await seedEntries(...ids.map((id) => createEntry(id, "feed-1")))
+    await seedUnread({ "feed-1": 1200 })
     // Read one by one on another device
     deltaMock.mockResolvedValue(
-      deltaResponse(
-        ids.map((id, index) =>
-          createAction({
-            id: 101 + index,
-            data: { entryIds: [id], read: true, isInbox: false, feeds: { "feed-1": 1 } },
-          }),
-        ),
-      ),
+      deltaResponse(ids.map((id, index) => readAction(101 + index, [id], { "feed-1": 1 }))),
     )
+    const patchMany = vi.spyOn(EntryService, "patchMany")
+    const storeUnread = vi.spyOn(UnreadService, "upsertMany")
     let entryUpdates = 0
     const unsubscribe = useEntryStore.subscribe(() => entryUpdates++)
 
@@ -748,106 +597,69 @@ describe("syncEngine", () => {
 
     expect(ids.every((id) => useEntryStore.getState().data[id]?.read)).toBe(true)
     expect(entryUpdates).toBe(1)
-    const patches = entryPatchManyMock.mock.calls as unknown as [{ entryIds: string[] }][]
-    const written = patches.map(([patch]) => patch.entryIds)
+    // More entries than one statement may bind
+    const written = patchMany.mock.calls.map(([patch]) => patch.entryIds!)
     expect(written.every((chunk) => chunk.length <= 500)).toBe(true)
     expect(written.flat()).toEqual(ids)
+    expect(Object.values(await storedRead()).every(Boolean)).toBe(true)
     expect(useUnreadStore.getState().data["feed-1"]).toBe(0)
-    expect(unreadUpsertManyMock).toHaveBeenCalledTimes(1)
+    expect(storeUnread).toHaveBeenCalledTimes(1)
+    expect(await storedUnread()).toEqual({ "feed-1": 0 })
   })
 
   it("keeps the last read state of an entry flipped back and forth", async () => {
-    seedCursor(110)
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: { entry1: createEntry("entry1", "feed-1") },
-      entryIdSet: new Set(["entry1"]),
-    }))
-    const flip = (id: number, read: boolean) =>
-      createAction({ id, data: { entryIds: ["entry1"], read, isInbox: false } })
+    await seedCursor(110)
+    await seedEntries(createEntry("entry1", "feed-1"))
+    const flip = (id: number, read: boolean) => readAction(id, ["entry1"], { "feed-1": 1 }, read)
     deltaMock.mockResolvedValue(
       deltaResponse([flip(111, true), flip(112, false), flip(113, true), flip(114, false)]),
     )
+    const patchMany = vi.spyOn(EntryService, "patchMany")
 
     await syncEngine.pull("interval")
 
     expect(useEntryStore.getState().data.entry1?.read).toBe(false)
-    expect(entryPatchManyMock).toHaveBeenCalledTimes(1)
-    expect(entryPatchManyMock).toHaveBeenCalledWith({
-      entry: { read: false },
-      entryIds: ["entry1"],
-    })
+    expect(patchMany).toHaveBeenCalledTimes(1)
+    expect(await storedRead()).toEqual({ entry1: false })
   })
 
   it("moves counters step by step, as each step stops at zero, around new entries", async () => {
-    seedCursor(120)
-    unreadActions.upsertManyInSession([
-      { id: "feed-1", count: 1 },
-      { id: "feed-2", count: 1 },
-    ])
-    const reads = (id: number, read: boolean, feeds: Record<string, number>) =>
-      createAction({ id, data: { entryIds: [], read, isInbox: false, feeds } })
+    await seedCursor(120)
+    await follow(feedSubscription("feed-2"))
+    await seedUnread({ "feed-1": 1, "feed-2": 1 })
     deltaMock.mockResolvedValue(
       deltaResponse([
         // feed-1: 1 - 3 stops at 0, then + 2; summing the run would give 0
-        reads(121, true, { "feed-1": 3, "feed-2": 3 }),
-        reads(122, false, { "feed-1": 2 }),
-        createAction({
-          id: 123,
-          model: "timeline",
-          modelId: "feed-2",
-          action: "N",
-          data: {
-            feedId: "feed-2",
-            count: 2,
-            unread: 2,
-            latestPublishedAt: "2026-09-16T00:00:00.000Z",
-            from: ["feed"],
-          },
-        }),
+        readAction(121, [], { "feed-1": 3, "feed-2": 3 }),
+        readAction(122, [], { "feed-1": 2 }, false),
+        newEntriesAction(123, "feed-2", 2),
         // feed-2: 0 + 2 - 1; taken with the reads before the new entries it would give 2
-        reads(124, true, { "feed-2": 1 }),
+        readAction(124, [], { "feed-2": 1 }),
       ]),
     )
 
     await syncEngine.pull("interval")
 
     expect(useUnreadStore.getState().data).toMatchObject({ "feed-1": 2, "feed-2": 1 })
+    expect(await storedUnread()).toEqual({ "feed-1": 2, "feed-2": 1 })
   })
+
   it("moves unread counters by what read actions report, without a recount", async () => {
-    seedCursor(70)
-    unreadActions.upsertManyInSession([
-      { id: "feed-1", count: 5 },
-      { id: "feed-2", count: 2 },
-      { id: "news", count: 1 },
-    ])
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: { entry1: createEntry("entry1", "feed-1") },
-      entryIdSet: new Set(["entry1"]),
-    }))
+    await seedCursor(70)
+    await seedUnread({ "feed-1": 5, "feed-2": 2, news: 1 })
+    await seedEntries(createEntry("entry1", "feed-1"))
     deltaMock.mockResolvedValue(
       deltaResponse([
-        createAction({
-          id: 71,
-          data: {
-            // entry9 was never loaded here: its feed is only known from `feeds`.
-            entryIds: ["entry1", "entry9"],
-            read: true,
-            isInbox: false,
-            feeds: { "feed-1": 1, "feed-2": 1 },
-          },
-        }),
-        createAction({
-          id: 72,
-          data: { entryIds: ["entry9"], read: false, isInbox: false, feeds: { "feed-2": 1 } },
-        }),
+        // entry9 was never loaded here: its feed is only known from `feeds`.
+        readAction(71, ["entry1", "entry9"], { "feed-1": 1, "feed-2": 1 }),
+        readAction(72, ["entry9"], { "feed-2": 1 }, false),
         createAction({
           id: 73,
           data: { entryIds: ["mail1"], read: true, isInbox: true, feeds: { news: 4 } },
         }),
       ]),
     )
+    const storeUnread = vi.spyOn(UnreadService, "upsertMany")
 
     await syncEngine.pull("interval")
 
@@ -860,47 +672,19 @@ describe("syncEngine", () => {
     })
     expect(readsGetMock).not.toHaveBeenCalled()
     expect(subscriptionsGetMock).not.toHaveBeenCalled()
-    // One write for the whole run of read actions
-    expect(unreadUpsertManyMock).toHaveBeenCalledTimes(1)
-    expect(unreadUpsertManyMock).toHaveBeenCalledWith([
-      { id: "feed-1", count: 4 },
-      { id: "feed-2", count: 2 },
-      { id: "news", count: 0 },
-    ])
+    // One write for the whole page
+    expect(storeUnread).toHaveBeenCalledTimes(1)
+    expect(await storedUnread()).toEqual({ "feed-1": 4, "feed-2": 2, news: 0 })
   })
 
   it("adds new unread entries to the counters and only fetches the head of visible lists", async () => {
-    seedCursor(80)
-    unreadActions.upsertManyInSession([{ id: "feed-1", count: 1 }])
-    useSubscriptionStore.setState((state) => ({
-      ...state,
-      data: {
-        ...state.data,
-        "feed-1": {
-          feedId: "feed-1",
-          type: "feed",
-          view: FeedViewType.Videos,
-          userId: "user-1",
-        } as never,
-      },
-    }))
-    const newEntries = (id: number, unread: number) =>
-      createAction({
-        id,
-        model: "timeline",
-        modelId: "feed-1",
-        action: "N",
-        createdAt: "2026-09-16T08:00:00.000Z",
-        data: {
-          feedId: "feed-1",
-          count: 3,
-          unread,
-          latestPublishedAt: "2026-09-16T00:00:00.000Z",
-          from: ["feed"],
-        },
-      })
+    await seedCursor(80)
+    await follow(feedSubscription("feed-1", FeedViewType.Videos))
+    await seedUnread({ "feed-1": 1 })
 
-    deltaMock.mockResolvedValueOnce(deltaResponse([newEntries(81, 2)]))
+    deltaMock.mockResolvedValueOnce(
+      deltaResponse([newEntriesAction(81, "feed-1", 2, "2026-09-16T08:00:00.000Z")]),
+    )
     await syncEngine.pull("interval")
 
     expect(useUnreadStore.getState().data["feed-1"]).toBe(3)
@@ -909,7 +693,9 @@ describe("syncEngine", () => {
     // The user may be reading: a background pull leaves the lists alone.
     expect(refreshEntriesHeadMock).not.toHaveBeenCalled()
 
-    deltaMock.mockResolvedValueOnce(deltaResponse([newEntries(82, 0)]))
+    deltaMock.mockResolvedValueOnce(
+      deltaResponse([newEntriesAction(82, "feed-1", 0, "2026-09-16T08:00:00.000Z")]),
+    )
     await syncEngine.pull("resume")
 
     expect(useUnreadStore.getState().data["feed-1"]).toBe(3)
@@ -921,39 +707,20 @@ describe("syncEngine", () => {
     expect(readsGetMock).not.toHaveBeenCalled()
   })
 
-  it("writes the counters of consecutive new-entry actions once, in order with other actions", async () => {
-    seedCursor(80)
-    unreadActions.upsertManyInSession([
-      { id: "feed-1", count: 1 },
-      { id: "feed-2", count: 0 },
-    ])
-    useSubscriptionStore.setState((state) => ({
-      ...state,
-      data: {
-        ...state.data,
-        "feed-1": { feedId: "feed-1", type: "feed", view: FeedViewType.Articles } as never,
-        "feed-2": { feedId: "feed-2", type: "feed", view: FeedViewType.Articles } as never,
-      },
-    }))
-    const newEntries = (id: number, feedId: string, unread: number) =>
-      createAction({
-        id,
-        model: "timeline",
-        modelId: feedId,
-        action: "N",
-        createdAt: "2026-09-16T08:00:00.000Z",
-        data: { feedId, count: unread, unread, latestPublishedAt: "", from: ["feed"] },
-      })
-    unreadUpsertManyMock.mockClear()
+  it("applies new-entry counters in order with other actions and stores them once per page", async () => {
+    await seedCursor(80)
+    await follow(feedSubscription("feed-1"), feedSubscription("feed-2"))
+    await seedUnread({ "feed-1": 1, "feed-2": 0 })
+    const storeUnread = vi.spyOn(UnreadService, "upsertMany")
 
     deltaMock.mockResolvedValueOnce(
       deltaResponse([
-        newEntries(81, "feed-1", 2),
-        newEntries(82, "feed-2", 3),
-        newEntries(83, "feed-1", 4),
-        // Unfollowing sets the count outright, so the increments before it are applied first
+        newEntriesAction(81, "feed-1", 2),
+        newEntriesAction(82, "feed-2", 3),
+        newEntriesAction(83, "feed-1", 4),
+        // Unfollowing sets the count outright, so the increments before it count first
         createAction({ id: 84, model: "subscription", modelId: "feed-2", action: "D" }),
-        newEntries(85, "feed-1", 1),
+        newEntriesAction(85, "feed-1", 1),
       ]),
     )
     await syncEngine.pull("interval")
@@ -962,29 +729,30 @@ describe("syncEngine", () => {
     expect(useUnreadStore.getState().data["feed-2"]).toBe(0)
     expect(setFeedUnreadDirtyMock).toHaveBeenCalledWith("feed-1")
     expect(setFeedUnreadDirtyMock).toHaveBeenCalledWith("feed-2")
-    // One write for the first three actions, one for the delete and one for the last action
-    expect(unreadUpsertManyMock).toHaveBeenCalledTimes(3)
+    expect(storeUnread).toHaveBeenCalledTimes(1)
+    expect(await storedUnread()).toEqual({ "feed-1": 8, "feed-2": 0 })
   })
 
   it("takes full snapshots again only when a calibration is due", async () => {
     const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000
-    seedCursor(90, twoHoursAgo)
-    readsGetMock.mockResolvedValue({ data: { "feed-1": 7 } })
+    await seedCursor(90, twoHoursAgo)
+    readsGetMock.mockResolvedValue({ code: 0, data: { "feed-1": 7 }, lastSyncId: 90 })
     deltaMock.mockResolvedValue(deltaResponse([], { lastSyncId: 90 }))
 
     await syncEngine.pull("interval")
 
     // Unread entries age out of the retention window without an action: recount hourly.
     expect(readsGetMock).toHaveBeenCalledTimes(1)
+    expect(stateMock).not.toHaveBeenCalled()
     expect(useUnreadStore.getState().data["feed-1"]).toBe(7)
     // Feed metadata is refreshed daily, so two hours are not enough.
     expect(subscriptionsGetMock).not.toHaveBeenCalled()
-    expect(Number(syncMetaStore.get("unreadCalibratedAt"))).toBeGreaterThan(twoHoursAgo)
+    expect(Number(await SyncMetaService.get("unreadCalibratedAt"))).toBeGreaterThan(twoHoursAgo)
 
     await syncEngine.pull("interval")
     expect(readsGetMock).toHaveBeenCalledTimes(1)
 
-    seedCursor(90, Date.now() - 25 * 60 * 60 * 1000)
+    await seedCursor(90, Date.now() - 25 * 60 * 60 * 1000)
     syncEngine.clearInSession()
     await syncEngine.pull("interval")
     expect(readsGetMock).toHaveBeenCalledTimes(2)
@@ -993,38 +761,24 @@ describe("syncEngine", () => {
 
   it("does not add new-entry hints a recount already counted, even when they arrive later", async () => {
     const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000
-    seedCursor(200, twoHoursAgo)
+    await seedCursor(200, twoHoursAgo)
+    await follow(feedSubscription("feed-1"))
     // The crawler logged four new entries at 201, but this poll is still answered from a
     // head published before that, so the hint is not delivered yet.
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 200 }))
     // The recount that follows already sees the four entries.
-    stateMock.mockResolvedValue({ code: 0, data: { lastSyncId: 201 } })
-    readsGetMock.mockResolvedValue({ data: { "feed-1": 4 } })
+    readsGetMock.mockResolvedValue({ code: 0, data: { "feed-1": 4 }, lastSyncId: 201 })
 
     await syncEngine.pull("interval")
 
     expect(useUnreadStore.getState().data["feed-1"]).toBe(4)
-    expect(syncMetaStore.get("unreadSnapshotSyncId")).toBe("201")
+    expect(await SyncMetaService.get("unreadSnapshotSyncId")).toBe("201")
 
     // The user reads one of them; the next poll delivers the hint and the flip together.
     deltaMock.mockResolvedValueOnce(
       deltaResponse([
-        createAction({
-          id: 201,
-          action: "N",
-          modelId: "feed-1",
-          data: {
-            feedId: "feed-1",
-            count: 4,
-            unread: 4,
-            latestPublishedAt: "2026-09-18T14:31:00.000Z",
-            from: ["feed"],
-          },
-        }),
-        createAction({
-          id: 202,
-          data: { entryIds: ["entry1"], read: true, isInbox: false, feeds: { "feed-1": 1 } },
-        }),
+        newEntriesAction(201, "feed-1", 4),
+        readAction(202, ["entry1"], { "feed-1": 1 }),
       ]),
     )
     await syncEngine.pull("interval")
@@ -1034,46 +788,20 @@ describe("syncEngine", () => {
     expect(setFeedUnreadDirtyMock).toHaveBeenCalledWith("feed-1")
   })
 
-  it("takes the snapshot id from the recount answer and keeps it across restarts", async () => {
-    seedCursor(300, Date.now() - 2 * 60 * 60 * 1000)
+  it("keeps the snapshot id of a recount across a restart", async () => {
+    await seedCursor(300, Date.now() - 2 * 60 * 60 * 1000)
+    await follow(feedSubscription("feed-1"))
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 300 }))
-    stateMock.mockResolvedValue({ code: 0, data: { lastSyncId: 301 } })
-    // The server names the id its counts reflect; it beats the state read before.
-    readsGetMock.mockResolvedValue({ data: { "feed-1": 2 }, lastSyncId: 305 })
+    readsGetMock.mockResolvedValue({ code: 0, data: { "feed-1": 2 }, lastSyncId: 305 })
 
     await syncEngine.pull("interval")
-    expect(syncMetaStore.get("unreadSnapshotSyncId")).toBe("305")
+    expect(await SyncMetaService.get("unreadSnapshotSyncId")).toBe("305")
 
     // A restart loads the id again: 305 is inside the snapshot, 306 is not.
-    syncEngine.clearInSession()
-    seedCursor(300)
+    await restart()
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(2)
     deltaMock.mockResolvedValueOnce(
-      deltaResponse([
-        createAction({
-          id: 305,
-          action: "N",
-          modelId: "feed-1",
-          data: {
-            feedId: "feed-1",
-            count: 2,
-            unread: 2,
-            latestPublishedAt: "2026-09-18T00:00:00.000Z",
-            from: ["feed"],
-          },
-        }),
-        createAction({
-          id: 306,
-          action: "N",
-          modelId: "feed-1",
-          data: {
-            feedId: "feed-1",
-            count: 1,
-            unread: 1,
-            latestPublishedAt: "2026-09-18T00:00:00.000Z",
-            from: ["feed"],
-          },
-        }),
-      ]),
+      deltaResponse([newEntriesAction(305, "feed-1", 2), newEntriesAction(306, "feed-1", 1)]),
     )
     await syncEngine.pull("interval")
 
@@ -1082,37 +810,25 @@ describe("syncEngine", () => {
   })
 
   it("still flips read state and settles transactions for actions inside the snapshot", async () => {
-    seedCursor(400, Date.now() - 2 * 60 * 60 * 1000)
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: { entry1: createEntry("entry1", "feed-1") },
-      entryIdSet: new Set(["entry1"]),
-    }))
+    await seedCursor(400, Date.now() - 2 * 60 * 60 * 1000)
+    await seedEntries(createEntry("entry1", "feed-1"))
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 400 }))
-    stateMock.mockResolvedValue({ code: 0, data: { lastSyncId: 400 } })
     // Another device read entry1 at 401, and the recount already reflects that.
-    readsGetMock.mockResolvedValue({ data: { "feed-1": 1 }, lastSyncId: 401 })
+    readsGetMock.mockResolvedValue({ code: 0, data: { "feed-1": 1 }, lastSyncId: 401 })
     await syncEngine.pull("interval")
     expect(useUnreadStore.getState().data["feed-1"]).toBe(1)
 
-    deltaMock.mockResolvedValueOnce(
-      deltaResponse([
-        createAction({
-          id: 401,
-          data: { entryIds: ["entry1"], read: true, isInbox: false, feeds: { "feed-1": 1 } },
-        }),
-      ]),
-    )
+    deltaMock.mockResolvedValueOnce(deltaResponse([readAction(401, ["entry1"], { "feed-1": 1 })]))
     await syncEngine.pull("interval")
 
     expect(useEntryStore.getState().data.entry1?.read).toBe(true)
-    expect(entryPatchManyMock).toHaveBeenCalledWith({ entry: { read: true }, entryIds: ["entry1"] })
+    expect(await storedRead()).toEqual({ entry1: true })
     // The counter was not moved twice.
     expect(useUnreadStore.getState().data["feed-1"]).toBe(1)
   })
 
   it("lets callers rely on the local snapshot once a cursor exists", async () => {
-    seedCursor(100)
+    await seedCursor(100)
     deltaMock.mockResolvedValue(deltaResponse([], { lastSyncId: 100 }))
 
     expect(await syncEngine.ensureSynced()).toBe(true)
@@ -1124,76 +840,72 @@ describe("syncEngine", () => {
     expect(readsGetMock).not.toHaveBeenCalled()
   })
 
-  it("keeps answering from the local snapshot when a pull fails, and declines without sync endpoints", async () => {
-    seedCursor(110)
+  it("keeps answering from the local snapshot when a pull fails, and declines when signed out", async () => {
+    await seedCursor(110)
     deltaMock.mockRejectedValueOnce(new Error("offline"))
     expect(await syncEngine.ensureSynced()).toBe(true)
 
-    syncEngine.clearInSession()
-    syncMetaStore.clear()
-    stateMock.mockRejectedValue(new FollowAPIError("not found", 404))
+    useUserStore.setState((state) => ({ ...state, whoami: null }))
     expect(await syncEngine.ensureSynced()).toBe(false)
-    expect(await syncEngine.catchUp(0)).toBe(false)
   })
 
   it("drops the prediction of a local mark once the change log reports the real effect", async () => {
-    seedCursor(120)
+    await seedCursor(120)
     deltaMock.mockResolvedValue(deltaResponse([], { lastSyncId: 120 }))
     await syncEngine.pull("interval")
 
-    unreadActions.upsertManyInSession([{ id: "feed-1", count: 5 }])
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: { entry1: createEntry("entry1", "feed-1") },
-      entryIdSet: new Set(["entry1"]),
-    }))
+    await seedUnread({ "feed-1": 5 })
+    await seedEntries(createEntry("entry1", "feed-1"))
     // Another device had marked the entry already, so the server flips nothing and answers
     // with the id of that device's action.
-    apiContext.provide({
-      subscriptions: { get: subscriptionsGetMock },
-      reads: { get: readsGetMock, markAsRead: vi.fn(async () => ({ code: 0, lastSyncId: 121 })) },
-    } as unknown as FollowAPI)
+    provideApi({ reads: { markAsRead: vi.fn(async () => ({ code: 0, lastSyncId: 121 })) } })
 
     await unreadSyncService.markEntriesAsRead(["entry1"])
     expect(useUnreadStore.getState().data["feed-1"]).toBe(4)
     await transactionQueue.flush()
     // Acknowledged, but the change log has not been read up to 121 yet.
     expect(useUnreadStore.getState().data["feed-1"]).toBe(4)
+    expect(await storedUnread()).toEqual({ "feed-1": 5 })
 
-    deltaMock.mockResolvedValue(
-      deltaResponse([
-        createAction({
-          id: 121,
-          data: { entryIds: ["entry1"], read: true, isInbox: false, feeds: { "feed-1": 1 } },
-        }),
-      ]),
-    )
+    deltaMock.mockResolvedValue(deltaResponse([readAction(121, ["entry1"], { "feed-1": 1 })]))
     await syncEngine.pull("ack")
 
     // One flip in total, not the other device's plus this client's prediction.
     expect(useUnreadStore.getState().data["feed-1"]).toBe(4)
-    expect(unreadUpsertManyMock).toHaveBeenLastCalledWith([{ id: "feed-1", count: 4 }])
+    expect(await storedUnread()).toEqual({ "feed-1": 4 })
     expect(readsGetMock).not.toHaveBeenCalled()
+  })
+
+  it("never shows its own flips taken off twice while the change log catches up", async () => {
+    await seedCursor(120)
+    deltaMock.mockResolvedValue(deltaResponse([], { lastSyncId: 120 }))
+    await syncEngine.pull("interval")
+    await seedUnread({ "feed-1": 5 })
+    await seedEntries(createEntry("entry1", "feed-1"), createEntry("entry2", "feed-1"))
+    provideApi({ reads: { markAsRead: vi.fn(async () => ({ code: 0, lastSyncId: 121 })) } })
+
+    await unreadSyncService.markEntriesAsRead(["entry1", "entry2"])
+    await transactionQueue.flush()
+    const shown: number[] = []
+    const unsubscribe = useUnreadStore.subscribe((state) => shown.push(state.data["feed-1"]!))
+    deltaMock.mockResolvedValue(
+      deltaResponse([readAction(121, ["entry1", "entry2"], { "feed-1": 2 })]),
+    )
+    await syncEngine.pull("ack")
+    unsubscribe()
+
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(3)
+    expect(shown.every((count) => count === 3)).toBe(true)
   })
 
   it("counts a mark acknowledged while the first bootstrap loads its snapshots once", async () => {
     // A fresh profile replays a mark from its outbox while the engine has no cursor yet.
-    unreadActions.upsertManyInSession([{ id: "feed-1", count: 19 }], { reset: true })
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: { entry1: createEntry("entry1", "feed-1") },
-      entryIdSet: new Set(["entry1"]),
-    }))
-    apiContext.provide({
-      subscriptions: { get: subscriptionsGetMock },
-      reads: {
-        get: readsGetMock,
-        markAsRead: vi.fn(async () => ({ code: 0, lastSyncId: 463 })),
-      },
-    } as unknown as FollowAPI)
+    await seedUnread({ "feed-1": 19 })
+    await seedEntries(createEntry("entry1", "feed-1"))
+    provideApi({ reads: { markAsRead: vi.fn(async () => ({ code: 0, lastSyncId: 463 })) } })
     stateMock.mockResolvedValue({ code: 0, data: { lastSyncId: 457 } })
     // The snapshot is read before the server applied the mark.
-    readsGetMock.mockResolvedValue({ data: { "feed-1": 19 }, lastSyncId: 457 })
+    readsGetMock.mockResolvedValue({ code: 0, data: { "feed-1": 19 }, lastSyncId: 457 })
     let releaseModels: () => void = () => {}
     const unregister = registerSyncModel("widget", {
       bootstrap: () =>
@@ -1213,47 +925,30 @@ describe("syncEngine", () => {
 
     releaseModels()
     await bootstrap
-    deltaMock.mockResolvedValue(
-      deltaResponse([
-        createAction({
-          id: 463,
-          data: { entryIds: ["entry1"], read: true, isInbox: false, feeds: { "feed-1": 1 } },
-        }),
-      ]),
-    )
+    deltaMock.mockResolvedValue(deltaResponse([readAction(463, ["entry1"], { "feed-1": 1 })]))
     await syncEngine.pull("ack")
 
     // The server's count: the change log's flip, not that plus the prediction.
     expect(useUnreadStore.getState().data["feed-1"]).toBe(18)
-    expect(unreadUpsertManyMock).toHaveBeenLastCalledWith([{ id: "feed-1", count: 18 }])
+    expect(await storedUnread()).toEqual({ "feed-1": 18 })
     unregister()
   })
 
   it("does not count a mark again on top of a first snapshot that already contains it", async () => {
     // A fresh profile replays a mark from its outbox while the engine has no cursor yet.
-    unreadActions.upsertManyInSession([{ id: "feed-1", count: 19 }], { reset: true })
-    useEntryStore.setState((state) => ({
-      ...state,
-      data: { entry1: createEntry("entry1", "feed-1") },
-      entryIdSet: new Set(["entry1"]),
-    }))
-    apiContext.provide({
-      subscriptions: { get: subscriptionsGetMock },
-      reads: {
-        get: readsGetMock,
-        markAsRead: vi.fn(async () => ({ code: 0, lastSyncId: 463 })),
-      },
-    } as unknown as FollowAPI)
+    await seedUnread({ "feed-1": 19 })
+    await seedEntries(createEntry("entry1", "feed-1"))
+    provideApi({ reads: { markAsRead: vi.fn(async () => ({ code: 0, lastSyncId: 463 })) } })
     stateMock.mockResolvedValue({ code: 0, data: { lastSyncId: 457 } })
     let releaseSubscriptions: () => void = () => {}
     subscriptionsGetMock.mockImplementation(
       () =>
         new Promise((resolve) => {
-          releaseSubscriptions = () => resolve({ data: [] })
+          releaseSubscriptions = () => resolve({ code: 0, data: [] })
         }),
     )
     // The server applied the mark before it counted the unread entries.
-    readsGetMock.mockResolvedValue({ data: { "feed-1": 18 }, lastSyncId: 465 })
+    readsGetMock.mockResolvedValue({ code: 0, data: { "feed-1": 18 }, lastSyncId: 465 })
 
     const bootstrap = syncEngine.pull("launch")
     await vi.waitFor(() => expect(subscriptionsGetMock).toHaveBeenCalledTimes(1))
@@ -1267,21 +962,251 @@ describe("syncEngine", () => {
     // The snapshot holds the mark already, so the count is the server's at once.
     expect(useUnreadStore.getState().data["feed-1"]).toBe(18)
 
-    deltaMock.mockResolvedValue(
-      deltaResponse([
-        createAction({
-          id: 463,
-          data: { entryIds: ["entry1"], read: true, isInbox: false, feeds: { "feed-1": 1 } },
-        }),
-      ]),
-    )
+    deltaMock.mockResolvedValue(deltaResponse([readAction(463, ["entry1"], { "feed-1": 1 })]))
     await syncEngine.pull("ack")
 
     expect(useUnreadStore.getState().data["feed-1"]).toBe(18)
   })
 
+  it("replays a mark made offline after a restart and counts it once", async () => {
+    await seedCursor(130)
+    await follow(feedSubscription("feed-1"))
+    await seedEntries(createEntry("entry1", "feed-1"), createEntry("entry2", "feed-1"))
+    await seedUnread({ "feed-1": 2 })
+    const markAsRead = vi.fn().mockRejectedValueOnce(new TypeError("Failed to fetch"))
+    provideApi({ reads: { markAsRead } })
+
+    await unreadSyncService.markEntriesAsRead(["entry1"])
+    await transactionQueue.flush()
+    await restart()
+
+    expect(useEntryStore.getState().data.entry1?.read).toBe(true)
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(1)
+    // The launch pull
+    deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 130 }))
+    await syncEngine.pull("launch")
+
+    markAsRead.mockResolvedValue({ code: 0, lastSyncId: 131 })
+    await transactionQueue.flush()
+    deltaMock.mockResolvedValue(deltaResponse([readAction(131, ["entry1"], { "feed-1": 1 })]))
+    await syncEngine.pull("ack")
+
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(1)
+    expect(await storedUnread()).toEqual({ "feed-1": 1 })
+    expect(await storedRead()).toEqual({ entry1: true, entry2: false })
+    expect(await storedCursor()).toBe("131")
+  })
+
+  describe("when applying an action fails", () => {
+    it("stops before it, keeps the cursor before it and starts with it again", async () => {
+      await seedCursor(10)
+      await follow(feedSubscription("feed-1"))
+      const apply = vi.fn().mockRejectedValueOnce(new Error("quota exceeded"))
+      const unregister = registerSyncModel("widget", { apply })
+      const actions = [
+        newEntriesAction(11, "feed-1", 1),
+        createAction({ id: 12, model: "widget", modelId: "w1" }),
+        newEntriesAction(13, "feed-1", 2),
+      ]
+      deltaMock
+        .mockResolvedValueOnce(deltaResponse(actions))
+        .mockResolvedValueOnce(deltaResponse(actions.slice(1)))
+
+      await syncEngine.pull("interval")
+
+      expect(await storedCursor()).toBe("11")
+      expect(await storedUnread()).toEqual({ "feed-1": 1 })
+      expect(useUnreadStore.getState().data["feed-1"]).toBe(1)
+
+      await syncEngine.pull("interval")
+
+      expect(deltaMock).toHaveBeenLastCalledWith({ lastSyncId: 11 })
+      expect(apply).toHaveBeenCalledTimes(2)
+      expect(await storedCursor()).toBe("13")
+      expect(useUnreadStore.getState().data["feed-1"]).toBe(3)
+      unregister()
+    })
+
+    it("does not skip the action after read states it could not write", async () => {
+      await seedCursor(20)
+      await seedEntries(createEntry("entry1", "feed-1"), createEntry("entry2", "feed-1"))
+      await seedUnread({ "feed-1": 2 })
+      vi.spyOn(EntryService, "patchMany").mockRejectedValueOnce(new Error("database is locked"))
+      deltaMock.mockResolvedValue(
+        deltaResponse([
+          readAction(21, ["entry1"], { "feed-1": 1 }),
+          createAction({
+            id: 22,
+            model: "collection",
+            modelId: "entry2",
+            action: "I",
+            data: {
+              entryId: "entry2",
+              feedId: "feed-1",
+              view: FeedViewType.Articles,
+              createdAt: "2026-09-16T00:00:00.000Z",
+            },
+          }),
+        ]),
+      )
+
+      await syncEngine.pull("interval")
+
+      expect(await storedCursor()).toBe("20")
+      expect(useCollectionStore.getState().collections.entry2).toBeUndefined()
+      expect(await storedUnread()).toEqual({ "feed-1": 2 })
+
+      await syncEngine.pull("interval")
+
+      expect(await storedCursor()).toBe("22")
+      expect(await storedRead()).toEqual({ entry1: true, entry2: false })
+      expect(useCollectionStore.getState().collections.entry2).toBeDefined()
+      expect(await storedUnread()).toEqual({ "feed-1": 1 })
+    })
+
+    it("counts nothing twice when the cursor could not be stored", async () => {
+      await seedCursor(40)
+      await follow(feedSubscription("feed-1"))
+      await seedUnread({ "feed-1": 1 })
+      const set = SyncMetaService.set.bind(SyncMetaService)
+      vi.spyOn(SyncMetaService, "set").mockImplementationOnce(async (key, value, tx) => {
+        if (key === "lastSyncId") throw new Error("disk I/O error")
+        await set(key, value, tx)
+      })
+      deltaMock.mockResolvedValue(deltaResponse([newEntriesAction(41, "feed-1", 2)]))
+
+      await syncEngine.pull("interval")
+      expect(await storedCursor()).toBe("40")
+      expect(await storedUnread()).toEqual({ "feed-1": 1 })
+
+      // The app quits before the next pull, which reads the log from the stored cursor.
+      await restart()
+      await syncEngine.pull("interval")
+
+      expect(deltaMock).toHaveBeenLastCalledWith({ lastSyncId: 40 })
+      expect(await storedCursor()).toBe("41")
+      expect(useUnreadStore.getState().data["feed-1"]).toBe(3)
+      expect(await storedUnread()).toEqual({ "feed-1": 3 })
+    })
+
+    it("loads everything again once the same action failed three pulls in a row", async () => {
+      await seedCursor(50)
+      const unregister = registerSyncModel("widget", {
+        apply: vi.fn().mockRejectedValue(new Error("unsupported rule")),
+      })
+      deltaMock.mockResolvedValue(
+        deltaResponse([createAction({ id: 51, model: "widget", modelId: "w1" })]),
+      )
+      stateMock.mockResolvedValue({ code: 0, data: { lastSyncId: 60 } })
+
+      await syncEngine.pull("interval")
+      await syncEngine.pull("interval")
+      expect(stateMock).not.toHaveBeenCalled()
+      expect(await storedCursor()).toBe("50")
+
+      await syncEngine.pull("interval")
+      expect(stateMock).toHaveBeenCalledTimes(1)
+      expect(subscriptionsGetMock).toHaveBeenCalledTimes(1)
+      expect(await storedCursor()).toBe("60")
+      unregister()
+    })
+  })
+
+  it("starts counting the change log again after the server started it over", async () => {
+    await seedCursor(500)
+    await follow(feedSubscription("feed-1"))
+    await SyncMetaService.set("unreadSnapshotSyncId", "600")
+    // Restored from a backup: the log's head is below the client's cursor now.
+    deltaMock.mockResolvedValueOnce(deltaResponse([], { reset: true, lastSyncId: 40 }))
+    stateMock.mockResolvedValue({ code: 0, data: { lastSyncId: 40 } })
+    subscriptionsGetMock.mockResolvedValue({
+      code: 0,
+      data: [
+        {
+          ...feedSubscription("feed-1"),
+          feeds: { type: "feed", id: "feed-1", url: "https://example.com/feed.xml" },
+        },
+      ],
+    })
+    readsGetMock.mockResolvedValue({ code: 0, data: { "feed-1": 2 }, lastSyncId: 40 })
+
+    await syncEngine.pull("interval")
+    expect(await storedCursor()).toBe("40")
+    expect(await SyncMetaService.get("unreadSnapshotSyncId")).toBe("40")
+
+    deltaMock.mockResolvedValueOnce(deltaResponse([newEntriesAction(41, "feed-1", 1)]))
+    await syncEngine.pull("interval")
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(3)
+
+    // Also after a restart
+    await restart()
+    deltaMock.mockResolvedValueOnce(deltaResponse([newEntriesAction(42, "feed-1", 1)]))
+    await syncEngine.pull("interval")
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(4)
+  })
+
+  it("leaves no counter to the new entries of a feed unfollowed here", async () => {
+    await seedCursor(10)
+    await follow(feedSubscription("feed-1"))
+    provideApi({ subscriptions: { delete: vi.fn(async () => ({ code: 0, lastSyncId: 12 })) } })
+
+    await subscriptionSyncService.unsubscribe("feed-1")
+    // Logged before the unfollow
+    deltaMock.mockResolvedValue(deltaResponse([newEntriesAction(11, "feed-1", 3)]))
+    await syncEngine.pull("interval")
+
+    expect(useUnreadStore.getState().data["feed-1"] ?? 0).toBe(0)
+    expect(setFeedUnreadDirtyMock).not.toHaveBeenCalledWith("feed-1")
+  })
+
+  it("recounts for the UI only after the pull that is applying the change log", async () => {
+    await seedCursor(70, Date.now() - 2 * 60_000)
+    await follow(feedSubscription("feed-1"))
+    await seedUnread({ "feed-1": 1 })
+    let answer: (value: ReturnType<typeof deltaResponse>) => void = () => {}
+    deltaMock.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+    readsGetMock.mockResolvedValue({ code: 0, data: { "feed-1": 3 }, lastSyncId: 71 })
+
+    const pulling = syncEngine.pull("interval")
+    await vi.waitFor(() => expect(deltaMock).toHaveBeenCalledTimes(1))
+    const recount = syncEngine.requestUnreadCalibration()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(readsGetMock).not.toHaveBeenCalled()
+
+    answer(deltaResponse([newEntriesAction(71, "feed-1", 2)]))
+    await pulling
+    await recount
+
+    expect(readsGetMock).toHaveBeenCalledTimes(1)
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(3)
+  })
+
+  it("pulls again after a running pull when catching up with a change of the server", async () => {
+    await seedCursor(90)
+    let answer: (value: ReturnType<typeof deltaResponse>) => void = () => {}
+    deltaMock
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      .mockResolvedValueOnce(
+        deltaResponse([
+          createAction({ id: 92, model: "collection", modelId: "entry1", action: "D" }),
+        ]),
+      )
+
+    const pulling = syncEngine.pull("interval")
+    await vi.waitFor(() => expect(deltaMock).toHaveBeenCalledTimes(1))
+    // An import finished on the server after the running pull read its last page.
+    const caughtUp = syncEngine.catchUp()
+    answer(deltaResponse([], { lastSyncId: 91 }))
+    await pulling
+
+    expect(await caughtUp).toBe(true)
+    expect(deltaMock).toHaveBeenCalledTimes(2)
+    expect(deltaMock).toHaveBeenLastCalledWith({ lastSyncId: 91 })
+    expect(syncEngine.getLastSyncId()).toBe(92)
+  })
+
   it("bootstraps a registered model once and hands it its actions", async () => {
-    seedCursor(130)
+    await seedCursor(130)
     const bootstrap = vi.fn(async () => {})
     const apply = vi.fn()
     const unregister = registerSyncModel("widget", { bootstrap, apply })
@@ -1293,7 +1218,7 @@ describe("syncEngine", () => {
     expect(apply).toHaveBeenCalledWith(widgetAction)
     // The account had a cursor but never loaded this model: it is loaded in full once.
     expect(bootstrap).toHaveBeenCalledTimes(1)
-    expect(syncMetaStore.get("bootstrapped:widget")).toBe("1")
+    expect(await SyncMetaService.get("bootstrapped:widget")).toBe("1")
 
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 131 }))
     await syncEngine.pull("interval")
@@ -1303,14 +1228,14 @@ describe("syncEngine", () => {
   })
 
   it("loads a model in full again after its actions went by without a handler", async () => {
-    seedCursor(140)
-    syncMetaStore.set("bootstrapped:widget", "1")
+    await seedCursor(140)
+    await SyncMetaService.set("bootstrapped:widget", "1")
 
     deltaMock.mockResolvedValueOnce(
       deltaResponse([createAction({ id: 141, model: "widget", modelId: "w1" })]),
     )
     await syncEngine.pull("interval")
-    expect(syncMetaStore.has("bootstrapped:widget")).toBe(false)
+    expect(await SyncMetaService.get("bootstrapped:widget")).toBeNull()
 
     const bootstrap = vi.fn(async () => {})
     const unregister = registerSyncModel("widget", { bootstrap, apply: vi.fn() })
@@ -1318,7 +1243,7 @@ describe("syncEngine", () => {
     await syncEngine.pull("interval")
 
     expect(bootstrap).toHaveBeenCalledTimes(1)
-    expect(syncMetaStore.get("bootstrapped:widget")).toBe("1")
+    expect(await SyncMetaService.get("bootstrapped:widget")).toBe("1")
     unregister()
   })
 
@@ -1332,47 +1257,21 @@ describe("syncEngine", () => {
 
     await syncEngine.pull("launch")
     expect(bootstrap).toHaveBeenCalledTimes(1)
-    expect(syncMetaStore.has("bootstrapped:widget")).toBe(false)
+    expect(await SyncMetaService.get("bootstrapped:widget")).toBeNull()
     expect(syncEngine.getLastSyncId()).toBe(7)
 
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 7 }))
     await syncEngine.pull("interval")
     expect(bootstrap).toHaveBeenCalledTimes(2)
-    expect(syncMetaStore.get("bootstrapped:widget")).toBe("1")
+    expect(await SyncMetaService.get("bootstrapped:widget")).toBe("1")
     unregister()
   })
 
   it("brings lists up to date on the next return for entries that arrived while reading", async () => {
-    seedCursor(150)
-    useSubscriptionStore.setState((state) => ({
-      ...state,
-      data: {
-        ...state.data,
-        "feed-1": {
-          feedId: "feed-1",
-          type: "feed",
-          view: FeedViewType.Articles,
-          userId: "user-1",
-        } as never,
-      },
-    }))
+    await seedCursor(150)
+    await follow(feedSubscription("feed-1"))
     deltaMock.mockResolvedValueOnce(
-      deltaResponse([
-        createAction({
-          id: 151,
-          model: "timeline",
-          modelId: "feed-1",
-          action: "N",
-          createdAt: "2026-09-18T09:00:00.000Z",
-          data: {
-            feedId: "feed-1",
-            count: 1,
-            unread: 1,
-            latestPublishedAt: "2026-09-18T09:00:00.000Z",
-            from: ["feed"],
-          },
-        }),
-      ]),
+      deltaResponse([newEntriesAction(151, "feed-1", 1, "2026-09-18T09:00:00.000Z")]),
     )
     await syncEngine.pull("interval")
     expect(refreshEntriesHeadMock).not.toHaveBeenCalled()
@@ -1389,48 +1288,23 @@ describe("syncEngine", () => {
 
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 151 }))
     syncEngine.clearInSession()
-    seedCursor(151)
     await syncEngine.pull("resume")
     expect(refreshEntriesHeadMock).toHaveBeenCalledTimes(1)
   })
 
   describe("on return to the app", () => {
-    const newEntries = (id: number) =>
-      createAction({
-        id,
-        model: "timeline",
-        modelId: "feed-1",
-        action: "N",
-        createdAt: "2026-09-18T09:00:00.000Z",
-        data: {
-          feedId: "feed-1",
-          count: 1,
-          unread: 1,
-          latestPublishedAt: "2026-09-18T09:00:00.000Z",
-          from: ["feed"],
-        },
-      })
+    const newEntries = (id: number) => newEntriesAction(id, "feed-1", 1, "2026-09-18T09:00:00.000Z")
 
-    beforeEach(() => {
-      useSubscriptionStore.setState((state) => ({
-        ...state,
-        data: {
-          ...state.data,
-          "feed-1": {
-            feedId: "feed-1",
-            type: "feed",
-            view: FeedViewType.Articles,
-            userId: "user-1",
-          } as never,
-        },
-      }))
+    beforeEach(async () => {
+      await follow(feedSubscription("feed-1"))
     })
 
     it("brings lists up to date after a pull that is still running", async () => {
-      seedCursor(200)
+      await seedCursor(200)
       let answer: (value: ReturnType<typeof deltaResponse>) => void = () => {}
       deltaMock.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
       const pulling = syncEngine.pull("interval")
+      await vi.waitFor(() => expect(deltaMock).toHaveBeenCalledTimes(1))
 
       syncEngine.resume()
       answer(deltaResponse([newEntries(201)]))
@@ -1439,7 +1313,7 @@ describe("syncEngine", () => {
     })
 
     it("brings lists up to date right after a pull, without asking for the delta again", async () => {
-      seedCursor(210)
+      await seedCursor(210)
       deltaMock.mockResolvedValueOnce(deltaResponse([newEntries(211)]))
       await syncEngine.pull("ack")
       expect(refreshEntriesHeadMock).not.toHaveBeenCalled()
@@ -1451,7 +1325,7 @@ describe("syncEngine", () => {
     })
 
     it("keeps the views owed when fetching the new entries failed", async () => {
-      seedCursor(220)
+      await seedCursor(220)
       deltaMock.mockResolvedValueOnce(deltaResponse([newEntries(221)]))
       await syncEngine.pull("interval")
       refreshEntriesHeadMock.mockRejectedValueOnce(new Error("offline"))
@@ -1468,7 +1342,7 @@ describe("syncEngine", () => {
     })
 
     it("still fetches new entries for a view whose lists the same pull invalidated", async () => {
-      seedCursor(230)
+      await seedCursor(230)
       deltaMock.mockResolvedValueOnce(
         deltaResponse([
           newEntries(231),
@@ -1482,8 +1356,9 @@ describe("syncEngine", () => {
       await vi.waitFor(() => expect(refreshEntriesHeadMock).toHaveBeenCalledTimes(1))
     })
   })
+
   it("bootstraps again when the server asks for a reset", async () => {
-    seedCursor(5)
+    await seedCursor(5)
     deltaMock.mockResolvedValue(deltaResponse([], { reset: true, lastSyncId: 5 }))
     stateMock.mockResolvedValue({ code: 0, data: { lastSyncId: 99 } })
 
@@ -1492,17 +1367,5 @@ describe("syncEngine", () => {
     expect(stateMock).toHaveBeenCalledTimes(1)
     expect(subscriptionsGetMock).toHaveBeenCalledTimes(1)
     expect(syncEngine.getLastSyncId()).toBe(99)
-  })
-
-  it("falls back to the full refetch behaviour when the server has no sync endpoints", async () => {
-    stateMock.mockRejectedValue(new FollowAPIError("not found", 404))
-
-    await syncEngine.pull("launch")
-    await syncEngine.pull("interval")
-
-    expect(stateMock).toHaveBeenCalledTimes(1)
-    expect(syncEngine.isAvailable()).toBe(false)
-    expect(isSyncEngineActive()).toBe(false)
-    expect(subscriptionsGetMock).not.toHaveBeenCalled()
   })
 })

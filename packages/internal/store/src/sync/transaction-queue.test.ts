@@ -1,3 +1,4 @@
+import { SyncTransactionService } from "@follow/database/services/sync-transaction"
 import { FollowAPIError } from "@follow-app/client-sdk"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -9,62 +10,24 @@ import {
   startSessionCheck,
 } from "./account"
 import { setSyncEngineActive } from "./sync-status"
-import type { TransactionKind, TransactionPersistContext } from "./transaction-queue"
+import type { ServerSuccess, TransactionKind, TransactionPersistContext } from "./transaction-queue"
 import { classifyTransactionError, transactionQueue } from "./transaction-queue"
 
-const { outboxRows, outboxInsertMock, outboxDeleteManyMock, outboxGetAllMock, outboxResetMock } =
-  vi.hoisted(() => {
-    const outboxRows: Array<{
-      id: string
-      kind: string
-      payload: unknown
-      createdAt: Date
-      userId?: string | null
-    }> = []
-    return {
-      outboxRows,
-      outboxInsertMock: vi.fn(async (row: (typeof outboxRows)[number]) => {
-        outboxRows.push(row)
-      }),
-      outboxDeleteManyMock: vi.fn(async (ids: string[]) => {
-        for (const id of ids) {
-          const index = outboxRows.findIndex((row) => row.id === id)
-          if (index !== -1) outboxRows.splice(index, 1)
-        }
-      }),
-      outboxGetAllMock: vi.fn(async () => [...outboxRows]),
-      outboxResetMock: vi.fn(async () => {
-        outboxRows.length = 0
-      }),
-    }
-  })
-
-vi.mock("@follow/database/services/sync-meta", () => ({
-  SyncMetaService: {
-    get: vi.fn(async () => null),
-    set: vi.fn(async () => {}),
-    delete: vi.fn(async () => {}),
-    reset: vi.fn(async () => {}),
-  },
-}))
-
-vi.mock("@follow/database/services/sync-transaction", () => ({
-  SyncTransactionService: {
-    insert: outboxInsertMock,
-    deleteMany: outboxDeleteManyMock,
-    getAll: outboxGetAllMock,
-    reset: outboxResetMock,
-  },
-}))
+vi.mock("@follow/database/db", async () =>
+  (await import("@follow/database/test-db")).createTestDB(),
+)
 
 type CounterPayload = { key: string; delta: number }
+type CounterResult = ServerSuccess & { lastSyncId?: number }
 
 const counters: Record<string, number> = {}
 const persisted: Record<string, number> = {}
 
+const ok = (lastSyncId?: number): CounterResult => ({ code: 0, lastSyncId })
+
 const createCounterKind = (
-  overrides: Partial<TransactionKind<CounterPayload, unknown>> = {},
-): TransactionKind<CounterPayload, unknown> => ({
+  overrides: Partial<TransactionKind<CounterPayload, CounterResult>> = {},
+): TransactionKind<CounterPayload, CounterResult> => ({
   kind: "test.counter",
   apply: ({ key, delta }) => {
     counters[key] = (counters[key] ?? 0) + delta
@@ -72,7 +35,7 @@ const createCounterKind = (
   rollback: ({ key, delta }) => {
     counters[key] = (counters[key] ?? 0) - delta
   },
-  execute: vi.fn(async () => {}),
+  execute: vi.fn(async () => ok()),
   persist: async (payloads) => {
     for (const { key, delta } of payloads) {
       persisted[key] = (persisted[key] ?? 0) + delta
@@ -86,6 +49,21 @@ const createCounterKind = (
   ...overrides,
 })
 
+const syncedKind = (syncId: number) =>
+  createCounterKind({
+    execute: vi.fn(async () => ok(syncId)),
+    syncIdOf: (result) => result.lastSyncId,
+  })
+
+const outbox = () => SyncTransactionService.getAll()
+
+/** Rows a previous session left in the outbox */
+const leaveInOutbox = async (
+  ...rows: Array<{ id: string; kind: string; payload: unknown; createdAt: Date; userId?: string }>
+) => {
+  for (const row of rows) await SyncTransactionService.insert(row)
+}
+
 const flushMicrotasks = () => vi.advanceTimersByTimeAsync(0)
 
 /** The session endpoint answered for the current credentials. */
@@ -95,6 +73,16 @@ const signInAs = (userId: string | null) => startSessionCheck().confirm(userId)
 const launch = () => {
   clearAccountInSession()
   registerSessionVerifier(async () => {})
+}
+
+const startOver = async () => {
+  vi.useFakeTimers()
+  transactionQueue.clearInSession()
+  launch()
+  await SyncTransactionService.reset()
+  for (const key of Object.keys(counters)) delete counters[key]
+  for (const key of Object.keys(persisted)) delete persisted[key]
+  vi.clearAllMocks()
 }
 
 // Stands in for the window: the queue attaches its listeners once, on the first restore.
@@ -118,15 +106,9 @@ const setNavigatorOnline = (online: boolean | undefined) => {
 }
 
 describe("transactionQueue", () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    transactionQueue.clearInSession()
-    launch()
+  beforeEach(async () => {
+    await startOver()
     signInAs("user-1")
-    outboxRows.length = 0
-    for (const key of Object.keys(counters)) delete counters[key]
-    for (const key of Object.keys(persisted)) delete persisted[key]
-    vi.clearAllMocks()
   })
 
   afterEach(() => {
@@ -141,7 +123,7 @@ describe("transactionQueue", () => {
     await transactionQueue.enqueue(kind, { key: "a", delta: 1 })
 
     expect(counters.a).toBe(1)
-    expect(outboxRows).toHaveLength(1)
+    expect(await outbox()).toHaveLength(1)
     expect(kind.execute).not.toHaveBeenCalled()
     expect(persisted.a).toBeUndefined()
 
@@ -150,7 +132,7 @@ describe("transactionQueue", () => {
 
     expect(kind.execute).toHaveBeenCalledTimes(1)
     expect(persisted.a).toBe(1)
-    expect(outboxRows).toHaveLength(0)
+    expect(await outbox()).toHaveLength(0)
   })
 
   it("batches adjacent transactions with the same batch key and keeps order across keys", async () => {
@@ -180,8 +162,10 @@ describe("transactionQueue", () => {
     const execute = vi
       .fn()
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      .mockRejectedValueOnce(new FollowAPIError("boom", 503))
-      .mockResolvedValue(undefined)
+      .mockRejectedValueOnce(
+        new FollowAPIError("boom", 503, undefined, undefined, { serverCode: 1 }),
+      )
+      .mockResolvedValue(ok())
     const kind = createCounterKind({ execute })
 
     await transactionQueue.enqueue(kind, { key: "a", delta: 1 })
@@ -205,7 +189,9 @@ describe("transactionQueue", () => {
   })
 
   it("rolls back and drops the transaction when the server rejects it", async () => {
-    const execute = vi.fn().mockRejectedValue(new FollowAPIError("nope", 422))
+    const execute = vi
+      .fn()
+      .mockRejectedValue(new FollowAPIError("nope", 422, undefined, undefined, { serverCode: 1 }))
     const kind = createCounterKind({ execute })
     const failures: unknown[] = []
     const unsubscribe = transactionQueue.onFailure((event) =>
@@ -221,7 +207,7 @@ describe("transactionQueue", () => {
 
     expect(counters.a).toBe(0)
     expect(persisted.a).toBeUndefined()
-    expect(outboxRows).toHaveLength(0)
+    expect(await outbox()).toHaveLength(0)
     // One report for the batch the server rejected.
     expect(failures).toEqual([
       [
@@ -232,11 +218,40 @@ describe("transactionQueue", () => {
     unsubscribe()
   })
 
+  it("keeps a change answered by something other than the server, and sends it again", async () => {
+    const execute = vi
+      .fn()
+      // A gateway's error page: no code of the server's
+      .mockRejectedValueOnce(new FollowAPIError("Forbidden", 403))
+      // The sign-in page of a captive portal, reached through a redirect
+      .mockResolvedValueOnce("<!doctype html><title>Sign in</title>")
+      .mockResolvedValue(ok())
+    const kind = createCounterKind({ execute })
+    const failures = vi.fn()
+    const stopListening = transactionQueue.onFailure(failures)
+
+    await transactionQueue.enqueue(kind, { key: "a", delta: 1 })
+    await vi.advanceTimersByTimeAsync(100 + 1000)
+
+    expect(execute).toHaveBeenCalledTimes(2)
+    expect(counters.a).toBe(1)
+    expect(persisted.a).toBeUndefined()
+    expect(await outbox()).toHaveLength(1)
+
+    await vi.advanceTimersByTimeAsync(2000)
+    await transactionQueue.whenIdle()
+    expect(execute).toHaveBeenCalledTimes(3)
+    expect(persisted.a).toBe(1)
+    expect(await outbox()).toHaveLength(0)
+    expect(failures).not.toHaveBeenCalled()
+    stopListening()
+  })
+
   it("pauses on 401 and resumes when asked", async () => {
     const execute = vi
       .fn()
       .mockRejectedValueOnce(new FollowAPIError("auth", 401))
-      .mockResolvedValue(undefined)
+      .mockResolvedValue(ok())
     const kind = createCounterKind({ execute })
 
     await transactionQueue.enqueue(kind, { key: "a", delta: 1 })
@@ -274,24 +289,27 @@ describe("transactionQueue", () => {
     }
   })
 
-  it("replays the outbox on restore before sending it", async () => {
+  it("replays the outbox after a restart before sending it", async () => {
+    const execute = vi.fn(() => new Promise<CounterResult>(() => {}))
+    await transactionQueue.enqueue(createCounterKind({ execute }), { key: "a", delta: 2 })
+    await leaveInOutbox({ id: "t2", kind: "test.unknown", payload: {}, createdAt: new Date() })
+
+    // The app quits before the server answered.
+    transactionQueue.clearInSession()
+    for (const key of Object.keys(counters)) delete counters[key]
     const kind = createCounterKind()
     transactionQueue.register(kind)
-    outboxRows.push(
-      { id: "t1", kind: kind.kind, payload: { key: "a", delta: 2 }, createdAt: new Date(1) },
-      { id: "t2", kind: "test.unknown", payload: {}, createdAt: new Date(2) },
-    )
-
     await transactionQueue.restore()
 
     expect(counters.a).toBe(2)
-    expect(outboxDeleteManyMock).toHaveBeenCalledWith(["t2"])
+    expect((await outbox()).map((row) => row.kind)).toEqual(["test.counter"])
     expect(transactionQueue.getPendingCount()).toBe(1)
 
     await vi.advanceTimersByTimeAsync(100)
     await transactionQueue.whenIdle()
     expect(kind.execute).toHaveBeenCalledWith([{ key: "a", delta: 2 }])
     expect(persisted.a).toBe(2)
+    expect(await outbox()).toHaveLength(0)
   })
 
   it("exposes overlays while pending and during the ack grace window", async () => {
@@ -310,8 +328,8 @@ describe("transactionQueue", () => {
 
   it("releases overlays once the sync engine applied the transaction's sync id", async () => {
     const kind = createCounterKind({
-      execute: vi.fn(async () => ({ lastSyncId: 42 })),
-      syncIdOf: (result) => (result as { lastSyncId?: number }).lastSyncId,
+      execute: vi.fn(async () => ok(42)),
+      syncIdOf: (result) => result.lastSyncId,
       ackGraceMs: 60_000,
     })
 
@@ -331,8 +349,8 @@ describe("transactionQueue", () => {
     setSyncEngineActive(true)
     const persistContexts: TransactionPersistContext[] = []
     const kind = createCounterKind({
-      execute: vi.fn(async () => ({ lastSyncId: 42 })),
-      syncIdOf: (result) => (result as { lastSyncId?: number }).lastSyncId,
+      execute: vi.fn(async () => ok(42)),
+      syncIdOf: (result) => result.lastSyncId,
       persist: async (_payloads, _result, context) => {
         persistContexts.push(context)
       },
@@ -369,10 +387,7 @@ describe("transactionQueue", () => {
 
   it("stops rebasing an acknowledged transaction that an unread snapshot already counts", async () => {
     setSyncEngineActive(true)
-    const kind = createCounterKind({
-      execute: vi.fn(async () => ({ lastSyncId: 42 })),
-      syncIdOf: (result) => (result as { lastSyncId?: number }).lastSyncId,
-    })
+    const kind = syncedKind(42)
 
     await transactionQueue.enqueue(kind, { key: "a", delta: -1 })
     await vi.advanceTimersByTimeAsync(100)
@@ -394,17 +409,31 @@ describe("transactionQueue", () => {
     expect(transactionQueue.markUnreadSnapshot(44)).toBe(false)
   })
 
+  it("rebases the changes of a change log that started over with lower ids", async () => {
+    setSyncEngineActive(true)
+    transactionQueue.markSynced(500)
+    transactionQueue.markUnreadSnapshot(500)
+
+    // The server was restored from a backup; the engine starts over from its new head.
+    transactionQueue.resetSyncPosition()
+    transactionQueue.markSynced(40)
+    await transactionQueue.enqueue(syncedKind(42), { key: "a", delta: -1 })
+    await vi.advanceTimersByTimeAsync(100)
+    await transactionQueue.whenIdle()
+
+    const counts = { a: 5 }
+    transactionQueue.rebaseUnreadCounts(counts)
+    expect(counts).toEqual({ a: 4 })
+    expect(transactionQueue.getOverlays().get("counter:a")).toBe(-1)
+  })
+
   it("settles at once when the engine is already past the acknowledged sync id", async () => {
     setSyncEngineActive(true)
     transactionQueue.markSynced(50)
-    const kind = createCounterKind({
-      execute: vi.fn(async () => ({ lastSyncId: 42 })),
-      syncIdOf: (result) => (result as { lastSyncId?: number }).lastSyncId,
-    })
     const settled = vi.fn()
     const stopListening = transactionQueue.onSettled(settled)
 
-    await transactionQueue.enqueue(kind, { key: "a", delta: -1 })
+    await transactionQueue.enqueue(syncedKind(42), { key: "a", delta: -1 })
     await vi.advanceTimersByTimeAsync(100)
     await transactionQueue.whenIdle()
 
@@ -416,8 +445,8 @@ describe("transactionQueue", () => {
   it("does not rebase acknowledged transactions when no change log will follow", async () => {
     const persistContexts: TransactionPersistContext[] = []
     const kind = createCounterKind({
-      execute: vi.fn(async () => ({ lastSyncId: 42 })),
-      syncIdOf: (result) => (result as { lastSyncId?: number }).lastSyncId,
+      execute: vi.fn(async () => ok(42)),
+      syncIdOf: (result) => result.lastSyncId,
       persist: async (_payloads, _result, context) => {
         persistContexts.push(context)
       },
@@ -450,7 +479,7 @@ describe("transactionQueue", () => {
 
     expect(acknowledged).toHaveBeenCalledTimes(1)
     expect(transactionQueue.getPendingCount()).toBe(0)
-    expect(outboxRows).toHaveLength(0)
+    expect(await outbox()).toHaveLength(0)
     expect(transactionQueue.getOverlays().get("confirmed:a")).toBe("a")
     // Only the change log ends it, not the ordinary grace period.
     await vi.advanceTimersByTimeAsync(60_000)
@@ -476,7 +505,7 @@ describe("transactionQueue", () => {
   })
 
   it("rebases unread counts with pending transactions only", async () => {
-    const execute = vi.fn(() => new Promise<void>(() => {}))
+    const execute = vi.fn(() => new Promise<CounterResult>(() => {}))
     const kind = createCounterKind({ execute })
 
     await transactionQueue.enqueue(kind, { key: "a", delta: -1 })
@@ -490,17 +519,6 @@ describe("transactionQueue", () => {
     transactionQueue.rebaseUnreadCounts(allCounts)
     expect(allCounts).toEqual({ a: 4, b: 2 })
   })
-
-  it("clears memory and the outbox on reset", async () => {
-    const kind = createCounterKind({ execute: vi.fn(() => new Promise<void>(() => {})) })
-
-    await transactionQueue.enqueue(kind, { key: "a", delta: 1 })
-    await transactionQueue.reset()
-
-    expect(transactionQueue.getPendingCount()).toBe(0)
-    expect(outboxResetMock).toHaveBeenCalledTimes(1)
-    expect(transactionQueue.getOverlays().size).toBe(0)
-  })
 })
 
 describe("transactionQueue during outages", () => {
@@ -508,15 +526,9 @@ describe("transactionQueue during outages", () => {
   const offlineError = () =>
     new Error("fetch failed: UnexpectedException: The Internet connection appears to be offline.")
 
-  beforeEach(() => {
-    vi.useFakeTimers()
-    transactionQueue.clearInSession()
-    launch()
+  beforeEach(async () => {
+    await startOver()
     signInAs("user-1")
-    outboxRows.length = 0
-    for (const key of Object.keys(counters)) delete counters[key]
-    for (const key of Object.keys(persisted)) delete persisted[key]
-    vi.clearAllMocks()
   })
 
   afterEach(() => {
@@ -527,11 +539,15 @@ describe("transactionQueue during outages", () => {
   it.each([
     ["the connection is gone", offlineError],
     ["the request times out", () => new FollowAPIError("timeout", 408)],
-    ["the server is down", () => new FollowAPIError("unavailable", 503)],
+    [
+      "the server is down",
+      () => new FollowAPIError("unavailable", 503, undefined, undefined, { serverCode: 1 }),
+    ],
   ])("keeps the change and its outbox row while %s, then sends it once", async (_, error) => {
     let reachable = false
     const execute = vi.fn(async () => {
       if (!reachable) throw error()
+      return ok()
     })
     const kind = createCounterKind({ execute })
     const failures = vi.fn()
@@ -543,7 +559,7 @@ describe("transactionQueue during outages", () => {
 
     expect(execute.mock.calls.length).toBeGreaterThan(8)
     expect(counters.a).toBe(1)
-    expect(outboxRows).toHaveLength(1)
+    expect(await outbox()).toHaveLength(1)
     expect(transactionQueue.getPendingCount()).toBe(1)
     expect(failures).not.toHaveBeenCalled()
 
@@ -554,12 +570,12 @@ describe("transactionQueue during outages", () => {
 
     expect(execute).toHaveBeenCalledTimes(callsBefore + 1)
     expect(persisted.a).toBe(1)
-    expect(outboxRows).toHaveLength(0)
+    expect(await outbox()).toHaveLength(0)
     stopListening()
   })
 
   it("keeps changes through any number of returns to the app while offline", async () => {
-    const execute = vi.fn(async () => {
+    const execute = vi.fn(async (): Promise<CounterResult> => {
       throw offlineError()
     })
     const kind = createCounterKind({ execute })
@@ -573,12 +589,12 @@ describe("transactionQueue during outages", () => {
 
     expect(execute.mock.calls.length).toBeGreaterThan(8)
     expect(counters.a).toBe(1)
-    expect(outboxRows).toHaveLength(1)
+    expect(await outbox()).toHaveLength(1)
   })
 
   it("does not let a long outage or a rejected batch doom the changes after it", async () => {
     let failure: () => Error = offlineError
-    const execute = vi.fn(async () => {
+    const execute = vi.fn(async (): Promise<CounterResult> => {
       throw failure()
     })
     const kind = createCounterKind({ execute })
@@ -588,24 +604,25 @@ describe("transactionQueue during outages", () => {
     expect(counters.a).toBe(1)
 
     // The server comes back and rejects that change: only it is rolled back.
-    failure = () => new FollowAPIError("nope", 422)
+    failure = () => new FollowAPIError("nope", 422, undefined, undefined, { serverCode: 1 })
     transactionQueue.resume()
     await vi.advanceTimersByTimeAsync(0)
     expect(counters.a).toBe(0)
-    expect(outboxRows).toHaveLength(0)
+    expect(await outbox()).toHaveLength(0)
 
     // The next change made during the next outage is kept, not rolled back after one try.
     failure = offlineError
     await transactionQueue.enqueue(kind, { key: "b", delta: 1 })
     await vi.advanceTimersByTimeAsync(5 * 60_000)
     expect(counters.b).toBe(1)
-    expect(outboxRows).toHaveLength(1)
+    expect(await outbox()).toHaveLength(1)
   })
 
   it("lets new changes wait for the scheduled retry and sends them in one batch", async () => {
     let reachable = false
     const execute = vi.fn(async () => {
       if (!reachable) throw offlineError()
+      return ok()
     })
     const kind = createCounterKind({ execute })
 
@@ -633,7 +650,7 @@ describe("transactionQueue during outages", () => {
   })
 
   it("starts the back-off over when the app or the network comes back", async () => {
-    const execute = vi.fn(async () => {
+    const execute = vi.fn(async (): Promise<CounterResult> => {
       throw offlineError()
     })
     const kind = createCounterKind({ execute })
@@ -654,6 +671,7 @@ describe("transactionQueue during outages", () => {
     let reachable = false
     const execute = vi.fn(async () => {
       if (!reachable) throw offlineError()
+      return ok()
     })
     const kind = createCounterKind({ execute })
 
@@ -671,15 +689,7 @@ describe("transactionQueue during outages", () => {
 })
 
 describe("transactionQueue and the account of the session", () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    transactionQueue.clearInSession()
-    launch()
-    outboxRows.length = 0
-    for (const key of Object.keys(counters)) delete counters[key]
-    for (const key of Object.keys(persisted)) delete persisted[key]
-    vi.clearAllMocks()
-  })
+  beforeEach(startOver)
 
   afterEach(() => {
     transactionQueue.clearInSession()
@@ -689,12 +699,14 @@ describe("transactionQueue and the account of the session", () => {
 
   it("records which account made a change, in memory and in the outbox", async () => {
     signInAs("user-a")
-    const kind = createCounterKind({ execute: vi.fn(() => new Promise<void>(() => {})) })
+    const kind = createCounterKind({
+      execute: vi.fn(() => new Promise<CounterResult>(() => {})),
+    })
 
     await transactionQueue.enqueue(kind, { key: "a", delta: 1 })
 
     expect(getLocalDataOwner()).toBe("user-a")
-    expect(outboxRows).toEqual([expect.objectContaining({ userId: "user-a" })])
+    expect(await outbox()).toEqual([expect.objectContaining({ userId: "user-a" })])
   })
 
   it("never sends a change with another account's session, and sends it once its own is back", async () => {
@@ -702,7 +714,7 @@ describe("transactionQueue and the account of the session", () => {
     const execute = vi
       .fn()
       .mockRejectedValueOnce(new FollowAPIError("session revoked", 401))
-      .mockResolvedValue(undefined)
+      .mockResolvedValue(ok())
     const kind = createCounterKind({ execute })
 
     await transactionQueue.enqueue(kind, { key: "a", delta: 1 })
@@ -717,7 +729,7 @@ describe("transactionQueue and the account of the session", () => {
 
     expect(execute).toHaveBeenCalledTimes(1)
     expect(counters.a).toBe(1)
-    expect(outboxRows).toHaveLength(1)
+    expect(await outbox()).toHaveLength(1)
 
     // Signing in as the account that made the change sends it at once.
     invalidateSessionUser()
@@ -726,14 +738,14 @@ describe("transactionQueue and the account of the session", () => {
 
     expect(execute).toHaveBeenCalledTimes(2)
     expect(persisted.a).toBe(1)
-    expect(outboxRows).toHaveLength(0)
+    expect(await outbox()).toHaveLength(0)
   })
 
   it("drops a restored change of an account whose data is not here, without sending it", async () => {
     signInAs("user-a")
     const kind = createCounterKind()
     transactionQueue.register(kind)
-    outboxRows.push(
+    await leaveInOutbox(
       {
         id: "t1",
         kind: kind.kind,
@@ -756,7 +768,7 @@ describe("transactionQueue and the account of the session", () => {
 
     expect(kind.execute).toHaveBeenCalledTimes(1)
     expect(kind.execute).toHaveBeenCalledWith([{ key: "a", delta: 1 }])
-    expect(outboxRows).toHaveLength(0)
+    expect(await outbox()).toHaveLength(0)
   })
 
   it("asks the session endpoint first after a launch, then sends", async () => {
@@ -773,7 +785,7 @@ describe("transactionQueue and the account of the session", () => {
     registerSessionVerifier(verify)
     const kind = createCounterKind()
     transactionQueue.register(kind)
-    outboxRows.push({
+    await leaveInOutbox({
       id: "t1",
       kind: kind.kind,
       payload: { key: "a", delta: 1 },
@@ -823,7 +835,7 @@ describe("transactionQueue and the account of the session", () => {
     await transactionQueue.enqueue(kind, { key: "a", delta: 1 })
     await vi.advanceTimersByTimeAsync(60_000)
     expect(kind.execute).not.toHaveBeenCalled()
-    expect(outboxRows).toEqual([expect.objectContaining({ userId: "user-a" })])
+    expect(await outbox()).toEqual([expect.objectContaining({ userId: "user-a" })])
     // It waits for the sign-in without polling.
     expect(vi.getTimerCount()).toBe(0)
 
@@ -835,18 +847,25 @@ describe("transactionQueue and the account of the session", () => {
 })
 
 describe("classifyTransactionError", () => {
-  it("retries what got no answer or a 'not now', fails on rejections, pauses on auth errors", () => {
+  const answered = (status: number) =>
+    new FollowAPIError("x", status, undefined, undefined, { serverCode: 1000 })
+
+  it("retries what got no answer from the server or a 'not now', fails on its rejections, pauses on auth errors", () => {
     expect(classifyTransactionError(new TypeError("Failed to fetch"))).toBe("retry")
     expect(classifyTransactionError(new Error("fetch failed: offline"))).toBe("retry")
-    expect(classifyTransactionError(new FollowAPIError("x", 500))).toBe("retry")
-    expect(classifyTransactionError(new FollowAPIError("x", 503))).toBe("retry")
-    expect(classifyTransactionError(new FollowAPIError("x", 408))).toBe("retry")
-    expect(classifyTransactionError(new FollowAPIError("x", 425))).toBe("retry")
-    expect(classifyTransactionError(new FollowAPIError("x", 429))).toBe("retry")
-    expect(classifyTransactionError(new FollowAPIError("x", 400))).toBe("fail")
-    expect(classifyTransactionError(new FollowAPIError("x", 403))).toBe("fail")
-    expect(classifyTransactionError(new FollowAPIError("x", 404))).toBe("fail")
-    expect(classifyTransactionError(new FollowAPIError("x", 422))).toBe("fail")
+    expect(classifyTransactionError(answered(500))).toBe("retry")
+    expect(classifyTransactionError(answered(503))).toBe("retry")
+    expect(classifyTransactionError(new FollowAPIError("timeout", 408))).toBe("retry")
+    expect(classifyTransactionError(answered(425))).toBe("retry")
+    expect(classifyTransactionError(answered(429))).toBe("retry")
+    expect(classifyTransactionError(answered(400))).toBe("fail")
+    expect(classifyTransactionError(answered(403))).toBe("fail")
+    expect(classifyTransactionError(answered(404))).toBe("fail")
+    expect(classifyTransactionError(answered(422))).toBe("fail")
     expect(classifyTransactionError(new FollowAPIError("x", 401))).toBe("pause")
+    // The error pages of a proxy, a gateway or a firewall carry no code of the server's
+    expect(classifyTransactionError(new FollowAPIError("Forbidden", 403))).toBe("retry")
+    expect(classifyTransactionError(new FollowAPIError("Not Found", 404))).toBe("retry")
+    expect(classifyTransactionError(new FollowAPIError("Payload Too Large", 413))).toBe("retry")
   })
 })

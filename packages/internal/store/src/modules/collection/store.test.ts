@@ -8,6 +8,8 @@ import { transactionQueue } from "../../sync/transaction-queue"
 import type { FollowAPI } from "../../types"
 import { useEntryStore } from "../entry/store"
 import type { EntryModel } from "../entry/types"
+import { useSubscriptionStore } from "../subscription/store"
+import type { SubscriptionModel } from "../subscription/types"
 import { collectionActions, collectionSyncService, useCollectionStore } from "./store"
 
 const { collectionUpsertManyMock, collectionDeleteManyMock } = vi.hoisted(() => ({
@@ -132,6 +134,30 @@ describe("collectionSyncService", () => {
     expect(useCollectionStore.getState().collections.entry1).toBeUndefined()
   })
 
+  it("stars from the All timeline in the entry's subscription view, else Articles", async () => {
+    collectionPostMock.mockResolvedValue({ code: 0 })
+    useSubscriptionStore.setState({
+      data: { feed1: { feedId: "feed1", view: FeedViewType.Videos } as SubscriptionModel },
+    })
+
+    await collectionSyncService.starEntry({ entryId: "entry1", view: FeedViewType.All })
+    await vi.advanceTimersByTimeAsync(100)
+    await transactionQueue.whenIdle()
+    expect(collectionPostMock).toHaveBeenLastCalledWith({
+      entryId: "entry1",
+      view: FeedViewType.Videos,
+    })
+
+    useSubscriptionStore.setState({ data: {} })
+    await collectionSyncService.starEntry({ entryId: "entry1", view: FeedViewType.All })
+    await vi.advanceTimersByTimeAsync(100)
+    await transactionQueue.whenIdle()
+    expect(collectionPostMock).toHaveBeenLastCalledWith({
+      entryId: "entry1",
+      view: FeedViewType.Articles,
+    })
+  })
+
   it("persists the star once the server acknowledges it", async () => {
     collectionPostMock.mockResolvedValue({ code: 0 })
 
@@ -149,7 +175,9 @@ describe("collectionSyncService", () => {
   })
 
   it("removes the optimistic star when the server rejects it", async () => {
-    collectionPostMock.mockRejectedValue(new FollowAPIError("not found", 404))
+    collectionPostMock.mockRejectedValue(
+      new FollowAPIError("not found", 404, undefined, undefined, { serverCode: 1000 }),
+    )
 
     await collectionSyncService.starEntry({ entryId: "entry1", view: FeedViewType.Articles })
     expect(useCollectionStore.getState().collections.entry1).toBeDefined()
