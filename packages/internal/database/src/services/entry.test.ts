@@ -4,10 +4,7 @@ import { db } from "../db"
 import { collectionsTable, entriesTable, subscriptionsTable } from "../schemas"
 import { EntryService } from "./entry"
 
-vi.mock("../db", async () => {
-  const { createTestDB } = await import("../test-db")
-  return { db: await createTestDB() }
-})
+vi.mock("../db", async () => (await import("../test-db")).createTestDB())
 
 /** Entry `index` of a feed, newer for a lower index */
 const entry = (feedId: string, index: number) => ({
@@ -50,6 +47,23 @@ describe("EntryService.getEntriesToHydrate", () => {
     expect(kept).not.toContain("feed-24")
     const stored = await db.query.entriesTable.findMany({ columns: { id: true } })
     expect(stored.map((row) => row.id).sort()).toEqual([...kept].sort())
+  })
+
+  it("keeps the newest 20 entries of an inbox", async () => {
+    await db
+      .insert(subscriptionsTable)
+      .values({ ...follow("news"), inboxId: "news", type: "inbox" })
+    // An inbox entry has the handle as its feed id too
+    await db
+      .insert(entriesTable)
+      .values(
+        Array.from({ length: 25 }, (_, index) => ({
+          ...entry("news", index),
+          inboxHandle: "news",
+        })),
+      )
+
+    expect(await keptIds()).toHaveLength(20)
   })
 
   it("keeps starred entries of feeds no longer followed", async () => {

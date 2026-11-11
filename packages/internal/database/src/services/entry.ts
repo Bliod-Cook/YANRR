@@ -79,10 +79,6 @@ class EntryServiceStatic implements Resetable {
     return db.query.entriesTable.findMany({ where: inArray(entriesTable.id, entryId) })
   }
 
-  getEntryAll() {
-    return db.query.entriesTable.findMany()
-  }
-
   /**
    * Keep the newest entries of every subscription and the starred ones, and clear the rest,
    * including the entries of feeds that are no longer followed, such as previewed feeds or opened
@@ -108,18 +104,13 @@ class EntryServiceStatic implements Resetable {
     const idsToClear: string[] = []
 
     for (const entry of candidates) {
-      const possibleIdList = [entry.inboxHandle, entry.feedId].filter(Boolean) as string[]
+      // An inbox entry has the handle as its feed id too
+      const sourceId = entry.inboxHandle || entry.feedId || ""
+      const count = entryIdCountMap.get(sourceId)
+      const isNewest = count !== undefined && count < ENTRIES_KEPT_PER_SOURCE
+      if (isNewest) entryIdCountMap.set(sourceId, count + 1)
 
-      // An entry kept for one of its sources is kept even when another source is full
-      let isKept = starred.has(entry.id)
-      for (const id of possibleIdList) {
-        const count = entryIdCountMap.get(id)
-        if (count === undefined || count >= ENTRIES_KEPT_PER_SOURCE) continue
-        entryIdCountMap.set(id, count + 1)
-        isKept = true
-      }
-
-      if (isKept) {
+      if (isNewest || starred.has(entry.id)) {
         idsToKeep.push(entry.id)
       } else {
         idsToClear.push(entry.id)
