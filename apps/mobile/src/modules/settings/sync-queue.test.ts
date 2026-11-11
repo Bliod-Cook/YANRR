@@ -1,143 +1,206 @@
-import { FollowAPIError } from "@follow-app/client-sdk"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+type Settings = Record<string, unknown>
 
 const mocks = vi.hoisted(() => {
   // Read by the shared constants at import
   vi.stubGlobal("ELECTRON", false)
-  return {
-    kv: new Map<string, string>(),
-    settingsGet: vi.fn(),
-    settingsUpdate: vi.fn(),
-  }
+  // The setting atoms report their changes on the event bus. Vitest loads its web variant,
+  // which needs a window; the app loads the one for React Native.
+  vi.stubGlobal("window", new EventTarget())
+  return { kv: new Map<string, string>() }
 })
 
-vi.mock("@/src/lib/kv", () => ({
-  kv: {
-    get: async (key: string) => mocks.kv.get(key) ?? null,
-    getSync: (key: string) => mocks.kv.get(key) ?? null,
-    set: (key: string, value: string) => {
+vi.mock("expo-sqlite/kv-store", () => ({
+  default: {
+    getItemSync: (key: string) => mocks.kv.get(key) ?? null,
+    setItemSync: (key: string, value: string) => {
       mocks.kv.set(key, value)
     },
-    setSync: (key: string, value: string) => {
-      mocks.kv.set(key, value)
-    },
-    delete: async (key: string) => {
+    removeItemSync: (key: string) => {
       mocks.kv.delete(key)
     },
   },
 }))
-
-vi.mock("@/src/lib/api-client", () => ({
-  followClient: {
-    api: { settings: { get: mocks.settingsGet, update: mocks.settingsUpdate } },
+// The local data reset deletes the database files as well
+vi.mock("expo-file-system", () => ({
+  Paths: { document: "file:///documents" },
+  File: class {
+    exists = false
   },
 }))
+// The setting atoms take their default language from the device
+vi.mock("@/src/lib/i18n", () => ({ getDeviceLanguage: () => "en" }))
 
-vi.mock("@follow/store/user/getters", () => ({
-  whoami: () => ({ id: "user-1" }),
-}))
+const STORAGE_KEY = "setting_sync_queue"
+const LONG_AGO = "2020-01-01T00:00:00.000Z"
 
-// Setting changes go through `enqueue` here; the bus listens on the window, which is not here.
-vi.mock("@follow/utils/event-bus", () => ({
-  EventBus: { subscribe: () => () => {} },
-}))
+const rule = {
+  id: "rule-1",
+  enabled: true,
+  pattern: "alpha",
+  patternType: "keyword" as const,
+  caseSensitive: false,
+  color: "#FDE68A",
+}
 
-// The setting atoms read the device language and storage at import; plain atoms stand in.
-vi.mock("@/src/atoms/settings/general", async () => {
-  const { atom } = await import("jotai")
-  const { jotaiStore } = await import("@follow/utils")
-  const createDefaultGeneralSettings = () => ({ actionLanguage: "default", language: "en" })
-  const __generalSettingAtom = atom<Record<string, unknown>>(createDefaultGeneralSettings())
+/** The changes this device sent to the server, and whether the server can be reached. */
+const server = { sent: [] as { userId: string; tab: string; body: Settings }[], isDown: false }
+
+/** Launch the app with what the device has in its key-value store, signed in as `userId`. */
+const launch = async (userId: string) => {
+  vi.resetModules()
+  // Before anything else, as in the app
+  const { applyScheduledLocalDataReset, scheduleLocalDataReset } =
+    await import("../../lib/local-data-reset")
+  applyScheduledLocalDataReset()
+
+  const { apiContext } = await import("@follow/store/context")
+  const { useUserStore } = await import("@follow/store/user/store")
+  const { getSyncModelHandler } = await import("@follow/store/sync/model-registry")
+  const general = await import("../../atoms/settings/general")
+  const ui = await import("../../atoms/settings/ui")
+  const spotlight = await import("../../atoms/settings/spotlight")
+  const { settingSyncQueue } = await import("./sync-queue")
+
+  apiContext.provide({
+    settings: {
+      get: async () => {
+        throw new Error("The account's settings were requested")
+      },
+      update: async ({ tab, ...body }: Settings & { tab: string }) => {
+        if (server.isDown) throw new TypeError("Network request failed")
+        server.sent.push({ userId, tab, body })
+        return { code: 0 }
+      },
+    },
+  } as never)
+  useUserStore.setState({ whoami: { id: userId } as never })
+
+  general.initializeDefaultGeneralSettings()
+  ui.initializeDefaultUISettings()
+  spotlight.initializeDefaultSpotlightSettings()
+  settingSyncQueue.init()
+
+  let logged = 0
   return {
-    __generalSettingAtom,
-    createDefaultGeneralSettings,
-    generalLocalOnlyKeys: ["language"],
-    getGeneralSettings: () => jotaiStore.get(__generalSettingAtom),
+    ...general,
+    ...ui,
+    ...spotlight,
+    settingSyncQueue,
+    scheduleLocalDataReset,
+    /** The sync engine reports a tab that changed on the server. */
+    report: (tab: string, payload?: Settings) =>
+      getSyncModelHandler("setting")!.apply({
+        id: (logged += 1),
+        model: "setting",
+        modelId: tab,
+        action: "U",
+        data: { payload, updatedAt: LONG_AGO },
+        createdAt: LONG_AGO,
+      }),
   }
-})
-
-vi.mock("@/src/atoms/settings/ui", async () => {
-  const { atom } = await import("jotai")
-  const { jotaiStore } = await import("@follow/utils")
-  const createDefaultSettings = () => ({})
-  const __uiSettingAtom = atom<Record<string, unknown>>(createDefaultSettings())
-  return {
-    __uiSettingAtom,
-    createDefaultSettings,
-    getUISettings: () => jotaiStore.get(__uiSettingAtom),
-    uiLocalOnlyKeys: [],
-  }
-})
-
-vi.mock("@/src/atoms/settings/spotlight", async () => {
-  const { atom } = await import("jotai")
-  const { jotaiStore } = await import("@follow/utils")
-  const __spotlightSettingAtom = atom<Record<string, unknown>>({ spotlights: [] })
-  return {
-    __spotlightSettingAtom,
-    getSpotlightSettings: () => jotaiStore.get(__spotlightSettingAtom),
-    spotlightServerSyncWhiteListKeys: ["spotlights"],
-  }
-})
-
-const { settingSyncQueue } = await import("./sync-queue")
+}
 
 describe("mobile setting sync", () => {
+  let app: Awaited<ReturnType<typeof launch>>
+
   beforeEach(async () => {
     vi.useFakeTimers()
+    vi.spyOn(console, "error").mockImplementation(() => {})
     mocks.kv.clear()
-    // Settings changed on this device went to the account already.
-    mocks.kv.set("setting_sync_local_first_user-1", "1")
-    mocks.settingsGet.mockResolvedValue({ code: 0, settings: {}, updated: {} })
-    mocks.settingsUpdate.mockReset()
-    await settingSyncQueue.init()
+    server.sent = []
+    server.isDown = false
+    app = await launch("user-a")
   })
 
   afterEach(() => {
-    settingSyncQueue.teardown()
+    app.settingSyncQueue.teardown()
     vi.useRealTimers()
+    vi.restoreAllMocks()
   })
 
-  it("retries a change that failed to send with back-off until it goes through", async () => {
-    mocks.settingsUpdate
-      .mockRejectedValueOnce(
-        new Error("fetch failed: The Internet connection appears to be offline."),
-      )
-      .mockRejectedValueOnce(new FollowAPIError("unavailable", 503))
-      .mockResolvedValue({ code: 0 })
-
-    void settingSyncQueue.enqueue("general", { actionLanguage: "fr-FR" })
+  it("sends each changed setting to its tab, except the device-local ones", async () => {
+    app.setGeneralSetting("unreadOnly", true)
+    app.setGeneralSetting("language", "ja")
+    app.setUISetting("colorScheme", "dark")
+    app.setUISetting("fontScale", 1.2)
+    app.setUISetting("showUnreadCountBadgeMobile", true)
+    app.setSpotlightSetting("spotlights", [rule])
 
     await vi.advanceTimersByTimeAsync(1000)
-    expect(mocks.settingsUpdate).toHaveBeenCalledTimes(1)
-    // One second of back-off, then the flush delay
-    await vi.advanceTimersByTimeAsync(2000)
-    expect(mocks.settingsUpdate).toHaveBeenCalledTimes(2)
-    // Two seconds of back-off, then the flush delay
-    await vi.advanceTimersByTimeAsync(3000)
-    expect(mocks.settingsUpdate).toHaveBeenCalledTimes(3)
-    expect(mocks.settingsUpdate).toHaveBeenLastCalledWith({
-      tab: "general",
-      actionLanguage: "fr-FR",
+
+    expect(server.sent).toEqual([
+      { userId: "user-a", tab: "general", body: { unreadOnly: true } },
+      { userId: "user-a", tab: "appearance", body: { colorScheme: "dark", spotlights: [rule] } },
+    ])
+  })
+
+  it("takes the account's settings into their atoms, except the device-local ones", async () => {
+    app.setUISetting("fontScale", 1.2)
+
+    await app.report("general", { unreadOnly: true, language: "fr-FR" })
+    await app.report("appearance", {
+      colorScheme: "dark",
+      fontScale: 2,
+      showUnreadCountBadgeMobile: true,
+      spotlights: [rule, { id: "broken" }],
     })
-    expect(settingSyncQueue.queue).toEqual([])
-    // Nothing is left in storage for the next launch to send again.
-    expect(mocks.kv.has("setting_sync_queue")).toBe(false)
+    // The desktop app's AI settings, logged without their values
+    await app.report("ai")
+
+    expect(app.getGeneralSettings()).toMatchObject({ unreadOnly: true, language: "en" })
+    expect(app.getUISettings()).toMatchObject({
+      colorScheme: "dark",
+      fontScale: 1.2,
+      showUnreadCountBadgeMobile: false,
+    })
+    expect(app.getSpotlightSettings()).toEqual({ spotlights: [rule] })
   })
 
-  it("sends a waiting change at once on resume and starts the back-off over", async () => {
-    mocks.settingsUpdate.mockRejectedValue(new Error("fetch failed: offline"))
+  it("keeps an unsent change in the key-value store and sends it after a restart", async () => {
+    server.isDown = true
+    app.setGeneralSetting("unreadOnly", true)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(JSON.parse(mocks.kv.get(STORAGE_KEY)!).pending).toEqual({
+      general: { unreadOnly: true },
+    })
+    app.settingSyncQueue.teardown()
 
-    void settingSyncQueue.enqueue("general", { actionLanguage: "fr-FR" })
-    // Failures at 1, 3, 6 and 11 s: the next try is eight seconds of back-off away
-    await vi.advanceTimersByTimeAsync(11_000)
-    expect(mocks.settingsUpdate).toHaveBeenCalledTimes(4)
-
-    mocks.settingsUpdate.mockResolvedValue({ code: 0 })
-    settingSyncQueue.resume()
+    server.isDown = false
+    app = await launch("user-a")
     await vi.advanceTimersByTimeAsync(1000)
 
-    expect(mocks.settingsUpdate).toHaveBeenCalledTimes(5)
-    expect(settingSyncQueue.queue).toEqual([])
+    expect(server.sent).toEqual([{ userId: "user-a", tab: "general", body: { unreadOnly: true } }])
+    expect(JSON.parse(mocks.kv.get(STORAGE_KEY)!).pending).toEqual({})
+  })
+
+  it("leaves the next account none of the settings of the one before, only the device's", async () => {
+    app.setGeneralSetting("unreadOnly", true)
+    app.setGeneralSetting("language", "ja")
+    app.setUISetting("colorScheme", "dark")
+    app.setUISetting("fontScale", 1.2)
+    app.setSpotlightSetting("spotlights", [rule])
+    await vi.advanceTimersByTimeAsync(1000)
+    // Not sent before the account signs out
+    server.isDown = true
+    app.setGeneralSetting("dimRead", true)
+    server.sent = []
+    app.settingSyncQueue.teardown()
+
+    // Signing out, switching the server and a session of another account all end like this
+    app.scheduleLocalDataReset("account")
+    server.isDown = false
+    app = await launch("user-b")
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(app.getGeneralSettings()).toMatchObject({
+      unreadOnly: false,
+      dimRead: false,
+      language: "ja",
+    })
+    expect(app.getUISettings()).toMatchObject({ colorScheme: "system", fontScale: 1.2 })
+    expect(app.getSpotlightSettings()).toEqual({ spotlights: [] })
+    expect(server.sent).toEqual([])
   })
 })

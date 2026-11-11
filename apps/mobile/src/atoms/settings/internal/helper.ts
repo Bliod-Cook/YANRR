@@ -1,4 +1,4 @@
-import { useRefValue } from "@follow/hooks"
+import { useRefValue } from "@follow/hooks/shared"
 import { createAtomHooks } from "@follow/utils"
 import { EventBus } from "@follow/utils/event-bus"
 import type { SetStateAction, WritableAtom } from "jotai"
@@ -7,9 +7,9 @@ import { atomWithStorage, selectAtom } from "jotai/utils"
 import { useMemo } from "react"
 import { shallow } from "zustand/shallow"
 
-import { JotaiPersistSyncStorage } from "@/src/lib/jotai"
+import { JotaiPersistSyncStorage } from "../../../lib/jotai"
+import { getSettingStorageKey } from "./storage"
 
-const getStorageNS = (settingKey: string) => `follow-rn-${settingKey}`
 type Nullable<T> = T | null | undefined
 
 export const createSettingAtom = <T extends object>(
@@ -17,7 +17,7 @@ export const createSettingAtom = <T extends object>(
   createDefaultSettings: () => T,
 ) => {
   const atom = atomWithStorage(
-    getStorageNS(settingKey),
+    getSettingStorageKey(settingKey),
     createDefaultSettings(),
     JotaiPersistSyncStorage,
     {
@@ -59,44 +59,6 @@ export const createSettingAtom = <T extends object>(
     return useMaybeSettingKey(key) as ReturnType<typeof getSettings>[T]
   }
 
-  function useSettingKeys<
-    T extends keyof ReturnType<typeof getSettings>,
-    K1 extends T,
-    K2 extends T,
-    K3 extends T,
-    K4 extends T,
-    K5 extends T,
-    K6 extends T,
-    K7 extends T,
-    K8 extends T,
-    K9 extends T,
-    K10 extends T,
-  >(keys: [K1, K2?, K3?, K4?, K5?, K6?, K7?, K8?, K9?, K10?]) {
-    return [
-      useMaybeSettingKey(keys[0]),
-      useMaybeSettingKey(keys[1]),
-      useMaybeSettingKey(keys[2]),
-      useMaybeSettingKey(keys[3]),
-      useMaybeSettingKey(keys[4]),
-      useMaybeSettingKey(keys[5]),
-      useMaybeSettingKey(keys[6]),
-      useMaybeSettingKey(keys[7]),
-      useMaybeSettingKey(keys[8]),
-      useMaybeSettingKey(keys[9]),
-    ] as [
-      ReturnType<typeof getSettings>[K1],
-      ReturnType<typeof getSettings>[K2],
-      ReturnType<typeof getSettings>[K3],
-      ReturnType<typeof getSettings>[K4],
-      ReturnType<typeof getSettings>[K5],
-      ReturnType<typeof getSettings>[K6],
-      ReturnType<typeof getSettings>[K7],
-      ReturnType<typeof getSettings>[K8],
-      ReturnType<typeof getSettings>[K9],
-      ReturnType<typeof getSettings>[K10],
-    ]
-  }
-
   const useSettingSelector = <
     T extends keyof ReturnType<typeof getSettings>,
     S extends ReturnType<typeof getSettings>,
@@ -118,24 +80,9 @@ export const createSettingAtom = <T extends object>(
     key: K,
     value: ReturnType<typeof getSettings>[K],
   ) => {
-    const updated = Date.now()
+    setSettings({ ...getSettings(), [key]: value })
 
-    EventBus.dispatch("SETTING_CHANGE_EVENT", {
-      key: settingKey as "general" | "ui" | "spotlight",
-      payload: {
-        [key]: value,
-      },
-    })
-    setSettings({
-      ...getSettings(),
-      [key]: value,
-
-      updated,
-    })
-  }
-
-  const clearSettings = () => {
-    setSettings(createDefaultSettings())
+    EventBus.dispatch("SETTING_CHANGE_EVENT", { key: settingKey, payload: { [key]: value } })
   }
 
   Object.defineProperty(useSettingValue, "select", {
@@ -146,11 +93,9 @@ export const createSettingAtom = <T extends object>(
     useSettingKey,
     useSettingSelector,
     setSetting,
-    clearSettings,
     initializeDefaultSettings,
 
     useSettingValue,
-    useSettingKeys,
     getSettings,
 
     settingAtom: atom,
@@ -158,12 +103,10 @@ export const createSettingAtom = <T extends object>(
     useSettingKey: typeof useSettingKey
     useSettingSelector: typeof useSettingSelector
     setSetting: typeof setSetting
-    clearSettings: typeof clearSettings
     initializeDefaultSettings: typeof initializeDefaultSettings
     useSettingValue: typeof useSettingValue & {
       select: <T extends keyof ReturnType<() => T>>(key: T) => Awaited<T[T]>
     }
-    useSettingKeys: typeof useSettingKeys
     getSettings: typeof getSettings
     settingAtom: typeof atom
   }

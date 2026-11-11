@@ -68,7 +68,7 @@ export const initializeApp = async () => {
   })
 
   void apm("setting sync", async () => {
-    await settingSyncQueue.init()
+    settingSyncQueue.init()
 
     await fetchSessionUser().catch(() => null)
 

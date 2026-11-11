@@ -1,21 +1,12 @@
-import { expoClient, storageAdapter } from "@better-auth/expo/client"
+import { expoClient } from "@better-auth/expo/client"
 import { invalidateSessionUser, onLocalDataOfAnotherAccount } from "@follow/store/sync/account"
-import { isNewUserQueryKey } from "@follow/store/user/constants"
-import { whoamiQueryKey } from "@follow/store/user/hooks"
+import { isNewUserQueryKey, whoamiQueryKey } from "@follow/store/user/constants"
 import { userActions } from "@follow/store/user/store"
-import { createMobileAPIHeaders } from "@follow/utils/headers"
 import { normalizeServerUrl } from "@follow/utils/server-url"
 import type { BetterAuthClientOptions } from "better-auth/client"
 import { createAuthClient } from "better-auth/react"
-import { nativeApplicationVersion } from "expo-application"
-import { Platform } from "react-native"
-import DeviceInfo from "react-native-device-info"
 
-import {
-  createMobileAuthCookieSyncPlugin,
-  createSessionAwareAuthCookieStorage,
-} from "./auth-cookie-sync"
-import { getClientId, getSessionId } from "./client-session"
+import { createSessionAwareAuthCookieStorage } from "./auth-cookie-sync"
 import { scheduleLocalDataReset } from "./local-data-reset"
 import { getUserAgent } from "./native/user-agent"
 import { Navigation } from "./navigation/Navigation"
@@ -32,7 +23,6 @@ const sessionDataKey = `${storagePrefix}_session_data`
 const sessionCookieRefreshIntervalSeconds = 60 * 60 * 12
 
 let authStateRevision = 0
-let lastAuthStateChangeAt = 0
 /**
  * Set while signing out, which ends in a reload with an empty database. The session's queries
  * are not loaded again before it: without the session the server would only refuse them.
@@ -40,13 +30,6 @@ let lastAuthStateChangeAt = 0
 let signingOut = false
 
 export const getAuthStateRevision = () => authStateRevision
-export const getLastAuthStateChangeAt = () => lastAuthStateChangeAt
-
-const bumpAuthStateRevision = () => {
-  authStateRevision += 1
-  lastAuthStateChangeAt = Date.now()
-  return authStateRevision
-}
 
 // Session-scoped queries must be reset on auth transitions, otherwise mounted timeline
 // queries can keep rendering anonymous cache under the new session.
@@ -57,48 +40,18 @@ const refreshSessionQueries = () =>
     queryClient.resetQueries({ queryKey: ["entries"] }),
     queryClient.resetQueries({ queryKey: ["subscription"] }),
     queryClient.resetQueries({ queryKey: ["unread"] }),
-    queryClient.resetQueries({ queryKey: ["owned", "lists"] }),
     queryClient.resetQueries({ queryKey: ["action", "rules"] }),
   ])
 
-type MobileAuthPlugins = [
-  ReturnType<typeof createMobileAuthCookieSyncPlugin>,
-  ReturnType<typeof expoClient>,
-]
 type MobileAuthClientOptions = Omit<BetterAuthClientOptions, "plugins"> & {
-  plugins: MobileAuthPlugins
-}
-
-const secureAuthCookieStorage = {
-  setItem(key: string, value: string) {
-    try {
-      safeSecureStore.setItem(key, value)
-    } catch (e) {
-      console.warn("SecureStore.setItem failed:", e)
-    }
-  },
-  getItem(key: string) {
-    try {
-      return safeSecureStore.getItem(key)
-    } catch (e) {
-      console.warn("SecureStore.getItem failed:", e)
-      return null
-    }
-  },
-  removeItem(key: string) {
-    try {
-      safeSecureStore.removeItem(key)
-    } catch (e) {
-      console.warn("SecureStore.removeItem failed:", e)
-    }
-  },
+  plugins: [ReturnType<typeof expoClient>]
 }
 
 const authCookieStorage = createSessionAwareAuthCookieStorage({
   cookieKey,
-  storage: secureAuthCookieStorage,
+  storage: safeSecureStore,
   onSessionChange() {
-    bumpAuthStateRevision()
+    authStateRevision += 1
     // Whose session it is stays unknown until the session endpoint answers, so queued changes
     // are not sent with it before.
     invalidateSessionUser()
@@ -106,26 +59,6 @@ const authCookieStorage = createSessionAwareAuthCookieStorage({
     if (!signingOut) void refreshSessionQueries()
   },
 })
-
-// Share Better Auth's write queue and recoverable UTF-8 chunk storage with its
-// Expo plugin so a cookie update from a response cannot race a session refresh.
-const expoCookieStorage = storageAdapter(authCookieStorage)
-
-const plugins = [
-  createMobileAuthCookieSyncPlugin({
-    cookieKey,
-    storage: authCookieStorage,
-    cookieStorage: {
-      getItem: expoCookieStorage.getItem,
-      setItem: expoCookieStorage.setItemAsync,
-    },
-  }),
-  expoClient({
-    scheme: "yanrr",
-    storagePrefix,
-    storage: authCookieStorage,
-  }),
-] as MobileAuthPlugins
 
 export const authClient = createAuthClient<MobileAuthClientOptions>({
   // Until the user has set a server there is no address, and better-auth refuses a relative one
@@ -138,18 +71,6 @@ export const authClient = createAuthClient<MobileAuthClientOptions>({
     cache: "no-store",
     // Learn more: https://better-fetch.vercel.app/docs/hooks
     onRequest: async (ctx) => {
-      const headers = createMobileAPIHeaders({
-        version: nativeApplicationVersion || "",
-        rnPlatform: {
-          OS: Platform.OS,
-          isPad: Platform.OS === "ios" && Platform.isPad,
-        },
-        installerPackageName: await DeviceInfo.getInstallerPackageName(),
-      })
-
-      Object.entries(headers).forEach(([key, value]) => {
-        ctx.headers.set(key, value)
-      })
       ctx.headers.set("User-Agent", await getUserAgent())
       // React Native sends no origin, and the server refuses state-changing requests that carry
       // the session cookie without its own
@@ -157,12 +78,16 @@ export const authClient = createAuthClient<MobileAuthClientOptions>({
 
       return ctx
     },
-    headers: {
-      "X-Client-Id": getClientId(),
-      "X-Session-Id": getSessionId(),
-    },
   },
-  plugins,
+  plugins: [
+    expoClient({
+      scheme: "yanrr",
+      storagePrefix,
+      storage: authCookieStorage,
+      // The signed-in user comes from the user store; a copy of the session would go unread
+      disableCache: true,
+    }),
+  ],
 })
 
 // @keep-sorted
@@ -178,9 +103,12 @@ const clearAuthStorage = async () => {
   await Promise.all(keys.map((key) => safeSecureStore.removeItemAsync(key)))
 }
 
-/** Reload with an empty local database; the app then starts over for the current session. */
+/**
+ * Reload with nothing of the account on the device; the app then starts over for the current
+ * session.
+ */
 const resetLocalData = async (reason: string) => {
-  scheduleLocalDataReset()
+  scheduleLocalDataReset("account")
   await reloadApp(reason)
 }
 
@@ -213,7 +141,7 @@ export const signOut = async () => {
   await clearAuthStorage()
   await userActions.removeCurrentUser()
   Navigation.rootNavigation.popToRoot()
-  bumpAuthStateRevision()
+  authStateRevision += 1
   try {
     await resetLocalData("User sign out")
   } catch (error) {

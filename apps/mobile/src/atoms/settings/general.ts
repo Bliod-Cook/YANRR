@@ -20,18 +20,13 @@ export const createDefaultGeneralSettings = (): GeneralSettings => {
 export const {
   useSettingKey: useGeneralSettingKey,
   useSettingSelector: useGeneralSettingSelector,
-  useSettingKeys: useGeneralSettingKeys,
   setSetting: setGeneralSetting,
-  clearSettings: clearGeneralSettings,
   initializeDefaultSettings: initializeDefaultGeneralSettings,
   getSettings: getGeneralSettings,
   useSettingValue: useGeneralSettingValue,
 
   settingAtom: __generalSettingAtom,
 } = createSettingAtom("general", createDefaultGeneralSettings)
-
-/** Device-local general settings: every other general setting syncs to the account. */
-export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = ["language", "appLaunchOnStartup"]
 
 export function useActionLanguage() {
   const actionLanguage = useGeneralSettingSelector((s) => s.actionLanguage)

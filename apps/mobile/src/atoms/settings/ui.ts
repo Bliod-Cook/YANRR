@@ -42,21 +42,9 @@ export const createDefaultSettings = (): UISettings => ({
 export const {
   useSettingKey: useUISettingKey,
   useSettingSelector: useUISettingSelector,
-  useSettingKeys: useUISettingKeys,
   setSetting: setUISetting,
-  clearSettings: clearUISettings,
   initializeDefaultSettings: initializeDefaultUISettings,
   getSettings: getUISettings,
   useSettingValue: useUISettingValue,
   settingAtom: __uiSettingAtom,
 } = createSettingAtom("ui", createDefaultSettings)
-
-/** Device-local appearance settings: every other appearance setting syncs to the account. */
-export const uiLocalOnlyKeys: (keyof UISettings)[] = [
-  "uiFontFamily",
-  "readerFontFamily",
-  "opaqueSidebar",
-  "fontScale",
-  "useSystemFontScaling",
-  // "customCSS",
-]

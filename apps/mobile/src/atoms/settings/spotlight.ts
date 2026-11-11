@@ -10,9 +10,7 @@ export const createDefaultSpotlightSettings = (): SpotlightSettings => ({
 export const {
   useSettingKey: useSpotlightSettingKey,
   useSettingSelector: useSpotlightSettingSelector,
-  useSettingKeys: useSpotlightSettingKeys,
   setSetting: setSpotlightSetting,
-  clearSettings: clearSpotlightSettings,
   initializeDefaultSettings: initializeDefaultSpotlightSettings,
   getSettings: getSpotlightSettings,
   useSettingValue: useSpotlightSettingValue,
