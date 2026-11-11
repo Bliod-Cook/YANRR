@@ -30,9 +30,6 @@ export const defaultGeneralSettings: GeneralSettings = {
   autoExpandLongSocialMedia: false,
   dimRead: false,
 
-  // Secure
-  jumpOutLinkWarn: true,
-
   // Pro feature
   enhancedSettings: false,
 
