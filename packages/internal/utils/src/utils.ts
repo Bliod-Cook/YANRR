@@ -198,24 +198,6 @@ export const resolveUrlWithBase = (url: string, baseUrl: string) => {
   }
 }
 
-export const getAvatarUrl = (user?: {
-  email?: string | null
-  name?: string | null
-  handle?: string | null
-  image?: string | null
-}) => {
-  if (user) {
-    if (user?.image) {
-      return user.image
-    } else {
-      const fallbackUrl = `https://avatar.vercel.sh/${user.handle || user.name}.svg?text=${(user.handle || user.name)?.slice(0, 2).toUpperCase()}`
-      return `https://unavatar.webp.se/gravatar/${user.email}?fallback=${encodeURIComponent(fallbackUrl)}`
-    }
-  } else {
-    return `https://avatar.vercel.sh/yanrr`
-  }
-}
-
 export { parse as parseUrl } from "tldts"
 
 export const clamp = (value: number, min: number, max: number) =>
@@ -291,20 +273,13 @@ export const formatTimeToSeconds = (time?: string | number) => {
  * ```ts
  * timeStringToSeconds("1:30") // 90
  * timeStringToSeconds("1:30:00") // 5400
+ * timeStringToSeconds("Part 2: The end") // null
  * ```
  */
 export function timeStringToSeconds(time: string): number | null {
-  const timeParts = time.split(":").map(Number)
+  if (!/^\d{1,2}:[0-5]\d(?::[0-5]\d)?$/.test(time)) return null
 
-  if (timeParts.length === 2) {
-    const [minutes, seconds] = timeParts
-    return minutes! * 60 + seconds!
-  } else if (timeParts.length === 3) {
-    const [hours, minutes, seconds] = timeParts
-    return hours! * 3600 + minutes! * 60 + seconds!
-  } else {
-    return null
-  }
+  return time.split(":").reduce((seconds, part) => seconds * 60 + Number(part), 0)
 }
 
 export type EstimatedDurationUnit = "months_days" | "days_hours" | "hours_minutes" | "minutes"

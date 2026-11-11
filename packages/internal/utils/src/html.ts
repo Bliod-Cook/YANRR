@@ -145,6 +145,125 @@ function rehypeTrimEndBrElement() {
   return trim
 }
 
+/**
+ * Inside SVG or MathML a style element is not raw text: its entities decode to text that a
+ * browser parses as markup wherever the element is written out as HTML.
+ */
+function rehypeRemoveForeignStyles() {
+  const removeStyles = (parent: Parent, inForeignContent: boolean) => {
+    if (inForeignContent) {
+      parent.children = parent.children.filter(
+        (child) => child.type !== "element" || child.tagName !== "style",
+      )
+    }
+    for (const child of parent.children) {
+      if (child.type === "element") {
+        removeStyles(child, inForeignContent || child.tagName === "svg" || child.tagName === "math")
+      }
+    }
+  }
+  return (tree: Root) => removeStyles(tree, false)
+}
+
+const svgTagNames = [
+  "svg",
+  "g",
+  "ellipse",
+  "text",
+  "tspan",
+  "polygon",
+  "path",
+  "title",
+  "rect",
+  "line",
+  "circle",
+  "use",
+]
+
+// The sanitizer matches hast property names: `strokeWidth`, not `stroke-width`
+const svgPaint = ["fill", "stroke", "strokeWidth", "transform"]
+const svgText = ["x", "y", "fill", "fontSize", "fontFamily", "textAnchor", "transform"]
+
+const mediaAttributes: NonNullable<Schema["attributes"]> = {
+  video: ["src", "poster"],
+  iframe: ["src", "frameBorder", "allowFullScreen", "loading", "referrerPolicy"],
+  source: ["src", "type"],
+  svg: [
+    "width",
+    "height",
+    "viewBox",
+    "xmlns",
+    "version",
+    "preserveAspectRatio",
+    "xmlnsXLink",
+    "xmlSpace",
+    "fill",
+    "stroke",
+    "strokeWidth",
+  ],
+  g: svgPaint,
+  path: ["d", ...svgPaint],
+  polygon: ["points", ...svgPaint],
+  circle: ["cx", "cy", "r", ...svgPaint],
+  ellipse: ["cx", "cy", "rx", "ry", ...svgPaint],
+  rect: ["x", "y", "width", "height", "rx", "ry", ...svgPaint],
+  line: ["x1", "y1", "x2", "y2", "stroke", "strokeWidth", "transform"],
+  text: svgText,
+  tspan: [...svgText, "dx", "dy"],
+  // Only shapes defined in the content itself
+  use: [["href", /^#/], ["xLinkHref", /^#/], "x", "y", "width", "height", "transform"],
+}
+
+const createSanitizeSchema = ({
+  renderInlineStyle,
+  noMedia,
+}: {
+  renderInlineStyle: boolean
+  noMedia: boolean
+}): Schema => {
+  const schema: Schema = {
+    ...defaultSchema,
+    tagNames: [...defaultSchema.tagNames!, "math"],
+    // Dropped with their text when not allowed, instead of leaving it in the article
+    strip: [...defaultSchema.strip!, "style", "title"],
+    // Outside SVG, React moves a title into the document head, where it renames the window
+    ancestors: { ...defaultSchema.ancestors, title: ["svg"] },
+  }
+
+  if (noMedia) {
+    return {
+      ...schema,
+      tagNames: schema.tagNames!.filter((tag) => tag !== "img" && tag !== "picture"),
+    }
+  }
+
+  // Style blocks and classes restyle the article just like inline styles, so one switch covers all
+  return {
+    ...schema,
+    tagNames: [
+      ...schema.tagNames!,
+      "video",
+      "iframe",
+      "figure",
+      ...svgTagNames,
+      ...(renderInlineStyle ? ["style"] : []),
+    ],
+    attributes: {
+      ...defaultSchema.attributes,
+      "*": renderInlineStyle
+        ? [...defaultSchema.attributes!["*"]!, "style", "className"]
+        : defaultSchema.attributes!["*"]!,
+      ...mediaAttributes,
+    },
+    // Replaces whatever sandbox the content asks for; none of these lets a frame navigate the
+    // reader away
+    required: {
+      ...defaultSchema.required,
+      iframe: { sandbox: ["allow-scripts", "allow-same-origin", "allow-popups", "allow-forms"] },
+    },
+  }
+}
+
 export const parseHtml = (content: string, options?: ParseHtmlOptions) => {
   const {
     renderInlineStyle = false,
@@ -155,95 +274,10 @@ export const parseHtml = (content: string, options?: ParseHtmlOptions) => {
     baseUrl,
   } = options || {}
 
-  const rehypeSchema: Schema = { ...defaultSchema }
-  rehypeSchema.tagNames = [...rehypeSchema.tagNames!, "math"]
-
-  if (noMedia) {
-    rehypeSchema.tagNames = rehypeSchema.tagNames?.filter(
-      (tag) => tag !== "img" && tag !== "picture",
-    )
-  } else {
-    rehypeSchema.tagNames = [
-      ...rehypeSchema.tagNames!,
-      "video",
-      "iframe",
-      "style",
-      "figure",
-      // SVG
-      "svg",
-      "g",
-      "ellipse",
-      "text",
-      "tspan",
-      "polygon",
-      "path",
-      "title",
-      "rect",
-      "line",
-      "circle",
-      "use",
-    ]
-    rehypeSchema.attributes = {
-      ...rehypeSchema.attributes,
-      "*": renderInlineStyle
-        ? [...rehypeSchema.attributes!["*"]!, "style", "class"]
-        : rehypeSchema.attributes!["*"]!,
-      video: ["src", "poster"],
-      iframe: [
-        "src",
-        "width",
-        "height",
-        "frameborder",
-        "allowfullscreen",
-        "sandbox",
-        "loading",
-        "referrerPolicy",
-        "title",
-        "id",
-        "class",
-      ],
-      source: ["src", "type"],
-
-      svg: [
-        "width",
-        "height",
-        "viewBox",
-        "xmlns",
-        "version",
-        "preserveAspectRatio",
-        "xmlns:xlink",
-        "xml:space",
-        "fill",
-        "stroke",
-        "stroke-width",
-      ],
-      g: ["transform", "fill", "stroke", "stroke-width"],
-      path: ["d", "fill", "stroke", "stroke-width", "transform"],
-      polygon: ["points", "fill", "stroke", "stroke-width", "transform"],
-      circle: ["cx", "cy", "r", "fill", "stroke", "stroke-width", "transform"],
-      ellipse: ["cx", "cy", "rx", "ry", "fill", "stroke", "stroke-width", "transform"],
-      rect: [
-        "x",
-        "y",
-        "width",
-        "height",
-        "fill",
-        "stroke",
-        "stroke-width",
-        "transform",
-        "rx",
-        "ry",
-      ],
-      line: ["x1", "y1", "x2", "y2", "stroke", "stroke-width", "transform"],
-      text: ["x", "y", "fill", "font-size", "font-family", "text-anchor", "transform"],
-      tspan: ["x", "y", "dx", "dy", "fill", "font-size", "font-family", "text-anchor", "transform"],
-      use: ["href", "xlink:href", "x", "y", "width", "height", "transform"],
-    }
-  }
-
   const pipeline = unified()
     .use(rehypeParse, { fragment: true })
-    .use(rehypeSanitize, rehypeSchema)
+    .use(rehypeSanitize, createSanitizeSchema({ renderInlineStyle, noMedia }))
+    .use(rehypeRemoveForeignStyles)
     .use(rehypeTrimEndBrElement)
     .use(rehypeInferDescriptionMeta)
     .use(rehypeStringify)
@@ -323,8 +357,23 @@ function prependMissingCoverImage(tree: Root, coverImageUrl: string, baseUrl?: s
   }
 }
 
+// A bare URL ends at whitespace or at CJK punctuation, fullwidth forms included
+const bareUrlPattern = /https?:\/\/[^\s"<>\u3001-\u303F\uFF00-\uFFEF]+/g
+
+// As in GFM autolinks, trailing punctuation and an unmatched ")" are left as text
+const trimUrlEnd = (url: string): string => {
+  const last = url.at(-1)
+  if (
+    (last && ".,:;!?'*_~".includes(last)) ||
+    (last === ")" && url.split(")").length > url.split("(").length)
+  ) {
+    return trimUrlEnd(url.slice(0, -1))
+  }
+  return url
+}
+
 function rehypeUrlToAnchor(tree: CompatibleVisitParentsTree) {
-  const tagsShouldNotBeWrapped = new Set(["a", "pre", "code"])
+  const tagsShouldNotBeWrapped = new Set(["a", "pre", "code", "style"])
   // https://chatgpt.com/share/37e0ceec-5c9e-4086-b9d6-5afc1af13bb0
   visitParents(tree, "text", (node, ancestors) => {
     const textNode = node as Text
@@ -341,9 +390,8 @@ function rehypeUrlToAnchor(tree: CompatibleVisitParentsTree) {
 
     const parent = typedAncestors.at(-1)
 
-    const urlRegex = /https?:\/\/\S+/g
     const text = textNode.value
-    const matches = [...text.matchAll(urlRegex)]
+    const matches = [...text.matchAll(bareUrlPattern)]
 
     if (matches.length === 0 || !parent || !("children" in parent)) return
 
@@ -355,7 +403,7 @@ function rehypeUrlToAnchor(tree: CompatibleVisitParentsTree) {
     let lastIndex = 0
 
     matches.forEach((match) => {
-      const [url] = match
+      const url = trimUrlEnd(match[0])
       const urlIndex = match.index || 0
 
       if (urlIndex > lastIndex) {
