@@ -1,4 +1,4 @@
-import { useTypeScriptHappyCallback } from "@follow/hooks"
+import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
 import { useEntry } from "@follow/store/entry/hooks"
 import { useAtomValue } from "jotai"
 import type { FC } from "react"

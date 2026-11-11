@@ -1,4 +1,4 @@
-import { useTypeScriptHappyCallback } from "@follow/hooks"
+import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
 import { usePrefetchSubscription } from "@follow/store/subscription/hooks"
 import { usePrefetchUnread } from "@follow/store/unread/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"

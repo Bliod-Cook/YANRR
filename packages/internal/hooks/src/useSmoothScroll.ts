@@ -35,7 +35,12 @@ export const useSmoothScroll = () => {
         return 1 - Math.pow(1 - t, 3)
       }
 
-      let animationId: number
+      let animationId = 0
+      const stop = () => {
+        cancelAnimationFrame(animationId)
+        scrollAnimationRef.current = null
+      }
+      scrollAnimationRef.current = { stop }
 
       const animateScroll = (currentTime: number) => {
         const elapsed = currentTime - startTime
@@ -48,12 +53,6 @@ export const useSmoothScroll = () => {
 
         if (progress < 1) {
           animationId = requestAnimationFrame(animateScroll)
-          scrollAnimationRef.current = {
-            stop: () => {
-              cancelAnimationFrame(animationId)
-              scrollAnimationRef.current = null
-            },
-          } as any
         } else {
           scrollAnimationRef.current = null
         }

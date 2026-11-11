@@ -1,12 +1,10 @@
-import { useTypeScriptHappyCallback } from "@follow/hooks"
+import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
 import { jotaiStore } from "@follow/utils"
 import { atom } from "jotai"
 import type * as React from "react"
-import type { RefObject } from "react"
-import { useCallback, useRef } from "react"
 import type { ViewProps } from "react-native"
 import { runOnJS, runOnUI } from "react-native-reanimated"
-import type { WebViewNavigation, WebViewProps } from "react-native-webview"
+import type { WebViewMessageEvent, WebViewNavigation, WebViewProps } from "react-native-webview"
 import WebView from "react-native-webview"
 
 import { openLink } from "@/src/lib/native"
@@ -20,14 +18,11 @@ type WebViewRef = WebView<WebViewProps>
 
 const webviewAtom = atom<WebViewRef | null>(null)
 
-const setWebview = (webview: WebViewRef | null) => {
-  jotaiStore.set(webviewAtom, webview)
-}
-
-export const injectJavaScript = (js: string) => {
+const injectJavaScript = (js: string) => {
   const webview = jotaiStore.get(webviewAtom)
   if (!webview) {
-    console.warn("WebView not ready, injecting JavaScript failed", js)
+    // The script can hold a whole article, which must not reach the device log
+    console.warn("WebView not ready, injecting JavaScript failed")
     return
   }
   return webview.injectJavaScript(js)
@@ -44,9 +39,30 @@ const bridgeQueue = createBridgeQueue((type, payload) => {
 
 export const dispatchToPage = bridgeQueue.dispatch
 
+const attachWebView = (webview: WebViewRef | null) => {
+  if (!webview) return
+  jotaiStore.set(webviewAtom, webview)
+  return () => {
+    // The next entry's WebView may have taken over already
+    if (jotaiStore.get(webviewAtom) !== webview) return
+    jotaiStore.set(webviewAtom, null)
+    bridgeQueue.reset()
+  }
+}
+
 const onLoadEnd = () => {
   injectJavaScript(atEnd)
 }
+
+// The page loads from the app's files; any other page a link leads to opens outside the app
+const onShouldStartLoadWithRequest = ({ url }: WebViewNavigation) => {
+  if (url.startsWith("file:")) return true
+  openLink(url)
+  return false
+}
+
+// Article iframes get the same messaging interface as the page, which is the only local file
+const isFromPage = (e: WebViewMessageEvent) => e.nativeEvent.url.startsWith("file:")
 
 export const NativeWebView: React.ComponentType<
   ViewProps & {
@@ -55,15 +71,11 @@ export const NativeWebView: React.ComponentType<
     url?: string
   }
 > = ({ onContentHeightChange, onSeekAudio }) => {
-  const webViewRef = useRef<WebViewRef | null>(null)
-  const { onNavigationStateChange } = useWebViewNavigation({ webViewRef })
   const { openLightbox } = useLightboxControls()
 
   return (
     <WebView<WebViewProps>
-      ref={(webview) => {
-        setWebview(webview)
-      }}
+      ref={attachWebView}
       style={styles.webview}
       containerStyle={styles.webviewContainer}
       source={{ uri: htmlUrl }}
@@ -84,86 +96,62 @@ export const NativeWebView: React.ComponentType<
           openLink(targetUrl)
         }
       }}
-      onNavigationStateChange={onNavigationStateChange}
+      onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
       onLoadEnd={onLoadEnd}
       onMessage={useTypeScriptHappyCallback(
-        (e) => {
-          const message = e.nativeEvent.data
-          const parsed = JSON.parse(message)
-          switch (parsed.type) {
-            case "bridgeReady": {
-              bridgeQueue.ready()
-              return
-            }
-            case "setContentHeight": {
-              onContentHeightChange?.({
-                nativeEvent: { height: parsed.payload },
-              })
-              return
-            }
-            case "previewImage": {
-              const { imageUrls, index } = parsed.payload
-              runOnUI(() => {
-                "worklet"
-                // const rect = measureHandle(aviHandle)
-                runOnJS(openLightbox)({
-                  images: (imageUrls as string[]).map((url: string) => ({
-                    uri: url,
-                    dimensions: null,
-                    thumbUri: url,
-                    thumbDimensions: null,
-                    thumbRect: null,
-                    type: "image",
-                  })),
-                  index,
-                })
-              })()
-              return
-            }
-            case "audio:seekTo": {
-              const { time } = parsed.payload
-              if (typeof time !== "number") {
-                console.warn("Failed to seek audio! Invalid time", time)
+        (e: WebViewMessageEvent) => {
+          if (!isFromPage(e)) return
+          try {
+            const parsed = JSON.parse(e.nativeEvent.data)
+            switch (parsed.type) {
+              case "bridgeReady": {
+                bridgeQueue.ready()
                 return
               }
-              onSeekAudio?.({ time })
-              break
+              case "setContentHeight": {
+                onContentHeightChange?.({
+                  nativeEvent: { height: parsed.payload },
+                })
+                return
+              }
+              case "previewImage": {
+                const { imageUrls, index } = parsed.payload
+                runOnUI(() => {
+                  "worklet"
+                  // const rect = measureHandle(aviHandle)
+                  runOnJS(openLightbox)({
+                    images: (imageUrls as string[]).map((url: string) => ({
+                      uri: url,
+                      dimensions: null,
+                      thumbUri: url,
+                      thumbDimensions: null,
+                      thumbRect: null,
+                      type: "image",
+                    })),
+                    index,
+                  })
+                })()
+                return
+              }
+              case "audio:seekTo": {
+                const { time } = parsed.payload
+                if (typeof time !== "number") {
+                  console.warn("Failed to seek audio! Invalid time", time)
+                  return
+                }
+                onSeekAudio?.({ time })
+                break
+              }
+              // No default
             }
-            // No default
+          } catch (error) {
+            console.warn("[webview] could not handle a message from the page", error)
           }
         },
         [onContentHeightChange, onSeekAudio, openLightbox],
       )}
     />
   )
-}
-
-const useWebViewNavigation = ({ webViewRef }: { webViewRef: RefObject<WebViewRef | null> }) => {
-  const onNavigationStateChange = useCallback(
-    (newNavState: WebViewNavigation) => {
-      const { url: urlStr } = newNavState
-      let url = null
-      try {
-        url = new URL(urlStr)
-      } catch (error) {
-        console.warn("Invalid URL", urlStr, error)
-        return
-      }
-      if (!url) return
-      if (url.protocol === "file:") return
-      // if (allowHosts.has(url.host)) return
-      webViewRef.current?.stopLoading()
-      // const formattedUrl = transformVideoUrl({ url: urlStr })
-      if (urlStr) {
-        openLink(urlStr)
-        return
-      }
-      openLink(urlStr)
-    },
-    [webViewRef],
-  )
-
-  return { onNavigationStateChange }
 }
 
 const styles = {

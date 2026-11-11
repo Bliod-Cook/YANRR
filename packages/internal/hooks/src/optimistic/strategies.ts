@@ -9,6 +9,7 @@ export const optimisticStrategies = {
    * Strategy for creating new items
    * Adds the new item to the beginning of the list with a temporary ID
    */
+  // The response is not merged into the item: it is an API envelope, and the settled query refetches
   create: <T extends OptimisticItem, TResponse = T>(
     generateOptimisticItem: (variables: any) => Omit<T, "id" | OptimisticKey>,
   ): StrategyConfig<T, TResponse> => ({
@@ -29,11 +30,9 @@ export const optimisticStrategies = {
       }
     },
 
-    successUpdater: (result: TResponse, variables: any, previousData: T[], context: any) => {
+    successUpdater: (_result: TResponse, _variables: any, previousData: T[], context: any) => {
       return previousData.map((item) =>
-        item.id === context?.tempId
-          ? { ...item, ...(result as any), [optimisticKey]: false }
-          : item,
+        item.id === context?.tempId ? { ...item, [optimisticKey]: false } : item,
       )
     },
   }),
@@ -67,10 +66,10 @@ export const optimisticStrategies = {
       }
     },
 
-    successUpdater: (result: TResponse, variables: any, previousData: T[]) => {
+    successUpdater: (_result: TResponse, variables: any, previousData: T[]) => {
       const targetId = typeof getTargetId === "function" ? getTargetId(variables) : getTargetId
       return previousData.map((item) =>
-        item.id === targetId ? { ...item, ...(result as any), [optimisticKey]: false } : item,
+        item.id === targetId ? { ...item, [optimisticKey]: false } : item,
       )
     },
   }),
@@ -126,10 +125,10 @@ export const optimisticStrategies = {
       }
     },
 
-    successUpdater: (result: TResponse, variables: any, previousData: T[]) => {
+    successUpdater: (_result: TResponse, variables: any, previousData: T[]) => {
       const targetId = getId(variables)
       return previousData.map((item) =>
-        item.id === targetId ? { ...item, ...(result as any), [optimisticKey]: false } : item,
+        item.id === targetId ? { ...item, [optimisticKey]: false } : item,
       )
     },
   }),

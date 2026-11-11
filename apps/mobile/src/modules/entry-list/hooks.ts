@@ -1,4 +1,4 @@
-import { useScrollMarkReadGracePeriod } from "@follow/hooks"
+import { useScrollMarkReadGracePeriod } from "@follow/hooks/shared"
 import { debouncedFetchEntryContentByStream } from "@follow/store/entry/store"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { useIsLoggedIn } from "@follow/store/user/hooks"

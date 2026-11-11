@@ -1,17 +1,19 @@
-import { useTypeScriptHappyCallback } from "@follow/hooks"
+import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
 import { cn } from "@follow/utils"
-import { useSetAtom, useStore } from "jotai"
 import type { PropsWithChildren } from "react"
-import { use, useImperativeHandle, useLayoutEffect, useRef, useState } from "react"
+import { use, useCallback, useImperativeHandle, useLayoutEffect, useRef, useState } from "react"
 import type { ScrollView, ScrollViewProps, StyleProp, ViewProps, ViewStyle } from "react-native"
-import { findNodeHandle, View } from "react-native"
+import { View } from "react-native"
 import type { AnimatedProps, SharedValue } from "react-native-reanimated"
-import Animated, { runOnJS, useAnimatedScrollHandler } from "react-native-reanimated"
+import Animated, {
+  runOnJS,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated"
 import type { ReanimatedScrollEvent } from "react-native-reanimated/lib/typescript/hook/commonTypes"
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { useBottomTabBarHeight } from "@/src/components/layouts/tabbar/hooks"
-import { isScrollToEnd } from "@/src/lib/native"
 import { useTabScreenIsFocused } from "@/src/lib/navigation/bottom-tab/hooks"
 import { useScreenIsInSheetModal } from "@/src/lib/navigation/hooks"
 import { ScreenItemContext } from "@/src/lib/navigation/ScreenItemContext"
@@ -80,36 +82,35 @@ export const SafeNavigationScrollView = ({
   const screenCtxValue = use(ScreenItemContext)
 
   const ref = useRef<ScrollView>(null)
-  useImperativeHandle(forwardedRef, () => {
-    return Object.assign({}, ref.current!, {
-      checkScrollToBottom,
-    })
-  })
   const { opacity } = use(BottomTabBarBackgroundContext)
 
   // All tab screens stay mounted, so only the focused one may drive the shared tab bar background.
   // Otherwise a hidden tab whose content fits the screen (e.g. Settings) clears it over the visible one.
   const tabScreenIsFocused = useTabScreenIsFocused()
-  const tabScreenIsFocusedRef = useRef(tabScreenIsFocused)
+  const isFocused = useSharedValue(tabScreenIsFocused)
   useLayoutEffect(() => {
-    tabScreenIsFocusedRef.current = tabScreenIsFocused
-  }, [tabScreenIsFocused])
+    isFocused.value = tabScreenIsFocused
+  }, [isFocused, tabScreenIsFocused])
 
-  function checkScrollToBottom() {
-    if (!tabScreenIsFocusedRef.current) {
-      return
+  // The tab bar background clears while the content is scrolled to its end
+  const scrollY = useSharedValue(0)
+  const viewportHeight = useSharedValue(0)
+  const contentHeight = useSharedValue(0)
+  const checkScrollToBottom = useCallback(() => {
+    "worklet"
+    if (!isFocused.value) return
+    const nextOpacity = scrollY.value + viewportHeight.value >= contentHeight.value - 1 ? 0 : 1
+    if (opacity.value !== nextOpacity) {
+      opacity.value = nextOpacity
     }
-    const handle = findNodeHandle(ref.current!)
-    if (!handle) {
-      return
-    }
+  }, [contentHeight, isFocused, opacity, scrollY, viewportHeight])
 
-    isScrollToEnd(handle).then((isEnd) => {
-      if (tabScreenIsFocusedRef.current) {
-        opacity.value = isEnd ? 0 : 1
-      }
+  useImperativeHandle(forwardedRef, () => {
+    return Object.assign({}, ref.current!, {
+      checkScrollToBottom,
     })
-  }
+  })
+
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       if (reanimatedScrollY) {
@@ -118,8 +119,11 @@ export const SafeNavigationScrollView = ({
       if (onScroll) {
         runOnJS(onScroll)(event)
       }
-      runOnJS(checkScrollToBottom)()
       screenCtxValue.reAnimatedScrollY.value = event.contentOffset.y
+      scrollY.value = event.contentOffset.y
+      viewportHeight.value = event.layoutMeasurement.height
+      contentHeight.value = event.contentSize.height
+      checkScrollToBottom()
     },
   })
 
@@ -133,16 +137,18 @@ export const SafeNavigationScrollView = ({
           onContentSizeChange={useTypeScriptHappyCallback(
             (w, h) => {
               screenCtxValue.scrollViewContentHeight.value = h
+              contentHeight.value = h
               checkScrollToBottom()
             },
-            [screenCtxValue.scrollViewContentHeight],
+            [screenCtxValue.scrollViewContentHeight, contentHeight, checkScrollToBottom],
           )}
           onLayout={useTypeScriptHappyCallback(
             (e) => {
               screenCtxValue.scrollViewHeight.value = e.nativeEvent.layout.height - headerHeight
+              viewportHeight.value = e.nativeEvent.layout.height
               checkScrollToBottom()
             },
-            [screenCtxValue.scrollViewHeight, headerHeight],
+            [screenCtxValue.scrollViewHeight, headerHeight, viewportHeight, checkScrollToBottom],
           )}
           automaticallyAdjustContentInsets={false}
           automaticallyAdjustsScrollIndicatorInsets={false}
@@ -182,7 +188,6 @@ export const NavigationBlurEffectHeaderView = ({
   containerStyle,
   ...props
 }: InternalNavigationHeaderProps & {
-  blurThreshold?: number
   headerHideableBottom?: () => React.ReactNode
   headerHideableBottomHeight?: number
   headerTitleAbsolute?: boolean
@@ -201,6 +206,7 @@ export const NavigationBlurEffectHeaderView = ({
         headerLeft={props.headerLeft}
         hideableBottom={hideableBottom}
         hideableBottomHeight={headerHideableBottomHeight}
+        hideableBottomRevealKey={props.hideableBottomRevealKey}
         headerTitleAbsolute={headerTitleAbsolute}
         headerTitle={props.headerTitle}
         promptBeforeLeave={props.promptBeforeLeave}
@@ -208,67 +214,4 @@ export const NavigationBlurEffectHeaderView = ({
       />
     </Animated.View>
   )
-}
-
-/**
- * @deprecated
- * please use `NavigationBlurEffectHeaderView` instead, pass `<NavigationBlurEffectHeaderView />` in `SafeNavigationScrollView`'s `Header` prop
- *
- * e.g. `<SafeNavigationScrollView Header={<NavigationBlurEffectHeaderView />} />`
- * @see NavigationBlurEffectHeaderView
- */
-export const NavigationBlurEffectHeader = ({
-  headerHideableBottom,
-  headerHideableBottomHeight,
-  headerTitleAbsolute,
-  ...props
-}: InternalNavigationHeaderProps & {
-  blurThreshold?: number
-  headerHideableBottomHeight?: number
-  headerHideableBottom?: () => React.ReactNode
-  headerTitleAbsolute?: boolean
-}) => {
-  const setHeaderHeight = use(SetNavigationHeaderHeightContext)
-
-  const hideableBottom = headerHideableBottom?.()
-  const screenCtxValue = use(ScreenItemContext)
-
-  const setSlot = useSetAtom(screenCtxValue.Slot)
-  const store = useStore()
-  useLayoutEffect(() => {
-    setSlot({
-      ...store.get(screenCtxValue.Slot),
-      header: (
-        <SetNavigationHeaderHeightContext value={setHeaderHeight}>
-          <InternalNavigationHeader
-            title={props.title}
-            headerRight={props.headerRight}
-            headerLeft={props.headerLeft}
-            hideableBottom={hideableBottom}
-            hideableBottomHeight={headerHideableBottomHeight}
-            headerTitleAbsolute={headerTitleAbsolute}
-            headerTitle={props.headerTitle}
-            promptBeforeLeave={props.promptBeforeLeave}
-            isLoading={props.isLoading}
-          />
-        </SetNavigationHeaderHeightContext>
-      ),
-    })
-  }, [
-    screenCtxValue.Slot,
-    headerHideableBottomHeight,
-    headerTitleAbsolute,
-    hideableBottom,
-    props.headerLeft,
-    props.headerRight,
-    props.title,
-    setHeaderHeight,
-    setSlot,
-    store,
-    props.headerTitle,
-    props.promptBeforeLeave,
-    props.isLoading,
-  ])
-
-  return null
 }

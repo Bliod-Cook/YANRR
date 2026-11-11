@@ -25,7 +25,6 @@ export function useLongPress({
 
   const onTouchStart = useEventCallback((e: React.TouchEvent) => {
     events.onTouchStart?.(e)
-    e.preventDefault()
     isLongPress.current = false
     const touch = e.touches[0]!
 

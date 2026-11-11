@@ -1,5 +1,5 @@
 import type { FeedViewType } from "@follow/constants"
-import { useTypeScriptHappyCallback } from "@follow/hooks"
+import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
 import { useViewWithSubscription } from "@follow/store/subscription/hooks"
 import { EventBus } from "@follow/utils/event-bus"
 import * as Haptics from "expo-haptics"

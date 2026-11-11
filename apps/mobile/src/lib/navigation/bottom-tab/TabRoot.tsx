@@ -1,4 +1,4 @@
-import { useTypeScriptHappyCallback } from "@follow/hooks"
+import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
 import { useAtom } from "jotai"
 import type { FC, PropsWithChildren } from "react"
 import * as React from "react"

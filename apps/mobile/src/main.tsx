@@ -36,8 +36,6 @@ import { SettingsTabScreen } from "./screens/(stack)/(tabs)/settings"
 import { SubscriptionsTabScreen } from "./screens/(stack)/(tabs)/subscriptions"
 import { registerSitemap } from "./sitemap"
 // @ts-expect-error
-global.APP_NAME = "Yanrr"
-// @ts-expect-error
 global.ELECTRON = false
 // @ts-expect-error
 authClientContext.provide(authClient)
@@ -50,8 +48,9 @@ enableFreeze(true)
   cssInterop(Component, { className: "style" })
 })
 
-initializeApp()
-registerSitemap()
+void initializeApp()
+// Its only consumer is the debug screen, which exists in development builds only
+if (__DEV__) registerSitemap()
 initializeI18n()
 registerRootComponent(RootComponent)
 

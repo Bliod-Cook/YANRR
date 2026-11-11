@@ -1,5 +1,5 @@
 import type { FeedViewType } from "@follow/constants"
-import { useTypeScriptHappyCallback } from "@follow/hooks"
+import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
 import { shouldRenderScrollMarkReadEndSpacer } from "@follow/shared/scroll-mark-read"
 import type { UseEntriesReturn } from "@follow/store/entry/types"
 import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"

@@ -79,6 +79,7 @@ export const createOptimisticConfig = {
     onSuccess?: (result: TResponse, variables: TVariables) => void | Promise<void>
     errorMessage?: string
     retryable?: boolean
+    maxRetries?: number
   }): OptimisticMutationConfig<TData, TVariables, TResponse> => ({
     mutationFn: config.mutationFn,
     queryKey: config.queryKey,
@@ -88,7 +89,7 @@ export const createOptimisticConfig = {
       showToast: true,
       customMessage: config.errorMessage || "Failed to delete item",
       retryable: config.retryable ?? false,
-      maxRetries: 0, // Usually don't retry deletes
+      maxRetries: config.maxRetries ?? 0,
     },
   }),
 
@@ -104,6 +105,7 @@ export const createOptimisticConfig = {
     onSuccess?: (result: TResponse, variables: TVariables) => void | Promise<void>
     errorMessage?: string
     retryable?: boolean
+    maxRetries?: number
   }): OptimisticMutationConfig<TData, TVariables, TResponse> => ({
     mutationFn: config.mutationFn,
     queryKey: config.queryKey,
@@ -113,7 +115,7 @@ export const createOptimisticConfig = {
       showToast: true,
       customMessage: config.errorMessage || "Failed to toggle item",
       retryable: config.retryable ?? true,
-      maxRetries: 0,
+      maxRetries: config.maxRetries ?? 2,
     },
   }),
 
