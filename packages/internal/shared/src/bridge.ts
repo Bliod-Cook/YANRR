@@ -1,8 +1,6 @@
 import type { BrowserWindow } from "electron"
-import { useEffect, useLayoutEffect, useRef } from "react"
+import { useEffect } from "react"
 import type { toast } from "sonner"
-
-import type { GeneralSettings, UISettings } from "./settings/interface"
 
 const PREFIX = "__follow"
 
@@ -27,8 +25,6 @@ export enum WindowState {
 interface RenderGlobalContext {
   /// Access Settings
   showSetting: (path?: string) => void
-  getGeneralSettings: () => GeneralSettings
-  getUISettings: () => UISettings
 
   /**
    * @description only work in electron app
@@ -54,12 +50,6 @@ interface RenderGlobalContext {
   setWindowState: (state: WindowState) => void
 
   dialog: typeof dialog
-  // URL
-  getWebUrl: () => string
-  getApiUrl: () => string
-
-  // Utils
-  invalidateQuery: (queryKey: string | string[]) => void
   navigateEntry: (options: { feedId: string; entryId: string; view: number }) => void
 
   refreshSession: () => void
@@ -78,14 +68,9 @@ export const useRegisterGlobalContext = <K extends keyof RenderGlobalContext>(
   key: K,
   fn: RenderGlobalContext[K],
 ) => {
-  const eventCallbackRef = useRef(fn)
-  useLayoutEffect(() => {
-    eventCallbackRef.current = fn
-  }, [fn])
-
   useEffect(() => {
-    registerGlobalContext({ [key]: eventCallbackRef.current })
-  }, [key])
+    registerGlobalContext({ [key]: fn })
+  }, [key, fn])
 }
 
 function createProxy<T extends RenderGlobalContext>(
@@ -128,12 +113,6 @@ type Fn<T> = {
 }
 export function callWindowExpose<T extends RenderGlobalContext>(window: BrowserWindow) {
   return createProxy((code) => window.webContents.executeJavaScript(code)) as Fn<T>
-}
-
-export function callWebviewExpose<T extends RenderGlobalContext>(
-  injectCode: (code: string) => void,
-) {
-  return createProxy(injectCode) as Fn<T>
 }
 
 export function callWindowExposeRenderer() {

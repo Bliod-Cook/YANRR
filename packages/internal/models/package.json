@@ -10,10 +10,6 @@
     "./rsshub": {
       "import": "./src/rsshub.ts",
       "types": "./src/rsshub.ts"
-    },
-    "./types": {
-      "import": "./src/types.ts",
-      "require": "./src/types.ts"
     }
   },
   "scripts": {

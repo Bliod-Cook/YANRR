@@ -3,10 +3,6 @@
   "private": true,
   "sideEffects": false,
   "exports": {
-    "./atoms/*": {
-      "import": "./src/atoms/*",
-      "types": "./src/atoms/*"
-    },
     "./helper/*": {
       "import": "./src/helper/*",
       "types": "./src/helper/*"
