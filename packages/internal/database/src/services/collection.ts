@@ -1,6 +1,6 @@
-import { eq, inArray } from "drizzle-orm"
+import { inArray } from "drizzle-orm"
 
-import { db } from "../db"
+import { db, withTransaction } from "../db"
 import { collectionsTable } from "../schemas"
 import type { CollectionSchema } from "../schemas/types"
 import type { Resetable } from "./internal/base"
@@ -12,32 +12,26 @@ class CollectionServiceStatic implements Resetable {
   }
 
   async upsertMany(collections: CollectionSchema[], options?: { reset?: boolean }) {
-    if (collections.length === 0) return
-
-    if (options?.reset) {
-      await db.delete(collectionsTable).execute()
-    }
-
-    await db
-      .insert(collectionsTable)
-      .values(collections)
-      .onConflictDoUpdate({
-        target: [collectionsTable.entryId],
-        set: conflictUpdateAllExcept(collectionsTable, ["entryId"]),
-      })
-  }
-
-  async delete(entryId: string) {
-    await db.delete(collectionsTable).where(eq(collectionsTable.entryId, entryId))
+    // An empty snapshot still replaces the stored collections, or they come back on the next launch
+    if (collections.length === 0 && !options?.reset) return
+    await withTransaction(async (tx) => {
+      if (options?.reset) {
+        await tx.delete(collectionsTable)
+      }
+      if (collections.length === 0) return
+      await tx
+        .insert(collectionsTable)
+        .values(collections)
+        .onConflictDoUpdate({
+          target: [collectionsTable.entryId],
+          set: conflictUpdateAllExcept(collectionsTable, ["entryId"]),
+        })
+    })
   }
 
   async deleteMany(entryId: string[]) {
     if (entryId.length === 0) return
     await db.delete(collectionsTable).where(inArray(collectionsTable.entryId, entryId))
-  }
-
-  getCollectionMany(entryId: string[]) {
-    return db.query.collectionsTable.findMany({ where: inArray(collectionsTable.entryId, entryId) })
   }
 
   getCollectionAll() {

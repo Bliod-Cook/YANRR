@@ -1,4 +1,4 @@
-import { db } from "../db"
+import { db, withTransaction } from "../db"
 import { unreadTable } from "../schemas"
 import type { UnreadSchema } from "../schemas/types"
 import type { Resetable } from "./internal/base"
@@ -19,17 +19,20 @@ class UnreadServiceStatic implements Resetable {
 
   async upsertMany(unreads: UnreadSchema[], options?: UnreadUpdateOptions) {
     // An empty snapshot still replaces the stored counts, or they come back on the next launch
-    if (options?.reset) {
-      await db.delete(unreadTable).execute()
-    }
-    if (unreads.length === 0) return
-    await db
-      .insert(unreadTable)
-      .values(unreads)
-      .onConflictDoUpdate({
-        target: [unreadTable.id],
-        set: conflictUpdateAllExcept(unreadTable, ["id"]),
-      })
+    if (unreads.length === 0 && !options?.reset) return
+    await withTransaction(async (tx) => {
+      if (options?.reset) {
+        await tx.delete(unreadTable)
+      }
+      if (unreads.length === 0) return
+      await tx
+        .insert(unreadTable)
+        .values(unreads)
+        .onConflictDoUpdate({
+          target: [unreadTable.id],
+          set: conflictUpdateAllExcept(unreadTable, ["id"]),
+        })
+    })
   }
 }
 
