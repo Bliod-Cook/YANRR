@@ -83,6 +83,7 @@ Any key in [`config.example.toml`](../server/config.example.toml) can go in `.en
 | `YANRR_ICONS__PROVIDER` | `google` | Where icons of sites without a feed image come from: `google`, `google-cn` (reachable from mainland China) or `direct` (the sites themselves) |
 | `RUST_LOG` | `info` | Log level, e.g. `debug` |
 | `HTTPS_PROXY`, `HTTP_PROXY`, `NO_PROXY` | | HTTP proxy for outgoing requests |
+| `SSL_CERT_FILE` | | A PEM file of certificate authorities to trust besides the public ones, e.g. the private CA of your RSSHub or model (mount it into the container). Without Docker, adding the CA to the system's trusted certificates works too. |
 
 ### Your own RSSHub
 
@@ -107,7 +108,7 @@ docker compose up -d
 
 Database migrations run on start. To stay on one release line, change the image tag in `compose.yaml` from `latest` to, e.g., `0.1`. Don't raise the `postgres` major version in place; that needs a dump and restore.
 
-The first start with article search builds the search index, which takes a few minutes per 100,000 articles. The index lives in the `data` volume; if the `yanrr` service in your `compose.yaml` has no `data:/data` volume, download `compose.yaml` again, or the index is rebuilt whenever the container is recreated.
+The first start with article search builds the search index in the background, which takes a few minutes per 100,000 articles; until it is done, search finds only the articles indexed so far, newest first. The index lives in the `data` volume; if the `yanrr` service in your `compose.yaml` has no `data:/data` volume, download `compose.yaml` again, or the index is rebuilt whenever the container is recreated.
 
 ## Back up and restore
 

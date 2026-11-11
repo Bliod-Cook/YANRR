@@ -21,8 +21,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # The server doesn't handle SIGTERM as PID 1
-    init: true
     env_file: .env
     environment:
       YANRR_DATABASE__URL: postgres://yanrr:yanrr@postgres/yanrr

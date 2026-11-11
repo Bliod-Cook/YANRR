@@ -20,6 +20,32 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     yanrr::sync::spawn_cleaner(state.db.clone());
     yanrr::search::spawn_indexer(state.clone());
     tracing::info!("listening on {}", listener.local_addr()?);
-    axum::serve(listener, yanrr::router(state)).await?;
+    axum::serve(listener, yanrr::router(state))
+        .with_graceful_shutdown(stopped())
+        .await?;
     Ok(())
+}
+
+/// Resolves once the server is told to stop: by ctrl-c, or by SIGTERM, which Docker and systemd stop it with.
+/// Requests under way are then answered before it exits.
+async fn stopped() {
+    let interrupted = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("ctrl-c can be listened for");
+    };
+    #[cfg(unix)]
+    let terminated = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("SIGTERM can be listened for")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let terminated = std::future::pending::<()>();
+    tokio::select! {
+        () = interrupted => {}
+        () = terminated => {}
+    }
+    tracing::info!("stopping");
 }
