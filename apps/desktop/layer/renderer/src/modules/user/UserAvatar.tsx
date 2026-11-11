@@ -3,8 +3,6 @@ import { useWhoami } from "@follow/store/user/hooks"
 import { getColorScheme, stringToHue } from "@follow/utils/color"
 import { cn } from "@follow/utils/utils"
 
-import type { LoginProps } from "./LoginButton"
-
 export const UserAvatar = ({
   ref,
   className,
@@ -16,8 +14,7 @@ export const UserAvatar = ({
   className?: string
   avatarClassName?: string
   hideName?: boolean
-} & LoginProps &
-  React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement | null> }) => {
+} & React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement | null> }) => {
   const whoami = useWhoami()
   const randomColor = stringToHue(whoami?.name || "")
   return (

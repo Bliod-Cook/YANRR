@@ -21,11 +21,10 @@ import { useFeature } from "~/hooks/biz/useFeature"
 import { useSettingModal } from "~/modules/settings/modal/use-setting-modal-hack"
 import { signOut, useSession } from "~/queries/auth"
 
-import type { LoginProps } from "./LoginButton"
 import { LoginButton } from "./LoginButton"
 import { UserAvatar } from "./UserAvatar"
 
-export type ProfileButtonProps = LoginProps & {
+export type ProfileButtonProps = {
   animatedAvatar?: boolean
 }
 
@@ -54,7 +53,7 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
         >
           <i className="i-mgc-settings-7-cute-re size-5 text-text-secondary" />
         </ActionButton>
-        <LoginButton {...props} />
+        <LoginButton />
       </>
     )
   }
