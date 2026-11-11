@@ -7,10 +7,12 @@ import type { ViewToken } from "@shopify/flash-list"
 import { useCallback, useInsertionEffect, useMemo, useRef, useState } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 
+import { useAiEnabled } from "@/src/atoms/server-configs"
 import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 
 import type { TimelineEntries } from "../screen/timeline-entries"
 import { collectEntriesScrolledPast } from "./scrolled-past"
+import { getTranslationPrefetchIds } from "./translation-prefetch"
 
 /**
  * What a list of entries does with the entries on screen: it loads their content and
@@ -81,8 +83,9 @@ export function useEntryListViewability({
   const translation = useGeneralSettingKey("translation")
   const translationMode = useGeneralSettingKey("translationMode")
   const actionLanguage = useActionLanguage()
+  const aiEnabled = useAiEnabled()
   usePrefetchEntryTranslation({
-    entryIds: active === false ? [] : visibleIds,
+    entryIds: getTranslationPrefetchIds({ visibleIds, active, aiEnabled }),
     language: actionLanguage,
     enabled: translation,
     mode: translationMode,
