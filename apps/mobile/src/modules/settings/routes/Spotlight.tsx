@@ -37,19 +37,10 @@ const createSpotlightRule = (): SpotlightRule => ({
   color: defaultSpotlightColor,
 })
 
-const createEditSpotlightRuleView = (ruleId: string) => {
-  const EditSpotlightRuleView: NavigationControllerView = function SpotlightRuleEditorView() {
-    return <EditSpotlightRuleScreen ruleId={ruleId} />
-  }
-  EditSpotlightRuleView.id = `spotlight-rule-${ruleId}`
-  EditSpotlightRuleView.displayName = `SpotlightRuleEditorView(${ruleId})`
-  return EditSpotlightRuleView
-}
-
 const addSpotlightRule = () => {
   const rule = createSpotlightRule()
   setSpotlightSetting("spotlights", [...getSpotlightSettings().spotlights, rule])
-  Navigation.rootNavigation.presentControllerView(createEditSpotlightRuleView(rule.id))
+  Navigation.rootNavigation.presentControllerView(EditSpotlightRuleScreen, { ruleId: rule.id })
 }
 
 export const SpotlightScreen: NavigationControllerView = () => {
@@ -87,9 +78,9 @@ export const SpotlightScreen: NavigationControllerView = () => {
                 .filter(Boolean)
                 .join(" · ")}
               onPress={() => {
-                Navigation.rootNavigation.presentControllerView(
-                  createEditSpotlightRuleView(rule.id),
-                )
+                Navigation.rootNavigation.presentControllerView(EditSpotlightRuleScreen, {
+                  ruleId: rule.id,
+                })
               }}
               prefix={<SpotlightRuleColorDot color={rule.color} />}
             />

@@ -28,8 +28,6 @@ vi.mock("expo", async () => {
 const EntryScreen: NavigationControllerView<{ entryId: string }> = () => null
 const FeedScreen: NavigationControllerView = () => null
 const FormScreen: NavigationControllerView = () => null
-const SettingsScreen: NavigationControllerView = () => null
-SettingsScreen.id = "settings"
 
 describe("Navigation", () => {
   let navigation: Navigation
@@ -66,14 +64,6 @@ describe("Navigation", () => {
     navigation.pushControllerView(FeedScreen)
 
     expect(screens()).toEqual([EntryScreen, FeedScreen])
-  })
-
-  it("keeps a screen with an id on the stack once", () => {
-    navigation.pushControllerView(SettingsScreen)
-    navigation.pushControllerView(FeedScreen)
-    navigation.pushControllerView(SettingsScreen)
-
-    expect(screens()).toEqual([SettingsScreen, FeedScreen])
   })
 
   it("replaces the top screen with a route of its own", () => {

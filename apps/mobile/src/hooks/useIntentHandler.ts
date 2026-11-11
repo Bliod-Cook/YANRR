@@ -45,8 +45,8 @@ const presentFollowScreen = async (navigation: Navigation, props: FollowScreenPr
     return
   }
 
-  // The navigation keeps a screen that is on top already, so the open form would stay, showing
-  // and following the feed of the link before. The new link takes its place.
+  // A form that is open already would stay under the new one, showing and following the feed of
+  // the link before. The new link takes its place.
   const topRoute = jotaiStore.get(navigation.__dangerous_getCtxValue().routesAtom).at(-1)
   if (topRoute?.Component === FollowScreen) {
     navigation.__internal_dismiss(topRoute.id)

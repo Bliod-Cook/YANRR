@@ -78,7 +78,7 @@ export class Navigation {
 
   private resolveScreenOptions<T>(
     view: NavigationControllerView<T>,
-  ): Required<Omit<NavigationControllerViewExtraProps, "id">> {
+  ): Required<NavigationControllerViewExtraProps> {
     return {
       transparent: view.transparent ?? false,
       title: view.title ?? "",
@@ -107,7 +107,6 @@ export class Navigation {
     const topRoute = routes.at(-1)
     // A second tap before the screen showed asks for the same screen again
     if (topRoute?.Component === view && haveSameProps(topRoute.props, props)) return
-    if (view.id && routes.some((route) => route.Component?.id === view.id)) return
     this.setRoutes([...routes, this.createRoute(view, props, type)])
   }
 
