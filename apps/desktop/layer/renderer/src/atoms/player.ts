@@ -100,6 +100,8 @@ export const AudioPlayer = {
       }
     }
 
+    this.audio.onended = () => this.pause()
+
     const currentActionId = this.__currentActionId
     return this.audio
       .play()

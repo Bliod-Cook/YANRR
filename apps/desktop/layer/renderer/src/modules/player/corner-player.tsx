@@ -114,7 +114,6 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
     setNowPlaying({
       title: entry?.title || undefined,
       artist: feed?.title || undefined,
-      album: coverImage || undefined,
       artwork: [
         {
           src: coverImage || "",
@@ -308,11 +307,6 @@ export const PlayerProgress = () => {
 
   useEffect(() => {
     if (isDraggingProgress) return
-    if (duration > 0 && currentTime >= duration) {
-      AudioPlayer?.pause()
-      AudioPlayer?.seek(duration)
-      return
-    }
     setControlledCurrentTime(currentTime)
   }, [currentTime, isDraggingProgress, duration])
 
