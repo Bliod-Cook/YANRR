@@ -1,5 +1,4 @@
 import { cn } from "@follow/utils"
-import { EventBus } from "@follow/utils/event-bus"
 import type { FC, PropsWithChildren, ReactNode } from "react"
 import {
   createElement,
@@ -70,6 +69,7 @@ const useHideableBottom = (
   enable: boolean,
   originalDefaultHeaderHeight: number,
   hideableBottomHeight?: number,
+  revealKey?: unknown,
 ) => {
   const lastScrollY = useSharedValue(0)
   const largeDefaultHeaderHeight = useSharedValue(
@@ -110,10 +110,8 @@ const useHideableBottom = (
   )
 
   useEffect(() => {
-    return EventBus.subscribe("SELECT_TIMELINE", () => {
-      largeHeaderHeight.value = withTiming(largeDefaultHeaderHeight.value)
-    })
-  }, [largeDefaultHeaderHeight, largeHeaderHeight])
+    largeHeaderHeight.value = withTiming(largeDefaultHeaderHeight.value)
+  }, [largeDefaultHeaderHeight, largeHeaderHeight, revealKey])
 
   const layoutHeightOnceRef = useRef(false)
   const onLayout = useCallback(
@@ -157,6 +155,8 @@ export interface InternalNavigationHeaderProps
 
   hideableBottom?: ReactNode
   hideableBottomHeight?: number
+  /** Shows the hideable bottom again, scrolled away or not, each time this value changes */
+  hideableBottomRevealKey?: unknown
   headerTitleAbsolute?: boolean
   headerTitle?: FC<React.ComponentProps<typeof FakeNativeHeaderTitle>> | ReactNode
   isLoading?: boolean
@@ -175,6 +175,7 @@ export const InternalNavigationHeader = ({
 
   hideableBottom,
   hideableBottomHeight,
+  hideableBottomRevealKey,
   headerTitleAbsolute,
 
   promptBeforeLeave,
@@ -228,6 +229,7 @@ export const InternalNavigationHeader = ({
     !!hideableBottom,
     defaultHeight,
     hideableBottomHeight,
+    hideableBottomRevealKey,
   )
 
   const rootTitleBarStyle = useAnimatedStyle(() => {
