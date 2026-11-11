@@ -2,19 +2,22 @@ import "vite/client"
 import "../../../../packages/types/react-global"
 import "../../../../packages/types/global"
 
+import type { PageToAppPayloads } from "@follow/shared/webview-bridge"
+
+/** Injected by the app around its message channel */
 interface Bridge {
-  measure: () => void
-  setContentHeight: (height: number) => void
-  previewImage: (data: { imageUrls: string[]; index: number }) => void
-  seekAudio: (time: number) => void
+  previewImage: (data: PageToAppPayloads["previewImage"]) => void
+  seekAudio: (time: PageToAppPayloads["audio:seekTo"]["time"]) => void
 }
 
 declare global {
   export const bridge: Bridge
 
   interface Window {
-    /** Android only: the WebView's own interface to the app */
+    /** Android: the WebView's own channel to the app */
     ReactNativeWebView?: { postMessage: (message: string) => void }
+    /** iOS: the app's message handler */
+    webkit?: { messageHandlers: { message: { postMessage: (message: string) => void } } }
   }
 }
 

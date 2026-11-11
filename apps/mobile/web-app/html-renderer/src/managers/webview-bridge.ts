@@ -1,4 +1,10 @@
 import type { ReaderStylePayload } from "@follow/shared/settings/reader-style"
+import type {
+  AppToPagePayloads,
+  AppToPageType,
+  PageToAppMessage,
+} from "@follow/shared/webview-bridge"
+import { WEBVIEW_BRIDGE_VERSION } from "@follow/shared/webview-bridge"
 
 import type { EntryModel, SpotlightState } from "../../types"
 import {
@@ -12,6 +18,18 @@ import {
 } from "../atoms"
 
 type Store = ReturnType<typeof import("jotai").createStore>
+
+type Handlers = { [K in AppToPageType]: (payload: AppToPagePayloads[K]) => void }
+
+// The injected `bridge` may not exist yet on Android, while the platform's own channel always does
+const postToApp = (message: PageToAppMessage) => {
+  const json = JSON.stringify(message)
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(json)
+  } else {
+    window.webkit?.messageHandlers.message.postMessage(json)
+  }
+}
 
 /**
  * WebView Bridge Manager
@@ -27,17 +45,15 @@ export class WebViewBridgeManager {
   /**
    * Set the current entry to be rendered
    */
-  setEntry = (entry: EntryModel) => {
-    this.store.set(entryAtom, entry)
+  setEntry = (entry: AppToPagePayloads["setEntry"]) => {
+    this.store.set(entryAtom, entry as EntryModel)
     if (Array.isArray(entry.spotlightRules)) {
       this.store.set(spotlightAtom, entry.spotlightRules)
     }
-    bridge.measure()
   }
 
   setSpotlights = (spotlights: SpotlightState["spotlights"]) => {
     this.store.set(spotlightAtom, spotlights)
-    bridge.measure()
   }
 
   /**
@@ -65,23 +81,15 @@ export class WebViewBridgeManager {
   /**
    * Set reader typography: font family, line height and text color
    */
-  setReaderStyle = (value: ReaderStylePayload | null) => {
-    this.store.set(readerStyleAtom, value && typeof value === "object" ? value : null)
+  setReaderStyle = (value: ReaderStylePayload) => {
+    this.store.set(readerStyleAtom, value)
   }
 
   /**
    * Set root font size for the WebView
    */
-  setRootFontSize = (size = 16) => {
+  setRootFontSize = (size: number) => {
     document.documentElement.style.fontSize = `${size}px`
-  }
-
-  /**
-   * Reset the WebView state
-   */
-  reset = () => {
-    this.store.set(entryAtom, null)
-    bridge.measure()
   }
 
   /**
@@ -91,7 +99,7 @@ export class WebViewBridgeManager {
   exposeToWindow() {
     // Minimal native->JS dispatch bridge to centralize API surface
     if (!window.__FO_BRIDGE__) {
-      const handlers = {
+      const handlers: Handlers = {
         setEntry: this.setEntry,
         setSpotlights: this.setSpotlights,
         setCodeTheme: this.setCodeTheme,
@@ -99,58 +107,38 @@ export class WebViewBridgeManager {
         setNoMedia: this.setNoMedia,
         setReaderStyle: this.setReaderStyle,
         setRootFontSize: this.setRootFontSize,
-      } as const
+      }
 
-      const tryParse = (v: any): any => {
-        if (typeof v !== "string") return v
-        const s = v.trim()
-        if (!s) return v
-        if ((s.startsWith("{") && s.endsWith("}")) || (s.startsWith("[") && s.endsWith("]"))) {
-          try {
-            return JSON.parse(s)
-          } catch {
-            return v
-          }
+      const handle = (type: string, payload: unknown) => {
+        const handler = handlers[type as AppToPageType] as ((payload: unknown) => void) | undefined
+        if (handler) {
+          handler(payload)
+        } else {
+          console.warn("[FO_BRIDGE] No handler for", type)
         }
-        if (s === "true") return true
-        if (s === "false") return false
-        const n = Number(s)
-        if (!Number.isNaN(n) && s === String(n)) return n
-        return v
       }
 
       window.__FO_BRIDGE__ = {
+        // The app parses its JSON before it calls in
         dispatch(type, payload) {
           try {
-            // @ts-expect-error
-            const fn = handlers[type]
-            if (typeof fn === "function") {
-              fn(tryParse(payload))
-            } else {
-              console.warn("[FO_BRIDGE] No handler for", type)
-            }
+            handle(type, payload)
           } catch (e) {
             console.error("[FO_BRIDGE] dispatch error", type, e)
           }
         },
         applyState(state) {
           try {
-            if (!state || typeof state !== "object") return
-            for (const key of Object.keys(state)) {
-              const fn = handlers[key as keyof typeof handlers]
-              if (typeof fn === "function") {
-                // @ts-expect-error
-                fn(tryParse(state[key]))
-              }
+            for (const [type, payload] of Object.entries(state)) {
+              // No payload is a string: iOS replays a boolean or a number as its JSON text
+              handle(type, typeof payload === "string" ? JSON.parse(payload) : payload)
             }
           } catch (e) {
             console.error("[FO_BRIDGE] applyState error", e)
           }
         },
       }
-      // Android only: tells the app the page takes messages now. The app's injected `bridge` may
-      // not exist yet there, while the WebView's own interface always does.
-      window.ReactNativeWebView?.postMessage(JSON.stringify({ type: "bridgeReady" }))
+      postToApp({ type: "bridgeReady", payload: { version: WEBVIEW_BRIDGE_VERSION } })
     }
   }
 }
@@ -158,8 +146,8 @@ export class WebViewBridgeManager {
 declare global {
   interface Window {
     __FO_BRIDGE__: {
-      dispatch: (type: string, payload: string) => void
-      applyState: (state: Record<string, any>) => void
+      dispatch: <T extends AppToPageType>(type: T, payload: AppToPagePayloads[T]) => void
+      applyState: (state: Partial<Record<AppToPageType, unknown>>) => void
     }
   }
 }

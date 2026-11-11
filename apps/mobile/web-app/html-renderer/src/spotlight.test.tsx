@@ -1,7 +1,7 @@
 import type { SpotlightRule } from "@follow/shared/spotlight"
 import type { Root } from "hast"
 import { createStore } from "jotai"
-import { beforeEach, describe, expect, test, vi } from "vitest"
+import { describe, expect, test } from "vitest"
 
 import { entryAtom, spotlightAtom } from "./atoms"
 import { WebViewBridgeManager } from "./managers/webview-bridge"
@@ -192,12 +192,6 @@ describe("applySpotlightToHtmlRendererTree", () => {
 })
 
 describe("WebViewBridgeManager", () => {
-  beforeEach(() => {
-    ;(globalThis as { bridge?: { measure: ReturnType<typeof vi.fn> } }).bridge = {
-      measure: vi.fn(),
-    }
-  })
-
   test("restores spotlight rules from the entry payload", () => {
     const store = createStore()
     const manager = new WebViewBridgeManager(store)
