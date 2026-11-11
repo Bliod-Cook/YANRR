@@ -1,15 +1,9 @@
 import { FeedViewType } from "@follow/constants"
-import {
-  useFeedById,
-  useFeedByIdOrUrl,
-  usePrefetchFeed,
-  usePrefetchFeedByUrl,
-} from "@follow/store/feed/hooks"
+import { useFeedById, usePrefetchFeed, usePrefetchFeedByUrl } from "@follow/store/feed/hooks"
 import { useSubscriptionByFeedId } from "@follow/store/subscription/hooks"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
 import type { SubscriptionForm } from "@follow/store/subscription/types"
 import { whoami } from "@follow/store/user/getters"
-import { formatNumber } from "@follow/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useEffect, useMemo, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
@@ -24,7 +18,6 @@ import {
   NavigationBlurEffectHeaderView,
   SafeNavigationScrollView,
 } from "@/src/components/layouts/views/SafeNavigationScrollView"
-import { RelativeDateTime } from "@/src/components/ui/datetime/RelativeDateTime"
 import { FormProvider } from "@/src/components/ui/form/FormProvider"
 import { FormLabel } from "@/src/components/ui/form/Label"
 import { FormSwitch } from "@/src/components/ui/form/Switch"
@@ -32,9 +25,6 @@ import { TextField } from "@/src/components/ui/form/TextField"
 import { GroupedInsetListCard } from "@/src/components/ui/grouped/GroupedList"
 import { PlatformActivityIndicator } from "@/src/components/ui/loading/PlatformActivityIndicator"
 import { Text } from "@/src/components/ui/typography/Text"
-import { SafeAlertCuteReIcon } from "@/src/icons/safe_alert_cute_re"
-import { SafetyCertificateCuteReIcon } from "@/src/icons/safety_certificate_cute_re"
-import { User3CuteReIcon } from "@/src/icons/user_3_cute_re"
 import { isNotFoundError, toastFetchError } from "@/src/lib/error-parser"
 import { destination } from "@/src/lib/navigation/biz/Destination"
 import { useCanDismiss, useNavigation } from "@/src/lib/navigation/hooks"
@@ -43,7 +33,6 @@ import { toast } from "@/src/lib/toast"
 import { FeedSummary } from "@/src/modules/discover/FeedSummary"
 import { FollowStateView } from "@/src/modules/feed/FollowStateView"
 import { FeedViewSelector } from "@/src/modules/feed/view-selector"
-import { useColor } from "@/src/theme/colors"
 
 const formSchema = z.object({
   view: z.coerce.number(),
@@ -87,27 +76,23 @@ const FeedLoadState = ({
     </FollowStateView>
   )
 }
-/** `defaultView` is the view a link asked for, which wins over the one the feed suggests */
+/** `defaultView` is the view a link asked for */
 export function FollowFeed(props: { id: string; defaultView?: FeedViewType }) {
   const { id } = props
   const feed = useFeedById(id as string)
-  const { data, error, isFetching, refetch } = usePrefetchFeed(id as string)
+  const { error, isFetching, refetch } = usePrefetchFeed(id as string)
   if (!feed) {
     return (
       <FeedLoadState id={id} isFetching={isFetching} error={error} onRetry={() => void refetch()} />
     )
   }
-  return (
-    <FollowImpl feedId={id} defaultView={props.defaultView ?? data?.analytics?.view ?? undefined} />
-  )
+  return <FollowImpl feedId={id} defaultView={props.defaultView} />
 }
 export function FollowUrl(props: { url: string; defaultView?: FeedViewType }) {
   const { url } = props
   const { isFetching, data, error, refetch } = usePrefetchFeedByUrl(url)
-  // A feed the server had not stored yet is previewed under a nonce id until the feed itself
-  // arrives, e.g. by following it, and takes the preview's place
-  const feedId = useFeedByIdOrUrl({ id: data?.feed.id, url: data?.feed.url })?.id ?? data?.feed.id
-  if (!data || !feedId) {
+  const feedId = data?.feed.id
+  if (!feedId) {
     return (
       <FeedLoadState
         id={url}
@@ -117,17 +102,11 @@ export function FollowUrl(props: { url: string; defaultView?: FeedViewType }) {
       />
     )
   }
-  return (
-    <FollowImpl
-      feedId={feedId}
-      defaultView={props.defaultView ?? data.responseData?.analytics?.view ?? undefined}
-    />
-  )
+  return <FollowImpl feedId={feedId} defaultView={props.defaultView} />
 }
 function FollowImpl(props: { feedId: string; defaultView?: FeedViewType }) {
   const { t } = useTranslation()
   const { t: tCommon } = useTranslation("common")
-  const textLabelColor = useColor("label")
   const { feedId: id, defaultView = FeedViewType.Articles } = props
   const feed = useFeedById(id)
   const subscription = useSubscriptionByFeedId(feed?.id)
@@ -261,42 +240,7 @@ function FollowImpl(props: { feedId: string; defaultView?: FeedViewType }) {
     >
       {/* Group 1 */}
       <GroupedInsetListCard>
-        <FeedSummary className="px-5 py-4" feed={feed}>
-          <View className="ml-11 mt-2 flex-row items-center gap-3 opacity-60">
-            <View className="flex-row items-center gap-1">
-              <User3CuteReIcon color={textLabelColor} width={12} height={12} />
-              <Text className="text-sm text-text">
-                {typeof feed.subscriptionCount === "number" ? (
-                  formatNumber(feed.subscriptionCount || 0)
-                ) : (
-                  <>?</>
-                )}{" "}
-                {tCommon("feed.follower", {
-                  count: feed.subscriptionCount ?? 0,
-                })}
-              </Text>
-            </View>
-            {feed.updatesPerWeek ? (
-              <View className="flex-row items-center gap-1">
-                <SafetyCertificateCuteReIcon color={textLabelColor} width={12} height={12} />
-                <Text className="text-sm text-text">
-                  {tCommon("feed.entry_week", {
-                    count: feed.updatesPerWeek,
-                  })}
-                </Text>
-              </View>
-            ) : feed.latestEntryPublishedAt ? (
-              <View className="flex-row items-center gap-1">
-                <SafeAlertCuteReIcon color={textLabelColor} width={12} height={12} />
-                <Text className="text-sm text-text">{tCommon("feed.updated_at")}</Text>
-                <RelativeDateTime
-                  className="text-sm text-text"
-                  date={feed.latestEntryPublishedAt}
-                />
-              </View>
-            ) : null}
-          </View>
-        </FeedSummary>
+        <FeedSummary className="px-5 py-4" feed={feed} />
       </GroupedInsetListCard>
       {isSubscribed && (
         <GroupedInsetListCard className="p-4">

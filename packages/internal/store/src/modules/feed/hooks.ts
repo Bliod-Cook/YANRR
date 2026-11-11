@@ -86,7 +86,7 @@ export const usePrefetchFeed = (id: string | undefined, options?: GeneralQueryOp
   return useQuery({
     ...options,
     queryKey: ["feed", id],
-    queryFn: () => feedSyncServices.fetchFeedById({ id }),
+    queryFn: () => feedSyncServices.fetchFeed({ id }),
   })
 }
 
@@ -94,7 +94,7 @@ export const usePrefetchFeedByUrl = (url: string, options?: GeneralQueryOptions)
   return useQuery({
     ...options,
     queryKey: ["feed", url],
-    queryFn: () => feedSyncServices.fetchFeedByUrl({ url }),
+    queryFn: () => feedSyncServices.fetchFeed({ url }),
   })
 }
 

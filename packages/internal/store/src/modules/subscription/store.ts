@@ -19,7 +19,7 @@ import { catchUpThroughEngine, ensureSyncedThroughEngine } from "../../sync/sync
 import type { AcknowledgedChangeKind } from "../../sync/transaction-queue"
 import { transactionQueue } from "../../sync/transaction-queue"
 import { invalidateEntriesQuery } from "../entry/hooks"
-import { getFeedById, getFeedServerId } from "../feed/getter"
+import { getFeedById } from "../feed/getter"
 import { feedActions } from "../feed/store"
 import { inboxActions } from "../inbox/store"
 import { unreadActions } from "../unread/store"
@@ -542,12 +542,7 @@ class SubscriptionSyncService {
   }
 
   async subscribe(subscription: SubscriptionForm) {
-    const body: SubscriptionForm = {
-      ...subscription,
-      // A feed the server has not stored yet is followed by its URL, not by its nonce id
-      feedId: getFeedServerId(subscription.feedId),
-    }
-    const data = await api().subscriptions.create(body)
+    const data = await api().subscriptions.create(subscription)
     // The server can answer without following anything, as when two accounts follow the same
     // new feed at once; a retry follows it
     if (!data.feed) {

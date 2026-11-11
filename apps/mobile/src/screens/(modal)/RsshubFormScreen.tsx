@@ -17,7 +17,7 @@ import { z } from "zod"
 
 import { HeaderSubmitTextButton } from "@/src/components/layouts/header/HeaderElements"
 import {
-  NavigationBlurEffectHeader,
+  NavigationBlurEffectHeaderView,
   SafeNavigationScrollView,
 } from "@/src/components/layouts/views/SafeNavigationScrollView"
 import { FormProvider, useFormContext } from "@/src/components/ui/form/FormProvider"
@@ -112,14 +112,18 @@ function FormImpl({ route, routePrefix, name }: RsshubFormParams) {
     <FormProvider form={form}>
       <PortalProvider>
         <KeyboardAvoidingView className="flex-1" behavior="padding">
-          <SafeNavigationScrollView className="bg-system-grouped-background">
-            <ScreenOptions
-              name={name}
-              routeName={routeName}
-              route={route.path}
-              routePrefix={routePrefix}
-              errors={nextErrors}
-            />
+          <SafeNavigationScrollView
+            className="bg-system-grouped-background"
+            Header={
+              <ScreenOptions
+                name={name}
+                routeName={routeName}
+                route={route.path}
+                routePrefix={routePrefix}
+                errors={nextErrors}
+              />
+            }
+          >
             <Text className="mx-4 mt-2 text-center text-sm text-secondary-label">
               {`rsshub://${routePrefix}${fullPath}`}
             </Text>
@@ -248,7 +252,7 @@ const ScreenOptions = memo(
       })
     }, [isDirty, setScreenOptions])
     return (
-      <NavigationBlurEffectHeader
+      <NavigationBlurEffectHeaderView
         title={`${name} - ${routeName}`}
         promptBeforeLeave={isDirty}
         headerRight={
@@ -295,12 +299,12 @@ const ModalHeaderSubmitButtonImpl = ({
       const url = `rsshub://${routePrefix}${fillRegexpPath}`
       const finalUrl = routeParamsPath ? `${url}/${routeParamsPath}` : url
       feedSyncServices
-        .fetchFeedById({
+        .fetchFeed({
           url: finalUrl,
         })
-        .then((feed) => {
+        .then((data) => {
           navigation.pushControllerView(FollowScreen, {
-            id: feed?.id,
+            id: data?.feed.id,
             type: "url" as const,
             url: finalUrl,
           })

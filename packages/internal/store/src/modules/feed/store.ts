@@ -1,11 +1,12 @@
 import type { FeedSchema } from "@follow/database/schemas/types"
-import { FEED_EXTRA_DATA_KEYS, FeedService } from "@follow/database/services/feed"
+import { FeedService } from "@follow/database/services/feed"
 import { SyncMetaService } from "@follow/database/services/sync-meta"
 import { isBizId } from "@follow/utils"
 
 import { api } from "../../context"
 import type { Hydratable, Resetable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
+import { apiMorph } from "../../morph/api"
 import type { FeedModel } from "./types"
 
 export interface FeedState {
@@ -57,24 +58,6 @@ const readResolvedUrls = async (): Promise<Record<string, string>> => {
     return {}
   }
 }
-// const get = useFeedStore.getState
-// const distanceTime = 1000 * 60 * 60 * 9
-
-/**
- * The keys of the stored previews that incoming feeds replace. A feed the server has not stored
- * yet is previewed under a nonce id, and the feed fetched or followed later for its URL takes its
- * place, so the nonce is neither found nor sent once the real feed is known.
- */
-const getReplacedPreviewIds = (stored: Record<string, FeedModel>, incoming: FeedSchema[]) => {
-  const previewIds = Object.keys(stored).filter((id) => stored[id]?.nonce)
-  if (previewIds.length === 0) return previewIds
-
-  const incomingIdByUrl = new Map(incoming.map((feed) => [feed.url, feed.id]))
-  return previewIds.filter((id) => {
-    const incomingId = incomingIdByUrl.get(stored[id]!.url)
-    return incomingId !== undefined && incomingId !== id
-  })
-}
 
 class FeedActions implements Hydratable, Resetable {
   async hydrate() {
@@ -87,25 +70,9 @@ class FeedActions implements Hydratable, Resetable {
   }
 
   upsertManyInSession(feeds: FeedSchema[]) {
-    const replacedPreviewIds = getReplacedPreviewIds(get().feeds, feeds)
     immerSet((draft) => {
-      for (const id of replacedPreviewIds) {
-        delete draft.feeds[id]
-      }
       for (const feed of feeds) {
-        // Feeds from subscriptions carry no analytics, so keep the stored ones for keys the
-        // incoming feed leaves empty, but let a fresh fetch replace them
-        const data = Object.fromEntries(
-          FEED_EXTRA_DATA_KEYS.filter(
-            (key) => feed[key] == null && (draft.feeds[feed.id] || {})[key],
-          ).map((key) => [key, draft.feeds[feed.id]?.[key]]),
-        )
-
-        draft.feeds[feed.id] = {
-          ...feed,
-          ...data,
-          type: "feed",
-        }
+        draft.feeds[feed.id] = { ...feed, type: "feed" }
       }
     })
   }
@@ -118,9 +85,7 @@ class FeedActions implements Hydratable, Resetable {
       this.upsertManyInSession(feeds)
     })
 
-    tx.persist(async () => {
-      await FeedService.upsertMany(feeds.filter((feed) => !("nonce" in feed)))
-    })
+    tx.persist(() => FeedService.upsertMany(feeds))
 
     await tx.run()
   }
@@ -190,59 +155,14 @@ type FeedQueryParams = {
 }
 
 class FeedSyncServices {
-  async fetchFeedById({ id, url }: FeedQueryParams) {
-    const isFeedId = isBizId(id)
-    if (!url && !isFeedId) {
-      return null
-    }
+  /** The feed with the id, or else at the URL, which the server fetches and stores if it has not yet */
+  async fetchFeed({ id, url }: FeedQueryParams) {
+    if (!url && !isBizId(id)) return null
 
-    const res = await api().feeds.get({
-      id,
-      url,
-    })
-
-    const nonce = Math.random().toString(36).slice(2, 15)
-
-    const finalData = {
-      ...res.data.feed,
-      updatesPerWeek: res.data.analytics?.updatesPerWeek,
-      subscriptionCount: res.data.analytics?.subscriptionCount,
-      latestEntryPublishedAt: res.data.analytics?.latestEntryPublishedAt,
-    } as FeedModel
-    if (!finalData.id) {
-      finalData["nonce"] = nonce
-    }
-    feedActions.upsertMany([finalData])
-
-    const feed = !finalData.id ? { ...finalData, id: nonce } : finalData
-    return {
-      ...res.data,
-      ...feed,
-    }
-  }
-
-  async fetchFeedByUrl({ url }: FeedQueryParams) {
-    const res = await api().feeds.get({ url }, { timeout: FEED_LOOKUP_TIMEOUT_MS })
-
-    const nonce = Math.random().toString(36).slice(2, 15)
-
-    const finalData = {
-      ...res.data.feed,
-      updatesPerWeek: res.data.analytics?.updatesPerWeek,
-      subscriptionCount: res.data.analytics?.subscriptionCount,
-      latestEntryPublishedAt: res.data.analytics?.latestEntryPublishedAt,
-    } as FeedModel
-    if (!finalData.id) {
-      finalData["nonce"] = nonce
-      finalData["id"] = nonce
-    }
-    feedActions.upsertMany([finalData])
-    void feedActions.setResolvedUrl(url, finalData.url)
-
-    return {
-      responseData: res.data,
-      feed: finalData,
-    }
+    const res = await api().feeds.get({ id, url }, { timeout: FEED_LOOKUP_TIMEOUT_MS })
+    await feedActions.upsertMany([apiMorph.toFeed(res.data.feed)])
+    await feedActions.setResolvedUrl(url, res.data.feed.url)
+    return res.data
   }
 }
 export const feedSyncServices = new FeedSyncServices()

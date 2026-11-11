@@ -1,37 +1,18 @@
+import { FeedService } from "@follow/database/services/feed"
+import { SyncMetaService } from "@follow/database/services/sync-meta"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { apiContext } from "../../context"
 import type { FollowAPI } from "../../types"
-import { findFeedByUrl, getFeedByUrl, getFeedServerId } from "./getter"
+import { findFeedByUrl, getFeedByUrl } from "./getter"
 import { feedActions, feedSyncServices, useFeedStore } from "./store"
 import type { FeedModel } from "./types"
 
-const { documents, storedFeeds } = vi.hoisted(() => ({
-  documents: new Map<string, string>(),
-  storedFeeds: [] as unknown[],
-}))
+vi.mock("@follow/database/db", async () =>
+  (await import("@follow/database/test-db")).createTestDB(),
+)
 
-vi.mock("@follow/database/services/feed", () => ({
-  FEED_EXTRA_DATA_KEYS: ["subscriptionCount", "updatesPerWeek", "latestEntryPublishedAt"],
-  FeedService: {
-    getFeedAll: vi.fn(async () => storedFeeds),
-    upsertMany: vi.fn(async () => {}),
-    patch: vi.fn(async () => {}),
-    reset: vi.fn(async () => {}),
-  },
-}))
-
-vi.mock("@follow/database/services/sync-meta", () => ({
-  SyncMetaService: {
-    get: vi.fn(async (key: string) => documents.get(key) ?? null),
-    set: vi.fn(async (key: string, value: string) => {
-      documents.set(key, value)
-    }),
-    delete: vi.fn(async (key: string) => {
-      documents.delete(key)
-    }),
-  },
-}))
+const RESOLVED_URLS_KEY = "feed:resolved-urls"
 
 const feed = (patch: Partial<FeedModel>) =>
   ({
@@ -42,71 +23,33 @@ const feed = (patch: Partial<FeedModel>) =>
     ...patch,
   }) as FeedModel
 
-describe("feedActions.upsertManyInSession", () => {
-  it("keeps stored analytics when the incoming feed has none", () => {
-    feedActions.upsertManyInSession([feed({ subscriptionCount: 12, updatesPerWeek: 3 })])
-    feedActions.upsertManyInSession([feed({ title: "Renamed" })])
+const storedResolvedUrls = async () =>
+  JSON.parse((await SyncMetaService.get(RESOLVED_URLS_KEY)) ?? "{}") as Record<string, string>
 
-    expect(useFeedStore.getState().feeds["feed-1"]).toMatchObject({
-      title: "Renamed",
-      subscriptionCount: 12,
-      updatesPerWeek: 3,
-    })
-  })
-
-  it("takes fresh analytics from a newer fetch", () => {
-    feedActions.upsertManyInSession([feed({ subscriptionCount: 12 })])
-    feedActions.upsertManyInSession([feed({ subscriptionCount: 15 })])
-
-    expect(useFeedStore.getState().feeds["feed-1"]?.subscriptionCount).toBe(15)
-  })
-})
-
-describe("a feed the server has not stored yet", () => {
-  const url = "https://example.com/new.xml"
+describe("feedSyncServices.fetchFeed", () => {
   const getFeed = vi.fn()
 
-  beforeEach(() => {
-    useFeedStore.setState({ feeds: {}, resolvedUrls: {} })
-    // The server answers for a new address with the parsed feed and an empty id
-    getFeed.mockResolvedValue({ data: { feed: { type: "feed", id: "", title: "New", url } } })
+  beforeEach(async () => {
+    await feedActions.reset()
+    getFeed.mockResolvedValue({ data: { feed: feed({ id: "1328554886337265664" }) } })
     apiContext.provide({ feeds: { get: getFeed } } as unknown as FollowAPI)
   })
 
-  it("is previewed under a nonce id that is never sent as its id", async () => {
-    const { feed: preview } = await feedSyncServices.fetchFeedByUrl({ url })
+  it.each([{ id: "1328554886337265664" }, { url: "https://example.com/feed.xml" }])(
+    "waits for the server, which gives the feed's source 70 s, to say why it failed: %o",
+    async (params) => {
+      await feedSyncServices.fetchFeed(params)
 
-    expect(useFeedStore.getState().feeds[preview.id]).toMatchObject({ url, nonce: preview.id })
-    expect(getFeedServerId(preview.id)).toBeUndefined()
-    feedActions.upsertManyInSession([feed({ id: "stored" })])
-    expect(getFeedServerId("stored")).toBe("stored")
-  })
+      const [, options] = getFeed.mock.calls[0] as [unknown, { timeout?: number } | undefined]
+      expect(options?.timeout).toBeGreaterThan(70_000)
+    },
+  )
 
-  it("gives way to the feed stored for its URL", async () => {
-    const { feed: preview } = await feedSyncServices.fetchFeedByUrl({ url })
-    feedActions.upsertManyInSession([feed({ id: "other-preview", nonce: "n", url: "other" })])
+  it("stores the feed", async () => {
+    await feedSyncServices.fetchFeed({ id: "1328554886337265664" })
 
-    feedActions.upsertManyInSession([feed({ id: "stored", url })])
-
-    const { feeds } = useFeedStore.getState()
-    expect(feeds[preview.id]).toBeUndefined()
-    expect(Object.keys(feeds).sort()).toEqual(["other-preview", "stored"])
-  })
-
-  it("keeps one preview when its address is fetched again", async () => {
-    const { feed: first } = await feedSyncServices.fetchFeedByUrl({ url })
-    const { feed: second } = await feedSyncServices.fetchFeedByUrl({ url })
-
-    expect(Object.keys(useFeedStore.getState().feeds)).toEqual([second.id])
-    expect(second.id).not.toBe(first.id)
-  })
-
-  it("waits for the server, which gives the feed's source 70 s, to say why it failed", async () => {
-    getFeed.mockClear()
-    await feedSyncServices.fetchFeedByUrl({ url })
-
-    const [, options] = getFeed.mock.calls[0] as [unknown, { timeout?: number } | undefined]
-    expect(options?.timeout).toBeGreaterThan(70_000)
+    expect(useFeedStore.getState().feeds["1328554886337265664"]?.title).toBe("Feed")
+    expect(await FeedService.getFeedAll()).toMatchObject([{ id: "1328554886337265664" }])
   })
 })
 
@@ -114,24 +57,17 @@ describe("a feed the server keeps under another URL than its address", () => {
   const address = "http://localhost:1200/test/sort"
   const url = "rsshub://test/sort"
 
-  beforeEach(() => {
-    documents.clear()
-    storedFeeds.length = 0
-    useFeedStore.setState({ feeds: {}, resolvedUrls: {} })
-    const getFeed = vi.fn(async () => ({
-      data: { feed: { type: "feed", id: "", title: "", url } },
-    }))
+  beforeEach(async () => {
+    await feedActions.reset()
+    const getFeed = vi.fn(async () => ({ data: { feed: feed({ id: "feed-sort", url }) } }))
     apiContext.provide({ feeds: { get: getFeed } } as unknown as FollowAPI)
   })
 
-  it("is found by its address once it was looked up, and after it is followed", async () => {
+  it("is found by its address once it was looked up", async () => {
     expect(getFeedByUrl(address)).toBeUndefined()
 
-    const { feed: preview } = await feedSyncServices.fetchFeedByUrl({ url: address })
-    expect(getFeedByUrl(address)?.id).toBe(preview.id)
+    await feedSyncServices.fetchFeed({ url: address })
 
-    // Following it brings the stored feed in place of the preview
-    feedActions.upsertManyInSession([feed({ id: "feed-sort", url })])
     expect(getFeedByUrl(address)?.id).toBe("feed-sort")
     expect(getFeedByUrl(url)?.id).toBe("feed-sort")
   })
@@ -148,12 +84,10 @@ describe("a feed the server keeps under another URL than its address", () => {
   })
 
   it("is still found by its address after the app restarts", async () => {
-    await feedSyncServices.fetchFeedByUrl({ url: address })
-    await vi.waitFor(() => expect(documents.has("feed:resolved-urls")).toBe(true))
+    await feedSyncServices.fetchFeed({ url: address })
 
-    // A new launch starts from what the database holds: the followed feed and the addresses
+    // A new launch starts from what the database holds
     useFeedStore.setState({ feeds: {}, resolvedUrls: {} })
-    storedFeeds.push(feed({ id: "feed-sort", url }))
     await feedActions.hydrate()
 
     expect(getFeedByUrl(address)?.id).toBe("feed-sort")
@@ -166,7 +100,7 @@ describe("a feed the server keeps under another URL than its address", () => {
     // Resolving an address again makes it the most recent one
     await feedActions.setResolvedUrl("http://localhost:1200/test/1", "rsshub://one")
 
-    const stored = JSON.parse(documents.get("feed:resolved-urls")!) as Record<string, string>
+    const stored = await storedResolvedUrls()
     expect(Object.keys(stored)).toHaveLength(100)
     expect(stored).not.toHaveProperty(["http://localhost:1200/test/0"])
     expect(Object.entries(stored).at(-1)).toEqual(["http://localhost:1200/test/1", "rsshub://one"])
@@ -179,6 +113,6 @@ describe("a feed the server keeps under another URL than its address", () => {
     await feedActions.reset()
 
     expect(useFeedStore.getState().resolvedUrls).toEqual({})
-    expect(documents.has("feed:resolved-urls")).toBe(false)
+    expect(await SyncMetaService.get(RESOLVED_URLS_KEY)).toBeNull()
   })
 })

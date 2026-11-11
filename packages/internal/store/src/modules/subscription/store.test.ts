@@ -39,7 +39,6 @@ vi.mock("i18next", async (importOriginal) => ({
 }))
 
 vi.mock("@follow/database/services/feed", () => ({
-  FEED_EXTRA_DATA_KEYS: [],
   FeedService: {
     upsertMany: vi.fn(async () => {}),
   },
@@ -466,37 +465,6 @@ describe("subscriptionSyncService", () => {
     expect(getConfirmedSubscriptionChange("leaving")).toBeUndefined()
   })
 
-  test("follows a feed the server has not stored by its URL, not by its nonce id", async () => {
-    const url = "rsshub://test/sort"
-    useFeedStore.setState({
-      feeds: {
-        nonce: { type: "feed", id: "nonce", nonce: "nonce", url, title: "Sort" } as FeedModel,
-      },
-    })
-    seed([])
-    mocks.create.mockResolvedValue({
-      code: 0,
-      feed: { type: "feed", id: "feed-sort", url, title: "Sort" },
-      unread: {},
-    })
-
-    await subscriptionSyncService.subscribe({
-      url,
-      feedId: "nonce",
-      view: FeedViewType.Articles,
-      category: null,
-      hideFromTimeline: null,
-      title: null,
-    })
-
-    expect(mocks.create).toHaveBeenCalledTimes(1)
-    expect(mocks.create.mock.calls[0]![0]).toMatchObject({ url })
-    expect(mocks.create.mock.calls[0]![0].feedId).toBeUndefined()
-    // The followed feed takes the place of its preview
-    expect(Object.keys(useFeedStore.getState().feeds)).toEqual(["feed-sort"])
-    expect(useSubscriptionStore.getState().data["feed-sort"]?.feedId).toBe("feed-sort")
-  })
-
   test("fails a follow the server answered without what it followed, storing nothing", async () => {
     const url = "https://example.com/new-feed.xml"
     seed([])
@@ -523,7 +491,7 @@ describe("subscriptionSyncService", () => {
     useFeedStore.setState({ feeds: {}, resolvedUrls: {} })
     seed([])
     const getFeed = vi.fn(async () => ({
-      data: { feed: { type: "feed", id: "", title: "", url } },
+      data: { feed: { type: "feed", id: "feed-sort", title: "", url } },
     }))
     apiContext.provide({
       feeds: { get: getFeed },
@@ -535,7 +503,7 @@ describe("subscriptionSyncService", () => {
       unread: {},
     })
 
-    const { feed } = await feedSyncServices.fetchFeedByUrl({ url: address })
+    const { feed } = (await feedSyncServices.fetchFeed({ url: address }))!
     await subscriptionSyncService.subscribe({
       url: feed.url,
       feedId: feed.id,

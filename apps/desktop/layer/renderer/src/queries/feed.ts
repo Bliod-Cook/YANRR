@@ -14,7 +14,7 @@ export const feed = {
     defineQuery(
       ["feed", id, url],
       async () =>
-        feedSyncServices.fetchFeedById({
+        feedSyncServices.fetchFeed({
           id,
           url,
         }),
