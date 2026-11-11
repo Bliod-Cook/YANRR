@@ -1,6 +1,5 @@
 import { RootPortal } from "@follow/components/ui/portal/index.jsx"
 import { PROD } from "@follow/shared/constants"
-import { useWhoami } from "@follow/store/user/hooks"
 import { preventDefault } from "@follow/utils/dom"
 import type { PropsWithChildren } from "react"
 import * as React from "react"
@@ -10,7 +9,6 @@ import { Outlet } from "react-router"
 
 import { setMainContainerElement, setRootContainerElement } from "~/atoms/dom"
 import { useUISettingKey } from "~/atoms/settings/ui"
-import { useLoginModalShow } from "~/atoms/user"
 import { AppErrorBoundary } from "~/components/common/AppErrorBoundary"
 import { ErrorComponentType } from "~/components/errors/enum"
 import { PlainModal, PlainWithAnimationModal } from "~/components/ui/modal/stacked/custom-modal"
@@ -22,6 +20,7 @@ import { LoginModalContent } from "~/modules/auth/LoginModalContent"
 import { DebugRegistry } from "~/modules/debug/registry"
 import { SearchCmdK } from "~/modules/panel/cmdk"
 import { CmdNTrigger } from "~/modules/panel/cmdn"
+import { useIsSignedOut } from "~/queries/session"
 
 import { SubscriptionColumnContainer } from "./subscription-column/SubscriptionColumn"
 
@@ -37,8 +36,7 @@ const errorTypes = [
  */
 export function MainDestopLayout() {
   const { t } = useTranslation()
-  const isAuthFail = useLoginModalShow()
-  const user = useWhoami()
+  const isSignedOut = useIsSignedOut()
 
   const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -59,7 +57,7 @@ export function MainDestopLayout() {
         </AppErrorBoundary>
       </main>
 
-      {isAuthFail && !user && (
+      {isSignedOut && (
         <RootPortal>
           <DeclarativeModal
             id="login"
