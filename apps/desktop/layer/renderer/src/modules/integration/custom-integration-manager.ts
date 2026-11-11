@@ -40,6 +40,8 @@ export interface IntegrationPlaceholder {
   example?: string
 }
 
+const BODY_METHODS: string[] = ["POST", "PUT", "PATCH"]
+
 /**
  * Manager class for handling custom integrations
  */
@@ -140,46 +142,44 @@ export class CustomIntegrationManager {
       jsonEscape?: boolean
     } = {},
   ): string {
-    let result = template
-
-    // Define placeholder mapping
-    const placeholders: Record<string, string> = {
-      "[title]": context.title,
-      "[url]": context.url,
-      "[content_html]": context.contentHtml,
-      "[content_markdown]": context.contentMarkdown,
-      "[summary]": context.summary,
-      "[author]": context.author,
-      "[published_at]": context.publishedAt,
-      "[description]": context.description,
+    const values: Record<string, string> = {
+      title: context.title,
+      url: context.url,
+      content_html: context.contentHtml,
+      content_markdown: context.contentMarkdown,
+      summary: context.summary,
+      author: context.author,
+      published_at: context.publishedAt,
+      description: context.description,
     }
 
-    // Replace each placeholder
-    Object.entries(placeholders).forEach(([placeholder, value]) => {
-      let processedValue = value
+    // A single pass keeps `$` patterns in values literal and never re-scans inserted text.
+    return template.replace(
+      /\[(title|url|content_html|content_markdown|summary|author|published_at|description)\]/g,
+      (_, key: string) => {
+        let value = values[key]!
 
-      if (options.urlEncode) {
-        processedValue = encodeURIComponent(processedValue)
-      }
+        if (options.urlEncode) {
+          value = encodeURIComponent(value)
+        }
 
-      if (options.htmlEscape) {
-        processedValue = processedValue
-          .replaceAll("&", "&amp;")
-          .replaceAll("<", "&lt;")
-          .replaceAll(">", "&gt;")
-          .replaceAll('"', "&quot;")
-          .replaceAll("'", "&#x27;")
-      }
+        if (options.htmlEscape) {
+          value = value
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#x27;")
+        }
 
-      if (options.jsonEscape) {
-        // Learn more https://stackoverflow.com/questions/4253367/how-to-escape-a-json-string-containing-newline-characters-using-javascript
-        processedValue = JSON.stringify(processedValue).slice(1, -1)
-      }
+        if (options.jsonEscape) {
+          // Learn more https://stackoverflow.com/questions/4253367/how-to-escape-a-json-string-containing-newline-characters-using-javascript
+          value = JSON.stringify(value).slice(1, -1)
+        }
 
-      result = result.replaceAll(placeholder, processedValue)
-    })
-
-    return result
+        return value
+      },
+    )
   }
 
   /**
@@ -209,7 +209,12 @@ export class CustomIntegrationManager {
     // Process body without URL encoding
     let processedBody: string | undefined
     if (fetchTemplate.body) {
-      const jsonEscape = processedHeaders["content-type"]?.toLowerCase() === "application/json"
+      if (BODY_METHODS.includes(fetchTemplate.method) && !processedHeaders["content-type"]) {
+        processedHeaders["content-type"] = "application/json"
+      }
+      const jsonEscape = !!processedHeaders["content-type"]
+        ?.toLowerCase()
+        .startsWith("application/json")
       processedBody = this.replacePlaceholders(fetchTemplate.body, context, { jsonEscape })
     }
 
@@ -256,33 +261,18 @@ export class CustomIntegrationManager {
           description: context.description,
         })
         return { success: true }
-      } else if ((integration.type === "http" || !integration.type) && integration.fetchTemplate) {
-        // Execute HTTP request (existing logic)
+      } else if (integration.fetchTemplate) {
         const { url, headers, body, method } = await this.processFetchTemplate(
           integration.fetchTemplate,
           context,
         )
 
-        // Prepare request options for fetch adapter
-        const finalHeaders = { ...headers }
-
-        // Set content-type if not already set and we have a body
-        if (
-          body &&
-          ["POST", "PUT", "PATCH"].includes(method) &&
-          !Object.keys(headers).some((key) => key.toLowerCase() === "content-type")
-        ) {
-          finalHeaders["Content-Type"] = "application/json"
-        }
-
-        // Execute the HTTP request using fetch adapter
         const response = await getFetchAdapter().fetch(url, {
           method: method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
-          headers: finalHeaders,
-          body: body && ["POST", "PUT", "PATCH"].includes(method) ? body : undefined,
+          headers,
+          body: body && BODY_METHODS.includes(method) ? body : undefined,
         })
 
-        // Check if request was successful
         if (!response.ok) {
           throw new Error(
             t("entry_actions.custom_integration.request_failed", {
@@ -293,41 +283,6 @@ export class CustomIntegrationManager {
         }
 
         return { success: true }
-      } else {
-        // Handle backward compatibility for integrations without type field
-        if (integration.fetchTemplate) {
-          // Treat as HTTP integration
-          const { url, headers, body, method } = await this.processFetchTemplate(
-            integration.fetchTemplate,
-            context,
-          )
-
-          const finalHeaders = { ...headers }
-          if (
-            body &&
-            ["POST", "PUT", "PATCH"].includes(method) &&
-            !Object.keys(headers).some((key) => key.toLowerCase() === "content-type")
-          ) {
-            finalHeaders["Content-Type"] = "application/json"
-          }
-
-          const response = await getFetchAdapter().fetch(url, {
-            method: method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
-            headers: finalHeaders,
-            body: body && ["POST", "PUT", "PATCH"].includes(method) ? body : undefined,
-          })
-
-          if (!response.ok) {
-            throw new Error(
-              t("entry_actions.custom_integration.request_failed", {
-                status: response.status,
-                statusText: response.statusText,
-              }),
-            )
-          }
-
-          return { success: true }
-        }
       }
 
       return { success: false, error: t("entry_actions.custom_integration.invalid_config") }

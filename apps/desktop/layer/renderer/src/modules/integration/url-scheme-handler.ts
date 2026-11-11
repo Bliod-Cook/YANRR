@@ -1,6 +1,5 @@
 import type { URLSchemeTemplate } from "@follow/shared/settings/interface"
 import { t } from "i18next"
-import { toast } from "sonner"
 
 import { ipcServices } from "~/lib/client"
 
@@ -46,26 +45,15 @@ export class URLSchemeHandler {
       description?: string
     },
   ): Promise<void> {
-    try {
-      const finalScheme = this.replacePlaceholders(template.scheme, data)
+    const finalScheme = this.replacePlaceholders(template.scheme, data)
 
-      // Validate URL scheme format
-      if (!finalScheme.includes("://")) {
-        throw new Error(t("entry_actions.custom_integration.url_scheme_invalid"))
-      }
-
-      await this.openURLScheme(finalScheme)
-
-      // Since URL schemes don't return responses, we assume success
-      toast.success(t("entry_actions.custom_integration.url_scheme_success"))
-    } catch (error) {
-      console.error("URL scheme execution failed:", error)
-      toast.error(
-        t("entry_actions.custom_integration.url_scheme_failed", {
-          error: error instanceof Error ? error.message : String(error),
-        }),
-      )
+    // Validate URL scheme format
+    if (!finalScheme.includes("://")) {
+      throw new Error(t("entry_actions.custom_integration.url_scheme_invalid"))
     }
+
+    // URL schemes don't return responses, so an opened scheme counts as success
+    await this.openURLScheme(finalScheme)
   }
 
   /**
