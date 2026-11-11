@@ -15,6 +15,8 @@ import { measure, runOnJS, runOnUI, useAnimatedRef } from "react-native-reanimat
 import { MediaCarousel } from "@/src/components/ui/carousel/MediaCarousel"
 import { useLightboxControls } from "@/src/components/ui/lightbox/lightboxState"
 import { Text } from "@/src/components/ui/typography/Text"
+import { useEntryReadMenuItem, useEntryStarMenuItem } from "@/src/modules/context-menu/entry"
+import { EntryGridFooter } from "@/src/modules/entry-content/EntryGridFooter"
 
 export function EntryPictureItem({ id }: { id: string }) {
   const { t } = useTranslation()
@@ -101,6 +103,8 @@ const MediaItems = ({
   onPreview?: (index: number, thumbnail: ImageSource | undefined) => void
   aspectRatio?: number
 }) => {
+  const readItem = useEntryReadMenuItem(entryId)
+  const starItem = useEntryStarMenuItem(entryId, FeedViewType.Pictures)
   const firstMedia = media[0]
   if (!firstMedia) {
     return null
@@ -116,6 +120,13 @@ const MediaItems = ({
       media={media}
       onPreview={onPreview}
       aspectRatio={realAspectRatio}
+      entryActions={
+        <>
+          {readItem}
+          {starItem}
+        </>
+      }
+      footer={<EntryGridFooter entryId={entryId} view={FeedViewType.Pictures} />}
     />
   )
 }

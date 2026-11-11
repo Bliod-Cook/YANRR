@@ -30,6 +30,63 @@ import {
   useSelectedView,
 } from "../screen/atoms"
 
+/** The mark-as-read item of an entry's menu, also used by the menus of its media */
+export const useEntryReadMenuItem = (id: string) => {
+  const { t } = useTranslation()
+  const isLoggedIn = useIsLoggedIn()
+  const read = useEntry(id, (state) => state.read)
+  if (!isLoggedIn) return null
+  return (
+    <ContextMenu.Item
+      key="MarkAsRead"
+      onSelect={() => {
+        read ? unreadSyncService.markEntryAsUnread(id) : unreadSyncService.markEntryAsRead(id)
+      }}
+    >
+      <ContextMenu.ItemTitle>
+        {read ? t("operation.mark_as_unread") : t("operation.mark_as_read")}
+      </ContextMenu.ItemTitle>
+      <ContextMenu.ItemIcon
+        ios={{
+          name: read ? "circle.fill" : "checkmark.circle",
+        }}
+      />
+    </ContextMenu.Item>
+  )
+}
+
+/** The star item of an entry's menu, also used by the menus of its media */
+export const useEntryStarMenuItem = (id: string, view: FeedViewType) => {
+  const { t } = useTranslation()
+  const isLoggedIn = useIsLoggedIn()
+  const feedId = useEntry(id, (state) => state.feedId)
+  const isEntryStarred = useIsEntryStarred(id)
+  if (!isLoggedIn || !feedId) return null
+  return (
+    <ContextMenu.Item
+      key="Star"
+      onSelect={() => {
+        if (isEntryStarred) {
+          collectionSyncService.unstarEntry({ entryId: id })
+          toast.success(t("operation.unstar_success"))
+        } else {
+          collectionSyncService.starEntry({ entryId: id, view })
+          toast.success(t("operation.star_success"))
+        }
+      }}
+    >
+      <ContextMenu.ItemIcon
+        ios={{
+          name: isEntryStarred ? "star.slash" : "star",
+        }}
+      />
+      <ContextMenu.ItemTitle>
+        {isEntryStarred ? t("operation.unstar") : t("operation.star")}
+      </ContextMenu.ItemTitle>
+    </ContextMenu.Item>
+  )
+}
+
 export const EntryItemContextMenu = ({
   id,
   children,
@@ -48,15 +105,13 @@ export const EntryItemContextMenu = ({
   const isTimelineSource = isTimelineSourceOverride ?? currentIsTimelineSource
   const sortOrder = useEffectiveEntrySortOrder({ isTimelineSource })
   const entry = useEntry(id, (state) => ({
-    read: state.read,
-    feedId: state.feedId,
     title: state.title,
     publishedAt: state.publishedAt,
   }))
-  // Onboarding entries have no link outside the app, and relative links resolve first
+  // Relative links resolve against the feed's site first
   const externalUrl = useEntryExternalUrl(id)
-  const feedId = entry?.feedId
-  const isEntryStarred = useIsEntryStarred(id)
+  const readItem = useEntryReadMenuItem(id)
+  const starItem = useEntryStarMenuItem(id, view)
   const navigation = useNavigation()
   const handlePressPreview = useCallback(() => {
     if (entry) {
@@ -125,23 +180,7 @@ export const EntryItemContextMenu = ({
               </ContextMenu.ItemTitle>
             </ContextMenu.Item>
 
-            <ContextMenu.Item
-              key="MarkAsRead"
-              onSelect={() => {
-                entry.read
-                  ? unreadSyncService.markEntryAsUnread(id)
-                  : unreadSyncService.markEntryAsRead(id)
-              }}
-            >
-              <ContextMenu.ItemTitle>
-                {entry.read ? t("operation.mark_as_unread") : t("operation.mark_as_read")}
-              </ContextMenu.ItemTitle>
-              <ContextMenu.ItemIcon
-                ios={{
-                  name: entry.read ? "circle.fill" : "checkmark.circle",
-                }}
-              />
-            </ContextMenu.Item>
+            {readItem}
 
             <ContextMenu.Item
               key="MarkAsReadBelow"
@@ -173,34 +212,7 @@ export const EntryItemContextMenu = ({
           </>
         )}
 
-        {isLoggedIn && feedId && view !== undefined && (
-          <ContextMenu.Item
-            key="Star"
-            onSelect={() => {
-              if (isEntryStarred) {
-                collectionSyncService.unstarEntry({
-                  entryId: id,
-                })
-                toast.success(t("operation.unstar_success"))
-              } else {
-                collectionSyncService.starEntry({
-                  entryId: id,
-                  view,
-                })
-                toast.success(t("operation.star_success"))
-              }
-            }}
-          >
-            <ContextMenu.ItemIcon
-              ios={{
-                name: isEntryStarred ? "star.slash" : "star",
-              }}
-            />
-            <ContextMenu.ItemTitle>
-              {isEntryStarred ? t("operation.unstar") : t("operation.star")}
-            </ContextMenu.ItemTitle>
-          </ContextMenu.Item>
-        )}
+        {starItem}
 
         {externalUrl && (
           <ContextMenu.Item
