@@ -2,9 +2,6 @@ node_modules
 dist
 # Prebuild builds the web app of apps/mobile on the worker
 /out/
-.next
-.open-next
-next-env.d.ts
 .DS_Store
 *.log*
 .env
@@ -12,29 +9,20 @@ next-env.d.ts
 .env.*
 !.env.example
 
-# Sentry Config File
-.env.sentry-build-plugin
-.vercel
 stats.html
 
 electron.vite.config.*.mjs
 vite.config.*.mjs
 
-.generated
 .turbo
 
-apps/desktop/src/renderer/dev-dist
 tsconfig.tsbuildinfo
 buildServer.json
 
 **/**/generated-routes.ts
 
-apps/desktop/resources/cli
-
 .claude/settings.local.json
 .serena
-
-.wrangler
 
 # Local agent artifacts
 .codex/
