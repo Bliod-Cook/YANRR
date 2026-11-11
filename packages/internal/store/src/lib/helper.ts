@@ -1,6 +1,7 @@
 /**
  * @copy from renderer/src/store/utils/helper.ts
  */
+import { DEV } from "@follow/shared/constants"
 import type { Draft } from "immer"
 import { enableMapSet, isDraft, original, produce } from "immer"
 import type { StateCreator, StoreApi, UseBoundStore } from "zustand"
@@ -16,6 +17,8 @@ export const createZustandStore =
   <S, T extends StateCreator<S, [], []> = StateCreator<S, [], []>>(name: string) =>
   (store: T) => {
     const newStore = createWithEqualityFn(store, shallow)
+    // The stores hold the session user and inbox secrets, so only development builds expose them
+    if (!DEV) return newStore
 
     storeMap[name] = newStore
 

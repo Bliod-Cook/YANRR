@@ -16,7 +16,6 @@ type SummaryModel = Omit<SummarySchema, "createdAt">
 interface SummaryData {
   summary: string
   readabilitySummary: string | null
-  lastAccessed: number
 }
 
 interface SummaryState {
@@ -40,34 +39,18 @@ const set = useSummaryStore.setState
 const immerSet = createImmerSetter(useSummaryStore)
 class SummaryActions implements Resetable, Hydratable {
   async hydrate() {
-    const summaries = await summaryService.getAllSummaries()
+    const summaries = await summaryService.getSummariesToHydrate()
     this.upsertManyInSession(summaries)
   }
 
   upsertManyInSession(summaries: SummaryModel[]) {
-    const now = Date.now()
     immerSet((state) => {
       summaries.forEach((summary) => {
-        if (!summary.language) return
-
-        if (!state.data[summary.entryId]) {
-          state.data[summary.entryId] = {}
-        }
-        if (!state.data[summary.entryId]![summary.language]) {
-          state.data[summary.entryId]![summary.language] = {
-            summary: "",
-            readabilitySummary: null,
-            lastAccessed: now,
-          }
-        }
-
-        state.data[summary.entryId]![summary.language] = {
-          summary: summary.summary || state.data[summary.entryId]![summary.language]!.summary || "",
-          readabilitySummary:
-            summary.readabilitySummary ||
-            state.data[summary.entryId]![summary.language]!.readabilitySummary ||
-            null,
-          lastAccessed: now,
+        const byLanguage = (state.data[summary.entryId] ??= {})
+        const current = byLanguage[summary.language]
+        byLanguage[summary.language] = {
+          summary: summary.summary || current?.summary || "",
+          readabilitySummary: summary.readabilitySummary || current?.readabilitySummary || null,
         }
       })
     })
@@ -76,9 +59,7 @@ class SummaryActions implements Resetable, Hydratable {
   async upsertMany(summaries: SummaryModel[]) {
     this.upsertManyInSession(summaries)
 
-    for (const summary of summaries) {
-      summaryService.insertSummary(summary)
-    }
+    await Promise.all(summaries.map((summary) => summaryService.insertSummary(summary)))
   }
 
   async reset() {
@@ -89,9 +70,7 @@ class SummaryActions implements Resetable, Hydratable {
         generatingStatus: {},
       })
     })
-    tx.persist(() => {
-      summaryService.reset()
-    })
+    tx.persist(() => summaryService.reset())
 
     await tx.run()
   }
@@ -163,7 +142,6 @@ class SummarySyncService {
               target === "readabilityContent"
                 ? generatedSummary
                 : state.data[entryId]?.[actionLanguage]?.readabilitySummary || null,
-            lastAccessed: Date.now(),
           }
           state.generatingStatus[statusID] = SummaryGeneratingStatus.Success
         })
@@ -185,11 +163,11 @@ class SummarySyncService {
     const summary = await pendingPromise
 
     if (summary) {
-      summaryActions.upsertMany([
+      await summaryActions.upsertMany([
         {
           entryId,
           summary: target === "content" ? summary : "",
-          language: actionLanguage ?? null,
+          language: actionLanguage,
           readabilitySummary: target === "readabilityContent" ? summary : null,
         },
       ])

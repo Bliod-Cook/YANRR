@@ -1,4 +1,4 @@
-import { FollowAPIError } from "@follow-app/client-sdk"
+import { db } from "@follow/database/db"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 import { apiContext } from "../../context"
@@ -6,20 +6,12 @@ import type { FollowAPI } from "../../types"
 import { useEntryStore } from "../entry/store"
 import type { EntryModel } from "../entry/types"
 import { SummaryGeneratingStatus } from "./enum"
-import { summarySyncService, useSummaryStore } from "./store"
+import { summaryActions, summarySyncService, useSummaryStore } from "./store"
 import { getGenerateSummaryStatusId } from "./utils"
 
-const { insertSummaryMock } = vi.hoisted(() => ({
-  insertSummaryMock: vi.fn(),
-}))
-
-vi.mock("@follow/database/services/summary", () => ({
-  summaryService: {
-    getAllSummaries: vi.fn(),
-    insertSummary: insertSummaryMock,
-    reset: vi.fn(),
-  },
-}))
+vi.mock("@follow/database/db", async () =>
+  (await import("@follow/database/test-db")).createTestDB(),
+)
 
 const createEntry = (id: string): EntryModel => ({
   id,
@@ -33,18 +25,20 @@ describe("summarySyncService", () => {
   const actionLanguage = "en"
   const target = "content"
   const summaryApiMock = vi.fn()
+  const generate = () => summarySyncService.generateSummary({ entryId, target, actionLanguage })
+  const status = () =>
+    useSummaryStore.getState().generatingStatus[
+      getGenerateSummaryStatusId(entryId, actionLanguage, target)
+    ]
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    await summaryActions.reset()
 
     useEntryStore.setState({
       data: {
         [entryId]: createEntry(entryId),
       },
-    })
-    useSummaryStore.setState({
-      data: {},
-      generatingStatus: {},
     })
     apiContext.provide({
       ai: {
@@ -53,47 +47,34 @@ describe("summarySyncService", () => {
     } as unknown as FollowAPI)
   })
 
-  test.each([
-    { apiData: null, expected: null },
-    { apiData: "", expected: null },
-  ])(
-    "treats empty API summary data as unavailable instead of payment failure",
-    async ({ apiData, expected }) => {
+  test("stores the summary", async () => {
+    summaryApiMock.mockResolvedValue({ data: "A summary" })
+
+    await expect(generate()).resolves.toBe("A summary")
+
+    expect(await db.query.summariesTable.findMany()).toMatchObject([
+      { entryId, language: actionLanguage, summary: "A summary" },
+    ])
+  })
+
+  test.each([{ apiData: null }, { apiData: "" }])(
+    "treats an empty summary as none: $apiData",
+    async ({ apiData }) => {
       summaryApiMock.mockResolvedValue({ data: apiData })
 
-      await expect(
-        summarySyncService.generateSummary({
-          entryId,
-          target,
-          actionLanguage,
-        }),
-      ).resolves.toBe(expected)
+      await expect(generate()).resolves.toBeNull()
 
-      expect(insertSummaryMock).not.toHaveBeenCalled()
-      expect(
-        useSummaryStore.getState().generatingStatus[
-          getGenerateSummaryStatusId(entryId, actionLanguage, target)
-        ],
-      ).toBe(SummaryGeneratingStatus.Success)
+      expect(await db.query.summariesTable.findMany()).toEqual([])
+      expect(status()).toBe(SummaryGeneratingStatus.Success)
     },
   )
 
-  test("keeps real API payment errors for the upgrade prompt", async () => {
-    const paymentError = new FollowAPIError("Payment required", 402)
-    summaryApiMock.mockRejectedValue(paymentError)
+  test("marks the summary failed and passes the error on when the request fails", async () => {
+    const error = new Error("Bad gateway")
+    summaryApiMock.mockRejectedValue(error)
 
-    await expect(
-      summarySyncService.generateSummary({
-        entryId,
-        target,
-        actionLanguage,
-      }),
-    ).rejects.toBe(paymentError)
+    await expect(generate()).rejects.toBe(error)
 
-    expect(
-      useSummaryStore.getState().generatingStatus[
-        getGenerateSummaryStatusId(entryId, actionLanguage, target)
-      ],
-    ).toBe(SummaryGeneratingStatus.Error)
+    expect(status()).toBe(SummaryGeneratingStatus.Error)
   })
 })

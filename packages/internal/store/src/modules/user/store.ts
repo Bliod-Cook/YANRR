@@ -113,7 +113,7 @@ class UserSyncService {
         ...whoami,
         ...changes,
       }
-      userActions.upsertMany([nextUser as unknown as UserModel])
+      await userActions.upsertMany([nextUser as unknown as UserModel])
     })
     tx.rollback(() => {
       immerSet((state) => {

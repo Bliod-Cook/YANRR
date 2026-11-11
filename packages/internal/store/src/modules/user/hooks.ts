@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
 
-import { api, queryClient } from "../../context"
+import { queryClient } from "../../context"
+import { ensureSyncedThroughEngine } from "../../sync/sync-status"
 import type { GeneralQueryOptions } from "../../types"
+import { useSubscriptionStore } from "../subscription/store"
 import { isNewUserQueryKey, whoamiQueryKey } from "./constants"
 import type { UserStore } from "./store"
 import { userSyncService, useUserStore } from "./store"
@@ -41,14 +43,15 @@ const loggedInSelector = (state: UserStore) => !!state.whoami
 export const useIsLoggedIn = () => {
   return useUserStore(loggedInSelector)
 }
+
+/** Fewer than 5 subscriptions, counted once the sync engine has brought the local ones up to date */
 export function useIsNewUser(options?: GeneralQueryOptions) {
   const { data } = useQuery({
     enabled: options?.enabled,
     queryKey: isNewUserQueryKey,
-    queryFn: async () => {
-      const subscriptions = await api().subscriptions.get({})
-      return subscriptions.data.length < 5
-    },
+    queryFn: async () =>
+      (await ensureSyncedThroughEngine()) &&
+      useSubscriptionStore.getState().subscriptionIdSet.size < 5,
   })
   return !!data
 }

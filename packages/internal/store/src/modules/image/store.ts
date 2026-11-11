@@ -20,7 +20,7 @@ const immerSet = createImmerSetter(useImagesStore)
 
 class ImageActions implements Hydratable, Resetable {
   async hydrate() {
-    const images = await ImagesService.getImageAll()
+    const images = await ImagesService.getImagesToHydrate()
     imageActions.upsertManyInSession(images)
   }
 
