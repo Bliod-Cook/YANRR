@@ -56,8 +56,11 @@
   }
 }
 
-i {
-  @apply select-none;
+@layer base {
+  i[class^="i-"],
+  i[class*=" i-"] {
+    @apply select-none;
+  }
 }
 
 @layer utilities {
