@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 type Settings = Record<string, unknown>
 
@@ -103,6 +103,18 @@ const launch = async (userId: string) => {
 }
 
 describe("mobile setting sync", () => {
+  // The first launch pays the cold import of the stores and atoms, slow on a busy machine
+  beforeAll(async () => {
+    await Promise.all([
+      import("@follow/store/context"),
+      import("@follow/store/user/store"),
+      import("../../atoms/settings/general"),
+      import("../../atoms/settings/ui"),
+      import("../../atoms/settings/spotlight"),
+      import("./sync-queue"),
+    ])
+  }, 60_000)
+
   let app: Awaited<ReturnType<typeof launch>>
 
   beforeEach(async () => {

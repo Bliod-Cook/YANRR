@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 vi.mock("./jotai", () => {
   const storage = new Map<string, unknown>()
@@ -14,6 +14,11 @@ vi.mock("./jotai", () => {
 })
 
 describe("server address", () => {
+  // The first import loads the whole utils barrel, which can exceed a test's 5 s on a busy machine
+  beforeAll(async () => {
+    await import("./server-env")
+  }, 60_000)
+
   beforeEach(() => {
     vi.resetModules()
   })
