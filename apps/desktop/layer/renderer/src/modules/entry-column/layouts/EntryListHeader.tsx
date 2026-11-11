@@ -93,7 +93,7 @@ export const EntryListHeader: FC<{
       </EllipsisHorizontalTextWithTooltip>
     </div>
   )
-  const { mutateAsync: refreshFeed, isPending } = useRefreshFeedMutation(feedId)
+  const { mutate: refreshFeed, isPending } = useRefreshFeedMutation(feedId)
 
   const isOnline = useIsOnline()
 
@@ -105,13 +105,6 @@ export const EntryListHeader: FC<{
 
   const { isScrolledBeyondThreshold } = useEntryRootState()
   const isScrolledBeyondThresholdValue = useAtomValue(isScrolledBeyondThreshold)
-  const { sendAIShortcut } = useSendAIShortcut()
-  const summarizeTimeline = useCallback(() => {
-    void sendAIShortcut({
-      shortcutId: DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID,
-      ensureNewChat: true,
-    })
-  }, [sendAIShortcut])
   const showEntryHeader = isWideMode && !!entryId && entryId !== ROUTE_ENTRY_PENDING
   const showTimelineSummaryButton = isWideMode && aiEnabled
   const showAiTimelineToggle = aiEnabled
@@ -154,15 +147,6 @@ export const EntryListHeader: FC<{
     )
   }
 
-  const renderTimelineSummaryButton = () => {
-    if (!showTimelineSummaryButton) return null
-    return (
-      <ActionButton tooltip={t("entry_list_header.timeline_summary")} onClick={summarizeTimeline}>
-        <i className="i-mgc-paint-brush-ai-cute-re text-purple-600 dark:text-purple-400" />
-      </ActionButton>
-    )
-  }
-
   return (
     <div
       className={cn(
@@ -196,7 +180,7 @@ export const EntryListHeader: FC<{
                   {(showAiTimelineToggle || showTimelineSummaryButton) && (
                     <div className="flex items-center gap-2">
                       {aiTimelineEnabled && renderAiTimelineButton()}
-                      {renderTimelineSummaryButton()}
+                      {showTimelineSummaryButton && <TimelineSummaryButton />}
                     </div>
                   )}
                   <DividerVertical className="mx-2 w-px" />
@@ -213,12 +197,10 @@ export const EntryListHeader: FC<{
               (isBizId(routerParams.feedId!) && feed?.type === "feed" ? (
                 <ActionButton
                   tooltip={t("entry_list_header.refresh")}
-                  onClick={() => {
-                    onBeforeRefresh?.()
-                    void refreshFeed()
-                  }}
+                  // The list is loaded again once the server has fetched the feed
+                  onClick={() => refreshFeed(undefined, { onSuccess: () => refetch() })}
                 >
-                  <RotatingRefreshIcon isRefreshing={isPending} />
+                  <RotatingRefreshIcon isRefreshing={isPending || isRefreshing} />
                 </ActionButton>
               ) : (
                 <ActionButton
@@ -275,6 +257,25 @@ export const EntryListHeader: FC<{
         )}
       </div>
     </div>
+  )
+}
+
+/** Apart from the header, so the AI chat it starts is only set up with the AI feature on */
+const TimelineSummaryButton = () => {
+  const { t } = useTranslation()
+  const { sendAIShortcut } = useSendAIShortcut()
+  return (
+    <ActionButton
+      tooltip={t("entry_list_header.timeline_summary")}
+      onClick={() =>
+        void sendAIShortcut({
+          shortcutId: DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID,
+          ensureNewChat: true,
+        })
+      }
+    >
+      <i className="i-mgc-paint-brush-ai-cute-re text-purple-600 dark:text-purple-400" />
+    </ActionButton>
   )
 }
 
