@@ -6,11 +6,12 @@ import { useTranslation } from "react-i18next"
 
 import { ipcServices } from "~/lib/client"
 
-type ServerUrlError = "invalid" | "unreachable"
+type ServerUrlError = "invalid" | "unreachable" | "failed"
 
 /**
  * Sets the server the desktop app talks to, then relaunches the app, which takes the server's
- * address at startup. `beforeRelaunch` clears what is left from the server before.
+ * address at startup. `beforeRelaunch` clears what is left from the server before; the app stays
+ * open when that fails, as relaunching would carry the old server's data over.
  */
 export const ServerUrlForm = ({ beforeRelaunch }: { beforeRelaunch?: () => Promise<void> }) => {
   const { t } = useTranslation("app")
@@ -21,18 +22,21 @@ export const ServerUrlForm = ({ beforeRelaunch }: { beforeRelaunch?: () => Promi
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault()
     setIsConnecting(true)
-    const result = await ipcServices?.auth.setServerUrl(url)
-    if (result) {
-      setError(result)
+    try {
+      const result = await ipcServices?.auth.setServerUrl(url)
+      if (result) {
+        setError(result)
+        setIsConnecting(false)
+        return
+      }
+      await beforeRelaunch?.()
+    } catch (error) {
+      console.error("Failed to switch the server", error)
+      setError("failed")
       setIsConnecting(false)
       return
     }
-
-    try {
-      await beforeRelaunch?.()
-    } finally {
-      ipcServices?.app.relaunch()
-    }
+    ipcServices?.app.relaunch()
   }
 
   return (
