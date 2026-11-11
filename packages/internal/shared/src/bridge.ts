@@ -53,6 +53,8 @@ interface RenderGlobalContext {
   navigateEntry: (options: { feedId: string; entryId: string; view: number }) => void
 
   refreshSession: () => void
+  /** Ends the session the way a sign-out does, without clearing the app's data */
+  endSession: () => Promise<unknown>
 }
 
 export const registerGlobalContext = (context: Partial<RenderGlobalContext>) => {

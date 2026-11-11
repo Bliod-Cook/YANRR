@@ -1,4 +1,3 @@
-import { IN_ELECTRON } from "@follow/shared/constants"
 import { EventBus } from "@follow/utils/event-bus"
 import { isEmptyObject } from "@follow/utils/utils"
 import dayjs from "dayjs"
@@ -76,15 +75,7 @@ export const loadLanguageAndApply = async (lang: string) => {
   } else {
     // Electron bundles every language in default-resource.electron.ts, there is nothing to fetch
     if (ELECTRON) return
-    let importFilePath = ""
-
-    if (IN_ELECTRON) {
-      importFilePath =
-        (await ipcServices?.app.resolveAppAsarPath(`dist/renderer/locales/${lang}.js`)) || ""
-    } else {
-      importFilePath = `/locales/${lang}.js`
-    }
-    const res = await import(/* @vite-ignore */ importFilePath)
+    const res = await import(/* @vite-ignore */ `/locales/${lang}.js`)
       .then((res: any) => res?.default || res)
       .catch(() => {
         toast.error(`${t("common:tips.load-lng-error")}: ${lang}`)

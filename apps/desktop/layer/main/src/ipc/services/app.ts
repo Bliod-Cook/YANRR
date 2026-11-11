@@ -1,5 +1,4 @@
 import fsp from "node:fs/promises"
-import { fileURLToPath } from "node:url"
 
 import { callWindowExpose } from "@follow/shared/bridge"
 import type { BrowserWindow } from "electron"
@@ -9,7 +8,7 @@ import path from "pathe"
 
 import { START_IN_TRAY_ARGS } from "~/constants/app"
 import { isMacOS } from "~/env"
-import { getCacheDir, getCacheSize } from "~/lib/cleaner"
+import { getCacheDir } from "~/lib/cache"
 import { setRendererReady } from "~/lib/deep-link"
 import { getDownloadFileName } from "~/lib/download-file-name"
 import { i18n } from "~/lib/i18n"
@@ -67,13 +66,6 @@ export class AppService extends IpcService {
   }
 
   @IpcMethod()
-  async openExternal(url: string): Promise<void> {
-    if (!url) return
-
-    await shell.openExternal(url)
-  }
-
-  @IpcMethod()
   windowAction(input: WindowActionInput): void {
     const { sender } = getIpcContext()
     if (sender.getType() === "window") {
@@ -112,8 +104,8 @@ export class AppService extends IpcService {
       // Drop the autostart flag so a relaunch never resurrects the app hidden.
       args: process.argv.slice(1).filter((arg) => arg !== START_IN_TRAY_ARGS),
     })
-    // `app.quit()` rather than `app.exit()`: the `before-quit` handlers persist
-    // the window bounds and flush the cookie store.
+    // `app.quit()` rather than `app.exit()`: the `before-quit` handler saves the
+    // window bounds and writes the cookie store.
     app.quit()
   }
 
@@ -180,22 +172,6 @@ export class AppService extends IpcService {
   }
 
   @IpcMethod()
-  getAppPath(): string {
-    return app.getAppPath()
-  }
-
-  @IpcMethod()
-  resolveAppAsarPath(input: string): string {
-    const resolvedInput = input.startsWith("file://") ? fileURLToPath(input) : input
-
-    if (path.isAbsolute(resolvedInput)) {
-      return resolvedInput
-    }
-
-    return path.join(app.getAppPath(), resolvedInput)
-  }
-
-  @IpcMethod()
   readyToShowMainWindow() {
     const window = WindowManager.getMainWindow()
     if (window && getIpcContext().sender === window.webContents) {
@@ -224,6 +200,7 @@ export class AppService extends IpcService {
     })
   }
 
+  /** In megabytes, 0 for none. Applies from the next launch, see `applyCacheSizeLimit`. */
   @IpcMethod()
   limitCacheSize(input: number): void {
     if (input === 0) {
@@ -238,9 +215,10 @@ export class AppService extends IpcService {
     return revealLogFile()
   }
 
+  /** In bytes */
   @IpcMethod()
-  getCacheSize() {
-    return getCacheSize()
+  getCacheSize(): Promise<number> {
+    return session.defaultSession.getCacheSize()
   }
 
   @IpcMethod()
