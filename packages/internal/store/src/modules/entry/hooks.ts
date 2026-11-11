@@ -247,8 +247,36 @@ const toCursorTime = (value: Date | string | null | undefined) => {
   return typeof value === "string" ? value : value.toISOString()
 }
 
+type EntriesQueryProps = Omit<FetchEntriesProps, "pageParam" | "read"> & FetchEntriesPropsSettings
+
+type EntriesListQueryProps = Pick<
+  EntriesQueryProps,
+  "feedId" | "inboxId" | "view" | "limit" | "feedIdList" | "isCollection"
+>
+
+/** Names a list by where its entries come from; every query key of the list starts with it */
+export const getEntriesListQueryKey = ({
+  feedId,
+  inboxId,
+  view,
+  limit,
+  feedIdList,
+  isCollection,
+}: EntriesListQueryProps) => ["entries", feedId, inboxId, view, limit, feedIdList, isCollection]
+
+export const getEntriesQueryKey = (props: EntriesQueryProps) => [
+  ...getEntriesListQueryKey(props),
+  props.unreadOnly,
+  props.aiSort,
+  getEffectiveEntrySortOrder({
+    sortOrder: props.aiSort ? "desc" : props.sortOrder,
+    unreadOnly: props.unreadOnly === true,
+    isTimelineSource: isTimelineEntriesSource(props),
+  }),
+]
+
 export const useEntriesQuery = (
-  props?: Omit<FetchEntriesProps, "pageParam" | "read"> & FetchEntriesPropsSettings,
+  props?: EntriesQueryProps,
   options?: {
     subscribed?: boolean
   },
@@ -258,38 +286,23 @@ export const useEntriesQuery = (
 
   const fetchUnread = unreadOnly
   const feedUnreadDirty = useFeedUnreadIsDirty((feedId as string) || "")
-  const effectiveSortOrder = getEffectiveEntrySortOrder({
-    sortOrder: aiSort ? "desc" : sortOrder,
-    unreadOnly: unreadOnly === true,
-    isTimelineSource: isTimelineEntriesSource({ feedId, inboxId, isCollection }),
-  })
 
   const isPop =
     "history" in globalThis && "isPop" in globalThis.history && !!globalThis.history.isPop
   const queryKey = useMemo(
-    () => [
-      "entries",
-      feedId,
-      inboxId,
-      view,
-      limit,
-      feedIdList,
-      isCollection,
-      unreadOnly,
-      aiSort,
-      effectiveSortOrder,
-    ],
-    [
-      feedId,
-      inboxId,
-      view,
-      limit,
-      feedIdList,
-      isCollection,
-      unreadOnly,
-      aiSort,
-      effectiveSortOrder,
-    ],
+    () =>
+      getEntriesQueryKey({
+        feedId,
+        inboxId,
+        view,
+        limit,
+        feedIdList,
+        isCollection,
+        unreadOnly,
+        aiSort,
+        sortOrder,
+      }),
+    [feedId, inboxId, view, limit, feedIdList, isCollection, unreadOnly, aiSort, sortOrder],
   )
 
   const entriesQuery = useMemo(() => entriesQueryOptions(queryKey), [queryKey])

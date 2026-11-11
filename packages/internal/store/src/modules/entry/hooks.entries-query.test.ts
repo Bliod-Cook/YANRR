@@ -13,7 +13,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 
 import { apiContext, queryClientContext } from "../../context"
 import type { FollowAPI } from "../../types"
-import { useEntriesQuery } from "./hooks"
+import { getEntriesListQueryKey, getEntriesQueryKey, useEntriesQuery } from "./hooks"
 
 vi.mock("@follow/database/db", async () =>
   (await import("@follow/database/test-db")).createTestDB(),
@@ -125,6 +125,17 @@ describe("useEntriesQuery against a server", () => {
   }
 
   const fourEntries = [served("e0", 9), served("e1", 8), served("e2", 7), served("e3", 6)]
+
+  it("keys the cached list by what the key builders return", async () => {
+    await listen(fourEntries)
+    await show()
+
+    const props = { feedId: "feed-1", view: FeedViewType.Articles, limit: 2 }
+    expect(client.getQueryData(getEntriesQueryKey(props))).toBeDefined()
+    expect(
+      client.getQueryCache().findAll({ queryKey: getEntriesListQueryKey(props) }),
+    ).toHaveLength(1)
+  })
 
   it("keeps the loaded entries when the next page fails, and reports the failure", async () => {
     await listen(fourEntries)

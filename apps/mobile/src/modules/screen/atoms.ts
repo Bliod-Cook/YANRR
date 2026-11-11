@@ -2,6 +2,7 @@ import { FeedViewType } from "@follow/constants"
 import { useCollectionEntryList } from "@follow/store/collection/hooks"
 import { FEED_COLLECTION_LIST } from "@follow/store/constants/app"
 import {
+  getEntriesListQueryKey,
   useEntriesQuery,
   useEntryIdsByFeedId,
   useEntryIdsByFeedIds,
@@ -159,17 +160,12 @@ function useEntriesQueryProps(viewId?: FeedViewType) {
 }
 
 /**
- * Whether the entries list shown here is loading, without loading it a second time. The store
- * keys a list by where its entries come from first (`["entries", feedId, inboxId, view, limit,
- * feedIdList, isCollection, …]`), then by the reading settings, so the first part names it.
+ * Whether the entries list shown here is loading, without loading it a second time. The list is
+ * named by where its entries come from; the reading settings only refine its query key.
  */
 export function useIsFetchingEntries() {
-  const { feedId, inboxId, view, limit, feedIdList, isCollection } = useEntriesQueryProps().payload
-  return (
-    useIsFetching({
-      queryKey: ["entries", feedId, inboxId, view, limit, feedIdList, isCollection],
-    }) > 0
-  )
+  const { payload } = useEntriesQueryProps()
+  return useIsFetching({ queryKey: getEntriesListQueryKey(payload) }) > 0
 }
 
 function useRemoteEntries({ viewId, active }: UseEntriesProps): RemoteTimelineEntries {
