@@ -10,7 +10,7 @@
 
 import * as React from "react"
 import { useCallback, useMemo, useState } from "react"
-import { LayoutAnimation, PixelRatio, ScrollView, StyleSheet, View } from "react-native"
+import { PixelRatio, StyleSheet, View } from "react-native"
 import { SystemBars } from "react-native-edge-to-edge"
 import { Gesture } from "react-native-gesture-handler"
 import PagerView from "react-native-pager-view"
@@ -31,7 +31,6 @@ import Animated, {
 } from "react-native-reanimated"
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context"
 
-import { Text } from "@/src/components/ui/typography/Text"
 import { isIOS } from "@/src/lib/platform"
 
 import type { Lightbox } from "../lightboxState"
@@ -192,7 +191,6 @@ function ImageView({
   const [isDragging, setIsDragging] = useState(false)
   const [imageIndex, setImageIndex] = useState(initialImageIndex)
   const [showControls, setShowControls] = useState(true)
-  const [isAltExpanded, setAltExpanded] = React.useState(false)
   const dismissSwipeTranslateY = useSharedValue(0)
   const isFlyingAway = useSharedValue(false)
 
@@ -243,19 +241,6 @@ function ImageView({
       transform: [
         {
           translateY: withClampedSpring(show ? 0 : -30, FAST_SPRING),
-        },
-      ],
-    }
-  })
-  const animatedFooterStyle = useAnimatedStyle(() => {
-    const show = showControls && dismissSwipeTranslateY.get() === 0
-    return {
-      flexGrow: 1,
-      pointerEvents: show ? "box-none" : "none",
-      opacity: withClampedSpring(show && openProgress.get() === 1 ? 1 : 0, FAST_SPRING),
-      transform: [
-        {
-          translateY: withClampedSpring(show ? 0 : 30, FAST_SPRING),
         },
       ],
     }
@@ -347,14 +332,6 @@ function ImageView({
             onPressSave={onPressSave}
             onPressShare={onPressShare}
             currentImageUri={currentImageUri}
-          />
-        </Animated.View>
-        <Animated.View style={animatedFooterStyle} renderToHardwareTextureAndroid={!isAltExpanded}>
-          <LightboxFooter
-            images={images}
-            index={imageIndex}
-            isAltExpanded={isAltExpanded}
-            toggleAltExpanded={() => setAltExpanded((e) => !e)}
           />
         </Animated.View>
       </View>
@@ -513,73 +490,6 @@ function LightboxImage({
     />
   )
 }
-function LightboxFooter({
-  images,
-  index,
-  isAltExpanded,
-  toggleAltExpanded,
-}: {
-  images: LightboxImageSource[]
-  index: number
-  isAltExpanded: boolean
-  toggleAltExpanded: () => void
-}) {
-  const insets = useSafeAreaInsets()
-  const image = images.at(index)
-  const altText = image?.alt
-  const isMomentumScrolling = React.useRef(false)
-
-  // If there's no alt text, don't render the footer
-  if (!altText) {
-    return null
-  }
-  return (
-    <ScrollView
-      style={styles.footerScrollView}
-      scrollEnabled={isAltExpanded}
-      onMomentumScrollBegin={() => {
-        isMomentumScrolling.current = true
-      }}
-      onMomentumScrollEnd={() => {
-        isMomentumScrolling.current = false
-      }}
-      contentContainerStyle={{
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-      }}
-    >
-      <View
-        style={{
-          marginBottom: insets.bottom,
-        }}
-      >
-        <View accessibilityRole="button" style={styles.footerText}>
-          <Text
-            className="text-gray-3"
-            numberOfLines={isAltExpanded ? undefined : 3}
-            selectable
-            onPress={() => {
-              if (isMomentumScrolling.current) {
-                return
-              }
-              LayoutAnimation.configureNext({
-                duration: 450,
-                update: {
-                  type: "spring",
-                  springDamping: 1,
-                },
-              })
-              toggleAltExpanded()
-            }}
-            onLongPress={() => {}}
-          >
-            {altText}
-          </Text>
-        </View>
-      </View>
-    </ScrollView>
-  )
-}
 const styles = StyleSheet.create({
   screen: {
     position: "absolute",
@@ -615,29 +525,6 @@ const styles = StyleSheet.create({
   },
   pager: {
     flex: 1,
-  },
-  header: {
-    position: "absolute",
-    width: "100%",
-    top: 0,
-    pointerEvents: "box-none",
-  },
-  footer: {
-    position: "absolute",
-    width: "100%",
-    maxHeight: "100%",
-    bottom: 0,
-  },
-  footerScrollView: {
-    backgroundColor: "#000d",
-    flex: 1,
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    maxHeight: "100%",
-  },
-  footerText: {
-    paddingBottom: isIOS ? 20 : 16,
   },
 })
 function interpolatePx(px: number, inputRange: readonly number[], outputRange: readonly number[]) {

@@ -1,6 +1,6 @@
 import { nanoid } from "nanoid/non-secure"
 import type { PropsWithChildren } from "react"
-import { createContext, use, useCallback, useMemo, useState } from "react"
+import { createContext, use, useCallback, useMemo, useRef, useState } from "react"
 
 import type { LightboxImageSource } from "./ImageViewing/@types"
 
@@ -31,24 +31,24 @@ const LightboxControlContext = createContext<{
 
 export function LightboxStateProvider({ children }: PropsWithChildren) {
   const [activeLightbox, setActiveLightbox] = useState<Lightbox | null>(null)
+  // Keeps the controls the same while the lightbox opens and closes
+  const activeLightboxRef = useRef<Lightbox | null>(null)
 
   const openLightbox = useCallback((lightbox: Omit<Lightbox, "id">) => {
-    setActiveLightbox((prevLightbox) => {
-      if (prevLightbox) {
-        // Ignore duplicate open requests. If it's already open,
-        // the user has to explicitly close the previous one first.
-        return prevLightbox
-      } else {
-        return { ...lightbox, id: nanoid() }
-      }
-    })
+    // Ignore duplicate open requests. If it's already open,
+    // the user has to explicitly close the previous one first.
+    if (activeLightboxRef.current) return
+    const nextLightbox = { ...lightbox, id: nanoid() }
+    activeLightboxRef.current = nextLightbox
+    setActiveLightbox(nextLightbox)
   }, [])
 
   const closeLightbox = useCallback(() => {
-    const wasActive = !!activeLightbox
+    const wasActive = !!activeLightboxRef.current
+    activeLightboxRef.current = null
     setActiveLightbox(null)
     return wasActive
-  }, [activeLightbox])
+  }, [])
 
   const state = useMemo(
     () => ({

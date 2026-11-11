@@ -351,7 +351,6 @@ const ImageItem = ({
                 source={{ uri: imageSrc.uri }}
                 placeholderContentFit="contain"
                 placeholder={imageSrc.thumbUri}
-                accessibilityLabel={imageSrc.alt}
                 onLoad={
                   hasLoaded
                     ? undefined

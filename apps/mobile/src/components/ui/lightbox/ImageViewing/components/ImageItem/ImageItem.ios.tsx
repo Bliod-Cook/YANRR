@@ -221,7 +221,6 @@ const ImageItem = ({
                 placeholderContentFit="contain"
                 placeholder={imageSrc.thumbUri}
                 style={{ flex: 1, borderRadius, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
-                accessibilityLabel={imageSrc.alt}
                 accessibilityHint=""
                 enableLiveTextInteraction={showControls && !scaled}
                 accessibilityIgnoresInvertColors

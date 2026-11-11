@@ -26,7 +26,6 @@ export type LightboxImageSource = {
   thumbUri: ImageProps["placeholder"]
   thumbDimensions: Dimensions | null
   thumbRect: MeasuredDimensions | null
-  alt?: string
   type: "image" | "circle-avi" | "rect-avi"
 }
 
