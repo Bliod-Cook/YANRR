@@ -1,42 +1,15 @@
 import { useWhoami } from "@follow/store/user/hooks"
 import type { AuthClientError } from "@follow/utils/auth-error"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect } from "react"
 import { toast } from "sonner"
 
 import { useAppIsReady } from "~/atoms/app"
-import { endSession, getSession as refreshBetterAuthSession } from "~/lib/auth"
-import { ipcServices } from "~/lib/client"
+import { endSession } from "~/lib/auth"
 import { getAuthErrorMessage, toastFetchError } from "~/lib/error-parser"
 import { reloadAtAppRoot } from "~/lib/reload-at-app-root"
 import { clearLocalSessionData } from "~/store/utils/clear"
 
 import { sessionQuery } from "./session"
-
-const sessionCookieRefreshInterval = 1000 * 60 * 60 * 12
-
-let lastSessionCookieRefreshAt = 0
-let sessionCookieRefreshPromise: Promise<unknown> | null = null
-
-const refreshAuthSessionCookie = async () => {
-  if (Date.now() - lastSessionCookieRefreshAt < sessionCookieRefreshInterval) {
-    return
-  }
-
-  sessionCookieRefreshPromise ??= refreshBetterAuthSession()
-    .then((result) => {
-      if (!result?.error) {
-        lastSessionCookieRefreshAt = Date.now()
-      }
-      return result
-    })
-    .catch(() => null)
-    .finally(() => {
-      sessionCookieRefreshPromise = null
-    })
-
-  await sessionCookieRefreshPromise
-}
 
 export const useSession = () => {
   const whoami = useWhoami()
@@ -83,32 +56,6 @@ export const useSession = () => {
   } as const
 }
 
-export const useAuthSessionCookieRefresh = (enabled: boolean) => {
-  useEffect(() => {
-    if (!enabled) {
-      return
-    }
-
-    const refresh = () => {
-      if (document.visibilityState !== "hidden") {
-        void refreshAuthSessionCookie()
-      }
-    }
-
-    refresh()
-
-    const interval = window.setInterval(refresh, sessionCookieRefreshInterval)
-    window.addEventListener("focus", refresh)
-    document.addEventListener("visibilitychange", refresh)
-
-    return () => {
-      window.clearInterval(interval)
-      window.removeEventListener("focus", refresh)
-      document.removeEventListener("visibilitychange", refresh)
-    }
-  }, [enabled])
-}
-
 /**
  * Whether a request of `~/lib/auth` went through. Otherwise the user is told why not: what the
  * server refused it with, or that the server could not be reached.
@@ -128,7 +75,6 @@ export const succeededOrToast = async (
 
 /** Starts the app over as the user who just signed in */
 export const handleSessionChanges = () => {
-  ipcServices?.auth.sessionChanged()
   window.location.reload()
 }
 

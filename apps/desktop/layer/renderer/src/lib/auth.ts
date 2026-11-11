@@ -1,8 +1,10 @@
 import { createAppAuthClient } from "@follow/shared/auth"
+import { registerGlobalContext } from "@follow/shared/bridge"
 import { env } from "@follow/shared/env.desktop"
 import { getApiUrl } from "@follow/utils/server-url"
 
 import { ipcServices } from "./client"
+import { unregisterPushToken } from "./push-token"
 
 // The auth client takes web addresses only, and the desktop app's API has none: it is on the
 // page's own origin, where the main process answers for the server (see `api-client`). So the
@@ -20,7 +22,7 @@ export const authClient = createAppAuthClient({
 })
 
 // @keep-sorted
-export const { changePassword, getSession, updateUser } = authClient
+export const { changePassword, updateUser } = authClient
 
 /** With the error the server refused the credentials with. Throws when it cannot be reached. */
 export const signInWithEmail = async (email: string, password: string) => {
@@ -42,9 +44,14 @@ export const signUpWithEmail = async (email: string, password: string) => {
  */
 export const endSession = async () => {
   if (ipcServices) {
+    // First, while the session still stands: the server takes a push token off its user only
+    await unregisterPushToken().catch(() => {})
     await ipcServices.auth.signOut()
     return { error: null }
   }
   const { error } = await authClient.signOut()
   return { error }
 }
+
+// The way the main process ends the session before it clears all data (macOS app menu)
+registerGlobalContext({ endSession })

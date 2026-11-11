@@ -5,7 +5,7 @@ import type { UISettings } from "@follow/shared/settings/interface"
 import { useUnreadAll } from "@follow/store/unread/hooks"
 import { hexToHslString } from "@follow/utils"
 import i18next from "i18next"
-import { useEffect, useInsertionEffect, useLayoutEffect, useRef } from "react"
+import { useEffect, useInsertionEffect, useLayoutEffect } from "react"
 
 import { useGeneralSettingKey } from "~/atoms/settings/general"
 import { useUISettingValue } from "~/atoms/settings/ui"
@@ -18,32 +18,12 @@ import { ipcServices } from "~/lib/client"
 import { buildAppFontFamily } from "~/lib/font-family"
 import { loadLanguageAndApply } from "~/lib/load-language"
 
+/** The dock badge shows the unread count the app knows, and nothing else writes it */
 const useUpdateDockBadge = (setting: UISettings) => {
   const unreadCount = useUnreadAll()
 
   useEffect(() => {
-    if (setting.showDockBadge) {
-      ipcServices?.dock.pollingUpdateUnreadCount()
-    } else {
-      ipcServices?.dock.cancelPollingUpdateUnreadCount().then(() => {
-        ipcServices?.dock.setDockBadge(0)
-      })
-    }
-    return
-  }, [setting.showDockBadge])
-
-  const prevCount = useRef<null | number>(null)
-  useEffect(() => {
-    if (!setting.showDockBadge) {
-      return
-    }
-    if (prevCount.current === unreadCount) {
-      return
-    }
-
-    ipcServices?.dock.setDockBadge(unreadCount).then(() => {
-      prevCount.current = unreadCount
-    })
+    ipcServices?.dock.setDockBadge(setting.showDockBadge ? unreadCount : 0)
   }, [unreadCount, setting.showDockBadge])
 }
 const useUISettingSync = () => {

@@ -1,8 +1,9 @@
-import { useAuthSessionCookieRefresh, useSession } from "~/queries/auth"
+import { usePushTokenRegistration } from "~/hooks/biz/usePushTokenRegistration"
+import { useSession } from "~/queries/auth"
 
 export const UserProvider = () => {
-  const { session } = useSession()
-  useAuthSessionCookieRefresh(!!session?.user)
+  useSession()
+  usePushTokenRegistration()
 
   return null
 }

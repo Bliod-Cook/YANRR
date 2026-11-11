@@ -14,12 +14,28 @@ import { Link } from "react-router"
 import { toast } from "sonner"
 
 import { setAppMessagingToken, useAppMessagingToken } from "~/atoms/app"
+import { useServerCapability } from "~/atoms/server-configs"
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
 import { useI18n } from "~/hooks/common"
 import { ipcServices } from "~/lib/client"
 import { useMessaging, useTestMessaging } from "~/queries/messaging"
 
 export const SettingNotifications = () => {
+  const t = useI18n()
+  const pushConfigured = useServerCapability("push")
+
+  if (!pushConfigured) {
+    return (
+      <p className="mt-4 text-sm leading-relaxed text-text-secondary">
+        {t.settings("notifications.not_configured")}
+      </p>
+    )
+  }
+
+  return <NotificationChannels />
+}
+
+const NotificationChannels = () => {
   const t = useI18n()
   const { isLoading, data } = useMessaging()
   const { dismiss } = useCurrentModal()
@@ -29,9 +45,7 @@ export const SettingNotifications = () => {
   const testMessaging = useTestMessaging()
 
   useEffect(() => {
-    ipcServices?.setting.getMessagingToken().then((credentials) => {
-      setAppMessagingToken(credentials || null)
-    })
+    ipcServices?.setting.getMessagingToken().then(setAppMessagingToken)
   }, [])
 
   return (
@@ -93,7 +107,8 @@ export const SettingNotifications = () => {
               <div className="space-y-2">
                 {data?.data?.map((row) => (
                   <div
-                    key={row.channel}
+                    // Several devices may share a channel
+                    key={row.token}
                     className="group relative flex items-center gap-4 rounded-lg border border-border bg-background p-4 transition-all hover:border-border hover:bg-fill-secondary/30"
                   >
                     {/* Channel Info */}

@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { logger } from "~/logger"
 
 import { getIconPath } from "../helper"
-import { ensureNotificationsTokenSent, updateNotificationsToken } from "../lib/user"
 import { AppManager } from "./app"
 
 const credentials = {
@@ -45,7 +44,6 @@ const mocks = vi.hoisted(() => ({
     setAsDefaultProtocolClient: vi.fn(),
   },
   connect: vi.fn(),
-  ensureNotificationsTokenSent: vi.fn(),
   isTestRun: false,
   firebaseConfig: {
     apiKey: "firebase-api-key-secret",
@@ -58,9 +56,9 @@ const mocks = vi.hoisted(() => ({
     ((event: { message: { data?: Record<string, unknown> } }) => void) | undefined,
   onReady: undefined as (() => void) | undefined,
   receiverConfig: undefined as Record<string, unknown> | undefined,
+  sendToPage: vi.fn(),
   storeGet: vi.fn(),
   storeSet: vi.fn(),
-  updateNotificationsToken: vi.fn(),
 }))
 
 vi.mock("@eneris/push-receiver", () => ({
@@ -110,7 +108,9 @@ vi.mock("electron-context-menu", () => ({
 }))
 
 vi.mock("~/manager/window", () => ({
-  WindowManager: {},
+  WindowManager: {
+    getMainWindow: () => ({ isDestroyed: () => false, webContents: { send: mocks.sendToPage } }),
+  },
 }))
 
 vi.mock("../env", () => ({
@@ -121,11 +121,8 @@ vi.mock("../env", () => ({
 vi.mock("../helper", () => ({ getIconPath: vi.fn() }))
 vi.mock("../ipc", () => ({ initializeIpcServices: vi.fn() }))
 vi.mock("../ipc/services/integration", () => ({ saveMediaToEagle: vi.fn() }))
-vi.mock("../lib/cleaner", () => ({
-  checkAndCleanCodeCache: vi.fn(),
-  clearCacheCronJob: vi.fn(),
-}))
 vi.mock("../lib/i18n", () => ({ t: vi.fn() }))
+vi.mock("../lib/open-external", () => ({ openExternalSafely: vi.fn() }))
 vi.mock("../lib/proxy", () => ({ updateProxy: vi.fn() }))
 vi.mock("../lib/store", () => ({
   store: {
@@ -134,10 +131,6 @@ vi.mock("../lib/store", () => ({
   },
 }))
 vi.mock("../lib/tray", () => ({ registerAppTray: vi.fn() }))
-vi.mock("../lib/user", () => ({
-  ensureNotificationsTokenSent: mocks.ensureNotificationsTokenSent,
-  updateNotificationsToken: mocks.updateNotificationsToken,
-}))
 vi.mock("../logger", () => ({
   logger: {
     error: vi.fn(),
@@ -145,11 +138,6 @@ vi.mock("../logger", () => ({
   },
 }))
 vi.mock("../menu", () => ({ registerAppMenu: vi.fn() }))
-vi.mock("./lifecycle", () => ({
-  LifecycleManager: {
-    onReady: vi.fn(),
-  },
-}))
 
 describe("AppManager push notifications", () => {
   beforeEach(() => {
@@ -184,7 +172,9 @@ describe("AppManager push notifications", () => {
     })
 
     expect(mocks.receiverConfig?.debug).toBe(false)
-    expect(updateNotificationsToken).toHaveBeenCalledWith(credentials)
+    // The page hands the token to the server, see `setting.getMessagingToken`
+    expect(mocks.storeSet).toHaveBeenCalledWith("notifications-credentials", credentials)
+    expect(mocks.sendToPage).toHaveBeenCalledWith("push-token")
 
     const serializedLogs = JSON.stringify([
       ...vi.mocked(logger.info).mock.calls,
@@ -199,21 +189,6 @@ describe("AppManager push notifications", () => {
     ]) {
       expect(serializedLogs).not.toContain(secret)
     }
-  })
-
-  it("sends the stored token again when the push connection is ready", async () => {
-    const registerPushNotifications = Reflect.get(
-      AppManager,
-      "registerPushNotifications",
-    ) as () => Promise<void>
-
-    await registerPushNotifications.call(AppManager)
-    expect(ensureNotificationsTokenSent).not.toHaveBeenCalled()
-
-    mocks.onReady?.()
-    mocks.onReady?.()
-
-    expect(ensureNotificationsTokenSent).toHaveBeenCalledTimes(2)
   })
 
   it("does not log connection error details or report a failed connection as connected", async () => {

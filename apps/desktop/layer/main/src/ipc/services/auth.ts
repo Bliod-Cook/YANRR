@@ -6,7 +6,6 @@ import { IpcMethod, IpcService } from "electron-ipc-decorator"
 import { removeSessionCookies } from "../../lib/auth-cookies"
 import { getApiURL, getServerUrl, getWebURL } from "../../lib/server-url"
 import { store } from "../../lib/store"
-import { deleteNotificationsToken, updateNotificationsToken } from "../../lib/user"
 
 const SERVER_ANSWER_TIMEOUT_MS = 10_000
 
@@ -30,19 +29,12 @@ const answersAsServer = async (server: string) => {
 export class AuthService extends IpcService {
   static override readonly groupName = "auth"
 
-  @IpcMethod()
-  async sessionChanged(): Promise<void> {
-    await updateNotificationsToken()
-  }
-
   /**
    * Ends the session on this device, also when the server cannot be told: other than a
    * browser, the app can drop the session cookie itself.
    */
   @IpcMethod()
   async signOut(): Promise<void> {
-    // First, while the session still stands: the server takes a push token off its user only
-    await deleteNotificationsToken().catch(() => {})
     await net
       .fetch(`${getApiURL()}/better-auth/sign-out`, {
         method: "POST",

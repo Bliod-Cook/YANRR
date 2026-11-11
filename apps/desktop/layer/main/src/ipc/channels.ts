@@ -10,6 +10,7 @@ export const IPC_SERVICE_GROUPS = [
   "integration",
   "menu",
   "reader",
+  "secret",
   "setting",
 ] as const
 
@@ -29,6 +30,9 @@ export const FindBarChannel = {
 /** Main to page: an item of the menu `menu.showContextMenu` opened was chosen, `{ path }` */
 export const MENU_CLICK_CHANNEL = "menu-click"
 
+/** Main to page: the push service registered the device, see `setting.getMessagingToken` */
+export const PUSH_TOKEN_CHANNEL = "push-token"
+
 export const CHANNELS_FROM_PAGE: readonly string[] = [
   FindBarChannel.find,
   FindBarChannel.clear,
@@ -39,4 +43,5 @@ export const CHANNELS_TO_PAGE: readonly string[] = [
   FindBarChannel.open,
   FindBarChannel.result,
   MENU_CLICK_CHANNEL,
+  PUSH_TOKEN_CHANNEL,
 ]

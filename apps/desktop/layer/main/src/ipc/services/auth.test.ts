@@ -34,13 +34,6 @@ vi.mock("../../lib/store", () => ({
   store: { get: vi.fn(), set: vi.fn() },
 }))
 
-vi.mock("../../lib/user", () => ({
-  deleteNotificationsToken: vi.fn(async () => {
-    mocks.events.push("push token deleted")
-  }),
-  updateNotificationsToken: vi.fn(),
-}))
-
 describe("AuthService.signOut", () => {
   let server: Server
 
@@ -62,13 +55,10 @@ describe("AuthService.signOut", () => {
 
   const sessionCookiesRemoved = () => mocks.removeCookie.mock.calls.map(([, name]) => name)
 
-  it("takes the device off push while the session still stands, then ends the session", async () => {
+  it("ends the session with the server and on the device", async () => {
     await new AuthService().signOut()
 
-    expect(mocks.events).toEqual([
-      "push token deleted",
-      `POST /api/better-auth/sign-out from ${mocks.serverUrl}`,
-    ])
+    expect(mocks.events).toEqual([`POST /api/better-auth/sign-out from ${mocks.serverUrl}`])
     expect(sessionCookiesRemoved()).toEqual([
       "__Secure-better-auth.session_token",
       "better-auth.session_token",

@@ -1,7 +1,7 @@
 import { PushReceiver } from "@eneris/push-receiver"
 import { callWindowExpose } from "@follow/shared/bridge"
 import { APP_ID, APP_PROTOCOL } from "@follow/shared/constants"
-import { app, nativeTheme, Notification, shell } from "electron"
+import { app, nativeTheme, Notification } from "electron"
 import contextMenu from "electron-context-menu"
 import path from "pathe"
 
@@ -10,16 +10,15 @@ import { WindowManager } from "~/manager/window"
 import { isTestRun } from "../env"
 import { getIconPath } from "../helper"
 import { initializeIpcServices } from "../ipc"
+import { PUSH_TOKEN_CHANNEL } from "../ipc/channels"
 import { saveMediaToEagle } from "../ipc/services/integration"
-import { checkAndCleanCodeCache, clearCacheCronJob } from "../lib/cleaner"
 import { t } from "../lib/i18n"
+import { openExternalSafely } from "../lib/open-external"
 import { updateProxy } from "../lib/proxy"
 import { store } from "../lib/store"
 import { registerAppTray } from "../lib/tray"
-import { ensureNotificationsTokenSent, updateNotificationsToken } from "../lib/user"
 import { logger } from "../logger"
 import { registerAppMenu } from "../menu"
-import { LifecycleManager } from "./lifecycle"
 
 class AppManagerStatic {
   private static instance: AppManagerStatic
@@ -33,14 +32,13 @@ class AppManagerStatic {
 
   public init() {
     initializeIpcServices()
-    LifecycleManager.onReady(this.onReady.bind(this))
+    void app.whenReady().then(() => this.onReady())
   }
 
   private onReady() {
     this.registerProtocols()
     this.setupAppVisuals()
     this.setupSystemConfigs()
-    this.runCronJobs()
     this.registerMenuAndContextMenu()
     this.registerPushNotifications()
 
@@ -79,11 +77,6 @@ class AppManagerStatic {
     }
   }
 
-  private runCronJobs() {
-    clearCacheCronJob()
-    checkAndCleanCodeCache()
-  }
-
   private async registerPushNotifications() {
     const firebaseConfig = import.meta.env.VITE_FIREBASE_CONFIG
     if (!firebaseConfig) {
@@ -107,13 +100,16 @@ class AppManagerStatic {
 
     instance.onReady(() => {
       logger.info("PushReceiver ready")
-      // At launch and after a reconnect, in case an earlier upload failed
-      void ensureNotificationsTokenSent()
     })
 
     instance.onCredentialsChanged(({ newCredentials }) => {
       logger.info("PushReceiver credentials changed")
-      updateNotificationsToken(newCredentials)
+      store.set(credentialsKey, newCredentials)
+      // The page hands the token to the server, as the signed-in user
+      const mainWindow = WindowManager.getMainWindow()
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(PUSH_TOKEN_CHANNEL)
+      }
     })
 
     instance.onNotification((notification) => {
@@ -130,8 +126,7 @@ class AppManagerStatic {
           })
           notification.on("click", () => {
             const mainWindow = WindowManager.getMainWindowOrCreate()
-            mainWindow.restore()
-            mainWindow.focus()
+            WindowManager.showMainWindow(mainWindow)
             const handlers = callWindowExpose(mainWindow)
             handlers.navigateEntry({
               feedId: data.feedId as string,
@@ -214,14 +209,14 @@ class AppManagerStatic {
             label: t("contextMenu.openImageInBrowser"),
             visible: params.mediaType === "image",
             click: () => {
-              shell.openExternal(params.srcURL)
+              void openExternalSafely(params.srcURL)
             },
           },
           {
             label: t("contextMenu.openLinkInBrowser"),
             visible: params.linkURL !== "",
             click: () => {
-              shell.openExternal(params.linkURL)
+              void openExternalSafely(params.linkURL)
             },
           },
           {
