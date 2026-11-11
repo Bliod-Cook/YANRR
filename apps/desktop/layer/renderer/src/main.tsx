@@ -8,6 +8,9 @@ import { IN_ELECTRON } from "@follow/shared/constants"
 import { getOS } from "@follow/utils/utils"
 
 import { ElECTRON_CUSTOM_TITLEBAR_HEIGHT } from "./constants/ui"
+import { installChunkReloadHandler } from "./lib/chunk-reload"
+
+installChunkReloadHandler()
 
 if (IN_ELECTRON) {
   const os = getOS()

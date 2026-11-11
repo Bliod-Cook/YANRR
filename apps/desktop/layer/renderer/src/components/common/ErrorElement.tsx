@@ -1,8 +1,7 @@
 import { Button } from "@follow/components/ui/button/index.js"
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { isRouteErrorResponse, useNavigate, useRouteError } from "react-router"
-import { toast } from "sonner"
 
 import { removeAppSkeleton } from "~/lib/app"
 import { attachOpenInEditor } from "~/lib/dev"
@@ -35,19 +34,6 @@ export function ErrorElement() {
   const reloadAtHome = async () => {
     await navigate("/")
     window.location.reload()
-  }
-
-  const reloadRef = useRef(false)
-  if (
-    message.startsWith("Failed to fetch dynamically imported module") &&
-    window.sessionStorage.getItem("reload") !== "1"
-  ) {
-    if (reloadRef.current) return null
-    toast.info(t("errors_page.web_app_updated"))
-    window.sessionStorage.setItem("reload", "1")
-    window.location.reload()
-    reloadRef.current = true
-    return null
   }
 
   return (

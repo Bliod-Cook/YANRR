@@ -7,6 +7,7 @@ import { Outlet } from "react-router"
 import { useAppIsReady } from "./atoms/app"
 import { useUISettingKey } from "./atoms/settings/ui"
 import { removeAppSkeleton } from "./lib/app"
+import { clearChunkReloadMarker } from "./lib/chunk-reload"
 import { ipcServices } from "./lib/client"
 import { appLog } from "./lib/log"
 import { WindowTitlebarRegion } from "./modules/app/Titlebar"
@@ -39,6 +40,7 @@ const AppLayer = () => {
     if (!appIsReady) return
     const doneTime = Math.trunc(performance.now())
     appLog("App is ready", `${doneTime}ms`)
+    clearChunkReloadMarker()
   }, [appIsReady])
 
   useEffect(() => {

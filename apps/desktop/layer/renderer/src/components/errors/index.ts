@@ -1,13 +1,16 @@
-import { lazy } from "react"
-
+import EntryNotFound from "./EntryNotFound"
 import { ErrorComponentType } from "./enum"
+import FeedNotFound from "./FeedNotFound"
+import ModalError from "./ModalError"
+import PageError from "./PageError"
+import RSSHubError from "./RSSHubError"
 
 const ErrorFallbackMap = {
-  [ErrorComponentType.Modal]: lazy(() => import("./ModalError")),
-  [ErrorComponentType.Page]: lazy(() => import("./PageError")),
-  [ErrorComponentType.FeedNotFound]: lazy(() => import("./FeedNotFound")),
-  [ErrorComponentType.RSSHubDiscoverError]: lazy(() => import("./RSSHubError")),
-  [ErrorComponentType.EntryNotFound]: lazy(() => import("./EntryNotFound")),
+  [ErrorComponentType.Modal]: ModalError,
+  [ErrorComponentType.Page]: PageError,
+  [ErrorComponentType.FeedNotFound]: FeedNotFound,
+  [ErrorComponentType.RSSHubDiscoverError]: RSSHubError,
+  [ErrorComponentType.EntryNotFound]: EntryNotFound,
 }
 
 export const getErrorFallback = (type: ErrorComponentType) => ErrorFallbackMap[type]

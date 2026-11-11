@@ -1,5 +1,5 @@
 import type { FC, PropsWithChildren } from "react"
-import { createElement, Suspense, useCallback } from "react"
+import { createElement, useCallback } from "react"
 
 import { getErrorFallback } from "../errors"
 import type { ErrorComponentType } from "../errors/enum"
@@ -44,7 +44,7 @@ const AppErrorBoundaryItem: FC<AppErrorBoundaryProps> = ({ errorType, children }
       if (!errorElement) {
         return <PageErrorFallback {...fallbackProps} />
       }
-      return <Suspense>{createElement(getErrorFallback(errorType), fallbackProps)}</Suspense>
+      return createElement(errorElement, fallbackProps)
     },
     [errorType],
   )
