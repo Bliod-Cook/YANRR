@@ -1,11 +1,11 @@
 import { existsSync } from "node:fs"
 import fsp from "node:fs/promises"
 
-import { dialog, net, shell } from "electron"
+import { net } from "electron"
 import { IpcMethod, IpcService } from "electron-ipc-decorator"
 import path from "pathe"
 
-import { t } from "~/lib/i18n"
+import { openExternalSafely } from "~/lib/open-external"
 import { store } from "~/lib/store"
 import { logger } from "~/logger"
 
@@ -52,7 +52,18 @@ interface CustomFetchInput {
   method: string
   headers: Record<string, string>
   body?: string
-  timeout?: number
+}
+
+/** How long the local apps and services the integrations talk to may take to answer */
+const INTEGRATION_TIMEOUT_MS = 10_000
+
+/** A custom integration's request, as long as the page gives one sent with the browser's fetch */
+const CUSTOM_FETCH_TIMEOUT_MS = 30_000
+
+/** The session id qBittorrent gave the app, for the host that gave it only */
+const getQBittorrentSID = (host: string) => {
+  const session = store.get("qbittorrentSID")
+  return session?.host === host ? session.sid : undefined
 }
 
 export async function saveMediaToEagle(input: SaveToEagleInput): Promise<any> {
@@ -72,58 +83,12 @@ export async function saveMediaToEagle(input: SaveToEagleInput): Promise<any> {
           },
         })),
       }),
+      signal: AbortSignal.timeout(INTEGRATION_TIMEOUT_MS),
     })
     return await res.json()
   } catch {
     return null
   }
-}
-
-const BUILT_IN_URL_SCHEME_PROTOCOLS = new Set<string>([
-  "http",
-  "https",
-  "mailto",
-  "obsidian",
-  "bear",
-  "drafts",
-  "things",
-  "notion",
-  "x-devonthink",
-])
-
-// Protocols that must never be handed to `shell.openExternal`, even after user
-// confirmation. Matches are exact so custom protocols such as `file-helper`
-// remain usable.
-const DISALLOWED_URL_SCHEME_PROTOCOLS = new Set<string>([
-  "data",
-  "file",
-  "jar",
-  "javascript",
-  "ms-msdt",
-  "res",
-  "search-ms",
-  "smb",
-  "vbscript",
-])
-
-function isDisallowedURLSchemeProtocol(protocol: string): boolean {
-  return DISALLOWED_URL_SCHEME_PROTOCOLS.has(protocol)
-}
-
-async function confirmUserDefinedURLScheme(protocol: string): Promise<boolean> {
-  const result = await dialog.showMessageBox({
-    type: "warning",
-    title: t("dialog.openExternalApp.title"),
-    message: t("dialog.openExternalApp.message", {
-      url: `${protocol}://`,
-      interpolation: { escapeValue: false },
-    }),
-    buttons: [t("dialog.open"), t("dialog.cancel")],
-    defaultId: 1,
-    cancelId: 1,
-  })
-
-  return result.response === 0
 }
 
 export class IntegrationService extends IpcService {
@@ -205,8 +170,7 @@ ${content}
   async loginToQBittorrent(input: LoginToQBittorrentInput) {
     const { host, username, password } = input
 
-    const existingSID = store.get("qbittorrentSID")
-    if (existingSID) {
+    if (getQBittorrentSID(host)) {
       const errorMessage = await this.checkQBittorrentAuth({ host })
       if (!errorMessage) {
         return
@@ -221,6 +185,7 @@ ${content}
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+      signal: AbortSignal.timeout(INTEGRATION_TIMEOUT_MS),
     })
 
     if (!res.ok) {
@@ -233,13 +198,13 @@ ${content}
       return "Failed to get SID from qBittorrent"
     }
 
-    store.set("qbittorrentSID", match[1])
+    store.set("qbittorrentSID", { host, sid: match[1] })
     return
   }
 
   async checkQBittorrentAuth(input: CheckQBittorrentAuthInput) {
     const { host } = input
-    const sid = store.get("qbittorrentSID")
+    const sid = getQBittorrentSID(host)
     if (!sid) {
       return "Not logged in to qBittorrent"
     }
@@ -249,6 +214,7 @@ ${content}
         Cookie: `SID=${sid}`,
       },
       credentials: "omit",
+      signal: AbortSignal.timeout(INTEGRATION_TIMEOUT_MS),
     })
 
     if (!res.ok) {
@@ -259,7 +225,7 @@ ${content}
   @IpcMethod()
   async addMagnet(input: AddMagnetInput) {
     const { host, urls } = input
-    const sid = store.get("qbittorrentSID")
+    const sid = getQBittorrentSID(host)
     if (!sid) {
       return "Not logged in to qBittorrent"
     }
@@ -271,6 +237,7 @@ ${content}
       },
       credentials: "omit",
       body: `urls=${encodeURIComponent(urls.join("\n"))}`,
+      signal: AbortSignal.timeout(INTEGRATION_TIMEOUT_MS),
     })
 
     if (!res.ok) {
@@ -284,7 +251,8 @@ ${content}
   @IpcMethod()
   async customFetch(input: CustomFetchInput) {
     const requestId = Math.random().toString(36).slice(2, 8)
-    const { url, method, headers, body, timeout = 10_000 } = input
+    const { url, method, headers, body } = input
+    const timeout = CUSTOM_FETCH_TIMEOUT_MS
 
     // Log request start
     logger.info(`[CustomFetch:${requestId}] Starting request`, {
@@ -312,12 +280,6 @@ ${content}
     const startTime = Date.now()
 
     try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => {
-        logger.warn(`[CustomFetch:${requestId}] Request timeout triggered after ${timeout}ms`)
-        controller.abort()
-      }, timeout)
-
       logger.debug(`[CustomFetch:${requestId}] Sending request...`)
 
       const response = await net.fetch(url, {
@@ -325,10 +287,9 @@ ${content}
         headers,
         credentials: "omit",
         body: body && ["POST", "PUT", "PATCH"].includes(method.toUpperCase()) ? body : undefined,
-        signal: controller.signal,
+        signal: AbortSignal.timeout(timeout),
       })
 
-      clearTimeout(timeoutId)
       const duration = Date.now() - startTime
 
       // Log response info
@@ -387,7 +348,7 @@ ${content}
     } catch (error) {
       const duration = Date.now() - startTime
 
-      if (error instanceof Error && error.name === "AbortError") {
+      if (error instanceof Error && error.name === "TimeoutError") {
         logger.error(`[CustomFetch:${requestId}] Request timeout`, {
           duration: `${duration}ms`,
           timeout: `${timeout}ms`,
@@ -407,66 +368,11 @@ ${content}
     }
   }
 
+  /** Opens the link a URL scheme integration made, and fails when it was not opened */
   @IpcMethod()
-  async openURLScheme(scheme: string) {
-    const requestId = Math.random().toString(36).slice(2, 8)
-
-    try {
-      // Parse and validate the protocol up-front. `shell.openExternal` will
-      // happily dispatch any scheme the OS has registered a handler for. Keep
-      // known dangerous protocols blocked while allowing user-configured app
-      // schemes such as `logseq://` or `ulysses://`.
-      let protocol: string
-      try {
-        protocol = new URL(scheme).protocol.replace(/:$/, "").toLowerCase()
-      } catch {
-        throw new Error("Invalid URL scheme format. Must include protocol (e.g., 'app://')")
-      }
-
-      if (!protocol) {
-        throw new Error("Invalid URL scheme format. Must include protocol (e.g., 'app://')")
-      }
-
-      if (isDisallowedURLSchemeProtocol(protocol)) {
-        throw new Error(`URL scheme "${protocol}://" is not allowed.`)
-      }
-
-      if (
-        !BUILT_IN_URL_SCHEME_PROTOCOLS.has(protocol) &&
-        !(await confirmUserDefinedURLScheme(protocol))
-      ) {
-        throw new Error(`URL scheme "${protocol}://" was not opened.`)
-      }
-
-      // Log URL scheme execution (mask sensitive data)
-      const safeScheme = scheme.replaceAll(/(\?|&)([^=]+)=([^&]+)/g, (_, prefix, key, value) =>
-        // Mask potential sensitive query parameters
-        key.toLowerCase().includes("token") ||
-        key.toLowerCase().includes("key") ||
-        key.toLowerCase().includes("password")
-          ? `${prefix}${key}=***`
-          : `${prefix}${key}=${value}`,
-      )
-
-      logger.info(`[URLScheme:${requestId}] Opening URL scheme`, {
-        scheme: safeScheme,
-        protocol,
-      })
-
-      // Use Electron's shell.openExternal to open URL scheme
-      // This will trigger the system's default handler for the scheme
-      await shell.openExternal(scheme)
-
-      logger.info(`[URLScheme:${requestId}] URL scheme opened successfully`)
-
-      return { success: true }
-    } catch (error) {
-      logger.error(`[URLScheme:${requestId}] Failed to open URL scheme`, {
-        error: error instanceof Error ? error.message : String(error),
-        scheme: scheme.split("://")[0], // Only log protocol for privacy
-      })
-
-      throw error
+  async openURLScheme(scheme: string): Promise<void> {
+    if (!(await openExternalSafely(scheme))) {
+      throw new Error(`The link of the URL scheme integration was not opened`)
     }
   }
 }

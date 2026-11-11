@@ -1,4 +1,7 @@
 import fsp from "node:fs/promises"
+import type { Server } from "node:http"
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
 import os from "node:os"
 
 import { dialog, shell } from "electron"
@@ -11,6 +14,8 @@ vi.mock("electron", () => ({
   ipcMain: {
     handle: vi.fn(),
   },
+  // Node's network stack stands in for Chromium's, which takes the same request
+  net: { fetch: (input: string, init?: RequestInit) => fetch(input, init) },
   shell: {
     openExternal: vi.fn(),
   },
@@ -25,10 +30,12 @@ vi.mock("electron-ipc-decorator", () => ({
   IpcService: class {},
 }))
 
+const storeData = vi.hoisted(() => new Map<string, unknown>())
+
 vi.mock("~/lib/store", () => ({
   store: {
-    get: vi.fn(),
-    set: vi.fn(),
+    get: (key: string) => storeData.get(key),
+    set: (key: string, value: unknown) => storeData.set(key, value),
   },
 }))
 
@@ -74,97 +81,67 @@ describe("IntegrationService", () => {
     ).rejects.toThrow()
   })
 
-  describe("openURLScheme", () => {
-    const openExternalMock = vi.mocked(shell.openExternal)
-    const showMessageBoxMock = vi.mocked(dialog.showMessageBox)
+  describe("qBittorrent", () => {
+    // Two qBittorrent Web UIs, each with a session id of its own
+    const servers: Server[] = []
+    const received: { host: string; path?: string; cookie?: string }[] = []
+
+    const startQBittorrent = async (sid: string) => {
+      const server = createServer((request, response) => {
+        const host = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+        received.push({ host, path: request.url, cookie: request.headers.cookie })
+        if (request.url === "/api/v2/auth/login") {
+          response.setHeader("set-cookie", `SID=${sid}; HttpOnly; path=/`)
+          response.end("Ok.")
+          return
+        }
+        response.statusCode = request.headers.cookie === `SID=${sid}` ? 200 : 403
+        response.end()
+      })
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+      servers.push(server)
+      return `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    }
 
     beforeEach(() => {
-      openExternalMock.mockReset()
-      openExternalMock.mockResolvedValue()
-      showMessageBoxMock.mockReset()
-      showMessageBoxMock.mockResolvedValue({ checkboxChecked: false, response: 0 })
+      storeData.clear()
+      received.length = 0
     })
 
-    it("rejects input that cannot be parsed as a URL", async () => {
+    afterEach(async () => {
+      for (const server of servers.splice(0)) {
+        server.closeAllConnections()
+        await new Promise((resolve) => server.close(resolve))
+      }
+    })
+
+    it("sends a session id only to the qBittorrent it came from", async () => {
+      const first = await startQBittorrent("first-sid")
+      const second = await startQBittorrent("second-sid")
       const service = new IntegrationService()
+      const login = { username: "admin", password: "secret" }
 
-      await expect(service.openURLScheme("not-a-url")).rejects.toThrow(/Invalid URL scheme/i)
-      expect(openExternalMock).not.toHaveBeenCalled()
+      await service.loginToQBittorrent({ host: first, ...login })
+      await expect(service.addMagnet({ host: second, urls: ["magnet:?xt=1"] })).resolves.toMatch(
+        /not logged in/i,
+      )
+      await service.loginToQBittorrent({ host: second, ...login })
+      await service.addMagnet({ host: second, urls: ["magnet:?xt=1"] })
+
+      expect(received.filter(({ host }) => host === second)).toEqual([
+        { host: second, path: "/api/v2/auth/login", cookie: undefined },
+        { host: second, path: "/api/v2/torrents/add", cookie: "SID=second-sid" },
+      ])
     })
+  })
 
-    // These are the dangerous protocols that previously slipped through the
-    // "contains ://" guard and reached shell.openExternal verbatim.
-    // shell.openExternal docs explicitly warn that passing untrusted URLs is
-    // unsafe — file://, smb://, search-ms:, ms-msdt:, jar:, res:, etc. have
-    // been used in real-world RCE / NTLM-credential-theft chains.
-    it.each([
-      ["file:///etc/passwd"],
-      ["FILE:///etc/passwd"],
-      ["smb://attacker.example/share"],
-      ["jar:http://attacker.example/x.jar!/"],
-      ["res://shell32.dll/1"],
-      ["ms-msdt:/id PCWDiagnostic"],
-      ["search-ms:query=secret"],
-      ["javascript:alert(1)"],
-      ["data:text/html,<script>alert(1)</script>"],
-      ["vbscript:msgbox(1)"],
-    ])(
-      "blocks dangerous scheme %s and does not invoke shell.openExternal",
-      async (dangerousScheme) => {
-        const service = new IntegrationService()
+  // Which links open is `openExternalSafely`'s to say; the integration has to report a link it
+  // did not open as failed
+  it("fails a URL scheme integration whose link was not opened", async () => {
+    vi.mocked(dialog.showMessageBox).mockResolvedValue({ checkboxChecked: false, response: 1 })
+    const service = new IntegrationService()
 
-        await expect(service.openURLScheme(dangerousScheme)).rejects.toThrow(
-          /not allowed|disallowed|not permitted/i,
-        )
-        expect(showMessageBoxMock).not.toHaveBeenCalled()
-        expect(openExternalMock).not.toHaveBeenCalled()
-      },
-    )
-
-    // Schemes of common note and task apps users set up as URL scheme integrations, plus
-    // generic web/mail. They must keep working after the fix.
-    it.each([
-      ["https://example.com"],
-      ["http://example.com/path?q=1"],
-      ["mailto:user@example.com"],
-      ["obsidian://new?vault=MyVault&name=Test"],
-      ["bear://x-callback-url/create?title=Test"],
-      ["things:///add?title=Test"],
-      ["notion://new?title=Test"],
-      ["x-devonthink://createText?title=Test"],
-      ["drafts://x-callback-url/create?text=Test"],
-    ])("permits known integration scheme %s", async (allowedScheme) => {
-      const service = new IntegrationService()
-
-      await expect(service.openURLScheme(allowedScheme)).resolves.toEqual({
-        success: true,
-      })
-      expect(showMessageBoxMock).not.toHaveBeenCalled()
-      expect(openExternalMock).toHaveBeenCalledWith(allowedScheme)
-    })
-
-    it.each([
-      ["logseq://x-callback-url/open?title=Test"],
-      ["my-app+yanrr.v2://open?title=Test"],
-      ["MYAPP://open"],
-      ["file-helper://open"],
-    ])("permits user-defined integration scheme %s", async (customScheme) => {
-      const service = new IntegrationService()
-
-      await expect(service.openURLScheme(customScheme)).resolves.toEqual({
-        success: true,
-      })
-      expect(showMessageBoxMock).toHaveBeenCalledOnce()
-      expect(openExternalMock).toHaveBeenCalledWith(customScheme)
-    })
-
-    it("does not open a user-defined integration scheme when confirmation is canceled", async () => {
-      showMessageBoxMock.mockResolvedValue({ checkboxChecked: false, response: 1 })
-      const service = new IntegrationService()
-
-      await expect(service.openURLScheme("logseq://open")).rejects.toThrow(/not opened/i)
-      expect(showMessageBoxMock).toHaveBeenCalledOnce()
-      expect(openExternalMock).not.toHaveBeenCalled()
-    })
+    await expect(service.openURLScheme("logseq://open")).rejects.toThrow(/not opened/i)
+    expect(shell.openExternal).not.toHaveBeenCalled()
   })
 })
