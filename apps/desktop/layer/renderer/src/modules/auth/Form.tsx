@@ -9,22 +9,15 @@ import {
   FormMessage,
 } from "@follow/components/ui/form/index.js"
 import { Input } from "@follow/components/ui/input/Input.js"
-import { IN_ELECTRON } from "@follow/shared/constants"
-import { userActions } from "@follow/store/user/store"
-import type { AuthUser } from "@follow-app/client-sdk"
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { TFunction } from "i18next"
 import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { Trans, useTranslation } from "react-i18next"
-import { toast } from "sonner"
 import { z } from "zod"
 
-import { signIn, signUp } from "~/lib/auth"
-import { ipcServices } from "~/lib/client"
-import { setAuthSessionToken } from "~/lib/client-session"
-import { getAuthErrorMessage } from "~/lib/error-parser"
-import { handleSessionChanges } from "~/queries/auth"
+import { signInWithEmail, signUpWithEmail } from "~/lib/auth"
+import { handleSessionChanges, succeededOrToast } from "~/queries/auth"
 
 const passwordSchema = z.string().min(8).max(128)
 
@@ -33,135 +26,9 @@ const formSchema = z.object({
   password: passwordSchema,
 })
 
-const getAuthTokenFromResult = (result: unknown) => {
-  if (!result || typeof result !== "object") {
-    return null
-  }
-
-  if ("sessionToken" in result && typeof result.sessionToken === "string") {
-    return result.sessionToken
-  }
-
-  if ("token" in result && typeof result.token === "string") {
-    return result.token
-  }
-
-  if ("session" in result && result.session && typeof result.session === "object") {
-    const { token } = result.session as { token?: unknown }
-    if (typeof token === "string") {
-      return token
-    }
-  }
-
-  if (
-    "data" in result &&
-    result.data &&
-    typeof result.data === "object" &&
-    ("sessionToken" in result.data || "token" in result.data || "session" in result.data)
-  ) {
-    const { sessionToken, token, session } = result.data as {
-      sessionToken?: unknown
-      token?: unknown
-      session?: { token?: unknown } | unknown
-    }
-    if (typeof sessionToken === "string") {
-      return sessionToken
-    }
-    if (typeof token === "string") {
-      return token
-    }
-    if (
-      session &&
-      typeof session === "object" &&
-      "token" in session &&
-      typeof session.token === "string"
-    ) {
-      return session.token
-    }
-    return null
-  }
-
-  return null
-}
-
-const getAuthUserFromResult = (result: unknown): AuthUser | null => {
-  if (!result || typeof result !== "object") {
-    return null
-  }
-
-  const data =
-    "data" in result && result.data && typeof result.data === "object" ? result.data : result
-  if (!("user" in data) || !data.user || typeof data.user !== "object") {
-    return null
-  }
-
-  const user = data.user as { id?: unknown }
-  return typeof user.id === "string" ? (data.user as AuthUser) : null
-}
-
-const persistElectronAuthUser = async (result: unknown) => {
-  if (!IN_ELECTRON) {
-    return
-  }
-
-  const authUser = getAuthUserFromResult(result)
-  if (!authUser) {
-    return
-  }
-
-  await userActions.upsertMany([
-    {
-      id: authUser.id,
-      email: authUser.email ?? null,
-      handle: authUser.handle ?? null,
-      name: authUser.name ?? null,
-      image: authUser.image ?? null,
-      isMe: true,
-      emailVerified: authUser.emailVerified ?? false,
-      bio: authUser.bio ?? null,
-      website: authUser.website ?? null,
-      socialLinks: authUser.socialLinks ?? null,
-    },
-  ])
-}
-
-type ElectronAuthResult = {
-  data?: Record<string, unknown>
-  error?: {
-    message: string
-    status?: number
-  } | null
-}
-
-const normalizeElectronAuthResult = (result: unknown): ElectronAuthResult => {
-  if (!result || typeof result !== "object") {
-    return {}
-  }
-
-  const normalized = result as ElectronAuthResult & Record<string, unknown>
-  if ("data" in normalized || "error" in normalized) {
-    return normalized
-  }
-
-  return {
-    data: normalized,
-    error: null,
-  }
-}
-
-const getElectronAuthService = () => {
-  if (!ipcServices) {
-    return null
-  }
-
-  return ipcServices.auth as typeof ipcServices.auth & {
-    signInWithCredential?: (payload: { email: string; password: string }) => Promise<unknown>
-    signUpWithCredential?: (payload: {
-      email: string
-      password: string
-      name: string
-    }) => Promise<unknown>
-  }
+/** Signs in or up and starts the app over as that user. A failure is said, and the form stays. */
+const enterWith = async (request: Parameters<typeof succeededOrToast>[0]) => {
+  if (await succeededOrToast(request)) handleSessionChanges()
 }
 
 export function LoginWithPassword({
@@ -179,32 +46,8 @@ export function LoginWithPassword({
     mode: "all",
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    const res = IN_ELECTRON
-      ? normalizeElectronAuthResult(
-          await getElectronAuthService()?.signInWithCredential?.({
-            email: values.email,
-            password: values.password,
-          }),
-        )
-      : await signIn.email({
-          email: values.email,
-          password: values.password,
-        })
-    if (res?.error) {
-      toast.error(getAuthErrorMessage(res.error))
-      return
-    }
-
-    if (IN_ELECTRON) {
-      const token = getAuthTokenFromResult(res)
-      if (token) {
-        setAuthSessionToken(token)
-      }
-      await persistElectronAuthUser(res)
-    }
-    handleSessionChanges()
-  }
+  const onSubmit = ({ email, password }: z.infer<typeof formSchema>) =>
+    enterWith(() => signInWithEmail(email, password))
 
   return (
     <Form {...form}>
@@ -319,46 +162,8 @@ export function RegisterForm({
     mode: "all",
   })
 
-  async function onSubmit(values: RegisterFormValues) {
-    const result = IN_ELECTRON
-      ? normalizeElectronAuthResult(
-          await getElectronAuthService()?.signUpWithCredential?.({
-            email: values.email,
-            password: values.password,
-            name: values.email.split("@")[0]!,
-          }),
-        )
-      : await signUp.email(
-          {
-            email: values.email,
-            password: values.password,
-            name: values.email.split("@")[0]!,
-          },
-          {
-            onError(context) {
-              toast.error(getAuthErrorMessage(context.error))
-            },
-          },
-        )
-
-    if (result?.error) {
-      // The web client's onError above already said why
-      if (IN_ELECTRON) toast.error(getAuthErrorMessage(result.error))
-      return result
-    }
-
-    if (IN_ELECTRON) {
-      const token = getAuthTokenFromResult(result)
-      if (token) {
-        setAuthSessionToken(token)
-      }
-      await persistElectronAuthUser(result)
-    }
-
-    handleSessionChanges()
-
-    return result
-  }
+  const onSubmit = ({ email, password }: RegisterFormValues) =>
+    enterWith(() => signUpWithEmail(email, password))
 
   return (
     <div className="relative">
