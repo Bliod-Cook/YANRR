@@ -9,17 +9,18 @@ import {
   SelectValue,
 } from "@follow/components/ui/select/index.jsx"
 import { ResponsiveSelect } from "@follow/components/ui/select/responsive.js"
-import { filterFieldOptions, filterOperatorOptions } from "@follow/store/action/constant"
+import {
+  filterFieldOptions,
+  filterOperatorOptions,
+  getFilterFieldType,
+} from "@follow/store/action/constant"
 import { useActionRule } from "@follow/store/action/hooks"
 import { actionActions } from "@follow/store/action/store"
-import { cn } from "@follow/utils/utils"
 import type { ActionFeedField, ActionOperation } from "@follow-app/client-sdk"
 import { Fragment } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ViewSelectContent } from "~/modules/feed/view-select-content"
-
-import { getRegexError } from "./utils"
 
 type WhenSectionProps = {
   index: number
@@ -82,9 +83,7 @@ export const WhenSection = ({ index }: WhenSectionProps) => {
                       })
                     }
 
-                    const type =
-                      filterFieldOptions.find((option) => option.value === item.field)?.type ||
-                      "text"
+                    const type = getFilterFieldType(item.field)
 
                     return (
                       <div key={conditionIdx} className="flex flex-col gap-2">
@@ -203,9 +202,6 @@ const OperationSelect = ({
       ...option,
       label: t(option.label),
     }))
-  if (options.length === 1 && value === undefined) {
-    onValueChange?.(options[0]!.value as ActionOperation)
-  }
   return (
     <ResponsiveSelect
       placeholder={t("actions.action_card.select_operation")}
@@ -247,9 +243,6 @@ const ValueInput = ({
       )
     }
     case "status": {
-      if (value === undefined) {
-        onChange("collected")
-      }
       return (
         <Select
           disabled={disabled}
@@ -278,7 +271,6 @@ const ValueInput = ({
       )
     }
     default: {
-      const regexError = operator === "regex" ? getRegexError(value) : null
       // Sized like the bare inputs of the other types: with a zero flex basis the operator
       // select took the whole row and squeezed the input to a few pixels
       return (
@@ -286,15 +278,9 @@ const ValueInput = ({
           <Input
             disabled={disabled}
             value={value as string | undefined}
-            aria-invalid={regexError ? true : undefined}
-            className={cn("h-9", regexError && "border-red focus:border-red")}
+            className="h-9"
             onChange={(event) => onChange(event.target.value)}
           />
-          {regexError && (
-            <p className="text-xs leading-relaxed text-red">
-              {t("actions.action_card.invalid_regex", { error: regexError })}
-            </p>
-          )}
           {operator === "regex" && (
             <p className="text-xs leading-relaxed text-text-tertiary">
               {t("actions.action_card.regex_help")}

@@ -1,8 +1,10 @@
-import { filterFieldOptions, filterOperatorOptions } from "@follow/store/action/constant"
+import {
+  availableActionMap,
+  filterFieldOptions,
+  filterOperatorOptions,
+} from "@follow/store/action/constant"
 import type { ActionItem } from "@follow/store/action/store"
 import type { TFunction } from "i18next"
-
-import { availableActionMap } from "./constants"
 
 const fieldLabelMap = new Map(filterFieldOptions.map((option) => [option.value, option.label]))
 const operatorLabelMap = new Map(

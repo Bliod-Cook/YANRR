@@ -4,15 +4,15 @@ import * as ScrollArea from "@follow/components/ui/scroll-area/ScrollArea.js"
 import {
   useActionRules,
   useIsActionDataDirty,
+  useIsActionRulesLoaded,
   usePrefetchActions,
 } from "@follow/store/action/hooks"
-import type { ActionItem } from "@follow/store/action/store"
+import type { ActionItem, ActionRulesImportResult } from "@follow/store/action/store"
 import { actionActions, useActionStore } from "@follow/store/action/store"
-import { nextFrame } from "@follow/utils"
-import { JsonObfuscatedCodec } from "@follow/utils/json-codec"
 import { cn } from "@follow/utils/utils"
 import { useQueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect, useRef, useState } from "react"
+import type { TFunction } from "i18next"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useBlocker } from "react-router"
 import { toast } from "sonner"
@@ -30,7 +30,7 @@ import {
 import { useDialog } from "~/components/ui/modal/stacked/hooks"
 import { useContextMenu } from "~/hooks/common/useContextMenu"
 import { getI18n } from "~/i18n"
-import { ClipboardError, copyToClipboard, readFromClipboard } from "~/lib/clipboard"
+import { copyToClipboard, readFromClipboard } from "~/lib/clipboard"
 import { downloadJsonFile, selectJsonFile } from "~/lib/export"
 import { RuleCard } from "~/modules/action/rule-card"
 import {
@@ -41,7 +41,28 @@ import {
 
 import { useSetSubViewRightView } from "../app-layout/subview/hooks"
 import { useSaveActionRules } from "./use-save-action-rules"
-import { findRuleIndexWithInvalidRegex, generateExportFilename } from "./utils"
+import { generateExportFilename } from "./utils"
+
+// From this width the rules are listed beside the editor of the selected one
+const WIDE_LAYOUT_MIN_WIDTH = 960
+
+/** A ref for an element, and whether it is wide enough for the list beside the editor. */
+const useIsWideLayout = () => {
+  const [element, setElement] = useState<HTMLElement | null>(null)
+  const [isWide, setIsWide] = useState(false)
+
+  // Measured before the first paint, so a wide window does not show the narrow layout first
+  useLayoutEffect(() => {
+    if (!element) return
+    const update = () => setIsWide(element.clientWidth >= WIDE_LAYOUT_MIN_WIDTH)
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [element])
+
+  return [setElement, isWide] as const
+}
 
 const EmptyActionPlaceholder = ({ onCreateRule }: { onCreateRule: () => void }) => {
   const { t } = useTranslation(["settings", "common"])
@@ -88,22 +109,33 @@ const ActionLoadError = ({ isRetrying, onRetry }: { isRetrying: boolean; onRetry
 }
 
 export const ActionSetting = () => {
-  const actions = useActionRules()
+  const ruleCount = useActionRules((rules) => rules.length)
+  const isLoaded = useIsActionRulesLoaded()
   const { t } = useTranslation("settings")
 
   const [selectedRuleIndex, setSelectedRuleIndex] = useState(0)
   const actionQuery = usePrefetchActions()
+  const [layoutRef, isWide] = useIsWideLayout()
 
   useEffect(() => {
-    if (actions.length === 0) {
-      setSelectedRuleIndex(0)
-      return
+    if (selectedRuleIndex > Math.max(0, ruleCount - 1)) {
+      setSelectedRuleIndex(Math.max(0, ruleCount - 1))
     }
+  }, [ruleCount, selectedRuleIndex])
 
-    if (selectedRuleIndex > actions.length - 1) {
-      setSelectedRuleIndex(actions.length - 1)
+  const createRule = useEventCallback(() => {
+    actionActions.addRule((number) => t("actions.actionName", { number }))
+    setSelectedRuleIndex(useActionStore.getState().rules.length - 1)
+  })
+
+  // Every rule is deleted the same way, the last one too: the deletion is saved with the others
+  const deleteRule = useEventCallback((index: number) => {
+    actionActions.deleteRule(index)
+    // The selection stays on the rule it was on, or moves to the one before a deleted one
+    if (index <= selectedRuleIndex) {
+      setSelectedRuleIndex(Math.max(0, selectedRuleIndex - 1))
     }
-  }, [actions.length, selectedRuleIndex])
+  })
 
   if (actionQuery.isPending) {
     return (
@@ -116,66 +148,59 @@ export const ActionSetting = () => {
   }
 
   // Saving sends every rule, so editing an empty list here would wipe the server's rules
-  if (actionQuery.isError && !actionActions.isLoaded()) {
+  if (actionQuery.isError && !isLoaded) {
     return (
       <ActionLoadError isRetrying={actionQuery.isFetching} onRetry={() => actionQuery.refetch()} />
     )
   }
 
-  const hasActions = actions.length > 0
-
-  const handleCreateRule = () => {
-    const nextIndex = actions.length
-    actionActions.addRule((number) => t("actions.actionName", { number }))
-    setSelectedRuleIndex(nextIndex)
-  }
-
   return (
-    <>
-      <ActionButtonGroup onCreateRule={handleCreateRule} />
+    <div ref={layoutRef} className="flex min-h-0 w-full flex-1 flex-col">
+      <ActionButtonGroup onCreateRule={createRule} />
       <ShareImportSection />
-      {hasActions ? (
-        <div className="flex min-h-0 w-full flex-1 flex-col @[960px]:absolute @[960px]:inset-x-0 @[960px]:bottom-0 @[960px]:top-12">
-          <div className="hidden h-full flex-1 @[960px]:flex @[960px]:h-0 @[960px]:overflow-hidden @[960px]:rounded-lg @[960px]:border @[960px]:border-fill-secondary">
-            <RuleList
-              selectedIndex={selectedRuleIndex}
-              onSelect={setSelectedRuleIndex}
-              onDelete={(deletedIndex) => {
-                // Adjust selectedRuleIndex when a rule is deleted
-                if (deletedIndex === selectedRuleIndex) {
-                  // If deleting the selected rule, select the previous one or 0
-                  setSelectedRuleIndex(Math.max(0, deletedIndex - 1))
-                } else if (deletedIndex < selectedRuleIndex) {
-                  // If deleting a rule before the selected one, shift the index down
-                  setSelectedRuleIndex(selectedRuleIndex - 1)
-                }
-              }}
-            />
-            <div className="flex flex-1 border-l border-fill-secondary">
-              <RuleCard index={selectedRuleIndex} mode="detail" />
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 @[960px]:hidden">
-            {actions.map((_, actionIdx) => (
-              <RuleCard
-                key={actionIdx}
-                index={actionIdx}
-                mode="compact"
-                defaultOpen={actionIdx === selectedRuleIndex}
-                onOpenChange={(open) => {
-                  if (open) {
-                    setSelectedRuleIndex(actionIdx)
-                  }
-                }}
-              />
-            ))}
+      {ruleCount === 0 ? (
+        <EmptyActionPlaceholder onCreateRule={createRule} />
+      ) : isWide ? (
+        <div className="absolute inset-x-0 bottom-0 top-12 flex overflow-hidden rounded-lg border border-fill-secondary">
+          <RuleList
+            selectedIndex={selectedRuleIndex}
+            onSelect={setSelectedRuleIndex}
+            onDelete={deleteRule}
+          />
+          <div className="flex flex-1 border-l border-fill-secondary">
+            <RuleCard index={selectedRuleIndex} mode="detail" onDelete={deleteRule} />
           </div>
         </div>
       ) : (
-        <EmptyActionPlaceholder onCreateRule={handleCreateRule} />
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: ruleCount }, (_, ruleIndex) => (
+            <RuleCard
+              key={ruleIndex}
+              index={ruleIndex}
+              mode="compact"
+              onDelete={deleteRule}
+              defaultOpen={ruleIndex === selectedRuleIndex}
+              onOpenChange={(open) => {
+                if (open) {
+                  setSelectedRuleIndex(ruleIndex)
+                }
+              }}
+            />
+          ))}
+        </div>
       )}
-    </>
+    </div>
   )
+}
+
+const toastImportResult = (result: ActionRulesImportResult, t: TFunction<"settings">) => {
+  if (result.ok) {
+    toast.success(t("actions.import_result.success", { count: result.count }))
+  } else if (result.reason === "parse_failed") {
+    toast.error(t("actions.import_result.parse_failed", { error: result.detail }))
+  } else {
+    toast.error(t(`actions.import_result.${result.reason}`))
+  }
 }
 
 const ShareImportSection = () => {
@@ -195,60 +220,40 @@ const ShareImportSection = () => {
   }, [t])
 
   const handleImport = useCallback(async () => {
+    let jsonData: string
     try {
-      const jsonData = await selectJsonFile()
-      const result = actionActions.importRules(jsonData)
-
-      if (result.success) {
-        toast.success(result.message)
-      } else {
-        toast.error(result.message)
-      }
+      jsonData = await selectJsonFile()
     } catch (error) {
       if (error instanceof Error && error.message === "No file selected") {
         return
       }
       toast.error(t("actions.share.import_failed"))
+      return
     }
+    toastImportResult(actionActions.importRules(jsonData), t)
   }, [t])
 
-  const clipboardPrefix = "yanrr:actions#"
+  // The rules go to the clipboard as the JSON a file export holds
   const handleCopyToClipboard = useCallback(async () => {
     try {
-      const jsonData = actionActions.exportRules()
-      const codecData = JsonObfuscatedCodec.encode(jsonData)
-      await copyToClipboard(`${clipboardPrefix}${codecData}`)
-      toast.success(t("actions.share.copy_success"))
-    } catch (error) {
-      toast.error(t("actions.share.copy_failed"))
-      console.error(error)
+      await copyToClipboard(actionActions.exportRules())
+    } catch {
+      // The failure has been shown already
+      return
     }
-  }, [clipboardPrefix, t])
+    toast.success(t("actions.share.copy_success"))
+  }, [t])
 
   const handleImportFromClipboard = useCallback(async () => {
+    let jsonData: string
     try {
-      const clipboardData = await readFromClipboard()
-      if (!clipboardData.startsWith(clipboardPrefix)) {
-        toast.error(t("actions.share.invalid_clipboard"))
-        return
-      }
-      const codecData = clipboardData.slice(clipboardPrefix.length)
-      const jsonData = JsonObfuscatedCodec.decode(codecData)
-      const result = actionActions.importRules(jsonData)
-
-      if (result.success) {
-        toast.success(result.message)
-      } else {
-        toast.error(result.message)
-      }
-    } catch (error) {
-      // readFromClipboard has already shown its own error
-      if (!(error instanceof ClipboardError)) {
-        toast.error(t("actions.share.import_clipboard_failed"))
-      }
-      console.error(error)
+      jsonData = await readFromClipboard()
+    } catch {
+      // The failure has been shown already
+      return
     }
-  }, [clipboardPrefix, t])
+    toastImportResult(actionActions.importRules(jsonData), t)
+  }, [t])
 
   return (
     <div className="mb-4 flex justify-end">
@@ -306,38 +311,7 @@ const RuleList = ({
   onDelete: (index: number) => void
 }) => {
   const rules = useActionRules()
-  const { t } = useTranslation("settings")
-  const ruleCount = useActionRules((s) => s.length)
-  const mutation = useSaveActionRules()
-  const { ask } = useDialog()
   const showContextMenu = useShowContextMenu()
-
-  const handleDeleteRule = useCallback(
-    (index: number) => {
-      if (ruleCount === 1) {
-        ask({
-          title: t("actions.action_card.summary.delete_title"),
-          variant: "danger",
-          message: t("actions.action_card.summary.delete_message"),
-          onConfirm: () => {
-            actionActions.deleteRule(index)
-            onDelete(index)
-            nextFrame(() => {
-              mutation.mutate()
-            })
-          },
-        })
-      } else {
-        actionActions.deleteRule(index)
-        onDelete(index)
-      }
-    },
-    [ruleCount, ask, t, mutation, onDelete],
-  )
-
-  if (rules.length === 0) {
-    return null
-  }
 
   return (
     <div className="flex w-[260px] shrink-0 flex-col">
@@ -350,7 +324,7 @@ const RuleList = ({
               index={index}
               isActive={index === selectedIndex}
               onSelect={onSelect}
-              handleDelete={handleDeleteRule}
+              handleDelete={onDelete}
               showContextMenu={showContextMenu}
             />
           ))}
@@ -416,43 +390,19 @@ const RuleListItem = ({
 
 const ActionButtonGroup = ({ onCreateRule }: { onCreateRule: () => void }) => {
   const queryClient = useQueryClient()
-  const actionLength = useActionRules((actions) => actions.length)
+  const hasActions = useActionRules((actions) => actions.length > 0)
   const isDirty = useIsActionDataDirty()
   const { t } = useTranslation("settings")
 
   useUnSavedBlocker(isDirty)
 
-  const mutation = useSaveActionRules({
+  const { save, isPending } = useSaveActionRules({
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["entries"],
       })
       toast(t("actions.saveSuccess"))
     },
-  })
-
-  const hasActions = actionLength > 0
-
-  // The pending state reaches the header button only after a render, too late for a double click
-  const isSavingRef = useRef(false)
-  const save = useEventCallback(() => {
-    if (isSavingRef.current) return
-    const { rules } = useActionStore.getState()
-    const invalidIndex = findRuleIndexWithInvalidRegex(rules, actionActions.getLoadedRules())
-    if (invalidIndex !== -1) {
-      toast.error(
-        t("actions.save_invalid_regex", {
-          name: getRuleDisplayName(rules[invalidIndex], invalidIndex, t),
-        }),
-      )
-      return
-    }
-    isSavingRef.current = true
-    mutation.mutate(undefined, {
-      onSettled: () => {
-        isSavingRef.current = false
-      },
-    })
   })
 
   const setRightView = useSetSubViewRightView()
@@ -463,15 +413,16 @@ const ActionButtonGroup = ({ onCreateRule }: { onCreateRule: () => void }) => {
           {t("actions.newRule")}
         </HeaderActionButton>
 
-        {hasActions && (
+        {/* Shown while there is anything to save, deleting the last rule included */}
+        {(isDirty || hasActions) && (
           <HeaderActionButton
             variant="accent"
             icon="i-mgc-check-circle-cute-re"
             disabled={!isDirty}
-            loading={mutation.isPending}
+            loading={isPending}
             onClick={save}
           >
-            {mutation.isPending ? t("actions.saving") : t("actions.save")}
+            {isPending ? t("actions.saving") : t("actions.save")}
           </HeaderActionButton>
         )}
       </HeaderActionGroup>,
@@ -479,7 +430,7 @@ const ActionButtonGroup = ({ onCreateRule }: { onCreateRule: () => void }) => {
     return () => {
       setRightView(null)
     }
-  }, [setRightView, actionLength, hasActions, isDirty, mutation, onCreateRule, save, t])
+  }, [setRightView, hasActions, isDirty, isPending, onCreateRule, save, t])
 
   return null
 }

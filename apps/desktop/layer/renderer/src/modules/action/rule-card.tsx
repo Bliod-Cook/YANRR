@@ -4,20 +4,17 @@ import * as ScrollArea from "@follow/components/ui/scroll-area/ScrollArea.js"
 import { Switch } from "@follow/components/ui/switch/index.jsx"
 import { useActionRule, useActionRules } from "@follow/store/action/hooks"
 import { actionActions } from "@follow/store/action/store"
-import { nextFrame } from "@follow/utils"
 import { cn } from "@follow/utils/utils"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useDialog } from "~/components/ui/modal/stacked/hooks"
-
 import { buildActionSummary, buildConditionSummary, getRuleDisplayName } from "./rule-summary"
 import { ThenSection } from "./then-section"
-import { useSaveActionRules } from "./use-save-action-rules"
 import { WhenSection } from "./when-section"
 
 type RuleCardProps = {
   index: number
+  onDelete: (index: number) => void
   mode?: "detail" | "compact"
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
@@ -25,6 +22,7 @@ type RuleCardProps = {
 
 export const RuleCard = ({
   index,
+  onDelete,
   mode = "detail",
   defaultOpen = false,
   onOpenChange,
@@ -36,13 +34,20 @@ export const RuleCard = ({
   }
 
   if (mode === "compact") {
-    return <CompactRuleCard index={index} defaultOpen={defaultOpen} onOpenChange={onOpenChange} />
+    return (
+      <CompactRuleCard
+        index={index}
+        onDelete={onDelete}
+        defaultOpen={defaultOpen}
+        onOpenChange={onOpenChange}
+      />
+    )
   }
 
   return (
     <div className="group/rule flex size-full flex-col @container">
       <div className="shrink-0 border-b border-fill-tertiary px-5 py-4">
-        <RuleCardToolbar index={index} />
+        <RuleCardToolbar index={index} onDelete={onDelete} />
       </div>
       <ScrollArea.ScrollArea rootClassName="flex-1" viewportClassName="h-full">
         <div className="p-5">
@@ -64,10 +69,12 @@ const RuleCardContent = ({ index }: { index: number }) => {
 
 const CompactRuleCard = ({
   index,
+  onDelete,
   defaultOpen,
   onOpenChange,
 }: {
   index: number
+  onDelete: (index: number) => void
   defaultOpen: boolean
   onOpenChange?: (open: boolean) => void
 }) => {
@@ -124,7 +131,7 @@ const CompactRuleCard = ({
       </button>
       {open ? (
         <div className="space-y-4 border-t border-fill-tertiary bg-transparent p-4">
-          <RuleCardToolbar index={index} />
+          <RuleCardToolbar index={index} onDelete={onDelete} />
           <RuleCardContent index={index} />
         </div>
       ) : null}
@@ -132,12 +139,15 @@ const CompactRuleCard = ({
   )
 }
 
-const RuleCardToolbar = ({ index }: { index: number }) => {
+const RuleCardToolbar = ({
+  index,
+  onDelete,
+}: {
+  index: number
+  onDelete: (index: number) => void
+}) => {
   const { t } = useTranslation("settings")
   const rule = useActionRule(index)
-  const ruleCount = useActionRules((s) => s.length)
-  const mutation = useSaveActionRules()
-  const { ask } = useDialog()
 
   if (!rule) {
     return null
@@ -147,24 +157,6 @@ const RuleCardToolbar = ({ index }: { index: number }) => {
     name,
     result: { disabled },
   } = rule
-
-  const handleDelete = () => {
-    if (ruleCount === 1) {
-      ask({
-        title: t("actions.action_card.summary.delete_title"),
-        variant: "danger",
-        message: t("actions.action_card.summary.delete_message"),
-        onConfirm: () => {
-          actionActions.deleteRule(index)
-          nextFrame(() => {
-            mutation.mutate()
-          })
-        },
-      })
-    } else {
-      actionActions.deleteRule(index)
-    }
-  }
 
   return (
     <div className={"flex w-full flex-wrap items-center gap-3"}>
@@ -191,7 +183,7 @@ const RuleCardToolbar = ({ index }: { index: number }) => {
           size="sm"
           aria-label={t("actions.action_card.summary.delete")}
           buttonClassName="size-8 p-0"
-          onClick={handleDelete}
+          onClick={() => onDelete(index)}
         >
           <i className="i-mgc-delete-2-cute-re" />
         </Button>

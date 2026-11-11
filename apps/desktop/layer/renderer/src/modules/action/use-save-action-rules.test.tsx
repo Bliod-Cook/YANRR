@@ -1,4 +1,4 @@
-import { actionSyncService } from "@follow/store/action/store"
+import { actionSyncService, useActionStore } from "@follow/store/action/store"
 import { FollowAPIError } from "@follow-app/client-sdk"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
@@ -6,6 +6,8 @@ import * as React from "react"
 import { act } from "react"
 import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
+import { toast } from "sonner"
+import type { MockInstance } from "vitest"
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
 import { useSaveActionRules } from "./use-save-action-rules"
@@ -19,7 +21,10 @@ vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()
   return {
     ...actual,
-    ["useTranslation"]: () => ({ t: (key: string) => key }),
+    ["useTranslation"]: () => ({
+      t: (key: string, options?: { name?: string }) =>
+        options?.name ? `${key}:${options.name}` : key,
+    }),
   }
 })
 
@@ -40,11 +45,12 @@ const conflictError = () =>
 describe("useSaveActionRules", () => {
   let root: Root | null = null
   let container: HTMLElement | null = null
-  let save!: ReturnType<typeof useSaveActionRules>["mutate"]
+  let save!: ReturnType<typeof useSaveActionRules>["save"]
+  let toastError!: MockInstance<typeof toast.error>
   const onSuccess = vi.fn()
 
   const Harness = () => {
-    save = useSaveActionRules({ onSuccess }).mutate
+    save = useSaveActionRules({ onSuccess }).save
     return null
   }
 
@@ -63,9 +69,11 @@ describe("useSaveActionRules", () => {
 
   beforeEach(async () => {
     vi.restoreAllMocks()
+    toastError = vi.spyOn(toast, "error")
     present.mockReset()
     toastFetchError.mockReset()
     onSuccess.mockReset()
+    useActionStore.setState({ rules: [], isDirty: false })
     container = document.createElement("div")
     document.body.append(container)
     root = createRoot(container)
@@ -85,13 +93,14 @@ describe("useSaveActionRules", () => {
     container = null
   })
 
-  const saveAndSettle = async (...args: Parameters<typeof save>) => {
+  const saveAndSettle = async () => {
     await act(async () => {
-      save(...args)
+      save()
       await vi.waitFor(() => {
         expect(
           present.mock.calls.length +
             toastFetchError.mock.calls.length +
+            toastError.mock.calls.length +
             onSuccess.mock.calls.length,
         ).toBeGreaterThan(0)
       })
@@ -150,6 +159,46 @@ describe("useSaveActionRules", () => {
     expect(dismiss).toHaveBeenCalled()
     expect(fetchRules).toHaveBeenCalledWith()
     await act(async () => dialogRoot.unmount())
+  })
+
+  test("names a rule with an incomplete condition instead of saving", async () => {
+    const saveRules = vi.spyOn(actionSyncService, "saveRules")
+    useActionStore.setState({
+      rules: [
+        { name: "Unfinished", condition: [[{ field: "entry_title" }]], result: {}, index: 0 },
+      ],
+      isDirty: true,
+    })
+
+    await saveAndSettle()
+
+    expect(saveRules).not.toHaveBeenCalled()
+    expect(toastError).toHaveBeenCalledWith("actions.save_incomplete_condition:Unfinished")
+  })
+
+  test("names the rule whose regex the server refused", async () => {
+    useActionStore.setState({
+      rules: [
+        { name: "Fine", condition: [], result: {}, index: 0 },
+        {
+          name: "Broken",
+          condition: [[{ field: "entry_title", operator: "regex", value: "a(" }]],
+          result: {},
+          index: 1,
+        },
+      ],
+      isDirty: true,
+    })
+    vi.spyOn(actionSyncService, "saveRules").mockRejectedValueOnce(
+      new FollowAPIError("`rules.1.condition.0.0.value`: Invalid regex: unclosed group", 422, "3"),
+    )
+
+    await saveAndSettle()
+
+    expect(toastFetchError).not.toHaveBeenCalled()
+    expect(toastError).toHaveBeenCalledWith("actions.save_invalid_regex:Broken", {
+      description: "Invalid regex: unclosed group",
+    })
   })
 
   test("shows other errors as before", async () => {

@@ -1,11 +1,23 @@
 import { Button } from "@follow/components/ui/button/index.js"
 import { useUpdateActionsMutation } from "@follow/store/action/hooks"
-import { actionSyncService, isActionRulesConflictError } from "@follow/store/action/store"
+import type { ActionItem } from "@follow/store/action/store"
+import {
+  actionSyncService,
+  isActionRulesConflictError,
+  useActionStore,
+} from "@follow/store/action/store"
+import type { ActionRuleProblem } from "@follow/store/action/validation"
+import { findActionRuleProblem, getRefusedActionRule } from "@follow/store/action/validation"
+import type { TFunction } from "i18next"
+import { useRef } from "react"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
 import { useEventCallback } from "usehooks-ts"
 
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { toastFetchError } from "~/lib/error-parser"
+
+import { getRuleDisplayName } from "./rule-summary"
 
 const ActionRulesConflictContent = ({
   dismiss,
@@ -48,10 +60,22 @@ const ActionRulesConflictContent = ({
   )
 }
 
+const problemMessageKeys = {
+  incomplete_condition: "actions.save_incomplete_condition",
+  invalid_regex: "actions.save_invalid_regex",
+  invalid_webhook: "actions.save_invalid_webhook",
+} as const
+
+const describeRuleProblem = (
+  { ruleIndex, kind }: ActionRuleProblem,
+  rules: readonly ActionItem[],
+  t: TFunction<"settings">,
+) => t(problemMessageKeys[kind], { name: getRuleDisplayName(rules[ruleIndex], ruleIndex, t) })
+
 /**
- * Saves the action rules. When they were changed elsewhere since they were loaded the server
- * refuses the save, and the user chooses to load the latest rules, which drops their edits, to
- * keep editing, or to save over the other changes.
+ * Saves the action rules unless one of them is not complete yet. When they were changed elsewhere
+ * since they were loaded the server refuses the save, and the user chooses to load the latest
+ * rules, which drops their edits, to keep editing, or to save over the other changes.
  */
 export const useSaveActionRules = ({ onSuccess }: { onSuccess?: () => void } = {}) => {
   const { t } = useTranslation("settings")
@@ -81,9 +105,34 @@ export const useSaveActionRules = ({ onSuccess }: { onSuccess?: () => void } = {
         presentConflict(() => mutation.mutate({ overwrite: true }))
         return
       }
+      const refused = getRefusedActionRule(error)
+      if (refused) {
+        toast.error(describeRuleProblem(refused, useActionStore.getState().rules, t), {
+          description: refused.detail,
+        })
+        return
+      }
       toastFetchError(error)
     },
   })
 
-  return mutation
+  // The pending state reaches the save button only after a render, too late for a double click
+  const isSavingRef = useRef(false)
+  const save = useEventCallback(() => {
+    if (isSavingRef.current) return
+    const { rules } = useActionStore.getState()
+    const problem = findActionRuleProblem(rules)
+    if (problem) {
+      toast.error(describeRuleProblem(problem, rules, t))
+      return
+    }
+    isSavingRef.current = true
+    mutation.mutate(undefined, {
+      onSettled: () => {
+        isSavingRef.current = false
+      },
+    })
+  })
+
+  return { save, isPending: mutation.isPending }
 }
