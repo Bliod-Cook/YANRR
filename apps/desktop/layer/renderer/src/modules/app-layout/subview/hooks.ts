@@ -7,7 +7,16 @@ import { useI18n } from "~/hooks/common"
 
 const titleAtom = atom<string | ReactNode | null>(null)
 
-const rightViewAtom = atom<ReactNode | null>(null)
+export interface SubViewAction {
+  id: string
+  icon: string
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  loading?: boolean
+}
+
+const actionsAtom = atom<SubViewAction[]>([])
 
 export function useSubViewTitle(title: I18nKeys): void
 export function useSubViewTitle(title: ReactNode, fallbackTitleString: string): void
@@ -27,6 +36,6 @@ export function useSubViewTitle(title: I18nKeys | ReactNode, fallbackTitleString
 // `useAtomValueRawSync` re-checks after subscribing.
 export const useSubViewTitleValue = () => useAtomValueRawSync(titleAtom)
 
-export const useSubViewRightView = () => useAtomValue(rightViewAtom)
+export const useSubViewActions = () => useAtomValue(actionsAtom)
 
-export const useSetSubViewRightView = () => useSetAtom(rightViewAtom)
+export const useSetSubViewActions = () => useSetAtom(actionsAtom)

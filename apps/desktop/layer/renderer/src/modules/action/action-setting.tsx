@@ -19,7 +19,6 @@ import { toast } from "sonner"
 import { useEventCallback } from "usehooks-ts"
 
 import { MenuItemText, useShowContextMenu } from "~/atoms/context-menu"
-import { HeaderActionButton, HeaderActionGroup } from "~/components/ui/button/HeaderActionButton"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +38,7 @@ import {
   getRuleDisplayName,
 } from "~/modules/action/rule-summary"
 
-import { useSetSubViewRightView } from "../app-layout/subview/hooks"
+import { useSetSubViewActions } from "../app-layout/subview/hooks"
 import { useSaveActionRules } from "./use-save-action-rules"
 import { generateExportFilename } from "./utils"
 
@@ -405,32 +404,33 @@ const ActionButtonGroup = ({ onCreateRule }: { onCreateRule: () => void }) => {
     },
   })
 
-  const setRightView = useSetSubViewRightView()
+  const setActions = useSetSubViewActions()
   useEffect(() => {
-    setRightView(
-      <HeaderActionGroup>
-        <HeaderActionButton variant="primary" icon="i-mingcute-add-line" onClick={onCreateRule}>
-          {t("actions.newRule")}
-        </HeaderActionButton>
-
-        {/* Shown while there is anything to save, deleting the last rule included */}
-        {(isDirty || hasActions) && (
-          <HeaderActionButton
-            variant="accent"
-            icon="i-mgc-check-circle-cute-re"
-            disabled={!isDirty}
-            loading={isPending}
-            onClick={save}
-          >
-            {isPending ? t("actions.saving") : t("actions.save")}
-          </HeaderActionButton>
-        )}
-      </HeaderActionGroup>,
-    )
+    setActions([
+      {
+        id: "new-rule",
+        icon: "i-mingcute-add-line",
+        label: t("actions.newRule"),
+        onClick: onCreateRule,
+      },
+      // Shown while there is anything to save, deleting the last rule included
+      ...(isDirty || hasActions
+        ? [
+            {
+              id: "save",
+              icon: "i-mgc-check-circle-cute-re",
+              label: isPending ? t("actions.saving") : t("actions.save"),
+              disabled: !isDirty,
+              loading: isPending,
+              onClick: save,
+            },
+          ]
+        : []),
+    ])
     return () => {
-      setRightView(null)
+      setActions([])
     }
-  }, [setRightView, hasActions, isDirty, isPending, onCreateRule, save, t])
+  }, [setActions, hasActions, isDirty, isPending, onCreateRule, save, t])
 
   return null
 }

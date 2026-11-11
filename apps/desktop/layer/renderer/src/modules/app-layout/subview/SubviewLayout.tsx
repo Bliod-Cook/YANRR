@@ -8,7 +8,7 @@ import { ELECTRON_BUILD } from "@follow/shared/constants"
 import { springScrollTo } from "@follow/utils/scroller"
 import { clsx, cn, getOS } from "@follow/utils/utils"
 import { m } from "framer-motion"
-import { isValidElement, useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useHotkeys } from "react-hotkeys-hook"
 import { useTranslation } from "react-i18next"
 import { NavigationType, Outlet, useLocation, useNavigate, useNavigationType } from "react-router"
@@ -16,10 +16,10 @@ import { parseQuery } from "ufo"
 
 import { Focusable } from "~/components/common/Focusable"
 import { GlassButton } from "~/components/ui/button/GlassButton"
-import { HeaderActionButton, HeaderActionGroup } from "~/components/ui/button/HeaderActionButton"
 import { HotkeyScope } from "~/constants"
 
-import { useSubViewRightView, useSubViewTitleValue } from "./hooks"
+import { SubViewHeaderActions } from "./HeaderActions"
+import { useSubViewTitleValue } from "./hooks"
 
 /**
  * SubviewLayout Component
@@ -199,7 +199,7 @@ function SubviewLayoutInner() {
 
           {/* Right: Button group block (rounded, glass) */}
 
-          <SubViewHeaderRightView isHeaderElevated={isHeaderElevated} />
+          <SubViewHeaderActions isHeaderElevated={isHeaderElevated} />
         </m.div>
       </div>
 
@@ -218,67 +218,6 @@ function SubviewLayoutInner() {
       <RootPortal>
         <ScrollProgressFAB scrollY={scrollY} scrollRef={scrollRef} maxScroll={maxScroll} />
       </RootPortal>
-    </div>
-  )
-}
-
-const SubViewHeaderRightView = ({ isHeaderElevated }: { isHeaderElevated: boolean }) => {
-  const rightView = useSubViewRightView()
-
-  if (!rightView) return null
-
-  if (isValidElement(rightView) && (rightView as any).type === HeaderActionGroup) {
-    const groupChildren = (rightView as any).props?.children
-    const childrenArray = Array.isArray(groupChildren) ? groupChildren : [groupChildren]
-
-    const items = childrenArray
-      .map((child: any) => {
-        if (isValidElement(child) && (child as any).type === HeaderActionButton) {
-          const { onClick, disabled, loading, icon, children: label } = (child as any).props
-          const key = (child as any).key ?? icon ?? (typeof label === "string" ? label : undefined)
-
-          return (
-            <GlassButton
-              key={key}
-              description={typeof label === "string" ? label : undefined}
-              disabled={disabled || loading}
-              onClick={onClick}
-              className={cn(disabled || loading ? "cursor-not-allowed opacity-50" : "")}
-              size="md"
-              theme="auto"
-            >
-              <i className={cn(loading ? "i-mgc-loading-3-cute-re animate-spin" : icon)} />
-            </GlassButton>
-          )
-        }
-        return null
-      })
-      .filter(Boolean)
-
-    return (
-      <div
-        className={cn(
-          "-mt-2 inline-flex items-center gap-1.5 rounded-full bg-fill p-2 backdrop-blur-background duration-200",
-          "has-[:nth-child(1)]:bg-transparent",
-          !isHeaderElevated && items.length > 1 ? "bg-material-ultra-thin" : "bg-material-medium",
-        )}
-      >
-        {items}
-      </div>
-    )
-  }
-
-  return (
-    <div
-      className={cn(
-        "ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-xl border p-1.5",
-        "opacity-0 duration-200",
-        isHeaderElevated
-          ? "border-border/50 bg-material-ultra-thin opacity-100 shadow-sm backdrop-blur-xl"
-          : "border-transparent bg-material-medium",
-      )}
-    >
-      <div className="inline-flex items-center">{rightView}</div>
     </div>
   )
 }

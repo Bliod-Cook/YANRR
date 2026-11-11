@@ -8,7 +8,7 @@ import { createRoot } from "react-dom/client"
 import { createMemoryRouter, RouterProvider } from "react-router"
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
-import { useSubViewRightView } from "../app-layout/subview/hooks"
+import { SubViewHeaderActions } from "../app-layout/subview/HeaderActions"
 import { ActionSetting } from "./action-setting"
 
 vi.mock("@follow/shared/env.desktop", () => ({
@@ -19,9 +19,6 @@ vi.mock("@follow/shared/env.desktop", () => ({
 }))
 
 const LOADED_AT = "2026-10-13T08:00:00.000Z"
-
-// The subview header, where the page puts its buttons
-const HeaderRightView = () => <>{useSubViewRightView()}</>
 
 describe("ActionSetting", () => {
   let root: Root | null = null
@@ -60,7 +57,7 @@ describe("ActionSetting", () => {
         path: "/",
         element: (
           <>
-            <HeaderRightView />
+            <SubViewHeaderActions isHeaderElevated />
             <ActionSetting />
           </>
         ),
