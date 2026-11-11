@@ -65,10 +65,7 @@ export const handleUrlRouting = (url: string) => {
         return
       }
       case "/": {
-        callMainWindow(url, (mainWindow) => {
-          mainWindow.restore()
-          mainWindow.focus()
-        })
+        callMainWindow(url, () => {})
         return
       }
 
@@ -93,7 +90,6 @@ const callMainWindow = (url: string, fn: (mainWindow: BrowserWindow) => any) => 
     // Routed again once the new window can take it
     return openDeepLink(url)
   }
-  mainWindow.restore()
-  mainWindow.focus()
+  WindowManager.showMainWindow(mainWindow)
   fn(mainWindow)
 }

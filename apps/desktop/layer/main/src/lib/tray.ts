@@ -94,12 +94,7 @@ export const registerAppTray = () => {
 }
 
 const showWindow = () => {
-  const mainWindow = WindowManager.getMainWindowOrCreate()
-  if (mainWindow.isMinimized()) {
-    mainWindow.restore()
-  } else {
-    WindowManager.showMainWindow(mainWindow)
-  }
+  WindowManager.showMainWindow(WindowManager.getMainWindowOrCreate())
 }
 
 const destroyAppTray = () => {

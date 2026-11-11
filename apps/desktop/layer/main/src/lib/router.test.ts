@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getMainWindow: vi.fn(),
   goToFeed: vi.fn(),
   openDeepLink: vi.fn(),
+  showMainWindow: vi.fn(),
   warn: vi.fn(),
 }))
 
@@ -29,21 +30,20 @@ vi.mock("~/manager/window", () => ({
     createMainWindow: mocks.createMainWindow,
     createWindow: mocks.createWindow,
     getMainWindow: mocks.getMainWindow,
+    showMainWindow: mocks.showMainWindow,
   },
 }))
 
 const { handleUrlRouting } = await import("./router")
 
-const createMainWindow = () => ({
-  focus: vi.fn(),
-  restore: vi.fn(),
-})
+const createMainWindow = () => ({})
 
 describe("handleUrlRouting", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
+  // Also when it is hidden in the tray or the Dock
   it("brings the main window to the front for a link with an unknown path", () => {
     const mainWindow = createMainWindow()
     mocks.getMainWindow.mockReturnValue(mainWindow)
@@ -54,7 +54,8 @@ describe("handleUrlRouting", () => {
 
     expect(mocks.createWindow).not.toHaveBeenCalled()
     expect(mocks.warn).toHaveBeenCalledTimes(3)
-    expect(mainWindow.focus).toHaveBeenCalledTimes(3)
+    expect(mocks.showMainWindow).toHaveBeenCalledTimes(3)
+    expect(mocks.showMainWindow).toHaveBeenCalledWith(mainWindow)
   })
 
   it("opens the main window first when it is gone, then routes the link again", () => {

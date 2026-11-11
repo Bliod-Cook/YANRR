@@ -4,16 +4,14 @@ import type { BrowserWindow } from "electron"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
-  ask: vi.fn(),
   onWindowClose: vi.fn(),
   onWindowShow: vi.fn(),
-  openExternal: vi.fn(),
+  openExternalSafely: vi.fn(),
 }))
 
 vi.mock("@electron-toolkit/utils", () => ({ is: { dev: false } }))
 vi.mock("@follow/shared/bridge", () => ({
   callWindowExpose: () => ({
-    dialog: { ask: mocks.ask },
     onWindowClose: mocks.onWindowClose,
     onWindowShow: mocks.onWindowShow,
   }),
@@ -23,7 +21,6 @@ vi.mock("@follow/shared/constants", () => ({ APP_PROTOCOL: "yanrr" }))
 vi.mock("electron", () => ({
   BrowserWindow: class {},
   screen: {},
-  shell: { openExternal: mocks.openExternal },
 }))
 vi.mock("~/env", () => ({ isMacOS: true, isWindows: false }))
 vi.mock("~/helper", () => ({
@@ -31,7 +28,7 @@ vi.mock("~/helper", () => ({
   getIconPath: vi.fn(),
 }))
 vi.mock("~/lib/deep-link", () => ({ setRendererReady: vi.fn() }))
-vi.mock("~/lib/i18n", () => ({ t: (key: string) => key }))
+vi.mock("~/lib/open-external", () => ({ openExternalSafely: mocks.openExternalSafely }))
 vi.mock("~/lib/store", () => ({ store: { get: vi.fn(), set: vi.fn() } }))
 vi.mock("~/lib/tray", () => ({ getTrayConfig: () => false }))
 vi.mock("~/lib/utils", () => ({ refreshBound: vi.fn() }))
@@ -42,8 +39,13 @@ const { WindowManager } = await import("./window")
 class FakeWindow extends EventEmitter {
   webContents = Object.assign(new EventEmitter(), { setWindowOpenHandler: vi.fn() })
   hide = vi.fn()
+  show = vi.fn()
+  restore = vi.fn()
+  minimized = false
+  isDestroyed = () => false
   isFullScreen = () => false
   isMaximized = () => false
+  isMinimized = () => this.minimized
   getBounds = () => ({ height: 700, width: 1000, x: 0, y: 0 })
 }
 
@@ -70,6 +72,16 @@ describe("main window visibility", () => {
 
     window.emit("show")
     expect(mocks.onWindowShow).toHaveBeenCalledTimes(1)
+  })
+
+  it("brings back a window that is minimized as well as one that is hidden", () => {
+    const window = new FakeWindow()
+    window.minimized = true
+
+    WindowManager.showMainWindow(window as unknown as BrowserWindow)
+
+    expect(window.restore).toHaveBeenCalledTimes(1)
+    expect(window.show).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -114,44 +126,36 @@ describe("main window navigation", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.ask.mockResolvedValue(true)
   })
 
   it("keeps the app's own pages, e.g. on a reload", () => {
     const event = navigate("app://yanrr/Applications/Yanrr.app/renderer/index.html#/timeline")
 
     expect(event.preventDefault).not.toHaveBeenCalled()
-    expect(mocks.openExternal).not.toHaveBeenCalled()
+    expect(mocks.openExternalSafely).not.toHaveBeenCalled()
   })
 
-  it("opens web pages in the browser instead of the window", () => {
-    const event = navigate("https://example.com/nav-test")
+  it.each([["https://example.com/nav-test"], ["obsidian://open?vault=Notes"]])(
+    "opens %s outside the window, the one way the app opens links",
+    (url) => {
+      const event = navigate(url)
 
-    expect(event.preventDefault).toHaveBeenCalled()
-    expect(mocks.openExternal).toHaveBeenCalledWith("https://example.com/nav-test")
-  })
+      expect(event.preventDefault).toHaveBeenCalled()
+      expect(mocks.openExternalSafely).toHaveBeenCalledWith(url)
+    },
+  )
 
   it("blocks other local pages", () => {
     for (const url of ["app://other.host/tmp/page.html", "file:///tmp/page.html", "not a url"]) {
       const event = navigate(url)
       expect(event.preventDefault).toHaveBeenCalled()
     }
-    expect(mocks.openExternal).not.toHaveBeenCalled()
+    expect(mocks.openExternalSafely).not.toHaveBeenCalled()
   })
 
   it("leaves the app's deep links to the system", () => {
     const event = navigate("yanrr://feed?id=1")
 
     expect(event.preventDefault).not.toHaveBeenCalled()
-  })
-
-  it("asks before opening another app", async () => {
-    const event = navigate("mailto:someone@example.com")
-
-    expect(event.preventDefault).toHaveBeenCalled()
-    await vi.waitFor(() => {
-      expect(mocks.openExternal).toHaveBeenCalledWith("mailto:someone@example.com")
-    })
-    expect(mocks.ask).toHaveBeenCalledTimes(1)
   })
 })

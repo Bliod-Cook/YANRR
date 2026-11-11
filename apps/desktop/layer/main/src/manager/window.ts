@@ -4,14 +4,14 @@ import { callWindowExpose, WindowState } from "@follow/shared/bridge"
 import { APP_PROTOCOL } from "@follow/shared/constants"
 import { SERVER_URL_ARG } from "@follow/shared/desktop-launch"
 import type { BrowserWindowConstructorOptions } from "electron"
-import { BrowserWindow, screen, shell } from "electron"
+import { BrowserWindow, screen } from "electron"
 import type { Event } from "electron/main"
 import path from "pathe"
 
 import { isMacOS, isWindows } from "~/env"
 import { filePathToAppUrl, getIconPath } from "~/helper"
 import { setRendererReady } from "~/lib/deep-link"
-import { t } from "~/lib/i18n"
+import { openExternalSafely } from "~/lib/open-external"
 import { getDevServerUrl, isAppPage } from "~/lib/page-origin"
 import { getServerUrl } from "~/lib/server-url"
 import { store } from "~/lib/store"
@@ -91,35 +91,11 @@ class WindowManagerStatic {
       )
     }
 
-    const confirmAndOpenExternalProtocol = async (url: string) => {
-      const caller = callWindowExpose(window)
-      const confirm = await caller.dialog.ask({
-        title: t("dialog.openExternalApp.title"),
-        message: t("dialog.openExternalApp.message", {
-          url,
-          interpolation: { escapeValue: false },
-        }),
-        confirmText: t("dialog.open"),
-        cancelText: t("dialog.cancel"),
-      })
-      if (!confirm) {
-        return
-      }
-      void shell.openExternal(url)
-    }
+    const isWebProtocol = (protocol: string) => protocol === "http" || protocol === "https"
 
     window.webContents.setWindowOpenHandler((details) => {
       const protocol = parseProtocol(details.url)
-      if (!protocol) {
-        return { action: "deny" }
-      }
-
-      if (protocol === "http" || protocol === "https") {
-        void shell.openExternal(details.url)
-        return { action: "deny" }
-      }
-
-      if (isIgnoredProtocol(protocol)) {
+      if (protocol && !isWebProtocol(protocol) && isIgnoredProtocol(protocol)) {
         logger.warn("Blocked window.open for ignored protocol", {
           protocol,
           url: details.url,
@@ -127,11 +103,11 @@ class WindowManagerStatic {
         return { action: "deny" }
       }
 
-      void confirmAndOpenExternalProtocol(details.url)
+      void openExternalSafely(details.url)
       return { action: "deny" }
     })
 
-    const handleExternalProtocol = async (e: Event, url: string) => {
+    const handleExternalProtocol = (e: Event, url: string) => {
       const protocol = parseProtocol(url)
       if (!protocol) {
         e.preventDefault()
@@ -143,12 +119,12 @@ class WindowManagerStatic {
       }
       e.preventDefault()
 
-      await confirmAndOpenExternalProtocol(url)
+      void openExternalSafely(url)
     }
 
     // The window only shows the app's own pages. Any other page would get the app's preload
     // script, so web pages open in the browser instead.
-    const handleMainFrameNavigation = async (e: Event, url: string) => {
+    const handleMainFrameNavigation = (e: Event, url: string) => {
       const protocol = parseProtocol(url)
       if (!protocol) {
         e.preventDefault()
@@ -157,26 +133,19 @@ class WindowManagerStatic {
       // E.g. a reload
       if (isAppPage(url)) return
 
-      if (protocol === "http" || protocol === "https") {
-        e.preventDefault()
-        void shell.openExternal(url)
-        return
-      }
       if (protocol === "app" || protocol === "file") {
         logger.warn("Blocked navigation to a local page", { url })
         e.preventDefault()
         return
       }
       // Chromium hands deep links and editor links to the system, and the page stays
-      if (isIgnoredProtocol(protocol)) return
+      if (!isWebProtocol(protocol) && isIgnoredProtocol(protocol)) return
 
       e.preventDefault()
-      await confirmAndOpenExternalProtocol(url)
+      void openExternalSafely(url)
     }
 
-    window.webContents.on("will-navigate", (e, url) => {
-      void handleMainFrameNavigation(e, url)
-    })
+    window.webContents.on("will-navigate", handleMainFrameNavigation)
 
     // A webview shows pages of the web: none of the app's scripts in them, and none of the
     // powers the attributes of the element could ask for
@@ -191,9 +160,7 @@ class WindowManagerStatic {
 
     // Handle webview external links
     window.webContents.on("did-attach-webview", (_, webContents) => {
-      webContents.on("will-navigate", (e, url) => {
-        void handleExternalProtocol(e, url)
-      })
+      webContents.on("will-navigate", handleExternalProtocol)
     })
 
     if (isWindows) {
@@ -499,9 +466,6 @@ class WindowManagerStatic {
     // We need to open the setting modal in the main window when the main window exists,
     // if we open a new window then the state between the two windows will be out of sync.
     if (this.windows.mainWindow) {
-      if (this.windows.mainWindow.isMinimized()) {
-        this.windows.mainWindow.restore()
-      }
       this.showMainWindow(this.windows.mainWindow)
 
       callWindowExpose(this.windows.mainWindow).showSetting(path)
@@ -517,9 +481,13 @@ class WindowManagerStatic {
 
   private maximizeOnFirstShow = new WeakSet<BrowserWindow>()
 
-  /** Shows the main window, maximized the first time if it was maximized when the app quit. */
+  /**
+   * Brings the main window back, whether hidden or minimized, maximized the first time if it was
+   * maximized when the app quit.
+   */
   showMainWindow = (window = this.windows.mainWindow) => {
     if (!window || window.isDestroyed()) return
+    if (window.isMinimized()) window.restore()
     window.show()
     if (this.maximizeOnFirstShow.delete(window)) window.maximize()
   }
