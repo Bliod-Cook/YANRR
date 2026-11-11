@@ -3,7 +3,6 @@
 
 use std::{iter, ops::Range, sync::LazyLock};
 
-use dom_query::{Document as Html, NodeRef};
 use regex::{Match, Regex};
 use serde::Serialize;
 use unicode_normalization::{
@@ -12,103 +11,12 @@ use unicode_normalization::{
     is_nfkc_quick,
 };
 
+use crate::html::visible;
+
 /// Characters a snippet shows before the term it is about.
 const LEAD: usize = 30;
 /// Characters a snippet shows at most.
 const SNIPPET: usize = 160;
-
-/// Elements set apart from the text around them.
-const BLOCKS: &[&str] = &[
-    "address",
-    "article",
-    "aside",
-    "blockquote",
-    "br",
-    "caption",
-    "dd",
-    "details",
-    "div",
-    "dl",
-    "dt",
-    "figcaption",
-    "figure",
-    "footer",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "header",
-    "hr",
-    "li",
-    "main",
-    "nav",
-    "ol",
-    "p",
-    "pre",
-    "section",
-    "summary",
-    "table",
-    "tbody",
-    "td",
-    "tfoot",
-    "th",
-    "thead",
-    "tr",
-    "ul",
-];
-/// Elements shown without text, which still stand between the text around them.
-const MEDIA: &[&str] = &[
-    "audio", "canvas", "embed", "iframe", "img", "math", "object", "picture", "svg", "video",
-];
-/// Elements never shown.
-const HIDDEN: &[&str] = &["script", "style", "template"];
-
-/// What a reader sees of `html`, with a line break wherever its text is set apart.
-fn visible(html: &str) -> String {
-    enum Step<'a> {
-        Enter(NodeRef<'a>),
-        Leave,
-    }
-    let document = Html::fragment(html);
-    let mut text = String::new();
-    // A stack rather than recursion, so that deeply nested markup can't exhaust the thread's.
-    let mut steps: Vec<Step> = document
-        .html_root()
-        .children_it(true)
-        .map(Step::Enter)
-        .collect();
-    while let Some(step) = steps.pop() {
-        let node = match step {
-            Step::Enter(node) => node,
-            Step::Leave => {
-                text.push('\n');
-                continue;
-            }
-        };
-        if node.is_text() {
-            text.push_str(&node.text());
-            continue;
-        }
-        let Some(name) = node.qual_name_ref().map(|name| name.local.to_string()) else {
-            continue;
-        };
-        if HIDDEN.contains(&name.as_str()) {
-            continue;
-        }
-        if MEDIA.contains(&name.as_str()) {
-            text.push('\n');
-            continue;
-        }
-        if BLOCKS.contains(&name.as_str()) {
-            text.push('\n');
-            steps.push(Step::Leave);
-        }
-        steps.extend(node.children_it(true).map(Step::Enter));
-    }
-    text
-}
 
 /// The characters of CJK runs.
 const CJK: &str = r"\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}\x{30FC}";

@@ -6,7 +6,7 @@ use feed_rs::{
 };
 use reqwest::Url;
 
-use super::{Attachment, Author, Draft, Entries, Media, MediaKind, ParsedFeed, html, resolve};
+use super::{Attachment, Author, Draft, Entries, Media, MediaKind, ParsedFeed, resolve};
 
 pub fn parse(body: &[u8], url: &str) -> Result<ParsedFeed, String> {
     // Empty ids are filled in by `Draft::finish`; feed-rs would fall back to a random UUID.
@@ -120,7 +120,7 @@ fn alternate(links: &[Link]) -> Option<&str> {
 
 fn plain(text: Text) -> String {
     if text.content_type.subty().as_str().contains("html") {
-        html::text(&text.content)
+        crate::html::text(&text.content)
     } else {
         text.content
     }

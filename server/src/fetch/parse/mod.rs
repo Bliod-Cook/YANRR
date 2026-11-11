@@ -150,7 +150,7 @@ pub struct EntryLink {
 
 /// The start of an HTML summary's text, or `None` if it has none.
 pub fn describe(html: &str) -> Option<String> {
-    let text = html::text(html);
+    let text = crate::html::text(html);
     (!text.is_empty()).then(|| text.chars().take(DESCRIPTION_LENGTH).collect())
 }
 
