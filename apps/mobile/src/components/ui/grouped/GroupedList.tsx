@@ -26,7 +26,6 @@ import {
   GROUPED_SECTION_TOP_MARGIN,
 } from "./constants"
 import { getGroupedListChildKey } from "./grouped-list-key"
-import { GroupedInsetListCardItemStyle } from "./GroupedInsetListCardItemStyle"
 
 const GROUPED_TABLET_MAX_WIDTH = 760
 /**
@@ -104,9 +103,7 @@ export const GroupedInsetListCard: FC<
             const isLast = index === nextChildren.length - 1
             if (child === null) return null
             const isNavigationLink =
-              React.isValidElement(child) &&
-              ((child.type as Function).name === GroupedInsetListNavigationLink.name ||
-                (child.type as any).itemStyle === GroupedInsetListCardItemStyle.NavigationLink)
+              React.isValidElement(child) && child.type === GroupedInsetListNavigationLink
             const NextSeparatorComponent =
               typeof SeparatorComponent === "function" ? <SeparatorComponent /> : undefined
             const NextSeparatorElement = SeparatorElement
