@@ -140,10 +140,13 @@ export const useSetCustomCommandShortcut = () => {
 export const useCommandShortcuts = () => {
   const overrideCommandShortcuts = useAtomValue(overrideCommandShortcutsAtom)
 
-  return {
-    ...defaultCommandShortcuts,
-    ...overrideCommandShortcuts,
-  }
+  return useMemo(
+    () => ({
+      ...defaultCommandShortcuts,
+      ...overrideCommandShortcuts,
+    }),
+    [overrideCommandShortcuts],
+  )
 }
 
 export const useIsShortcutConflict = (

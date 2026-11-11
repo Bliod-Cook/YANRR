@@ -1,8 +1,7 @@
 import { isMobile } from "@follow/components/hooks/useMobile.js"
-import { FeedViewType, getView } from "@follow/constants"
+import { FeedViewType } from "@follow/constants"
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { useIsEntryStarred } from "@follow/store/collection/hooks"
-import { isOnboardingEntryUrl } from "@follow/store/constants/onboarding"
 import { useEntry } from "@follow/store/entry/hooks"
 import { entrySyncServices } from "@follow/store/entry/store"
 import type { EntryModel } from "@follow/store/entry/types"
@@ -30,7 +29,18 @@ import { isMutationCommandId } from "~/modules/command/mutation-command-ids"
 import type { FollowCommandId, UnknownCommand } from "~/modules/command/types"
 import { useToolbarOrderMap } from "~/modules/customize-toolbar/hooks"
 
-import { useRouteParams } from "./useRouteParams"
+import { useRouteParamsSelector } from "./useRouteParams"
+
+// Views whose entries open in their own layouts, which show neither the readability content nor
+// the AI summary (see `getEntryContentLayout`)
+const MEDIA_LAYOUT_VIEWS = new Set([
+  FeedViewType.SocialMedia,
+  FeedViewType.Pictures,
+  FeedViewType.Videos,
+])
+
+/** Whether entries of the view open in the article layout, the one that shows readability */
+export const isArticleLayoutView = (view: FeedViewType) => !MEDIA_LAYOUT_VIEWS.has(view)
 
 export const enableEntryReadability = async ({ id, url }: { id: string; url: string }) => {
   const status = getReadabilityStatus()[id]
@@ -44,25 +54,22 @@ export const toggleEntryReadability = async ({ id, url }: { id: string; url: str
   const isTurnOn = status !== ReadabilityStatus.INITIAL && !!status
 
   if (!isTurnOn && url) {
-    // The onboarding entries link to an internal yanrr:// address with no page to extract
-    if (isOnboardingEntryUrl(url)) return
     setReadabilityStatus({
       [id]: ReadabilityStatus.WAITING,
     })
+    let status: ReadabilityStatus
     try {
       await entrySyncServices.fetchEntryReadabilityContent(id, async () => {
         const res = await ipcServices?.reader.readability({ url })
         return res?.content
       })
-
-      setReadabilityStatus({
-        [id]: ReadabilityStatus.SUCCESS,
-      })
+      status = ReadabilityStatus.SUCCESS
     } catch {
-      setReadabilityStatus({
-        [id]: ReadabilityStatus.FAILURE,
-      })
+      status = ReadabilityStatus.FAILURE
     }
+    // Turned off while loading
+    if (getReadabilityStatus()[id] !== ReadabilityStatus.WAITING) return
+    setReadabilityStatus({ [id]: status })
   } else {
     setReadabilityStatus({
       [id]: ReadabilityStatus.INITIAL,
@@ -239,7 +246,11 @@ export const HIDE_ACTIONS_IN_ENTRY_TOOLBAR_ACTIONS: FollowCommandId[] = [
 ]
 export const useEntryActions = ({ entryId, view }: { entryId: string; view: FeedViewType }) => {
   const entry = useEntry(entryId, entrySelector)
-  const { isCollection, entryId: routeEntryId } = useRouteParams()
+  const isCollection = useRouteParamsSelector((params) => params.isCollection)
+  const isCurrentVisitEntry = useRouteParamsSelector(
+    (params) => params.entryId === entryId,
+    [entryId],
+  )
   const isInCollection = useIsEntryStarred(entryId)
   const isEntryInReadability = useEntryIsInReadability(entryId)
 
@@ -268,9 +279,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
   const shortcuts = useCommandShortcuts()
   // Integrations register their commands only once they are enabled
   const commands = useCommands()
-
-  const isCurrentVisitEntry = routeEntryId === entryId
-  const isOnboardingEntry = isOnboardingEntryUrl(entry?.url)
 
   const actionConfigs: EntryActionItem[] = useMemo(() => {
     if (!hasEntry) return []
@@ -340,7 +348,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
         onClick: runCmdFn(COMMAND_ID.entry.copyLink, [{ entryId }]),
         hide: !entry.url,
         shortcut: shortcuts[COMMAND_ID.entry.copyLink],
-        disabled: isOnboardingEntry,
         entryId,
       }),
       new EntryActionMenuItem({
@@ -353,7 +360,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
         id: COMMAND_ID.entry.imageGallery,
         hide: entry.imagesLength <= 5,
         onClick: runCmdFn(COMMAND_ID.entry.imageGallery, [{ entryId }]),
-        disabled: isOnboardingEntry,
         entryId,
       }),
       new EntryActionMenuItem({
@@ -361,7 +367,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
         hide: !entry.url,
         onClick: runCmdFn(COMMAND_ID.entry.openInBrowser, [{ entryId }]),
         shortcut: shortcuts[COMMAND_ID.entry.openInBrowser],
-        disabled: isOnboardingEntry,
         entryId,
       }),
       new EntryActionMenuItem({
@@ -371,17 +376,12 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
         ]),
         hide: isMobile() || !entry.url,
         active: isShowSourceContent,
-        disabled: isOnboardingEntry,
         entryId,
       }),
       new EntryActionMenuItem({
         id: COMMAND_ID.entry.toggleAISummary,
         onClick: runCmdFn(COMMAND_ID.entry.toggleAISummary, []),
-        hide:
-          isShowAISummaryAuto ||
-          ([FeedViewType.SocialMedia, FeedViewType.Videos] as (number | undefined)[]).includes(
-            view,
-          ),
+        hide: isShowAISummaryAuto || !isArticleLayoutView(view),
         active: isShowAISummaryOnce,
         entryId,
       }),
@@ -421,7 +421,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
         onClick: runCmdFn(COMMAND_ID.entry.share, [{ entryId }]),
         hide: !entry.url,
         shortcut: shortcuts[COMMAND_ID.entry.share],
-        disabled: isOnboardingEntry,
         entryId,
       }),
       MENU_ITEM_SEPARATOR,
@@ -435,10 +434,9 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
       new EntryActionMenuItem({
         id: COMMAND_ID.entry.readability,
         onClick: runCmdFn(COMMAND_ID.entry.readability, [{ entryId, entryUrl: entry.url! }]),
-        hide: !!entry.readability || (view && getView(view)?.wideMode) || !entry.url,
+        hide: !!entry.readability || !isArticleLayoutView(view) || !entry.url,
         active: isEntryInReadability,
         notice: !entry.doesContentContainsHTMLTags && !isEntryInReadability,
-        disabled: isOnboardingEntry,
         entryId,
       }),
 
@@ -505,7 +503,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
     isEntryInReadability,
     integrationSettings.customIntegration,
     integrationSettings.enableCustomIntegration,
-    isOnboardingEntry,
     commands,
   ])
 

@@ -93,36 +93,39 @@ describe("EntryHeader", () => {
     })
   })
 
-  // The social media layout renders neither the AI summary nor the readability content
-  test("leaves out the actions the layout of a social media entry ignores in the all timeline", async () => {
-    // Otherwise the summary shows by itself, and its toggle is hidden for any entry
-    setGeneralSetting("summary", false)
-    useEntryStore.setState({ data: { [post.id]: post } })
-    useSubscriptionStore.setState({ data: { social: socialSubscription } })
-    setRoute({
-      params: { timelineId: "all", entryId: post.id },
-      searchParams: new URLSearchParams(),
-      location: { pathname: "/timeline/all", search: "", hash: "", state: null, key: "" },
-    })
-    host = document.createElement("div")
-    document.body.append(host)
-    root = createRoot(host)
+  // The social media and picture layouts render neither the AI summary nor the readability content
+  test.each([FeedViewType.SocialMedia, FeedViewType.Pictures])(
+    "leaves out the actions the layout of view %i ignores in the all timeline",
+    async (view) => {
+      // Otherwise the summary shows by itself, and its toggle is hidden for any entry
+      setGeneralSetting("summary", false)
+      useEntryStore.setState({ data: { [post.id]: post } })
+      useSubscriptionStore.setState({ data: { social: { ...socialSubscription, view } } })
+      setRoute({
+        params: { timelineId: "all", entryId: post.id },
+        searchParams: new URLSearchParams(),
+        location: { pathname: "/timeline/all", search: "", hash: "", state: null, key: "" },
+      })
+      host = document.createElement("div")
+      document.body.append(host)
+      root = createRoot(host)
 
-    await act(async () => {
-      root?.render(
-        <QueryClientProvider client={new QueryClient()}>
-          <Provider store={jotaiStore}>
-            <GlobalFocusableProvider>
-              <EntryHeaderWithCommands entryId={post.id} />
-            </GlobalFocusableProvider>
-          </Provider>
-        </QueryClientProvider>,
-      )
-    })
+      await act(async () => {
+        root?.render(
+          <QueryClientProvider client={new QueryClient()}>
+            <Provider store={jotaiStore}>
+              <GlobalFocusableProvider>
+                <EntryHeaderWithCommands entryId={post.id} />
+              </GlobalFocusableProvider>
+            </Provider>
+          </QueryClientProvider>,
+        )
+      })
 
-    const actionOf = (id: string) => host?.querySelector(`[data-command-id="${id}"]`)
-    expect(actionOf(COMMAND_ID.entry.star)).not.toBeNull()
-    expect(actionOf(COMMAND_ID.entry.toggleAISummary)).toBeNull()
-    expect(actionOf(COMMAND_ID.entry.readability)).toBeNull()
-  })
+      const actionOf = (id: string) => host?.querySelector(`[data-command-id="${id}"]`)
+      expect(actionOf(COMMAND_ID.entry.star)).not.toBeNull()
+      expect(actionOf(COMMAND_ID.entry.toggleAISummary)).toBeNull()
+      expect(actionOf(COMMAND_ID.entry.readability)).toBeNull()
+    },
+  )
 })
