@@ -55,11 +55,6 @@
       "require": "./src/morph/*.ts",
       "import": "./src/morph/*.ts"
     },
-    "./reset": {
-      "types": "./src/reset.ts",
-      "require": "./src/reset.ts",
-      "import": "./src/reset.ts"
-    },
     "./subscription/*": {
       "types": "./src/modules/subscription/*.ts",
       "require": "./src/modules/subscription/*.ts",
