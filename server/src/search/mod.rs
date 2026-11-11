@@ -20,12 +20,10 @@ use tokio::sync::Notify;
 
 use self::index::{Entry, Fields, Plan};
 pub use self::{index::Within, text::Highlight};
-use crate::{AppState, api::entries::Scope};
+use crate::AppState;
 
 /// The index format; an index of another one is built anew from the database.
 const VERSION: &str = "v2";
-/// Entries read from the database at a time.
-const BATCH: usize = 1000;
 /// Queued entries indexed at a time.
 const QUEUE_BATCH: usize = 500;
 /// How long the indexer waits for news before looking at the queue anyway, e.g. after a crash.
@@ -41,14 +39,15 @@ pub struct Search {
 }
 
 impl Search {
-    /// The index in `dir`, built from the database first when it isn't there.
+    /// The index in `dir`; when it isn't there, an empty one with every stored entry queued for it, so that it is
+    /// built while the server runs.
     pub async fn open(
         dir: &Path,
         db: &DatabaseConnection,
     ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         let path = dir.join(VERSION);
         if !path.exists() {
-            build(dir, &path, db).await?;
+            create(dir, &path, db).await?;
         }
         let index = Index::open_in_dir(&path)?;
         let options = IndexWriterOptions::builder()
@@ -72,19 +71,42 @@ impl Search {
     }
 
     /// Replaces the documents of `ids` with those of `rows`, dropping the ones whose entry is gone, and makes
-    /// them searchable.
+    /// them searchable. A failure changes nothing and leaves the writer ready for the next try.
     fn index(&self, ids: &[i64], rows: Vec<Row>) -> tantivy::Result<()> {
         let mut writer = self.writer.lock().unwrap_or_else(PoisonError::into_inner);
         let found: HashSet<i64> = rows.iter().map(|row| row.id).collect();
         for id in ids.iter().filter(|id| !found.contains(id)) {
             self.fields.delete(&writer, *id as u64);
         }
-        for row in rows {
-            self.fields.add(&writer, &row.entry())?;
+        let indexed = rows
+            .into_iter()
+            .try_for_each(|row| self.fields.add(&writer, &row.entry()))
+            .and_then(|()| writer.commit());
+        if let Err(err) = indexed {
+            // Also starts the writer's threads anew, should they have died.
+            writer.rollback()?;
+            return Err(err);
         }
-        writer.commit()?;
         self.reader.reload()
     }
+}
+
+/// The entries a search looks among and may show, as its caller defines them.
+pub trait Scope {
+    /// Where in the index to look for what [`Scope::readable`] keeps, or `None` when nowhere.
+    fn within(
+        &self,
+        db: &DatabaseConnection,
+        user_id: &str,
+    ) -> impl Future<Output = Result<Option<Within>, DbErr>> + Send;
+
+    /// Of `ids`, the entries the search may show the user.
+    fn readable(
+        &self,
+        db: &DatabaseConnection,
+        user_id: &str,
+        ids: &[i64],
+    ) -> impl Future<Output = Result<HashSet<i64>, DbErr>> + Send;
 }
 
 /// An entry a search found, and what it shows of where.
@@ -100,7 +122,7 @@ pub async fn find(
     search: &Search,
     user_id: &str,
     keyword: &str,
-    scope: &Scope,
+    scope: &impl Scope,
     after: Option<i64>,
     limit: usize,
 ) -> Result<Vec<Found>, Box<dyn Error + Send + Sync>> {
@@ -228,10 +250,11 @@ pub(crate) async fn enqueue(db: &impl ConnectionTrait, ids: &[i64]) -> Result<()
     Ok(())
 }
 
-/// Indexes the queued entries. An entry leaves the queue only once it is searchable, so that one indexed again
-/// after a failure is merely replaced.
+/// Indexes the queued entries, newest first. An entry leaves the queue only once it is searchable, so that one
+/// indexed again after a failure is merely replaced.
 pub async fn index_pending(state: &AppState) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let claim = format!("SELECT entry_id FROM search_queue ORDER BY entry_id LIMIT {QUEUE_BATCH}");
+    let claim =
+        format!("SELECT entry_id FROM search_queue ORDER BY entry_id DESC LIMIT {QUEUE_BATCH}");
     loop {
         let statement = Statement::from_string(DbBackend::Postgres, &claim);
         let ids = state
@@ -271,38 +294,24 @@ pub fn spawn_indexer(state: AppState) {
     });
 }
 
-/// Builds the index of every entry in `path`, next to it first so that an interrupted build is started over.
-async fn build(
+/// Makes an empty index in `path`, next to it first so that an interrupted start is started over, with every stored
+/// entry queued for it.
+async fn create(
     dir: &Path,
     path: &Path,
     db: &DatabaseConnection,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    // Queued first, so that they stay queued should the start be interrupted once the index is there.
+    let queue =
+        "INSERT INTO search_queue SELECT id FROM entries UNION ALL SELECT id FROM inbox_entries
+        ON CONFLICT DO NOTHING";
+    db.execute_unprepared(queue).await?;
     let building = dir.join(format!("{VERSION}.building"));
     if building.exists() {
         fs::remove_dir_all(&building)?;
     }
     fs::create_dir_all(&building)?;
-    let index = Index::create_in_dir(&building, index::schema())?;
-    let fields = Fields::new(&index.schema());
-    let mut writer: IndexWriter = index.writer_with_num_threads(2, 128_000_000)?;
-    let sql = format!("{} ORDER BY id LIMIT {BATCH}", rows("id > $1"));
-    let (mut after, mut count) = (0_i64, 0);
-    loop {
-        let statement = Statement::from_sql_and_values(DbBackend::Postgres, &sql, [after.into()]);
-        let rows = Row::find_by_statement(statement).all(db).await?;
-        let Some(last) = rows.last() else { break };
-        after = last.id;
-        let entries =
-            tokio::task::spawn_blocking(|| rows.into_iter().map(Row::entry).collect::<Vec<_>>())
-                .await?;
-        for entry in &entries {
-            fields.add(&writer, entry)?;
-        }
-        count += entries.len();
-        tracing::info!("search index: {count} entries");
-    }
-    writer.commit()?;
-    writer.wait_merging_threads()?;
+    Index::create_in_dir(&building, index::schema())?;
     fs::rename(&building, path)?;
     // Indexes of other formats, finished or not, are dropped; nothing else in `dir` is touched.
     for found in fs::read_dir(dir)? {

@@ -1,12 +1,12 @@
 mod common;
 
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, sync::Arc};
 
 use common::{Fixtures, Reply, TestApp, create_inbox, deliver, json, json_feed, subscribe};
 use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use serde_json::{Value, json};
 use tempfile::TempDir;
-use yanrr::{api::entries::Scope, fetch, search};
+use yanrr::{AppState, api::entries::Scope, fetch, search};
 
 const TIME: &str = "2026-10-01T08:00:00Z";
 
@@ -78,6 +78,25 @@ async fn an_inbox_delivery_is_queued_once() {
     deliver(&app, &secret, entry.clone()).await;
     deliver(&app, &secret, entry).await;
     assert_eq!(queued(&app).await, 1);
+}
+
+#[tokio::test]
+async fn deleted_entries_are_queued_to_leave_the_index() {
+    let app = TestApp::spawn().await;
+    app.sign_up("alice@example.com").await;
+    let secret = create_inbox(&app, "news").await;
+    for guid in ["one", "two"] {
+        let entry = json!({ "guid": guid, "publishedAt": TIME, "title": "Hello" });
+        deliver(&app, &secret, entry).await;
+    }
+    search::index_pending(&app.state).await.unwrap();
+
+    app.delete("/api/inboxes", json!({ "handle": "news" }))
+        .await;
+
+    assert_eq!(queued(&app).await, 2);
+    search::index_pending(&app.state).await.unwrap();
+    assert_eq!(queued(&app).await, 0);
 }
 
 /// Feeds of [`readers`].
@@ -282,6 +301,7 @@ async fn a_new_index_is_built_from_the_stored_entries() {
     app.sign_up("alice@example.com").await;
     fixtures.set("/feed", feed(vec![item("one", "Rust one", "")]));
     subscribe(&app, &fixtures.url("/feed"), json!({})).await;
+    search::index_pending(&app.state).await.unwrap();
 
     let dir = TempDir::new().unwrap();
     for older in ["v0", "v0.building", "notes"] {
@@ -294,9 +314,16 @@ async fn a_new_index_is_built_from_the_stored_entries() {
     assert!(!dir.path().join("v0").exists());
     assert!(!dir.path().join("v0.building").exists());
     assert!(dir.path().join("notes").exists());
+    // The stored entries are indexed in the background, like new ones.
+    assert_eq!(queued(&app).await, 1);
+    let state = AppState {
+        search: Arc::new(rebuilt),
+        ..app.state.clone()
+    };
+    search::index_pending(&state).await.unwrap();
     let found = search::find(
         &app.state.db,
-        &rebuilt,
+        &state.search,
         &app.user_id().await,
         "rust",
         &Scope::default(),

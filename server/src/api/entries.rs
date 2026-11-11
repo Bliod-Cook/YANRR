@@ -164,12 +164,14 @@ impl Scope {
     fn is_everything(&self) -> bool {
         self.is_subscriptions() && self.view.is_none()
     }
+}
 
+impl search::Scope for Scope {
     /// Where a search of the scope looks in the index for what [`Self::readable`] keeps, or `None` when nowhere;
     /// it follows [`Self::condition`] and then [`Self::inbox_condition`].
-    pub(crate) async fn within(
+    async fn within(
         &self,
-        db: &impl ConnectionTrait,
+        db: &DatabaseConnection,
         user_id: &str,
     ) -> Result<Option<search::Within>, DbErr> {
         let view = single_view(self.view);
@@ -221,9 +223,9 @@ impl Scope {
 
     /// Of `ids`, the entries a search of the scope finds: those its timeline lists, or without a scope those of
     /// a feed the user follows and not blocked for them, and of their inboxes.
-    pub(crate) async fn readable(
+    async fn readable(
         &self,
-        db: &impl ConnectionTrait,
+        db: &DatabaseConnection,
         user_id: &str,
         ids: &[i64],
     ) -> Result<HashSet<i64>, DbErr> {
