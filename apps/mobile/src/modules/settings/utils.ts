@@ -8,7 +8,7 @@ import * as Sharing from "expo-sharing"
 import { t } from "i18next"
 
 import { getDbPath } from "@/src/database"
-import { followApi } from "@/src/lib/api-client"
+import { followApi, followClient } from "@/src/lib/api-client"
 import { toastFetchError } from "@/src/lib/error-parser"
 import { toast } from "@/src/lib/toast"
 
@@ -28,13 +28,15 @@ export const importOpml = async () => {
       return
     }
 
-    // The API client sends requests with expo/fetch, which reads a file part through `bytes()`
-    // and rejects React Native's `{ uri, name, type }` parts before sending anything.
     const opml = new File(file.uri)
     const { data: parsed } = await followApi.subscriptions.parseOpml(await opml.arrayBuffer())
     const data = await importOpmlInBatches(
-      opml,
-      parsed.subscriptions.map((subscription) => subscription.url),
+      followClient,
+      parsed.subscriptions.map(({ url, title, category }) => ({
+        url,
+        title: title ?? undefined,
+        category: category ?? undefined,
+      })),
     )
     // The import is logged per feed, so the delta feed delivers exactly what was added.
     void subscriptionSyncService.refresh(undefined, { afterServerChange: true })
@@ -68,12 +70,16 @@ export const exportLocalDatabase = async () => {
       idempotent: true,
     }).catch(console.error)
 
-    await FileSystem.getInfoAsync(destinationUri)
-    await Sharing.shareAsync(destinationUri, {
-      UTI: "public.database",
-      mimeType: "application/x-sqlite3",
-      dialogTitle: t("general.export_database.label", { ns: "settings" }),
-    })
+    try {
+      await Sharing.shareAsync(destinationUri, {
+        UTI: "public.database",
+        mimeType: "application/x-sqlite3",
+        dialogTitle: t("general.export_database.label", { ns: "settings" }),
+      })
+    } finally {
+      // Left in Documents, the copy of the whole database would end up in the device backup
+      await FileSystem.deleteAsync(destinationUri, { idempotent: true }).catch(console.error)
+    }
   } catch (error) {
     console.error(error)
     toast.error(t("data_control.export_local_database.failed", { ns: "settings" }))
