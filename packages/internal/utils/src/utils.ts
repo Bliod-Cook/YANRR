@@ -30,7 +30,8 @@ export { clsx } from "clsx"
 export type OS = "macOS" | "iOS" | "Windows" | "Android" | "Linux" | ""
 
 declare const window: {
-  platform: NodeJS.Platform
+  /** `process.platform` of the desktop app's main process, unset elsewhere */
+  platform?: string
   navigator: Navigator
 }
 declare const ELECTRON: boolean

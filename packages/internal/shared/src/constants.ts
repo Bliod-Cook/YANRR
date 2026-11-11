@@ -3,6 +3,8 @@ declare const globalThis: {
   window?: { api?: { canWindowBlur: boolean } }
   electron?: object
 }
+// Inlined by the mobile bundler
+declare const process: { env: { NODE_ENV?: string } }
 
 export enum ModeEnum {
   development = "development",
