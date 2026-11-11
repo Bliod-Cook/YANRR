@@ -1,10 +1,10 @@
 //! Icons of the sites whose feeds declare no image, looked up for the clients so that they reach neither the sites
 //! nor a third party for them.
 
-use std::{sync::LazyLock, time::Duration};
+use std::time::Duration;
 
+use dom_query::Document;
 use reqwest::{Client, StatusCode, Url};
-use scraper::{Html, Selector};
 
 use crate::{
     config::{IconProvider, IconsConfig},
@@ -20,8 +20,6 @@ const LIMITS: Limits = Limits {
 };
 /// How many of the icons a page links to are tried before its `/favicon.ico`.
 const MAX_LINKED: usize = 3;
-
-static LINKS: LazyLock<Selector> = LazyLock::new(|| Selector::parse("link[rel][href]").unwrap());
 
 /// A raster image, typed by its leading bytes rather than by what the site claimed.
 pub struct Icon {
@@ -102,7 +100,10 @@ async fn from_site(client: &Client, home: &str) -> Option<Icon> {
     let home = Url::parse(home).ok()?;
     // Sites that turn away the page may still serve their favicon.
     let mut candidates = match get(client, &home).await {
-        Some(page) => linked(&String::from_utf8_lossy(&page.body), &home),
+        // Links in the page are relative to where redirects led.
+        Some(page) => Url::parse(&page.url)
+            .map(|base| linked(&String::from_utf8_lossy(&page.body), &base))
+            .unwrap_or_default(),
         None => Vec::new(),
     };
     candidates.truncate(MAX_LINKED);
@@ -129,23 +130,21 @@ async fn get(client: &Client, url: &Url) -> Option<Fetched> {
 /// Raster icons the page links to, best first: favicons from the smallest of at least [`SIZE`] down to the largest
 /// below it, then those of unknown size, then Apple touch icons, which are drawn for home screens.
 fn linked(html: &str, base: &Url) -> Vec<Url> {
-    let mut icons: Vec<_> = Html::parse_document(html)
-        .select(&LINKS)
+    let page = Document::from(html);
+    let mut icons: Vec<_> = page
+        .select("link[rel][href]")
+        .nodes()
+        .iter()
         .filter_map(|link| {
-            let attr = |name| {
-                link.value()
-                    .attr(name)
-                    .unwrap_or_default()
-                    .to_ascii_lowercase()
-            };
+            let attr = |name| link.attr(name).unwrap_or_default().to_ascii_lowercase();
             let rel = attr("rel");
             let rel: Vec<_> = rel.split_ascii_whitespace().collect();
             let touch = rel.iter().any(|kind| kind.starts_with("apple-touch-icon"));
             if !touch && !rel.contains(&"icon") {
                 return None;
             }
-            let href = link.value().attr("href")?;
-            let url = base.join(href).ok()?;
+            let href = link.attr("href")?;
+            let url = base.join(&href).ok()?;
             let svg =
                 attr("type").contains("svg") || url.path().to_ascii_lowercase().ends_with(".svg");
             if svg || !matches!(url.scheme(), "http" | "https") {
@@ -170,7 +169,7 @@ fn linked(html: &str, base: &Url) -> Vec<Url> {
 
 #[cfg(test)]
 mod tests {
-    use axum::{Router, routing::get as route};
+    use axum::{Router, response::Redirect, routing::get as route};
     use tokio::net::TcpListener;
 
     use super::*;
@@ -236,6 +235,24 @@ mod tests {
 
         assert_eq!(icon.content_type, "image/png");
         assert_eq!(icon.body, PNG);
+    }
+
+    #[tokio::test]
+    async fn resolves_linked_icons_against_where_redirects_led() {
+        let router = Router::new()
+            .route("/", route(|| async { Redirect::temporary("/blog/") }))
+            .route(
+                "/blog/",
+                route(|| async { r#"<link rel="icon" href="icon.png">"# }),
+            )
+            .route("/blog/icon.png", route(|| async { PNG }))
+            .route("/favicon.ico", route(|| async { ICO }));
+
+        let icon = from_site(&http::client(), &serve(router).await)
+            .await
+            .unwrap();
+
+        assert_eq!(icon.content_type, "image/png");
     }
 
     #[tokio::test]
