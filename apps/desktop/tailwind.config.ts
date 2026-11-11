@@ -4,10 +4,7 @@ import plugin from "tailwindcss/plugin"
 export default extendConfig({
   content: [
     "./layer/renderer/src/**/*.{ts,tsx}",
-    "./apps/web/src/**/*.{ts,tsx}",
-
     "./layer/renderer/index.html",
-    "./apps/web/index.html",
     "../../packages/**/*.{ts,tsx}",
     "!../../packages/**/node_modules",
   ],

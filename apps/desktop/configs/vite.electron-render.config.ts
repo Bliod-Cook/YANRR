@@ -41,7 +41,7 @@ export default {
   root: VITE_ROOT,
   build: {
     outDir: resolve(root, "dist/renderer"),
-    sourcemap: isStaging || !!process.env.CI,
+    sourcemap: isStaging,
     target: "esnext",
     rollupOptions: {
       input: {

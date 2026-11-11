@@ -16,11 +16,9 @@ import { viteRenderBaseConfig } from "./configs/vite.render.config"
 import { createDependencyChunksPlugin } from "./plugins/vite/deps"
 import { htmlInjectPlugin } from "./plugins/vite/html-inject"
 import { localesPlugin } from "./plugins/vite/locales"
-import manifestPlugin from "./plugins/vite/manifest"
 import { createPlatformSpecificImportPlugin } from "./plugins/vite/specific-import"
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
-const isCI = process.env.CI === "true" || process.env.CI === "1"
 const ROOT = resolve(__dirname, "./layer/renderer")
 
 const isWebBuild = process.env.WEB_BUILD === "1"
@@ -40,7 +38,6 @@ export default ({ mode }) => {
     build: {
       outDir: resolve(__dirname, "out/web"),
       target: "ES2022",
-      sourcemap: isCI,
       rollupOptions: {
         input: {
           main: resolve(ROOT, "/index.html"),
@@ -202,7 +199,6 @@ export default ({ mode }) => {
       ]),
 
       createPlatformSpecificImportPlugin(isWebBuild ? "web" : "electron"),
-      isWebBuild && manifestPlugin(),
       isWebBuild && htmlPlugin(),
       process.env.analyzer && analyzer(),
     ],
