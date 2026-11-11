@@ -28,9 +28,14 @@ const LanguageMap = {
 } as const
 
 export const Component = () => {
+  const category = useParams().category as (typeof RSSHubCategories)[number]
+  // A fresh page per category, so the search text does not carry over
+  return <CategoryPage key={category} category={category} />
+}
+
+const CategoryPage = ({ category }: { category: (typeof RSSHubCategories)[number] }) => {
   const { t } = useTranslation()
   const lang = useUISettingKey("discoverLanguage")
-  const category = useParams().category as (typeof RSSHubCategories)[number]
   const title = t(`discover.category.${category}`, { ns: "common" })
   useSubViewTitle(title as I18nKeys)
 
@@ -42,9 +47,6 @@ export const Component = () => {
     {
       staleTime: 1000 * 60 * 60 * 24, // 1 day
       placeholderData: keepPreviousData as any as Record<string, RSSHubNamespace>,
-      meta: {
-        persist: true,
-      },
     },
   )
   const { data, isLoading } = rsshubPopular
@@ -280,10 +282,6 @@ const RouteItem = memo(
     routePrefix: string
     onRouteClick: (route: string) => void
   }) => {
-    if (Array.isArray(routeData.path)) {
-      routeData.path = routeData.path.find((p: string) => p === route) ?? routeData.path[0]
-    }
-
     return (
       <li
         className="-mx-4 rounded p-3 px-5 transition-colors hover:bg-material-opaque"
