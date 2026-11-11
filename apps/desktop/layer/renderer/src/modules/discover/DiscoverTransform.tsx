@@ -57,11 +57,6 @@ export function DiscoverTransform() {
     Queries.discover.rsshubNamespace({
       namespace: "rsshub",
     }),
-    {
-      meta: {
-        persist: true,
-      },
-    },
   )
 
   if (isLoading) {
