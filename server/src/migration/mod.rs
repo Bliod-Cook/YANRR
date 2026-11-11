@@ -52,6 +52,12 @@ impl MigratorTrait for Migrator {
                 "m20261112_000001_unread_subscriptions",
                 "unread_subscriptions.sql"
             ),
+            sql!(
+                "m20261112_000101_messaging_devices",
+                "messaging_devices.sql"
+            ),
+            sql!("m20261112_000102_search_deletions", "search_deletions.sql"),
+            sql!("m20261112_000103_ai_cache_keys", "ai_cache_keys.sql"),
         ]
     }
 }

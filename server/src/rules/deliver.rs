@@ -152,8 +152,13 @@ async fn notify(
     if tokens.is_empty() {
         return Ok(());
     }
-    fcm.send(&state.db, &state.http, user_id, &tokens, notification)
-        .await
+    let sent = fcm
+        .send(&state.db, &state.http, user_id, &tokens, notification)
+        .await?;
+    match sent.failures.is_empty() {
+        true => Ok(()),
+        false => Err(sent.failures.join("; ")),
+    }
 }
 
 #[cfg(test)]

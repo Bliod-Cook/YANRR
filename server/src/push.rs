@@ -8,12 +8,17 @@ use std::{
 use chrono::Utc;
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use reqwest::Client;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, TransactionTrait};
 use serde::Deserialize;
 use serde_json::json;
 use tokio::sync::Mutex;
 
-use crate::{config::PushConfig, entity::messaging_token, fetch::http::successful};
+use crate::{
+    config::PushConfig,
+    entity::messaging_token,
+    fetch::http::successful,
+    sync::{self, Action},
+};
 
 const SCOPE: &str = "https://www.googleapis.com/auth/firebase.messaging";
 const JWT_BEARER: &str = "urn:ietf:params:oauth:grant-type:jwt-bearer";
@@ -44,6 +49,28 @@ pub struct Notification {
     pub view: i16,
 }
 
+/// What came of sending a notification to devices of a user.
+#[derive(Default)]
+pub struct Sent {
+    /// Devices FCM took it for.
+    pub delivered: usize,
+    /// Devices FCM no longer knows, whose tokens were removed.
+    pub forgotten: usize,
+    /// What went wrong on the other devices.
+    pub failures: Vec<String>,
+}
+
+/// A `messaging` change of a device's token; clients tell the changes apart by channel.
+pub fn change(token: messaging_token::Model, action: &'static str) -> Action {
+    Action {
+        user_id: token.user_id,
+        model: "messaging",
+        model_id: Some(token.channel.clone()),
+        action,
+        data: json!({ "channel": token.channel, "token": token.token }),
+    }
+}
+
 pub struct Fcm {
     account: ServiceAccount,
     key: EncodingKey,
@@ -71,7 +98,7 @@ impl Fcm {
     }
 
     /// Sends `notification` to each of the user's `tokens`, forgetting those FCM reports as no longer registered;
-    /// fails with what went wrong on any device, once all were tried.
+    /// fails only when it could not try.
     pub async fn send(
         &self,
         db: &DatabaseConnection,
@@ -79,36 +106,26 @@ impl Fcm {
         user_id: &str,
         tokens: &[String],
         notification: &Notification,
-    ) -> Result<(), String> {
+    ) -> Result<Sent, String> {
         let access_token = self.access_token(http).await?;
-        let (mut unregistered, mut failures) = (Vec::new(), Vec::new());
+        let (mut sent, mut unregistered) = (Sent::default(), Vec::new());
         for token in tokens {
             match self
                 .send_one(http, &access_token, token, notification)
                 .await
             {
-                Ok(()) => {}
+                Ok(()) => sent.delivered += 1,
                 // A device that uninstalled the app or dropped its token; any other error might be ours.
                 Err(err) if err.contains("\"UNREGISTERED\"") => unregistered.push(token.clone()),
-                Err(err) => failures.push(err),
+                Err(err) => sent.failures.push(err),
             }
         }
         if !unregistered.is_empty() {
-            messaging_token::Entity::delete_many()
-                .filter(messaging_token::Column::UserId.eq(user_id))
-                .filter(messaging_token::Column::Token.is_in(unregistered.iter().cloned()))
-                .exec(db)
+            sent.forgotten = forget(db, user_id, unregistered)
                 .await
                 .map_err(|err| err.to_string())?;
-            failures.push(format!(
-                "{} unregistered device(s) removed",
-                unregistered.len()
-            ));
         }
-        match failures.is_empty() {
-            true => Ok(()),
-            false => Err(failures.join("; ")),
-        }
+        Ok(sent)
     }
 
     async fn send_one(
@@ -176,4 +193,23 @@ impl Fcm {
         *cached = Some((token.access_token.clone(), expires));
         Ok(token.access_token)
     }
+}
+
+/// Removes the user's `tokens`, telling their other devices; how many there were.
+async fn forget(
+    db: &DatabaseConnection,
+    user_id: &str,
+    tokens: Vec<String>,
+) -> Result<usize, DbErr> {
+    let txn = db.begin().await?;
+    let removed = messaging_token::Entity::delete_many()
+        .filter(messaging_token::Column::UserId.eq(user_id))
+        .filter(messaging_token::Column::Token.is_in(tokens))
+        .exec_with_returning(&txn)
+        .await?;
+    let count = removed.len();
+    let actions = removed.into_iter().map(|row| change(row, "D")).collect();
+    sync::record(&txn, actions).await?;
+    txn.commit().await?;
+    Ok(count)
 }

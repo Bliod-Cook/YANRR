@@ -5,41 +5,9 @@ use jsonwebtoken::{Algorithm, DecodingKey, Validation};
 use sea_orm::{ConnectionTrait, DbBackend, Statement};
 use serde_json::{Value, json};
 
-#[tokio::test]
-async fn tokens_replace_per_channel() {
-    let app = TestApp::spawn().await;
-    app.sign_up("alice@example.com").await;
-    let alice = app.user_id().await;
-    app.insert_user("bob").await;
-    let sql = "INSERT INTO messaging_tokens VALUES ('bob', 'android', 'shared')";
-    app.state.db.execute_unprepared(sql).await.unwrap();
-    let register = async |token: &str, channel: &str| {
-        let body = json!({ "token": token, "channel": channel });
-        app.post("/api/messaging", body).await
-    };
-
-    let first = json(register("a", "macos").await).await;
-    assert!(first["lastSyncId"].is_i64());
-    register("b", "macos").await;
-    register("c", "ios").await;
-    register("shared", "web").await;
-    assert_error(register("d", "fax").await, 400, 4).await;
-    for _ in 0..2 {
-        app.delete("/api/messaging", json!({ "channel": "ios" }))
-            .await;
-    }
-    assert_error(app.get("/api/messaging/test").await, 403, 5).await;
-
-    let tokens = json(app.get("/api/messaging").await).await;
-    assert_eq!(
-        tokens["data"],
-        json!([
-            { "userId": alice, "token": "b", "channel": "macos" },
-            { "userId": alice, "token": "shared", "channel": "web" },
-        ])
-    );
-    let logged: Vec<_> = app
-        .actions()
+/// The `messaging` changes in the signed-in user's log: action, channel and data.
+async fn changes(app: &TestApp) -> Vec<(Value, Value, Value)> {
+    app.actions()
         .await
         .into_iter()
         .filter(|action| action["model"] == "messaging")
@@ -50,25 +18,68 @@ async fn tokens_replace_per_channel() {
                 action["data"].clone(),
             )
         })
-        .collect();
-    let change = |action: &str, channel: &str| {
-        (json!(action), json!(channel), json!({ "channel": channel }))
+        .collect()
+}
+
+fn change(action: &str, channel: &str, token: &str) -> (Value, Value, Value) {
+    let data = json!({ "channel": channel, "token": token });
+    (json!(action), json!(channel), data)
+}
+
+#[tokio::test]
+async fn tokens_are_kept_per_device() {
+    let app = TestApp::spawn().await;
+    app.sign_up("alice@example.com").await;
+    let alice = app.user_id().await;
+    app.insert_user("bob").await;
+    let sql = "INSERT INTO messaging_tokens (user_id, channel, token)
+        VALUES ('bob', 'android', 'shared'), ('bob', 'ios', 'bob-phone')";
+    app.state.db.execute_unprepared(sql).await.unwrap();
+    let register = async |token: &str, channel: &str| {
+        let body = json!({ "token": token, "channel": channel });
+        app.post("/api/messaging", body).await
     };
+
+    let first = json(register("mac", "macos").await).await;
+    assert!(first["lastSyncId"].is_i64());
+    register("mac", "macos").await;
+    register("other-mac", "macos").await;
+    register("phone", "ios").await;
+    register("shared", "web").await;
+    assert_error(register("fax", "fax").await, 400, 4).await;
+    for _ in 0..2 {
+        app.delete("/api/messaging", json!({ "token": "phone" }))
+            .await;
+    }
+    app.delete("/api/messaging", json!({ "token": "bob-phone" }))
+        .await;
+    assert_error(app.get("/api/messaging/test").await, 403, 5).await;
+
+    let tokens = json(app.get("/api/messaging").await).await;
     assert_eq!(
-        logged,
+        tokens["data"],
+        json!([
+            { "userId": alice, "token": "mac", "channel": "macos" },
+            { "userId": alice, "token": "other-mac", "channel": "macos" },
+            { "userId": alice, "token": "shared", "channel": "web" },
+        ])
+    );
+    assert_eq!(
+        changes(&app).await,
         [
-            change("U", "macos"),
-            change("U", "macos"),
-            change("U", "ios"),
-            change("U", "web"),
-            change("D", "ios"),
+            change("U", "macos", "mac"),
+            change("U", "macos", "other-mac"),
+            change("U", "ios", "phone"),
+            change("U", "web", "shared"),
+            change("D", "ios", "phone"),
         ]
     );
-    // The shared device moved to Alice: Bob loses it and is told so.
+    // The shared device moved to Alice: Bob loses it and is told so; his phone stays his.
     let sql = "SELECT
             (SELECT count(*) FROM messaging_tokens WHERE user_id = 'bob') AS tokens,
             (SELECT count(*) FROM sync_actions
-             WHERE user_id = 'bob' AND model = 'messaging' AND action = 'D' AND model_id = 'android') AS removals";
+             WHERE user_id = 'bob' AND model = 'messaging' AND action = 'D' AND model_id = 'android'
+                AND data->>'token' = 'shared') AS removals";
     let bob = app
         .state
         .db
@@ -77,7 +88,7 @@ async fn tokens_replace_per_channel() {
         .unwrap()
         .unwrap();
     let count = |column| bob.try_get::<i64>("", column).unwrap();
-    assert_eq!((count("tokens"), count("removals")), (0, 1));
+    assert_eq!((count("tokens"), count("removals")), (1, 1));
 }
 
 #[tokio::test]
@@ -151,15 +162,26 @@ async fn push_reaches_every_device_and_forgets_unregistered_ones() {
         app.post("/api/messaging", body).await;
     }
 
-    // A refused device fails the test push, after every device was tried.
+    // A device FCM no longer knows is forgotten, which is no failure.
+    let tested = app.get("/api/messaging/test?channel=macos").await;
+    assert_eq!(json(tested).await, json!({ "code": 0 }));
+    let kept: Vec<_> = json(app.get("/api/messaging").await).await["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|token| token["token"].clone())
+        .collect();
+    assert_eq!(kept, ["denied-token", "phone-token"]);
+    let forgotten = changes(&app).await.pop();
+    assert_eq!(forgotten, Some(change("D", "macos", "gone-token")));
+
+    // A refused device fails the test push, after every device was tried; what FCM said stays in the log.
     let tested = app.get("/api/messaging/test").await;
     assert_eq!(tested.status(), 500);
-    assert!(
-        json(tested).await["message"]
-            .as_str()
-            .unwrap()
-            .contains("PERMISSION_DENIED")
-    );
+    let tested = json(tested).await;
+    assert_eq!(tested["code"], 1005);
+    let message = tested["message"].as_str().unwrap();
+    assert!(!message.contains("PERMISSION_DENIED"), "{message}");
     let mut tried: Vec<_> = fixtures
         .requests(FCM_SEND_PATH)
         .iter()
@@ -167,17 +189,6 @@ async fn push_reaches_every_device_and_forgets_unregistered_ones() {
         .collect();
     tried.sort_by_key(|token| token.to_string());
     assert_eq!(tried, ["denied-token", "gone-token", "phone-token"]);
-    let mut kept: Vec<_> = json(app.get("/api/messaging").await).await["data"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|token| token["token"].clone())
-        .collect();
-    kept.sort_by_key(|token| token.to_string());
-    assert_eq!(kept, ["denied-token", "phone-token"]);
-
     // The access token is kept for the next notification.
-    let tested = app.get("/api/messaging/test?channel=ios").await;
-    assert_eq!(json(tested).await, json!({ "code": 0 }));
     assert_eq!(fixtures.requests("/token").len(), 1);
 }
