@@ -3,6 +3,7 @@
   "app.copied_to_clipboard": "Copié dans le presse-papiers",
   "app.request_timeout": "Le serveur a mis trop de temps à répondre. Veuillez réessayer.",
   "auth.error.invalid_email_or_password": "Email ou mot de passe incorrect.",
+  "auth.error.invalid_password": "Le mot de passe actuel est incorrect.",
   "auth.error.sign_in_failed": "Connexion impossible. Veuillez réessayer.",
   "auth.error.too_many_requests": "Trop de requêtes. Veuillez réessayer plus tard.",
   "discover.category.all": "Populaire",

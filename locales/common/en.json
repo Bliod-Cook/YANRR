@@ -3,6 +3,7 @@
   "app.copied_to_clipboard": "Copied to clipboard",
   "app.request_timeout": "The server took too long to respond. Please try again.",
   "auth.error.invalid_email_or_password": "Incorrect email or password.",
+  "auth.error.invalid_password": "Current password is incorrect.",
   "auth.error.sign_in_failed": "Couldn't sign in. Please try again.",
   "auth.error.too_many_requests": "Too many requests. Please try again later.",
   "discover.category.all": "Popular",

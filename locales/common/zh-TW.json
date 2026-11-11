@@ -3,6 +3,7 @@
   "app.copied_to_clipboard": "已複製到剪貼簿",
   "app.request_timeout": "伺服器回應逾時，請稍後再試。",
   "auth.error.invalid_email_or_password": "電子信箱或密碼不正確。",
+  "auth.error.invalid_password": "目前密碼不正確。",
   "auth.error.sign_in_failed": "登入失敗，請再試一次。",
   "auth.error.too_many_requests": "請求過於頻繁，請稍後再試。",
   "discover.category.all": "熱門",

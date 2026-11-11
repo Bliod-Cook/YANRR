@@ -3,6 +3,7 @@
   "app.copied_to_clipboard": "クリップボードにコピーしました",
   "app.request_timeout": "サーバーの応答に時間がかかりすぎました。しばらくしてからもう一度お試しください。",
   "auth.error.invalid_email_or_password": "メールアドレスまたはパスワードが正しくありません。",
+  "auth.error.invalid_password": "現在のパスワードが正しくありません。",
   "auth.error.sign_in_failed": "ログインできませんでした。もう一度お試しください。",
   "auth.error.too_many_requests": "リクエストが多すぎます。しばらくしてからもう一度お試しください。",
   "discover.category.all": "人気",
