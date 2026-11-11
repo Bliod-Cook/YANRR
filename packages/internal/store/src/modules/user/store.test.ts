@@ -74,6 +74,14 @@ describe("userSyncService.whoami", () => {
     expect(UserService.removeCurrentUser).toHaveBeenCalledTimes(1)
   })
 
+  it("takes the server's word for it when the database cannot be written", async () => {
+    vi.mocked(UserService.removeCurrentUser).mockRejectedValueOnce(new Error("database closed"))
+    vi.spyOn(console, "error").mockImplementation(() => {})
+
+    await expect(userSyncService.whoami()).resolves.toBeNull()
+    expect(useUserStore.getState().whoami).toBeNull()
+  })
+
   it("stores the user of the session", async () => {
     const createdAt = "2024-01-01T00:00:00.000Z"
     answer = {

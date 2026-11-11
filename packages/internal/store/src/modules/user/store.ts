@@ -69,8 +69,9 @@ class UserSyncService {
     const res = error ? null : data
 
     if (!res) {
-      // Also in the database, or the next launch would start signed in as that user
-      await userActions.removeCurrentUser()
+      // Also in the database, or the next launch would start signed in as that user. The
+      // server's answer stands if that write fails.
+      await userActions.removeCurrentUser().catch(() => {})
       return null
     }
 
