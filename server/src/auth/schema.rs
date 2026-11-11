@@ -1,9 +1,9 @@
+//! The entities better-auth stores; their tables are created by the migrations, so a change here needs one.
+
 use better_auth::AuthSchema;
 use better_auth::seaorm::AuthEntity;
 use better_auth::seaorm::sea_orm;
 use better_auth::seaorm::sea_orm::entity::prelude::*;
-use better_auth::seaorm::sea_orm::sea_query::{Alias, ForeignKey, ForeignKeyAction, Index};
-use better_auth::seaorm::sea_orm::{ConnectionTrait, Schema};
 mod user {
     use super::*;
     #[derive(Clone, Debug, serde::Serialize, DeriveEntityModel, AuthEntity)]
@@ -93,83 +93,4 @@ impl AuthSchema for AppAuthSchema {
     type Session = session::Model;
     type Account = account::Model;
     type Verification = verification::Model;
-}
-/// Create auth tables in an empty database.
-///
-/// Call this scaffold from the application's initial migration.
-/// Use versioned migrations to change existing tables.
-pub async fn create_auth_tables(database: &impl ConnectionTrait) -> Result<(), sea_orm::DbErr> {
-    let schema = Schema::new(database.get_database_backend());
-    for statement in [
-        schema.create_table_from_entity(user::Entity).to_owned(),
-        schema
-            .create_table_from_entity(session::Entity)
-            .foreign_key(
-                ForeignKey::create()
-                    .name("fk_sessions_user_id")
-                    .from(Alias::new("sessions"), Alias::new("user_id"))
-                    .to(Alias::new("users"), Alias::new("id"))
-                    .on_delete(ForeignKeyAction::Cascade),
-            )
-            .to_owned(),
-        schema
-            .create_table_from_entity(account::Entity)
-            .foreign_key(
-                ForeignKey::create()
-                    .name("fk_accounts_user_id")
-                    .from(Alias::new("accounts"), Alias::new("user_id"))
-                    .to(Alias::new("users"), Alias::new("id"))
-                    .on_delete(ForeignKeyAction::Cascade),
-            )
-            .to_owned(),
-        schema
-            .create_table_from_entity(verification::Entity)
-            .to_owned(),
-    ] {
-        let _ = database.execute(&statement).await?;
-    }
-    for statement in [
-        Index::create()
-            .name("idx_users_email")
-            .table(Alias::new("users"))
-            .col(Alias::new("email"))
-            .unique()
-            .to_owned(),
-        Index::create()
-            .name("idx_sessions_token")
-            .table(Alias::new("sessions"))
-            .col(Alias::new("token"))
-            .unique()
-            .to_owned(),
-        Index::create()
-            .name("idx_sessions_user_id")
-            .table(Alias::new("sessions"))
-            .col(Alias::new("user_id"))
-            .to_owned(),
-        Index::create()
-            .name("idx_sessions_expires_at")
-            .table(Alias::new("sessions"))
-            .col(Alias::new("expires_at"))
-            .to_owned(),
-        Index::create()
-            .name("idx_accounts_provider_id_account_id")
-            .table(Alias::new("accounts"))
-            .col(Alias::new("provider_id"))
-            .col(Alias::new("account_id"))
-            .unique()
-            .to_owned(),
-        Index::create()
-            .name("idx_accounts_user_id")
-            .table(Alias::new("accounts"))
-            .col(Alias::new("user_id"))
-            .to_owned(),
-        Index::create()
-            .name("idx_verifications_identifier")
-            .table(Alias::new("verifications"))
-            .col(Alias::new("identifier"))
-            .to_owned(),
-    ] {
-        let _ = database.execute(&statement).await?;
-    }
-    Ok(())
 }

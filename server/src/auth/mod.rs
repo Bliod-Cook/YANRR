@@ -1,6 +1,6 @@
 mod schema;
 
-pub use schema::{AppAuthSchema, create_auth_tables};
+pub use schema::AppAuthSchema;
 
 use better_auth::{
     AuthConfig, AuthResult, BetterAuth,
