@@ -36,15 +36,6 @@ describe("createSharedAnimation", () => {
     expect(stop).toHaveBeenCalledTimes(1)
   })
 
-  it("starts again for a holder that comes after it stopped", () => {
-    const { hold, start, stop } = setup()
-
-    hold()()
-    hold()
-    expect(start).toHaveBeenCalledTimes(2)
-    expect(stop).toHaveBeenCalledTimes(1)
-  })
-
   it("follows a mount, unmount and mount again of the same view", () => {
     const { hold, start, stop } = setup()
 
