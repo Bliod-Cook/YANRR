@@ -144,10 +144,42 @@ describe("SharePanel", () => {
     await clickAction(container, "share.system_share")
 
     expect(share).toHaveBeenCalledWith({
-      text: "Example description | share.discover_more",
-      title: `Example entry - ${APP_NAME}`,
+      title: "Example entry",
       url: "https://example.com/article",
     })
+    expect(mocks.dismissPopover).toHaveBeenCalledOnce()
+  })
+
+  test("shares only the link of an entry without a title", async () => {
+    mocks.getEntry.mockReturnValue({
+      description: "A post from a social feed",
+      id: "entry-1",
+      title: null,
+      url: "https://example.com/post",
+    })
+    const share = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: share,
+    })
+    ;({ container, root } = await renderSharePanel())
+
+    await clickAction(container, "share.system_share")
+
+    expect(share).toHaveBeenCalledWith({ url: "https://example.com/post" })
+  })
+
+  test("posts the entry title with its link to a social network", async () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null)
+    ;({ container, root } = await renderSharePanel())
+
+    await clickAction(container, "Telegram")
+
+    expect(open).toHaveBeenCalledWith(
+      "https://t.me/share/url?url=https%3A%2F%2Fexample.com%2Farticle&text=Example%20entry",
+      "_blank",
+      "width=600,height=400",
+    )
     expect(mocks.dismissPopover).toHaveBeenCalledOnce()
   })
 

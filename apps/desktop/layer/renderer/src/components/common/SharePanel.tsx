@@ -36,7 +36,7 @@ const socialOptions: SocialShareOption[] = [
     id: "twitter",
     label: "X",
     icon: tw`i-mgc-social-x-cute-re`,
-    url: "https://x.com/intent/tweet?text={text}&url={url}",
+    url: "https://x.com/intent/tweet?text={title}&url={url}",
     color: "text-white",
     bgColor: "bg-black",
   },
@@ -52,7 +52,7 @@ const socialOptions: SocialShareOption[] = [
     id: "telegram",
     label: "Telegram",
     icon: tw`i-mgc-telegram-cute-re`,
-    url: "https://t.me/share/url?url={url}&text={text}",
+    url: "https://t.me/share/url?url={url}&text={title}",
     color: "text-white",
     bgColor: "bg-[#0088CC]",
   },
@@ -60,51 +60,33 @@ const socialOptions: SocialShareOption[] = [
     id: "weibo",
     label: "微博",
     icon: tw`i-mgc-weibo-cute-re`,
-    url: "https://service.weibo.com/share/share.php?url={url}&title={text}",
+    url: "https://service.weibo.com/share/share.php?url={url}&title={title}",
     color: "text-white",
     bgColor: "bg-[#E6162D]",
   },
 ]
 
-const getShareUrl = (entryId: string) => {
-  const entry = getEntry(entryId)
-  if (!entry) return ""
+interface ShareContent {
+  title?: string
+  url: string
+}
 
-  return entry.url!
+/**
+ * What leaves the app: the article as its publisher names it. Social posts often have no title,
+ * so their link goes out on its own.
+ */
+const getShareContent = (entryId: string): ShareContent | null => {
+  const entry = getEntry(entryId)
+  if (!entry?.url) return null
+
+  return { title: entry.title || undefined, url: entry.url }
 }
 
 export const SharePanel = ({ entryId }: SharePanelProps) => {
   const { t } = useTranslation()
 
-  const generateShareContent = useCallback(
-    (entry: ReturnType<typeof getEntry>) => {
-      if (!entry) return null
-
-      const { title, description } = entry
-      const shareUrl = getShareUrl(entryId)
-
-      // Limit text to 50 characters with ellipsis
-      const truncateText = (text: string, maxLength = 50) => {
-        return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text
-      }
-
-      const shareTitle = `${title || t("share.default_title")} - ${APP_NAME}`
-      const baseText = description || title || t("share.default_description")
-      const truncatedText = truncateText(baseText)
-      const shareText = `${truncatedText} | ${t("share.discover_more")}`
-
-      return {
-        title: shareTitle,
-        text: shareText,
-        url: shareUrl,
-      }
-    },
-    [entryId, t],
-  )
-
   const handleNativeShare = useCallback(async () => {
-    const entry = getEntry(entryId)
-    const shareContent = generateShareContent(entry)
+    const shareContent = getShareContent(entryId)
 
     if (!shareContent) return
 
@@ -114,11 +96,7 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
         await ipcServices?.menu.showShareMenu(shareContent.url)
       } else if (navigator.share) {
         // Use Web Share API
-        await navigator.share({
-          title: shareContent.title,
-          text: shareContent.text,
-          url: shareContent.url,
-        })
+        await navigator.share(shareContent)
       } else {
         // Fallback to copying link
         await copyToClipboard(shareContent.url)
@@ -138,12 +116,15 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
         toast.error(t("share.copy_failed"))
       }
     }
-  }, [entryId, generateShareContent, t])
+  }, [entryId, t])
 
   const handleCopyLink = useCallback(async () => {
-    const shareUrl = getShareUrl(entryId)
+    const shareContent = getShareContent(entryId)
+
+    if (!shareContent) return
+
     try {
-      await copyToClipboard(shareUrl)
+      await copyToClipboard(shareContent.url)
       toast.success(t("share.link_copied"))
       dismissPopover()
     } catch {
@@ -153,24 +134,18 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
 
   const handleSocialShare = useCallback(
     (shareUrlTemplate: string) => {
-      const entry = getEntry(entryId)
-      const shareContent = generateShareContent(entry)
+      const shareContent = getShareContent(entryId)
 
       if (!shareContent) return
 
-      const encodedUrl = encodeURIComponent(shareContent.url)
-      const shareTitle = encodeURIComponent(shareContent.title)
-      const shareText = encodeURIComponent(shareContent.text)
-
       const finalUrl = shareUrlTemplate
-        .replace("{url}", encodedUrl)
-        .replace("{title}", shareTitle)
-        .replace("{text}", shareText)
+        .replace("{url}", encodeURIComponent(shareContent.url))
+        .replace("{title}", encodeURIComponent(shareContent.title ?? ""))
 
       window.open(finalUrl, "_blank", "width=600,height=400")
       dismissPopover()
     },
-    [entryId, generateShareContent],
+    [entryId],
   )
 
   const actionOptions: ShareOption[] = [
