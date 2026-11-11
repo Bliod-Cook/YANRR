@@ -5,9 +5,10 @@ import { useCallback } from "react"
 import { useNavigate } from "react-router"
 import { withoutTrailingSlash, withTrailingSlash } from "ufo"
 
-import { previewBackPath } from "~/atoms/preview"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { FeedForm } from "~/modules/discover/FeedForm"
+
+import { getPreviewBackPath } from "./useNavigateEntry"
 
 export interface FollowOptions {
   id?: string
@@ -37,9 +38,9 @@ export const useFollow = () => {
         content: ({ dismiss }) => {
           const onSuccess = () => {
             options?.onSuccess?.()
-            // If it's a preview, navigate to the back path
-            const backPath = previewBackPath()
-            backPath && navigate(backPath)
+            // Followed from its preview: back to where the preview was opened from
+            const backPath = getPreviewBackPath()
+            if (backPath) void navigate(backPath)
             dismiss()
           }
           return <FeedForm id={id} url={url} onSuccess={onSuccess} />

@@ -16,12 +16,12 @@ import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 
-import { previewBackPath } from "~/atoms/preview"
 import { setGeneralSetting, useGeneralSettingKey } from "~/atoms/settings/general"
 import { useSubscriptionColumnShow } from "~/atoms/sidebar"
 import { ROUTE_ENTRY_PENDING } from "~/constants"
 import { useFeature } from "~/hooks/biz/useFeature"
 import { useFollow } from "~/hooks/biz/useFollow"
+import { getPreviewBackPath } from "~/hooks/biz/useNavigateEntry"
 import { getRouteParams, useRouteParams } from "~/hooks/biz/useRouteParams"
 import { useLoginModal } from "~/hooks/common"
 import { useSendAIShortcut } from "~/modules/ai-chat/hooks/useSendAIShortcut"
@@ -293,7 +293,7 @@ const PreviewHeaderInfoWrapper: Component = ({ children }) => {
         <MotionButtonBase
           onClick={(e) => {
             e.stopPropagation()
-            navigate(previewBackPath() || "/")
+            navigate(getPreviewBackPath() || "/")
           }}
           className="no-drag-region mr-1 inline-flex items-center gap-1 whitespace-nowrap duration-200 hover:text-accent"
         >

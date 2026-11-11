@@ -7,7 +7,6 @@ import { toast } from "sonner"
 
 import { disableShowAISummaryOnce } from "~/atoms/ai-summary"
 import { disableShowAITranslationOnce } from "~/atoms/ai-translation"
-import { setPreviewBackPath } from "~/atoms/preview"
 import { resetShowSourceContent } from "~/atoms/source-content"
 import {
   ROUTE_ENTRY_PENDING,
@@ -25,8 +24,19 @@ export type NavigateEntryOptions = Partial<{
   view: FeedViewType
   folderName: string | null
   inboxId: string
+  /** Opens the feed as a preview, whose back button returns to this path */
   backPath: string
 }>
+
+type PreviewLocationState = { previewBackPath?: string }
+
+/**
+ * Where the back button of the feed preview on screen, and following the feed from it, return to.
+ * It lives in the history entry, so it is gone once another feed is opened.
+ */
+export const getPreviewBackPath = () =>
+  (getReadonlyRoute().location.state as PreviewLocationState | null)?.previewBackPath
+
 /**
  * @description a hook to navigate to `feedId`, `entryId`, add search for `view`, `level`
  */
@@ -99,9 +109,9 @@ export const navigateEntry = (options: NavigateEntryOptions) => {
   const currentPath = route.location.pathname + route.location.search
   if (path === currentPath) return
 
-  if (backPath) {
-    setPreviewBackPath(backPath)
-  }
+  // Entries opened in a preview keep its way back
+  const staysInFeed = parsedOptions.feedId === encodeURIComponent(route.params.feedId ?? "")
+  const previewBackPath = backPath ?? (staysInFeed ? getPreviewBackPath() : undefined)
 
   disableShowAISummaryOnce()
   disableShowAITranslationOnce()
@@ -119,7 +129,8 @@ export const navigateEntry = (options: NavigateEntryOptions) => {
     throw new Error(message, { cause: "Navigation is not available" })
   }
 
-  return navigate?.(path)
+  const state: PreviewLocationState | undefined = previewBackPath ? { previewBackPath } : undefined
+  return navigate(path, { state })
 }
 
 export const useBackHome = (timelineId?: string) => {
