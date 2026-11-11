@@ -1,36 +1,22 @@
 import { FollowAPIError } from "@follow-app/client-sdk"
-import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister"
-import type { OmitKeyof } from "@tanstack/react-query"
 import { QueryClient } from "@tanstack/react-query"
-import type { PersistQueryClientOptions } from "@tanstack/react-query-persist-client"
-import { FetchError } from "ofetch"
-
-import { QUERY_PERSIST_KEY } from "../constants/app"
 
 const defaultStaleTime = 600_000 // 10min
 // A timeout (408) waited the whole time already: each retry would wait as long again, for minutes
 const DO_NOT_RETRY_CODES = new Set([400, 401, 403, 404, 408, 422])
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retryDelay: 1000,
       staleTime: defaultStaleTime,
       retry(failureCount, error) {
-        if (
-          error instanceof FetchError &&
-          (error.statusCode === undefined || DO_NOT_RETRY_CODES.has(error.statusCode))
-        ) {
-          return false
-        }
-
         if (error instanceof FollowAPIError && DO_NOT_RETRY_CODES.has(error.status)) {
           return false
         }
 
-        return !!(3 - failureCount)
+        return failureCount < 3
       },
-      // throwOnError: import.meta.env.DEV,
     },
     // TanStack pauses mutations before they run while the browser is offline, and a paused
     // mutation has no function after a reload, so a star or a read toggle made offline did
@@ -41,38 +27,3 @@ const queryClient = new QueryClient({
     },
   },
 })
-const localStoragePersister = createSyncStoragePersister({
-  storage: window.localStorage,
-  key: QUERY_PERSIST_KEY,
-})
-
-declare module "@tanstack/react-query" {
-  interface Meta {
-    queryMeta: { persist?: boolean }
-  }
-
-  interface Register extends Meta {}
-}
-
-export const persistConfig: OmitKeyof<PersistQueryClientOptions, "queryClient"> = {
-  persister: localStoragePersister,
-  // 7 day
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-  dehydrateOptions: {
-    // A restored mutation has no function to run, so persisting one only keeps it hanging.
-    shouldDehydrateMutation: () => false,
-    shouldDehydrateQuery: (query) => {
-      if (!query.meta?.persist) return false
-      const queryIsReadyForPersistence = query.state.status === "success"
-      if (queryIsReadyForPersistence) {
-        return (
-          !((query.state?.data as any)?.pages?.length > 1) && query.queryKey?.[0] !== "check-eagle"
-        )
-      } else {
-        return false
-      }
-    },
-  },
-}
-
-export { queryClient }

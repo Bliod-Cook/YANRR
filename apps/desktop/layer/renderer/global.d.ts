@@ -1,9 +1,9 @@
-import type { ElectronAPI } from "@electron-toolkit/preload"
+import type { ElectronBridge } from "@follow/electron-main"
 
 declare global {
   interface Window {
-    electron?: ElectronAPI
-    api?: { canWindowBlur: boolean; isWindowsStore: boolean }
+    electron?: ElectronBridge
+    api?: { canWindowBlur: boolean }
     platform: NodeJS.Platform
     /** The server's addresses overriding `@follow/shared/env.desktop`, see `env.desktop.ts` */
     __followEnv?: Record<string, string>
@@ -11,17 +11,4 @@ declare global {
   export const APP_NAME = "Yanrr"
 }
 
-declare module "virtual:pwa-register/react" {
-  import type { Dispatch, SetStateAction } from "react"
-  import type { RegisterSWOptions } from "vite-plugin-pwa/types"
-
-  export function useRegisterSW(options?: RegisterSWOptions): {
-    needRefresh: [boolean, Dispatch<SetStateAction<boolean>>]
-    offlineReady: [boolean, Dispatch<SetStateAction<boolean>>]
-    updateServiceWorker: (reloadPage?: boolean) => Promise<void>
-  }
-}
-
 export {}
-
-export { type RegisterSWOptions } from "vite-plugin-pwa/types"

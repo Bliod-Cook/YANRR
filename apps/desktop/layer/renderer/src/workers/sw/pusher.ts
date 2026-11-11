@@ -11,10 +11,6 @@ interface NewEntryMessage {
 type Message = NewEntryMessage
 
 export const registerPusher = (self: ServiceWorkerGlobalScope) => {
-  self.addEventListener("message", (event) => {
-    if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting()
-  })
-
   // Firebase Cloud Messaging handler
   self.addEventListener("push", (event) => {
     if (event.data) {

@@ -90,35 +90,15 @@ export default ({ mode }) => {
         enableInDev: true,
       }),
       localesPlugin(),
+      // Builds the web app manifest and the push service worker, which precaches nothing and is
+      // registered by the push setup when it is needed
       isWebBuild &&
         VitePWA({
           strategies: "injectManifest",
           srcDir: "src",
           filename: "sw.ts",
-          registerType: "prompt",
           injectRegister: false,
-
-          injectManifest: {
-            injectionPoint: undefined,
-            globPatterns: [
-              "**/*.{js,json,css,html,txt,svg,png,ico,webp,woff,woff2,ttf,eot,otf,wasm}",
-            ],
-
-            manifestTransforms: [
-              (manifest) => {
-                return {
-                  manifest,
-                  warnings: [],
-                  additionalManifestEntries: [
-                    {
-                      url: "/sw.js?pwa=true",
-                      revision: null,
-                    },
-                  ],
-                }
-              },
-            ],
-          },
+          injectManifest: { injectionPoint: undefined },
 
           manifest: {
             theme_color: "#000000",
@@ -148,13 +128,6 @@ export default ({ mode }) => {
                 purpose: "maskable",
               },
             ],
-          },
-
-          devOptions: {
-            enabled: false,
-            navigateFallback: "index.html",
-            suppressWarnings: true,
-            type: "module",
           },
         }),
       mode !== "development" &&
@@ -223,11 +196,7 @@ export default ({ mode }) => {
         ],
         ["i18next", "i18next-browser-languagedetector", "react-i18next"],
         // Data query
-        [
-          "@tanstack/react-query",
-          "@tanstack/react-query-persist-client",
-          "@tanstack/query-sync-storage-persister",
-        ],
+        ["@tanstack/react-query"],
         ["tldts"],
         ["zod", "react-hook-form", "@hookform/resolvers"],
       ]),
