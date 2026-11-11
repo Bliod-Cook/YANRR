@@ -9,10 +9,10 @@ import { shallow } from "zustand/shallow"
 
 declare module "@follow/utils/event-bus" {
   interface CustomEvent {
+    // Declared the same way by its listener, the setting sync queue of the store
     SETTING_CHANGE_EVENT: {
-      updated: number
-      payload: Record<string, any>
       key: string
+      payload: Record<string, unknown>
     }
   }
 }
@@ -118,23 +118,9 @@ export const createSettingAtom = <T extends object>(
     key: K,
     value: ReturnType<typeof getSettings>[K],
   ) => {
-    const updated = Date.now()
-    setSettings({
-      ...getSettings(),
-      [key]: value,
+    setSettings({ ...getSettings(), [key]: value })
 
-      updated,
-    })
-
-    EventBus.dispatch("SETTING_CHANGE_EVENT", {
-      payload: { [key]: value },
-      updated,
-      key: settingKey,
-    })
-  }
-
-  const clearSettings = () => {
-    setSettings(createDefaultSettings())
+    EventBus.dispatch("SETTING_CHANGE_EVENT", { key: settingKey, payload: { [key]: value } })
   }
 
   Object.defineProperty(useSettingValue, "select", {
@@ -145,7 +131,6 @@ export const createSettingAtom = <T extends object>(
     useSettingKey,
     useSettingSelector,
     setSetting,
-    clearSettings,
     initializeDefaultSettings,
 
     useSettingValue,
@@ -157,7 +142,6 @@ export const createSettingAtom = <T extends object>(
     useSettingKey: typeof useSettingKey
     useSettingSelector: typeof useSettingSelector
     setSetting: typeof setSetting
-    clearSettings: typeof clearSettings
     initializeDefaultSettings: typeof initializeDefaultSettings
     useSettingValue: typeof useSettingValue & {
       select: <T extends keyof ReturnType<() => T>>(key: T) => Awaited<T[T]>

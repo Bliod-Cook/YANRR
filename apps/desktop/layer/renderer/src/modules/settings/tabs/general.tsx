@@ -2,19 +2,15 @@ import { ResponsiveSelect } from "@follow/components/ui/select/responsive.js"
 import { useTypeScriptHappyCallback } from "@follow/hooks"
 import { ACTION_LANGUAGE_MAP } from "@follow/shared"
 import { IN_ELECTRON } from "@follow/shared/constants"
-import { START_IN_TRAY_ARGS } from "@follow/shared/desktop-launch"
 import { cn } from "@follow/utils/utils"
 import dayjs from "dayjs"
-import { useAtom } from "jotai"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { currentSupportedLanguages } from "~/@types/constants"
 import { defaultResources } from "~/@types/default-resource"
-import { langLoadingLockMapAtom } from "~/atoms/lang"
 import {
   DEFAULT_ACTION_LANGUAGE,
-  getGeneralSettings,
   setGeneralSetting,
   useGeneralSettingKey,
   useGeneralSettingSelector,
@@ -41,12 +37,7 @@ const { defineSettingItem: _defineSettingItem, SettingBuilder } = createSetting(
 )
 
 const saveLoginSetting = (checked: boolean) => {
-  ipcServices?.setting.setLoginItemSettings({
-    openAtLogin: checked,
-    // Start hidden in the tray when launched at login and the tray icon is enabled. Only Windows
-    // passes the arguments, the main process detects a login launch on macOS itself
-    args: [START_IN_TRAY_ARGS],
-  })
+  ipcServices?.setting.setOpenAtLogin(checked)
   setGeneralSetting("appLaunchOnStartup", checked)
 }
 
@@ -57,13 +48,10 @@ export const SettingGeneral = () => {
       if (settings) {
         // On Windows `openAtLogin` only matches a login item registered without arguments,
         // `executableWillLaunchAtLogin` matches it with any arguments
-        const launchOnStartup =
-          settings.openAtLogin || settings.executableWillLaunchAtLogin === true
-        // Writing marks the general settings as updated, which makes this device ignore older
-        // general settings from other devices, so only write when the OS value differs
-        if (getGeneralSettings().appLaunchOnStartup !== launchOnStartup) {
-          setGeneralSetting("appLaunchOnStartup", launchOnStartup)
-        }
+        setGeneralSetting(
+          "appLaunchOnStartup",
+          settings.openAtLogin || settings.executableWillLaunchAtLogin === true,
+        )
       }
     })
   }, [])
@@ -208,8 +196,6 @@ export const LanguageSelector = ({
     ? language
     : fallbackLanguage
 
-  const [loadingLanguageLockMap] = useAtom(langLoadingLockMapAtom)
-
   return (
     <div className={cn("mb-3 mt-4 flex w-full items-center", containerClassName)}>
       <div className="flex grow flex-col gap-1">
@@ -226,7 +212,6 @@ export const LanguageSelector = ({
         contentClassName={contentClassName}
         defaultValue={finalRenderLanguage}
         value={finalRenderLanguage}
-        disabled={loadingLanguageLockMap[finalRenderLanguage]}
         onValueChange={(value) => {
           setGeneralSetting("language", value as string)
           dayjs.locale(value)

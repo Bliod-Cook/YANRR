@@ -19,7 +19,6 @@ const {
   useSettingSelector: useGeneralSettingSelectorInternal,
   useSettingKeys: useGeneralSettingKeysInternal,
   setSetting: setGeneralSetting,
-  clearSettings: clearGeneralSettings,
   initializeDefaultSettings: initializeDefaultGeneralSettings,
   getSettings: getGeneralSettingsInternal,
   useSettingValue: useGeneralSettingValueInternal,
@@ -105,7 +104,6 @@ const [
 )
 export {
   __generalSettingAtom,
-  clearGeneralSettings,
   getGeneralSettings,
   initializeDefaultGeneralSettings,
   setGeneralSetting,

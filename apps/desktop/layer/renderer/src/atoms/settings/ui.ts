@@ -22,7 +22,6 @@ const {
   useSettingSelector: useUISettingSelectorInternal,
   useSettingKeys: useUISettingKeysInternal,
   setSetting: setUISetting,
-  clearSettings: clearUISettings,
   initializeDefaultSettings: initializeDefaultUISettings,
   getSettings: getUISettingsInternal,
   useSettingValue: useUISettingValueInternal,
@@ -62,7 +61,6 @@ const [useUISettingKey, useUISettingSelector, useUISettingKeys, getUISettings, u
   )
 export {
   __uiSettingAtom,
-  clearUISettings,
   getUISettings,
   initializeDefaultUISettings,
   setUISetting,

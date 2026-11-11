@@ -1,537 +1,155 @@
-import { getSyncModelHandler } from "@follow/store/sync/model-registry"
-import type { SyncAction } from "@follow/store/sync/types"
-import { getStorageNS } from "@follow/utils/ns"
-import { FollowAPIError } from "@follow-app/client-sdk"
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
-import {
-  clearAISettings,
-  getAISettings,
-  initializeDefaultAISettings,
-  setAISetting,
-} from "~/atoms/settings/ai"
-import {
-  clearGeneralSettings,
-  getGeneralSettings,
-  initializeDefaultGeneralSettings,
-  setGeneralSetting,
-} from "~/atoms/settings/general"
-import {
-  getSpotlightSettings,
-  initializeDefaultSpotlightSettings,
-  setSpotlightSetting,
-} from "~/atoms/settings/spotlight"
-import { initializeDefaultUISettings } from "~/atoms/settings/ui"
-import { queryClient } from "~/lib/query-client"
+type Settings = Record<string, unknown>
 
-import { settingSyncQueue } from "./sync-queue"
+const USER = "user-1"
+const STORAGE_KEY = "follow:setting_sync_queue"
+const LONG_AGO = "2020-01-01T00:00:00.000Z"
 
-const { settingsGetMock, settingsPrefetchMock, settingsUpdateMock, whoamiMock } = vi.hoisted(
-  () => ({
-    settingsGetMock: vi.fn(),
-    settingsPrefetchMock: vi.fn(),
-    settingsUpdateMock: vi.fn(),
-    whoamiMock: vi.fn(),
-  }),
-)
-
-vi.mock("@follow/store/user/getters", () => ({
-  whoami: whoamiMock,
-}))
-
-vi.mock("~/lib/api-client", () => ({
-  followClient: {
-    api: {
-      settings: {
-        get: settingsGetMock,
-        update: settingsUpdateMock,
-      },
-    },
-  },
-}))
-
-vi.mock("~/queries/settings", () => ({
-  settings: {
-    get: () => ({
-      key: ["settings"],
-      fn: settingsPrefetchMock,
-    }),
-  },
-}))
-
-// Settings changed on this device went to the account once already, as after the first launch
-// of a version that syncs them again.
-const markLocalSettingsUploaded = () =>
-  localStorage.setItem(getStorageNS("setting_sync_local_first_user-1"), "1")
-
-const createRule = () => ({
+const rule = {
   id: "rule-1",
   enabled: true,
   pattern: "alpha",
   patternType: "keyword" as const,
   caseSensitive: false,
   color: "#FDE68A",
-})
+}
 
-describe("desktop spotlight setting sync", () => {
-  beforeEach(() => {
-    const eventTarget = new EventTarget()
-    Object.defineProperties(window, {
-      addEventListener: {
-        configurable: true,
-        value: eventTarget.addEventListener.bind(eventTarget),
-      },
-      removeEventListener: {
-        configurable: true,
-        value: eventTarget.removeEventListener.bind(eventTarget),
-      },
-      dispatchEvent: {
-        configurable: true,
-        value: eventTarget.dispatchEvent.bind(eventTarget),
-      },
-    })
+/** What the account holds on the server, and the changes this device sent to it. */
+const server = {
+  settings: {} as Record<string, Settings>,
+  updated: {} as Record<string, string>,
+  sent: [] as { tab: string; body: Settings }[],
+}
 
-    whoamiMock.mockReturnValue({ id: "user-1" })
-    settingsUpdateMock.mockResolvedValue({ code: 0 })
-    settingsPrefetchMock.mockResolvedValue({
-      code: 0,
-      settings: {},
-      updated: {},
-    })
-    settingsGetMock.mockResolvedValue({
-      code: 0,
-      settings: {},
-      updated: {},
-    })
+/** Launch the app with what the profile has in localStorage, signed in. */
+const launch = async () => {
+  vi.resetModules()
+  const { apiContext } = await import("@follow/store/context")
+  const { useUserStore } = await import("@follow/store/user/store")
+  const { getSyncModelHandler } = await import("@follow/store/sync/model-registry")
+  const general = await import("~/atoms/settings/general")
+  const ui = await import("~/atoms/settings/ui")
+  const spotlight = await import("~/atoms/settings/spotlight")
+  const ai = await import("~/atoms/settings/ai")
+  const { doMigration } = await import("~/initialize/migrates")
+  const { initializeSettings } = await import("~/initialize/settings")
+  const { settingSyncQueue } = await import("./sync-queue")
 
-    initializeDefaultUISettings()
-    // Initializing keeps the values a previous test set; clearing starts from the defaults.
-    clearGeneralSettings()
-    clearAISettings()
-    initializeDefaultGeneralSettings()
-    initializeDefaultAISettings()
-    initializeDefaultSpotlightSettings()
+  apiContext.provide({
+    settings: {
+      get: async () => ({ code: 0, settings: server.settings, updated: server.updated }),
+      update: async ({ tab, ...body }: Settings & { tab: string }) => {
+        server.sent.push({ tab, body })
+        return { code: 0 }
+      },
+    },
+  } as never)
+  useUserStore.setState({ whoami: { id: USER } as never })
+
+  await doMigration()
+  initializeSettings()
+  settingSyncQueue.init()
+
+  return {
+    ...general,
+    ...ui,
+    ...spotlight,
+    ...ai,
+    settingSyncQueue,
+    /** The sync engine's first load of the account's settings */
+    loadAccountSettings: () => getSyncModelHandler("setting")!.bootstrap!(),
+  }
+}
+
+describe("desktop setting sync", () => {
+  let app: Awaited<ReturnType<typeof launch>>
+
+  beforeEach(async () => {
+    vi.useFakeTimers()
     localStorage.clear()
-    markLocalSettingsUploaded()
+    server.settings = {}
+    server.updated = {}
+    server.sent = []
+    app = await launch()
   })
 
   afterEach(() => {
+    app.settingSyncQueue.teardown()
     vi.useRealTimers()
-    vi.clearAllMocks()
-    settingSyncQueue.teardown()
-    settingSyncQueue.queue = []
     localStorage.clear()
-    initializeDefaultUISettings()
-    initializeDefaultGeneralSettings()
-    initializeDefaultAISettings()
-    initializeDefaultSpotlightSettings()
   })
 
-  const settingAction = (tab: string, data: unknown): SyncAction => ({
-    id: 1,
-    model: "setting",
-    modelId: tab,
-    action: "U",
-    data,
-    createdAt: "2030-04-14T12:00:00.000Z",
-  })
-
-  test("the sync engine loads settings in full once and then applies logged tabs without a request", async () => {
-    const handler = getSyncModelHandler("setting")!
-    setGeneralSetting("actionLanguage", "ja")
-    queryClient.setQueryData(["settings"], { code: 0, settings: {}, updated: {} })
-
-    await handler.apply(
-      settingAction("general", {
-        payload: { actionLanguage: "en" },
-        updatedAt: "2030-04-14T12:00:00.000Z",
-      }),
-    )
-
-    expect(getGeneralSettings()).toMatchObject({
-      actionLanguage: "en",
-      updated: Date.parse("2030-04-14T12:00:00.000Z"),
-    })
-    expect(settingsPrefetchMock).not.toHaveBeenCalled()
-    // The cached `/settings` answer follows, for the settings dialog.
-    expect(queryClient.getQueryData(["settings"])).toMatchObject({
-      settings: { general: { actionLanguage: "en" } },
-      updated: { general: "2030-04-14T12:00:00.000Z" },
-    })
-
-    settingsPrefetchMock.mockResolvedValue({
-      code: 0,
-      settings: { general: { actionLanguage: "fr-FR" } },
-      updated: { general: "2031-01-01T00:00:00.000Z" },
-    })
-    await handler.bootstrap?.()
-    expect(settingsPrefetchMock).toHaveBeenCalledTimes(1)
-    expect(getGeneralSettings()).toMatchObject({ actionLanguage: "fr-FR" })
-
-    queryClient.removeQueries({ queryKey: ["settings"] })
-  })
-
-  test("a logged tab does not override a local change that is still waiting to be sent", async () => {
-    const handler = getSyncModelHandler("setting")!
-    setGeneralSetting("actionLanguage", "ja")
-    settingSyncQueue.queue.push({
-      tab: "general",
-      payload: { actionLanguage: "ja" },
-      date: Date.now(),
-    })
-
-    await handler.apply(
-      settingAction("general", {
-        payload: { actionLanguage: "en" },
-        updatedAt: "2030-04-14T12:00:00.000Z",
-      }),
-    )
-
-    expect(getGeneralSettings()).toMatchObject({ actionLanguage: "ja" })
-  })
-
-  test("a settings load that failed is reported to the sync engine instead of counting as done", async () => {
-    const handler = getSyncModelHandler("setting")!
-    // A status the query client does not retry, so the test does not wait for back-off.
-    settingsPrefetchMock.mockRejectedValue(new FollowAPIError("unprocessable", 422))
-
-    await expect(handler.bootstrap?.()).rejects.toThrow("unprocessable")
-    // The launch path keeps swallowing the error, as before.
-    await expect(settingSyncQueue.syncLocal()).resolves.toBeUndefined()
-    queryClient.removeQueries({ queryKey: ["settings"] })
-  })
-
-  test("a tab logged without its payload is read through the settings endpoint", async () => {
-    const handler = getSyncModelHandler("setting")!
-    settingsPrefetchMock.mockResolvedValue({
-      code: 0,
-      settings: { general: { actionLanguage: "zh-CN" } },
-      updated: { general: "2030-05-01T00:00:00.000Z" },
-    })
-
-    await handler.apply(settingAction("ai", { updatedAt: "2030-05-01T00:00:00.000Z" }))
-
-    expect(settingsPrefetchMock).toHaveBeenCalledTimes(1)
-    expect(getGeneralSettings()).toMatchObject({ actionLanguage: "zh-CN" })
-    queryClient.removeQueries({ queryKey: ["settings"] })
-  })
-
-  test("applyRemoteSettings hydrates general settings from provided payload", () => {
-    setGeneralSetting("actionLanguage", "ja")
-
-    settingSyncQueue.applyRemoteSettings({
-      code: 0,
-      settings: {
-        general: {
-          actionLanguage: "en",
-        },
-      },
-      updated: {
-        general: "2030-04-14T12:00:00.000Z",
-      },
-    })
-
-    expect(getGeneralSettings()).toMatchObject({
-      actionLanguage: "en",
-      updated: Date.parse("2030-04-14T12:00:00.000Z"),
-    })
-    expect(settingsPrefetchMock).not.toHaveBeenCalled()
-  })
-
-  test("syncLocal hydrates spotlight rules from remote appearance settings", async () => {
-    const rule = createRule()
-    settingsPrefetchMock.mockResolvedValue({
-      code: 0,
-      settings: {
-        appearance: {
-          spotlights: [rule],
-          spotlightsUpdated: 1710000000100,
-        },
-      },
-      updated: {
-        appearance: "2026-04-14T12:00:00.000Z",
-      },
-    })
-
-    await settingSyncQueue.syncLocal()
-
-    expect(getSpotlightSettings()).toMatchObject({
-      updated: 1710000000100,
-      spotlights: [rule],
-    })
-  })
-
-  test("changing spotlight settings syncs them through the appearance tab", async () => {
-    vi.useFakeTimers()
-
-    const rule = createRule()
-    settingsPrefetchMock.mockResolvedValue({
-      code: 0,
-      settings: {
-        appearance: {
-          uiFontFamily: "system-ui",
-          spotlights: [],
-        },
-      },
-      updated: {
-        appearance: "2026-04-14T12:00:00.000Z",
-      },
-    })
-
-    await settingSyncQueue.init()
-
-    setSpotlightSetting("spotlights", [rule])
+  test("sends each changed setting to its tab, except the device-local ones", async () => {
+    app.setGeneralSetting("actionLanguage", "fr-FR")
+    app.setGeneralSetting("language", "ja")
+    app.setGeneralSetting("appLaunchOnStartup", true)
+    app.setUISetting("wideMode", true)
+    app.setUISetting("accentColor", "blue")
+    app.setUISetting("uiFontFamily", "serif")
+    app.setSpotlightSetting("spotlights", [rule])
+    app.setAISetting("personalizePrompt", "Call me Captain.")
 
     await vi.advanceTimersByTimeAsync(1000)
-    await Promise.resolve()
 
-    expect(settingsUpdateMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tab: "appearance",
-        spotlights: [rule],
-      }),
-    )
+    expect(server.sent).toEqual([
+      { tab: "general", body: { actionLanguage: "fr-FR" } },
+      { tab: "appearance", body: { wideMode: true, spotlights: [rule] } },
+      { tab: "ai", body: { personalizePrompt: "Call me Captain." } },
+    ])
   })
 
-  test("settings sync to the account except the device-local ones", async () => {
-    vi.useFakeTimers()
+  test("takes the account's settings into their atoms, except the device-local ones", async () => {
+    server.settings = {
+      general: { unreadOnly: true, language: "fr-FR" },
+      appearance: { uiTextSize: 18, accentColor: "blue", spotlights: [rule, { id: "broken" }] },
+      ai: { personalizePrompt: "Call me Captain." },
+    }
+    server.updated = { general: LONG_AGO, appearance: LONG_AGO, ai: LONG_AGO }
+    const { language } = app.getGeneralSettings()
 
-    await settingSyncQueue.init()
+    await app.loadAccountSettings()
 
-    setGeneralSetting("actionLanguage", "fr-FR")
-    setGeneralSetting("language", "ja")
-    setAISetting("personalizePrompt", "Call me Captain.")
+    expect(app.getGeneralSettings()).toMatchObject({ unreadOnly: true, language })
+    expect(app.getUISettings()).toMatchObject({ uiTextSize: 18, accentColor: "orange" })
+    expect(app.getUISettings()).not.toHaveProperty("spotlights")
+    expect(app.getSpotlightSettings()).toEqual({ spotlights: [rule] })
+    expect(app.getAISettings().personalizePrompt).toBe("Call me Captain.")
+  })
 
+  test("a device-local setting changed here does not keep the account's settings out", async () => {
+    server.settings = { general: { unreadOnly: true } }
+    server.updated = { general: LONG_AGO }
+
+    app.setGeneralSetting("language", "ja")
+    await app.loadAccountSettings()
+
+    expect(app.getGeneralSettings()).toMatchObject({ unreadOnly: true, language: "ja" })
+  })
+
+  test("a new profile takes the account's settings and sends none of its own", async () => {
+    server.settings = { general: { unreadOnly: true, enhancedSettings: true } }
+    server.updated = { general: LONG_AGO }
+
+    await app.loadAccountSettings()
     await vi.advanceTimersByTimeAsync(1000)
-    await Promise.resolve()
 
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(2)
-    expect(settingsUpdateMock).toHaveBeenCalledWith({ tab: "general", actionLanguage: "fr-FR" })
-    expect(settingsUpdateMock).toHaveBeenCalledWith({
-      tab: "ai",
-      personalizePrompt: "Call me Captain.",
+    expect(app.getGeneralSettings()).toMatchObject({ unreadOnly: true, enhancedSettings: true })
+    expect(server.sent).toEqual([])
+  })
+
+  test("keeps an unsent change in localStorage and sends it after a restart", async () => {
+    app.setGeneralSetting("unreadOnly", true)
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)).toMatchObject({
+      userId: USER,
+      pending: { general: { unreadOnly: true } },
     })
-  })
+    app.settingSyncQueue.teardown()
 
-  test("a change made while a flush waits for the server is sent after it", async () => {
-    vi.useFakeTimers()
-    let resolveFirstUpdate!: (value: { code: number }) => void
-    settingsUpdateMock.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveFirstUpdate = resolve
-        }),
-    )
-
-    await settingSyncQueue.init()
-
-    setGeneralSetting("actionLanguage", "fr-FR")
-    await vi.advanceTimersByTimeAsync(1000)
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(1)
-
-    setAISetting("personalizePrompt", "Call me Captain.")
-    resolveFirstUpdate({ code: 0 })
+    app = await launch()
     await vi.advanceTimersByTimeAsync(1000)
 
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(2)
-    expect(settingsUpdateMock).toHaveBeenLastCalledWith({
-      tab: "ai",
-      personalizePrompt: "Call me Captain.",
-    })
-    expect(settingSyncQueue.queue).toEqual([])
-  })
-
-  test("a change that failed to send is retried with back-off until it goes through", async () => {
-    vi.useFakeTimers()
-    settingsUpdateMock
-      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      .mockRejectedValueOnce(new FollowAPIError("unavailable", 503))
-      .mockResolvedValue({ code: 0 })
-
-    await settingSyncQueue.init()
-    setGeneralSetting("actionLanguage", "fr-FR")
-
-    await vi.advanceTimersByTimeAsync(1000)
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(1)
-    expect(settingSyncQueue.queue).toHaveLength(1)
-
-    // One second of back-off, then the flush delay
-    await vi.advanceTimersByTimeAsync(2000)
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(2)
-    expect(settingSyncQueue.queue).toHaveLength(1)
-
-    // Two seconds of back-off, then the flush delay
-    await vi.advanceTimersByTimeAsync(3000)
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(3)
-    expect(settingsUpdateMock).toHaveBeenLastCalledWith({ tab: "general", actionLanguage: "fr-FR" })
-    expect(settingSyncQueue.queue).toEqual([])
-
-    await vi.advanceTimersByTimeAsync(120_000)
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(3)
-  })
-
-  test.each([
-    ["the window gets the focus back", () => window.dispatchEvent(new Event("focus"))],
-    ["the network comes back", () => window.dispatchEvent(new Event("online"))],
-    ["the page becomes visible", () => document.dispatchEvent(new Event("visibilitychange"))],
-  ])("a waiting change is sent at once when %s", async (_, comeBack) => {
-    vi.useFakeTimers()
-    settingsUpdateMock.mockRejectedValue(new TypeError("Failed to fetch"))
-
-    await settingSyncQueue.init()
-    setGeneralSetting("actionLanguage", "fr-FR")
-    // Failures at 1, 3, 6 and 11 s: the next try is eight seconds of back-off away
-    await vi.advanceTimersByTimeAsync(11_000)
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(4)
-
-    settingsUpdateMock.mockResolvedValue({ code: 0 })
-    comeBack()
-    await vi.advanceTimersByTimeAsync(1000)
-
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(5)
-    expect(settingSyncQueue.queue).toEqual([])
-  })
-
-  test("a change made while a retry is pending goes out with it", async () => {
-    vi.useFakeTimers()
-    settingsUpdateMock.mockRejectedValueOnce(new TypeError("Failed to fetch"))
-    settingsUpdateMock.mockResolvedValue({ code: 0 })
-
-    await settingSyncQueue.init()
-    setGeneralSetting("actionLanguage", "fr-FR")
-    await vi.advanceTimersByTimeAsync(1000)
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(1)
-
-    setGeneralSetting("actionLanguage", "de-DE")
-    await vi.advanceTimersByTimeAsync(500)
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(1)
-
-    await vi.advanceTimersByTimeAsync(1500)
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(2)
-    expect(settingsUpdateMock).toHaveBeenLastCalledWith({ tab: "general", actionLanguage: "de-DE" })
-    expect(settingSyncQueue.queue).toEqual([])
-  })
-
-  test("changes left from the last session are sent after a restart", async () => {
-    vi.useFakeTimers()
-    localStorage.setItem(
-      getStorageNS("setting_sync_queue"),
-      JSON.stringify({
-        ownerUserId: "user-1",
-        queue: [{ tab: "general", payload: { actionLanguage: "de-DE" }, date: Date.now() }],
-      }),
-    )
-
-    await settingSyncQueue.init()
-    await vi.advanceTimersByTimeAsync(1000)
-
-    expect(settingsUpdateMock).toHaveBeenCalledWith({ tab: "general", actionLanguage: "de-DE" })
-    expect(settingSyncQueue.queue).toEqual([])
-  })
-
-  test("newer settings from the account replace the local ones except the device-local ones", () => {
-    setGeneralSetting("actionLanguage", "ja")
-    setGeneralSetting("language", "ja")
-    setAISetting("personalizePrompt", "Keep answers short.")
-
-    settingSyncQueue.applyRemoteSettings({
-      code: 0,
-      settings: {
-        general: { actionLanguage: "fr-FR", language: "en" },
-        ai: { personalizePrompt: "Call me Captain." },
-      },
-      updated: {
-        general: "2030-04-14T12:00:00.000Z",
-        ai: "2030-04-14T12:00:00.000Z",
-      },
-    })
-
-    expect(getGeneralSettings()).toMatchObject({ actionLanguage: "fr-FR", language: "ja" })
-    expect(getAISettings().personalizePrompt).toBe("Call me Captain.")
-  })
-
-  test("once per account, settings changed on the device go up before the account's are taken", async () => {
-    localStorage.clear()
-    setGeneralSetting("actionLanguage", "zh-CN")
-    setGeneralSetting("language", "ja")
-    setAISetting("personalizePrompt", "Call me Captain.")
-    vi.useFakeTimers()
-
-    await settingSyncQueue.init()
-    // The account still holds what the clients synced before 1.6.0.
-    settingSyncQueue.applyRemoteSettings({
-      code: 0,
-      settings: {
-        general: { actionLanguage: "ja", unreadOnly: true },
-        ai: { personalizePrompt: "Answer like a pirate." },
-      },
-      updated: {
-        general: "2030-04-14T12:00:00.000Z",
-        ai: "2030-04-14T12:00:00.000Z",
-      },
-    })
-
-    expect(getGeneralSettings()).toMatchObject({ actionLanguage: "zh-CN", unreadOnly: false })
-    expect(getAISettings().personalizePrompt).toBe("Call me Captain.")
-
-    await vi.advanceTimersByTimeAsync(1000)
-    await Promise.resolve()
-
-    expect(settingsUpdateMock).toHaveBeenCalledTimes(2)
-    expect(settingsUpdateMock).toHaveBeenCalledWith({ tab: "general", actionLanguage: "zh-CN" })
-    expect(settingsUpdateMock).toHaveBeenCalledWith({
-      tab: "ai",
-      personalizePrompt: "Call me Captain.",
-    })
-
-    // Once the upload is through, the settings left at their defaults take the account's.
-    settingSyncQueue.applyRemoteSettings({
-      code: 0,
-      settings: { general: { actionLanguage: "zh-CN", unreadOnly: true } },
-      updated: { general: "2030-04-15T12:00:00.000Z" },
-    })
-    expect(getGeneralSettings()).toMatchObject({ actionLanguage: "zh-CN", unreadOnly: true })
-
-    settingsUpdateMock.mockClear()
-    await settingSyncQueue.init()
-    await vi.advanceTimersByTimeAsync(1000)
-    await Promise.resolve()
-    expect(settingsUpdateMock).not.toHaveBeenCalled()
-  })
-
-  test("a device left at its defaults sends nothing and takes the account's settings", async () => {
-    localStorage.clear()
-    vi.useFakeTimers()
-
-    await settingSyncQueue.init()
-    settingSyncQueue.applyRemoteSettings({
-      code: 0,
-      settings: { general: { actionLanguage: "ja" } },
-      updated: { general: "2030-04-14T12:00:00.000Z" },
-    })
-
-    await vi.advanceTimersByTimeAsync(1000)
-    await Promise.resolve()
-
-    expect(getGeneralSettings().actionLanguage).toBe("ja")
-    expect(settingsUpdateMock).not.toHaveBeenCalled()
-  })
-
-  test("replaceRemoteIfEmpty does not overwrite existing remote settings", async () => {
-    settingsGetMock.mockResolvedValue({
-      code: 0,
-      settings: {
-        general: {
-          language: "ja",
-        },
-      },
-      updated: {
-        general: "2026-04-14T12:00:00.000Z",
-      },
-    })
-
-    await settingSyncQueue.replaceRemoteIfEmpty()
-
-    expect(settingsUpdateMock).not.toHaveBeenCalled()
+    expect(server.sent).toEqual([{ tab: "general", body: { unreadOnly: true } }])
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).pending).toEqual({})
   })
 })

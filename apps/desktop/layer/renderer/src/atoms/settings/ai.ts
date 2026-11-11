@@ -119,7 +119,6 @@ export const {
   useSettingKey: useAISettingKey,
   useSettingSelector: useAISettingSelector,
   setSetting: setAISetting,
-  clearSettings: clearAISettings,
   initializeDefaultSettings,
   getSettings: getAISettings,
   useSettingValue: useAISettingValue,
@@ -138,9 +137,8 @@ export const syncServerShortcuts = (
 
   if (isEqual(mergedShortcuts, storedShortcuts)) return
 
-  // Every device merges the server defaults on its own. Writing them as a user change would
-  // stamp the AI settings as just updated and upload them on each launch, which overrides newer
-  // AI settings from other devices.
+  // Every device merges the server defaults on its own: written past `setAISetting`, the merge
+  // is not sent to the account as a change of the user.
   jotaiStore.set(__aiSettingAtom, { ...currentSettings, shortcuts: mergedShortcuts })
 }
 
