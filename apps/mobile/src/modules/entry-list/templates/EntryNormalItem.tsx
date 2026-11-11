@@ -6,9 +6,8 @@ import { useFeedById } from "@follow/store/feed/hooks"
 import { useEntryTranslation } from "@follow/store/translation/hooks"
 import { cn, formatEstimatedMins, formatTimeToSeconds } from "@follow/utils"
 import { useRecyclingState } from "@shopify/flash-list"
-import { useEvent } from "expo"
 import { useVideoPlayer, VideoView } from "expo-video"
-import { memo, useCallback, useMemo, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { ImageErrorEventData } from "react-native"
 import { View } from "react-native"
@@ -24,7 +23,6 @@ import { ItemPressable } from "@/src/components/ui/pressable/ItemPressable"
 import { Text } from "@/src/components/ui/typography/Text"
 import { PlayerAction } from "@/src/components/ui/video/PlayerAction"
 import { useNavigation } from "@/src/lib/navigation/hooks"
-import { isIOS } from "@/src/lib/platform"
 import { player, useAudioPlayState } from "@/src/lib/player"
 import { toast } from "@/src/lib/toast"
 import { usePreferredFeedTitle } from "@/src/modules/feed/feed-title"
@@ -192,7 +190,7 @@ const ThumbnailImage = ({ entryId }: { entryId: string }) => {
   const mediaModel = entry?.media?.find(
     (media) => media.type === "photo" || (media.type === "video" && media.preview_image_url),
   )
-  const image = mediaModel?.type === "photo" ? mediaModel?.url : null // mediaModel?.preview_image_url
+  const image = mediaModel?.type === "photo" ? mediaModel.url : mediaModel?.preview_image_url
   const blurhash = mediaModel?.blurhash
   const audio = entry?.attachments?.find((attachment) => attachment.mime_type?.startsWith("audio/"))
   const audioState = useAudioPlayState(audio?.url)
@@ -205,18 +203,18 @@ const ThumbnailImage = ({ entryId }: { entryId: string }) => {
       player.pause()
       return
     }
-    try {
-      player.play({
+    player
+      .play({
         url: audio.url,
         title: entry?.title,
         artist: feedTitle,
         // What the row shows, so the player isn't blank when the entry has no image
         artwork: getEntryArtwork(imageError ? null : image, feed),
       })
-    } catch (error) {
-      console.error("Error playing audio:", error)
-      toast.error(t("player.play_failed"))
-    }
+      .catch((error: unknown) => {
+        console.error("Error playing audio:", error)
+        toast.error(t("player.play_failed"))
+      })
   }, [audio, audioState, entry?.title, feed, feedTitle, image, imageError, t])
   const handleImageError = useCallback(() => {
     setImageError(true)
@@ -241,7 +239,7 @@ const ThumbnailImage = ({ entryId }: { entryId: string }) => {
           />
         ))}
 
-      {video && <VideoThumbnail key={video.url} url={video.url} isSquare={isSquare} />}
+      {video && <VideoPlayback key={video.url} url={video.url} isSquare={isSquare} />}
 
       {/* Show feed icon if no image but audio is present */}
       {imageError && <FeedIcon feed={feed} size={96} />}
@@ -251,57 +249,58 @@ const ThumbnailImage = ({ entryId }: { entryId: string }) => {
   )
 }
 
-// Only rows with a video create a player, a native one on Android, and its play button shows the
-// video's own state rather than the podcast player's
-const VideoThumbnail = ({ url, isSquare }: { url: string; isSquare: boolean }) => {
+// The row shows the video's preview image; a player only exists while the video plays in full screen
+const VideoPlayback = ({ url, isSquare }: { url: string; isSquare: boolean }) => {
+  const [isPlaying, setIsPlaying] = useState(false)
+  return isPlaying ? (
+    <FullscreenVideo url={url} isSquare={isSquare} onExit={() => setIsPlaying(false)} />
+  ) : (
+    <PlayerAction mediaState="paused" onPress={() => setIsPlaying(true)} />
+  )
+}
+
+const FullscreenVideo = ({
+  url,
+  isSquare,
+  onExit,
+}: {
+  url: string
+  isSquare: boolean
+  onExit: () => void
+}) => {
   const videoViewRef = useRef<null | VideoView>(null)
   const videoPlayer = useVideoPlayer(url, (player) => {
     player.preservesPitch = true
+    player.play()
   })
-  const { isPlaying } = useEvent(videoPlayer, "playingChange", {
-    isPlaying: videoPlayer.playing,
-  })
-  const [showVideoNativeControlsForAndroid, setShowVideoNativeControlsForAndroid] = useState(false)
-  const handlePressPlay = useCallback(() => {
-    setShowVideoNativeControlsForAndroid(true)
-    // Ensure the nativeControls is ready before entering fullscreen for Android
-    setTimeout(() => {
+  useEffect(() => {
+    // Android enters full screen once the native controls are ready, after the view mounts
+    const timeout = setTimeout(() => {
       videoViewRef.current?.enterFullscreen()
     }, 0)
-    if (videoPlayer.playing) {
-      videoPlayer.pause()
-    } else {
-      videoPlayer.play()
-    }
-  }, [videoPlayer])
+    return () => clearTimeout(timeout)
+  }, [])
 
   return (
-    <>
-      <View className="flex size-full items-center justify-center">
-        <VideoView
-          ref={videoViewRef}
-          className={cn("overflow-hidden rounded-lg", isSquare ? "size-24" : "")}
-          // eslint-disable-next-line react-native/no-inline-styles -- VideoView requires explicit width and height
-          style={{
-            width: "100%",
-            height: "100%",
-            aspectRatio: isSquare ? 1 : undefined,
-          }}
-          contentFit={isSquare ? "cover" : "contain"}
-          player={videoPlayer}
-          // The Android native controls will be shown when the video is paused
-          nativeControls={isIOS || showVideoNativeControlsForAndroid}
-          accessible={false}
-          allowsVideoFrameAnalysis={false}
-          fullscreenOptions={{ enable: false }}
-          onFullscreenExit={() => {
-            videoPlayer.pause()
-            setShowVideoNativeControlsForAndroid(false)
-          }}
-        />
-      </View>
-      <PlayerAction mediaState={isPlaying ? "playing" : "paused"} onPress={handlePressPlay} />
-    </>
+    <View className="absolute inset-0 items-center justify-center">
+      <VideoView
+        ref={videoViewRef}
+        className={cn("overflow-hidden rounded-lg", isSquare ? "size-24" : "")}
+        // eslint-disable-next-line react-native/no-inline-styles -- VideoView requires explicit width and height
+        style={{
+          width: "100%",
+          height: "100%",
+          aspectRatio: isSquare ? 1 : undefined,
+        }}
+        contentFit={isSquare ? "cover" : "contain"}
+        player={videoPlayer}
+        nativeControls
+        accessible={false}
+        allowsVideoFrameAnalysis={false}
+        fullscreenOptions={{ enable: false }}
+        onFullscreenExit={onExit}
+      />
+    </View>
   )
 }
 const AspectRatioImage = ({
