@@ -4,7 +4,7 @@ import { m } from "motion/react"
 import * as React from "react"
 import { useTranslation } from "react-i18next"
 
-import { getErrorMessage, parseAIError } from "~/modules/ai-chat/utils/error"
+import { getChatErrorMessage } from "~/modules/ai-chat/utils/error"
 
 interface ErrorMessageProps {
   error: Error | string
@@ -17,22 +17,6 @@ interface ErrorMessageProps {
  */
 export const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, className }) => {
   const { t } = useTranslation("ai")
-  const parsedError = React.useMemo(() => parseAIError(error), [error])
-
-  const displayMessage = getErrorMessage(parsedError)
-  const { errorCode, errorData } = parsedError
-
-  const getContextualInfo = () => {
-    if (!parsedError.isBusinessError || !errorData) return null
-
-    switch (errorCode) {
-      default: {
-        return null
-      }
-    }
-  }
-
-  const contextualInfo = getContextualInfo()
 
   return (
     <m.div
@@ -55,15 +39,8 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, className }) 
 
             {/* Error message - always visible but subtle */}
             <div className="cursor-text select-text text-sm leading-relaxed text-text-secondary">
-              {displayMessage}
+              {getChatErrorMessage(error)}
             </div>
-
-            {/* Contextual info if exists */}
-            {contextualInfo && (
-              <div className="mt-1 space-y-1.5 rounded-lg border border-border/50 bg-fill-secondary/30 p-2.5">
-                {contextualInfo}
-              </div>
-            )}
           </div>
         </div>
       </div>

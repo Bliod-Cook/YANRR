@@ -1,86 +1,28 @@
-import { ExceptionCodeMap } from "@follow-app/client-sdk"
-
 import { getI18n } from "~/i18n"
 
-export interface ParsedErrorData {
-  code?: number
-  [key: string]: any
-}
-
-export interface ParsedError {
-  rawMessage: string
-  errorCode: number | null
-  errorData: ParsedErrorData | null
-  isBusinessError: boolean
-}
-
-/**
- * Parse error object or string to extract structured error information
- * @param error - Error object or error message string
- * @returns Parsed error information
- */
-export function parseAIError(error: Error | string | undefined): ParsedError {
-  if (!error) {
-    return {
-      rawMessage: "",
-      errorCode: null,
-      errorData: null,
-      isBusinessError: false,
-    }
-  }
-
-  const rawMessage = typeof error === "string" ? error : error.message
-
+const parseServerError = (message: string): { code?: unknown; message?: unknown } | null => {
   try {
-    const parsed = JSON.parse(rawMessage)
-    const errorData: ParsedErrorData = parsed || {}
-    const { code } = errorData
-
-    const isBusinessError = !!(code && ExceptionCodeMap[code])
-
-    return {
-      rawMessage,
-      errorCode: code || null,
-      errorData: isBusinessError ? errorData : null,
-      isBusinessError,
-    }
+    const parsed: unknown = JSON.parse(message)
+    return parsed && typeof parsed === "object" ? parsed : null
   } catch {
-    // Not a JSON error, return as plain text error
-    return {
-      rawMessage,
-      errorCode: null,
-      errorData: null,
-      isBusinessError: false,
-    }
+    return null
   }
 }
 
-// The server ends a stalled reply with an error chunk carrying one of these English messages.
-const SERVER_STREAM_TIMEOUT_MESSAGE_KEYS = {
-  "The AI model stopped responding, so the reply was ended. Please try again.":
-    "chat.error.model_stopped_responding",
-  "The reply took too long, so it was ended. Please try again.": "chat.error.reply_took_too_long",
-} as const
-
-const getServerStreamTimeoutKey = (message: string) =>
-  Object.hasOwn(SERVER_STREAM_TIMEOUT_MESSAGE_KEYS, message)
-    ? SERVER_STREAM_TIMEOUT_MESSAGE_KEYS[message as keyof typeof SERVER_STREAM_TIMEOUT_MESSAGE_KEYS]
-    : undefined
-
 /**
- * Get translated error message with fallback
- * @param error - Parsed error information
- * @returns User-friendly error message
+ * What to tell the user about a failed reply. The server answers a failed request, and ends a
+ * failed reply, with its error body `{ code, message }`, whose code the error locales translate.
+ * Any other message is shown as it is.
  */
-export function getErrorMessage(error: ParsedError): string {
-  if (!error.isBusinessError || !error.errorCode) {
-    const timeoutKey = getServerStreamTimeoutKey(error.rawMessage.trim())
-    return timeoutKey ? getI18n().t(timeoutKey, { ns: "ai" }) : error.rawMessage
-  }
+export const getChatErrorMessage = (error: Error | string): string => {
+  const rawMessage = typeof error === "string" ? error : error.message
+  const serverError = parseServerError(rawMessage)
+  if (!serverError) return rawMessage
 
-  const errorKey = `errors:${error.errorCode}` as any
-  const translatedMessage = getI18n().t(errorKey)
-
-  // If translation exists and is different from the key, use it; otherwise fallback to raw message
-  return translatedMessage !== errorKey ? translatedMessage : error.rawMessage
+  const serverMessage = typeof serverError.message === "string" ? serverError.message : rawMessage
+  const key = `errors:${String(serverError.code)}`
+  const i18n = getI18n()
+  return typeof serverError.code === "number" && i18n.exists(key)
+    ? i18n.t(key as never)
+    : serverMessage
 }
