@@ -4,14 +4,10 @@ import { collectionSyncService } from "@follow/store/collection/store"
 import { useEntry } from "@follow/store/entry/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { useIsLoggedIn } from "@follow/store/user/hooks"
-import { requireNativeModule } from "expo"
 import type { PropsWithChildren } from "react"
-import { useRef } from "react"
 import { useTranslation } from "react-i18next"
-import type { View } from "react-native"
-import { findNodeHandle, Pressable } from "react-native"
+import { Pressable } from "react-native"
 
-import { isIOS } from "@/src/lib/platform"
 import { toast } from "@/src/lib/toast"
 
 import { ContextMenu } from "../context-menu"
@@ -22,17 +18,6 @@ type ImageContextMenuProps = PropsWithChildren<{
   entryId?: string
   view?: FeedViewType
 }>
-
-interface IOSNativeImageActions {
-  saveImageByHandle: (handle: number) => void
-  shareImageByHandle: (handle: number, url: string) => void
-  getBase64FromImageViewByHandle: (handle: number) => Promise<{ base64: string }>
-  copyImageByHandle: (handle: number) => void
-}
-
-const getIOSNativeImageActions = () => {
-  return requireNativeModule<IOSNativeImageActions>("Helper")
-}
 
 export const ImageContextMenu = ({ imageUrl, entryId, children, view }: ImageContextMenuProps) => {
   const { t } = useTranslation()
@@ -45,7 +30,6 @@ export const ImageContextMenu = ({ imageUrl, entryId, children, view }: ImageCon
 
   const isEntryStarred = useIsEntryStarred(entryId!)
 
-  const contextMenuTriggerRef = useRef<View>(null)
   const saveImageToAlbum = useSaveImageToMediaLibrary()
 
   if (!imageUrl || !entry) {
@@ -55,8 +39,7 @@ export const ImageContextMenu = ({ imageUrl, entryId, children, view }: ImageCon
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger>
-        {/* Must wrap a NOT <View /> Component, because <View />'s handle can found native view in native. May be this is a react native bug */}
-        <Pressable ref={contextMenuTriggerRef}>{children}</Pressable>
+        <Pressable>{children}</Pressable>
       </ContextMenu.Trigger>
 
       <ContextMenu.Content>
@@ -106,21 +89,7 @@ export const ImageContextMenu = ({ imageUrl, entryId, children, view }: ImageCon
           </>
         )}
 
-        <ContextMenu.Item
-          key="Save"
-          onSelect={async () => {
-            if (isIOS) {
-              const handle = findNodeHandle(contextMenuTriggerRef.current)
-
-              if (!handle) {
-                return
-              }
-              getIOSNativeImageActions().saveImageByHandle(handle)
-            } else {
-              saveImageToAlbum(imageUrl)
-            }
-          }}
-        >
+        <ContextMenu.Item key="Save" onSelect={() => saveImageToAlbum(imageUrl)}>
           <ContextMenu.ItemTitle>{t("image.save_to_album")}</ContextMenu.ItemTitle>
           <ContextMenu.ItemIcon
             ios={{
@@ -128,21 +97,7 @@ export const ImageContextMenu = ({ imageUrl, entryId, children, view }: ImageCon
             }}
           />
         </ContextMenu.Item>
-        <ContextMenu.Item
-          key="Share"
-          onSelect={async () => {
-            if (isIOS) {
-              const handle = findNodeHandle(contextMenuTriggerRef.current)
-
-              if (!handle) {
-                return
-              }
-              getIOSNativeImageActions().shareImageByHandle(handle, imageUrl)
-            } else {
-              shareImage({ uri: imageUrl })
-            }
-          }}
-        >
+        <ContextMenu.Item key="Share" onSelect={() => shareImage(imageUrl)}>
           <ContextMenu.ItemIcon
             ios={{
               name: "square.and.arrow.up",

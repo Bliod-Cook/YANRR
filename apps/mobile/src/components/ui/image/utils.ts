@@ -1,17 +1,19 @@
 import { createBuildSafeHeaders } from "@follow/utils/headers"
-import ImageEditor from "@react-native-community/image-editor"
 import * as FileSystem from "expo-file-system/legacy"
 import type { ImageProps, ImageSource } from "expo-image"
+import { Image as ExpoImage } from "expo-image"
 import { Asset, usePermissions } from "expo-media-library"
 import * as Sharing from "expo-sharing"
 import { t } from "i18next"
+import { nanoid } from "nanoid/non-secure"
 import { useCallback } from "react"
-import { Image } from "react-native"
 
 import { toSecureImageUrl } from "@/src/lib/image"
-import { isAndroid, isNative } from "@/src/lib/platform"
+import { isNative } from "@/src/lib/platform"
 import { serverEnv } from "@/src/lib/server-env"
 import { toast } from "@/src/lib/toast"
+
+import { getImageFileName } from "./image-file-name"
 
 const buildSafeHeaders = createBuildSafeHeaders(serverEnv.WEB_URL, [serverEnv.API_URL])
 
@@ -45,78 +47,51 @@ export const getSafeSource = (source: ImageProps["source"]) => {
   } satisfies ImageProps["source"]
 }
 
-const getImageData = async (imageUrl: string) => {
-  let size = await Image.getSize(imageUrl)
-
-  // Workaround for Android where the size returned by Image.getSize is not accurate for remote images
-  // Learn more https://github.com/facebook/react-native/issues/33498
-  if (isAndroid) {
-    size = {
-      width: size.width * 10,
-      height: size.height * 10,
-    }
-  }
-
-  const croppedImage = await ImageEditor.cropImage(imageUrl, {
-    offset: {
-      x: 0,
-      y: 0,
-    },
-    size,
-    format: "png",
-    includeBase64: true,
-  })
-
-  return croppedImage
-}
-
-const createTempFile = async (base64: string, filename: string) => {
-  if (!FileSystem.cacheDirectory) {
-    throw new Error("Cache directory is not available")
-  }
-  const fileUri = await FileSystem.getInfoAsync(FileSystem.cacheDirectory)
-  const filePath = `${fileUri.uri}/${filename}`
-  await FileSystem.writeAsStringAsync(filePath, base64, {
+const readHead = async (file: string) => {
+  const base64 = await FileSystem.readAsStringAsync(file, {
     encoding: FileSystem.EncodingType.Base64,
+    position: 0,
+    length: 16,
   })
+  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+}
 
-  return {
-    filePath,
-    cleanup: () => FileSystem.deleteAsync(filePath),
+/**
+ * Runs `task` with the original file of the image, removed once `task` is done: the one the image
+ * views cached, or else a download with the headers they load the image with.
+ */
+const withImageFile = async <T>(uri: string, task: (file: string) => Promise<T>) => {
+  const url = toSecureImageUrl(uri)
+  const dir = `${FileSystem.cacheDirectory}image-${nanoid()}/`
+  await FileSystem.makeDirectoryAsync(dir)
+  try {
+    const downloaded = `${dir}download`
+    const cachePath = await ExpoImage.getCachePathAsync(url)
+    if (cachePath) {
+      await FileSystem.copyAsync({ from: `file://${cachePath}`, to: downloaded })
+    } else {
+      const { status } = await FileSystem.downloadAsync(url, downloaded, {
+        headers: buildSafeHeaders({ url }),
+      })
+      if (status < 200 || status >= 300) throw new Error(`HTTP ${status}`)
+    }
+    const file = `${dir}${getImageFileName(url, await readHead(downloaded))}`
+    await FileSystem.moveAsync({ from: downloaded, to: file })
+    return await task(file)
+  } finally {
+    await FileSystem.deleteAsync(dir, { idempotent: true })
   }
 }
 
-export function extractFilenameFromUrl(uri: string): string {
-  // Extract actual filename from URL, removing any query parameters
-  const urlWithoutParams = uri.split(/[?#]/).at(0)
-  const lastSegment = urlWithoutParams?.split("/").pop() || "image"
-  return lastSegment
-}
-
-export async function shareImage({ uri }: { uri: string }) {
-  if (!(await Sharing.isAvailableAsync())) {
-    // TODO might need to give an error to the user in this case -prf
-    return
+export async function shareImage(uri: string) {
+  try {
+    await withImageFile(uri, (file) => Sharing.shareAsync(file, { dialogTitle: t("image.share") }))
+  } catch (error) {
+    toast.error(t("image.share_failed", { error: String(error) }))
   }
-  const croppedImage = await getImageData(uri)
-  const filename = `${extractFilenameFromUrl(uri)}.png`
-
-  const { filePath, cleanup } = await createTempFile(croppedImage.base64, filename)
-  await Sharing.shareAsync(filePath, {
-    mimeType: "image/png",
-    dialogTitle: t("image.share"),
-  })
-
-  cleanup()
 }
 
-export const saveImageToMediaLibrary = async ({ uri }: { uri: string }) => {
-  const croppedImage = await getImageData(uri)
-  const filename = `${extractFilenameFromUrl(uri)}.png`
-  const { filePath, cleanup } = await createTempFile(croppedImage.base64, filename)
-  await Asset.create(filePath)
-  cleanup()
-}
+const saveImageToMediaLibrary = (uri: string) => withImageFile(uri, (file) => Asset.create(file))
 
 /**
  * Same as `saveImageToMediaLibrary`, but also handles permissions and toasts
@@ -140,7 +115,7 @@ export function useSaveImageToMediaLibrary() {
 
       async function save() {
         try {
-          await saveImageToMediaLibrary({ uri })
+          await saveImageToMediaLibrary(uri)
           toast.success(t("image.saved"))
         } catch (e) {
           toast.error(t("image.save_failed", { error: String(e) }))
