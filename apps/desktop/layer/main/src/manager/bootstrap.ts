@@ -1,17 +1,15 @@
-import { rmSync } from "node:fs"
-
 import { electronApp, optimizer } from "@electron-toolkit/utils"
 import { APP_ID } from "@follow/shared/constants"
 import { createBuildSafeHeaders } from "@follow/utils/headers"
 import { getApiUrl } from "@follow/utils/server-url"
 import { app, BrowserWindow, net, protocol, session } from "electron"
-import { join } from "pathe"
 
 import { WindowManager } from "~/manager/window"
 
 import { isMacOS } from "../env"
 import { proxyApiRequest } from "../lib/api-proxy"
 import { APP_API_URL } from "../lib/app-url"
+import { applyCacheSizeLimit } from "../lib/cache"
 import { isDeepLink, openDeepLink, setDeepLinkHandler } from "../lib/deep-link"
 import { getPageOrigin } from "../lib/page-origin"
 import { isPermissionGranted } from "../lib/permissions"
@@ -36,24 +34,21 @@ const answerApiRequest = async (request: Request) => {
 
 export class BootstrapManager {
   public static start() {
-    AppManager.init()
-
     const gotTheLock = app.requestSingleInstanceLock()
     if (!gotTheLock) {
       app.quit()
       return
     }
 
+    // Before the app is ready, when Chromium sets up its cache
+    applyCacheSizeLimit()
+    AppManager.init()
     this.registerAppEvents()
   }
 
   private static registerAppEvents() {
     app.on("second-instance", (_, commandLine) => {
-      const mainWindow = WindowManager.getMainWindow()
-      if (mainWindow) {
-        if (mainWindow.isMinimized()) mainWindow.restore()
-        WindowManager.showMainWindow(mainWindow)
-      }
+      WindowManager.showMainWindow()
 
       const url = commandLine.find(isDeepLink)
       if (url) {
@@ -66,15 +61,16 @@ export class BootstrapManager {
     app.on("open-url", (event, url) => {
       event.preventDefault()
       if (app.isReady()) {
-        const mainWindow = WindowManager.getMainWindowOrCreate()
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          if (mainWindow.isMinimized()) mainWindow.restore()
-          mainWindow.focus()
-        }
+        WindowManager.showMainWindow(WindowManager.getMainWindowOrCreate())
       }
       if (url) {
         openDeepLink(url)
       }
+    })
+
+    // The Dock icon was clicked or the app launched again on macOS, where the window only hides
+    app.on("activate", () => {
+      WindowManager.showMainWindow(WindowManager.getMainWindowOrCreate())
     })
 
     app.whenReady().then(() => {
@@ -98,7 +94,6 @@ export class BootstrapManager {
       const server = getServerUrl()
       const buildSafeHeaders = createBuildSafeHeaders(server ?? "", [
         server ? getApiUrl(server) : "",
-        "https://readwise.io",
       ])
       session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
         details.requestHeaders = buildSafeHeaders({
@@ -132,30 +127,28 @@ export class BootstrapManager {
       }
     })
 
-    app.on("before-quit", async () => {
-      const window = WindowManager.getMainWindow()
-      if (!window || window.isDestroyed()) return
-      WindowManager.saveMainWindowState(window)
-      await session.defaultSession.cookies.flushStore()
-    })
-
     app.on("window-all-closed", () => {
       if (!isMacOS) {
         app.quit()
       }
     })
 
-    app.on("before-quit", () => {
-      const windows = BrowserWindow.getAllWindows()
-      windows.forEach((window) => window.destroy())
+    // Quitting waits until the cookie store is written: Chromium may not get to it on the way
+    // out, and a session just ended or begun would come back or be lost on the next launch
+    let cookiesWritten = false
+    app.on("before-quit", (event) => {
+      if (cookiesWritten) return
+      event.preventDefault()
 
-      if (import.meta.env.DEV) {
-        const cacheDir = join(app.getPath("userData"), "Cache")
-        const codeCacheDir = join(app.getPath("userData"), "Code Cache")
+      const window = WindowManager.getMainWindow()
+      if (window && !window.isDestroyed()) WindowManager.saveMainWindowState(window)
 
-        rmSync(cacheDir, { recursive: true, force: true })
-        rmSync(codeCacheDir, { recursive: true, force: true })
-      }
+      void session.defaultSession.cookies.flushStore().finally(() => {
+        cookiesWritten = true
+        // Closing would only hide the main window, see `bindMainWindowCloseHandlers`
+        for (const window of BrowserWindow.getAllWindows()) window.destroy()
+        app.quit()
+      })
     })
   }
 

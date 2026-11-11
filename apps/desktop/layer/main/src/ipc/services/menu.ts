@@ -1,8 +1,6 @@
-import type { MenuItemConstructorOptions, MessageBoxOptions, WebContents } from "electron"
-import { dialog, Menu, ShareMenu } from "electron"
+import type { MenuItemConstructorOptions, WebContents } from "electron"
+import { Menu, ShareMenu } from "electron"
 import { getIpcContext, IpcMethod, IpcService } from "electron-ipc-decorator"
-
-import { t } from "~/lib/i18n"
 
 type SerializableMenuItem = Omit<MenuItemConstructorOptions, "click" | "submenu"> & {
   submenu?: SerializableMenuItem[]
@@ -10,12 +8,6 @@ type SerializableMenuItem = Omit<MenuItemConstructorOptions, "click" | "submenu"
 
 interface ShowContextMenuInput {
   items: SerializableMenuItem[]
-}
-
-interface ShowConfirmDialogInput {
-  title: string
-  message: string
-  options?: Partial<MessageBoxOptions>
 }
 
 export class MenuService extends IpcService {
@@ -52,17 +44,6 @@ export class MenuService extends IpcService {
       callback: () => defer.resolve(),
     })
     return defer.promise
-  }
-
-  @IpcMethod()
-  async showConfirmDialog(input: ShowConfirmDialogInput): Promise<boolean> {
-    const result = await dialog.showMessageBox({
-      message: input.title,
-      detail: input.message,
-      buttons: [t("dialog.confirm"), t("dialog.cancel")],
-      ...input.options,
-    })
-    return result.response === 0
   }
 
   @IpcMethod()
