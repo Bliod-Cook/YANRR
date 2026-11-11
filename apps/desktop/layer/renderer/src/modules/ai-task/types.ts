@@ -28,16 +28,6 @@ export const scheduleSchema = z.union([
 
 export type ScheduleType = z.infer<typeof scheduleSchema>
 
-// AI Task Options (notification channels etc.)
-// Keep in sync with backend schema.
-export const aiTaskOptionsSchema = z.object({
-  notifyChannels: z
-    .array(z.enum(["email"]))
-    .describe("Notification channels to use. Currently only 'email' supported."),
-})
-
-export type AITaskOptions = z.infer<typeof aiTaskOptionsSchema>
-
 /**
  * @param getPromptText - the plain text of the prompt. The submitted prompt is the serialized
  * editor state, whose JSON is never empty and is much longer than the text the user typed.
@@ -51,7 +41,6 @@ export const createTaskSchema = (t: TFunction<"ai">, getPromptText?: () => strin
         .max(50, t("tasks.validation.title_max")),
       prompt: z.string(),
       schedule: scheduleSchema,
-      options: aiTaskOptionsSchema,
     })
     .superRefine((data, ctx) => {
       const promptText = getPromptText ? getPromptText() : data.prompt

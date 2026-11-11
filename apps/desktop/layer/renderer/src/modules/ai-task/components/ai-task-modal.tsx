@@ -27,18 +27,12 @@ import { AIPersistService } from "~/modules/ai-chat/services"
 import { useCreateAITaskMutation, useUpdateAITaskMutation } from "~/modules/ai-task/query"
 import type { ScheduleType, TaskFormData } from "~/modules/ai-task/types"
 import { createTaskSchema, MAX_PROMPT_LENGTH } from "~/modules/ai-task/types"
-import { useSettingModal } from "~/modules/settings/modal/use-setting-modal-hack"
 
-import { NotifyChannelsConfig } from "./notify-channels-config"
 import { ScheduleConfig } from "./schedule-config"
 
 interface AITaskModalProps {
   task?: AITask // Existing task for editing (optional)
   prompt?: string
-  /**
-   * Explicitly control whether to show the "open settings" tip/link.
-   */
-  showSettingsTip?: boolean
 }
 
 // Convert existing task data to form format or use defaults
@@ -55,7 +49,6 @@ const getDefaultFormData = (task?: AITask, prompt?: string): TaskFormData => {
         type: "once",
         date: now.add(1, "hour").toISOString(),
       },
-      options: { notifyChannels: ["email"] },
     }
   }
   if (prompt) {
@@ -109,16 +102,14 @@ const getDefaultFormData = (task?: AITask, prompt?: string): TaskFormData => {
     name: task.name,
     prompt: task.prompt,
     schedule: formSchedule,
-    options: { notifyChannels: ["email"], ...task.options },
   }
 }
 
-export const AITaskModal = ({ task, prompt, showSettingsTip = false }: AITaskModalProps) => {
+export const AITaskModal = ({ task, prompt }: AITaskModalProps) => {
   const { dismiss } = useCurrentModal()
   const createAITaskMutation = useCreateAITaskMutation()
   const updateAITaskMutation = useUpdateAITaskMutation()
   const { t } = useTranslation("ai")
-  const settingModalPresent = useSettingModal()
 
   const isEditing = !!task
 
@@ -140,7 +131,6 @@ export const AITaskModal = ({ task, prompt, showSettingsTip = false }: AITaskMod
   })
 
   const scheduleValue = form.watch("schedule")
-  const notifyChannelsValue = form.watch("options.notifyChannels")
 
   const initialPromptRef = useRef(form.getValues("prompt"))
 
@@ -276,32 +266,9 @@ export const AITaskModal = ({ task, prompt, showSettingsTip = false }: AITaskMod
             </div>
           </div>
 
-          {/* Notification Channels Section */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <i className="i-mgc-notification-cute-re size-4 text-text-secondary" />
-              <h3 className="text-sm font-medium text-text">{t("tasks.section.notifications")}</h3>
-            </div>
-            <NotifyChannelsConfig
-              value={notifyChannelsValue}
-              onChange={(channels) => form.setValue("options.notifyChannels", channels)}
-            />
-          </div>
-
           {/* Form Actions */}
 
           <div className="flex items-center justify-end">
-            {showSettingsTip && (
-              <button
-                type="button"
-                onClick={() => settingModalPresent("ai")}
-                className="mr-auto flex items-center gap-1 text-xs text-text-tertiary underline-offset-2 hover:text-text-secondary hover:underline disabled:opacity-50"
-                disabled={currentMutation.isPending}
-              >
-                <i className="i-mgc-settings-7-cute-re size-3" />
-                {t("tasks.view_in_settings")}
-              </button>
-            )}
             <div className="flex gap-3">
               <Button
                 type="button"

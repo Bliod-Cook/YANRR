@@ -52,15 +52,20 @@ export const useAITaskQuery = (id: string | undefined, opts?: { enabled?: boolea
 export const useCreateAITaskMutation = () => {
   return useOptimisticMutation(
     withoutErrorToast(
-      createOptimisticConfig.forCreate<OptimisticAITask, CreateTaskRequest, TaskCreateResponse>({
-        mutationFn: (input) => followApi.aiTask.create(input),
+      createOptimisticConfig.forCreate<
+        OptimisticAITask,
+        Omit<CreateTaskRequest, "options">,
+        TaskCreateResponse
+      >({
+        // A task has no options: they only held notification channels
+        mutationFn: (input) => followApi.aiTask.create({ ...input, options: {} }),
         queryKey: aiTaskKeys.list,
         generateOptimistic: (variables) => ({
           name: variables.name,
           prompt: variables.prompt,
           isEnabled: variables.isEnabled ?? true,
           schedule: variables.schedule,
-          options: variables.options ?? { notifyChannels: ["email"] },
+          options: {},
           userId: "temp-user",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
