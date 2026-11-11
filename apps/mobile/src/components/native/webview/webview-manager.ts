@@ -8,6 +8,8 @@ import { SharedWebViewModule } from "./index"
 /** What the page renders of an entry */
 export type WebViewEntry = Pick<EntryModel, "content" | "url" | "media" | "attachments"> & {
   spotlightRules?: SpotlightRule[]
+  /** The feed's site, the base for relative addresses when the entry has no URL */
+  siteUrl?: string | null
 }
 
 const dispatch = <T extends AppToPageType>(type: T, payload: AppToPagePayloads[T]) => {
@@ -32,8 +34,8 @@ export const WebViewManager = {
    */
   setEntry(entry?: WebViewEntry | null): void {
     if (!entry) return
-    const { content, url, media, attachments, spotlightRules } = entry
-    const payload: WebViewEntry = { content, url, media, attachments, spotlightRules }
+    const { content, url, media, attachments, spotlightRules, siteUrl } = entry
+    const payload: WebViewEntry = { content, url, media, attachments, spotlightRules, siteUrl }
     dispatch("setEntry", payload)
   },
 
