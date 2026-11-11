@@ -1,13 +1,15 @@
 //! What rules send out about entries as they arrive or are collected.
 
 use futures::{FutureExt, StreamExt, future::BoxFuture, stream};
+use reqwest::{Client, Url};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use serde_json::json;
+use serde_json::{Value, json};
 
 use super::{EntrySettings, Subject};
 use crate::{
     AppState,
     entity::{entry, feed, messaging_token},
+    fetch::http::describe,
     push::{Fcm, Notification},
     wire,
 };
@@ -91,9 +93,11 @@ fn sends(state: &AppState, feed: &feed::Model, delivery: Delivery) -> Vec<BoxFut
         .map(|url| {
             let (http, payload) = (state.http.clone(), payload.clone());
             async move {
-                let sent = http.post(&url).json(&payload).send().await;
-                if let Err(err) = sent.and_then(|response| response.error_for_status()) {
-                    tracing::warn!(entry = entry_id, "webhook {url} failed: {err}");
+                if let Err(err) = post(&http, &url, &payload).await {
+                    // Only the host: the address of a Slack or Discord webhook is its secret.
+                    let host = Url::parse(&url).ok();
+                    let host = host.as_ref().and_then(Url::host_str).unwrap_or_default();
+                    tracing::warn!(entry = entry_id, "webhook to {host} failed: {err}");
                 }
             }
             .boxed()
@@ -113,6 +117,21 @@ fn sends(state: &AppState, feed: &feed::Model, delivery: Delivery) -> Vec<BoxFut
         );
     }
     sends
+}
+
+/// Posts `payload` to a webhook. Only a 2xx answer delivers it: redirects are not followed, so they fail too.
+async fn post(http: &Client, url: &str, payload: &Value) -> Result<(), String> {
+    let response = http
+        .post(url)
+        .json(payload)
+        .send()
+        .await
+        .map_err(describe)?;
+    let status = response.status();
+    match status.is_success() {
+        true => Ok(()),
+        false => Err(format!("HTTP {}", status.as_u16())),
+    }
 }
 
 /// Pushes the notification to each of the user's devices.
@@ -135,4 +154,27 @@ async fn notify(
     }
     fcm.send(&state.db, &state.http, user_id, &tokens, notification)
         .await
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::{Router, http::StatusCode, response::Redirect, routing::post as route};
+    use tokio::net::TcpListener;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn webhooks_fail_unless_they_answer_with_success() {
+        let router = Router::new()
+            .route("/hook", route(|| async { StatusCode::NO_CONTENT }))
+            .route("/moved", route(|| async { Redirect::permanent("/hook") }));
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        let (http, payload) = (crate::fetch::http_client(), json!({}));
+
+        assert_eq!(post(&http, &format!("{url}/hook"), &payload).await, Ok(()));
+        let moved = post(&http, &format!("{url}/moved"), &payload).await;
+        assert_eq!(moved, Err("HTTP 308".into()));
+    }
 }

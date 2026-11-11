@@ -98,6 +98,11 @@ async fn invalid_rules_are_refused() {
         assert!(message.starts_with(path), "{message}");
     };
 
+    let block = |field: &str, pattern: &str| {
+        let rule = json!({ "field": field, "operator": "regex", "value": pattern });
+        json!({ "name": "Hide", "condition": [], "result": { "blockRules": [rule] } })
+    };
+
     let webhook = json!({ "name": "Forward", "condition": [], "result": { "webhooks": ["ftp://example.com"] } });
     refused(json!([webhook]), "`rules.0.result.webhooks.0`: Invalid URL").await;
     refused(
@@ -105,19 +110,25 @@ async fn invalid_rules_are_refused() {
         "`rules.1.condition.0.0.value`: Invalid regex",
     )
     .await;
+    refused(
+        json!([block("title", "(")]),
+        "`rules.0.result.blockRules.0.value`: Invalid regex",
+    )
+    .await;
+    refused(
+        json!([block("order", "1")]),
+        "`rules.0.result.blockRules.0.field`: Unsupported field",
+    )
+    .await;
 
-    // A pattern stored before is not checked again, so it does not keep other edits from being saved.
-    let stored = json!([regex("(")]);
+    // Rules stored before are not checked again, so they do not keep other edits from being saved.
+    let stored = json!([regex("("), block("title", "(")]);
     let sql = "INSERT INTO action_rules VALUES ($1, $2, now(), now())";
     let values = [app.user_id().await.into(), stored.into()];
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, values);
     app.state.db.execute_raw(statement).await.unwrap();
-    let saved = app
-        .put(
-            "/api/actions",
-            json!({ "rules": [regex("("), regex("ok")] }),
-        )
-        .await;
+    let rules = json!([regex("("), block("title", "("), regex("ok")]);
+    let saved = app.put("/api/actions", json!({ "rules": rules })).await;
     assert_eq!(saved.status(), 200);
 }
 
@@ -218,6 +229,44 @@ async fn new_entries_are_blocked_starred_or_silenced() {
 }
 
 #[tokio::test]
+async fn saved_rules_unblock_what_they_no_longer_block() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    fixtures.set("/live", Reply::Body(SINGLE_ITEM_RSS.into()));
+    app.sign_up("alice@example.com").await;
+    let feed_id = subscribe(&app, &fixtures.url("/live"), json!({})).await;
+    let block = |title: &str| json!({ "name": title, "condition": title_is(title), "result": { "block": true } });
+    let hide_starred = json!({
+        "name": "Hide",
+        "condition": [],
+        "result": { "blockRules": [{ "field": "title", "operator": "regex", "value": "^Starred" }] },
+    });
+    let rules = json!([block("Blocked post"), hide_starred]);
+    app.put("/api/actions", json!({ "rules": rules })).await;
+    fixtures.set("/live", Reply::Body(FOUR_ITEM_RSS.into()));
+    fetch::refresh_feed(&app.state, feed_id.parse().unwrap())
+        .await
+        .unwrap();
+    assert_eq!(
+        titles(&timeline(&app, json!({})).await),
+        ["Earlier post", "Silenced post"]
+    );
+
+    app.put("/api/actions", json!({ "rules": [hide_starred] }))
+        .await;
+
+    let all = timeline(&app, json!({})).await;
+    assert_eq!(
+        titles(&all),
+        ["Blocked post", "Earlier post", "Silenced post"]
+    );
+    let unblocked = all
+        .iter()
+        .find(|item| item["entries"]["title"] == "Blocked post")
+        .unwrap();
+    assert_eq!(unblocked["read"], true);
+}
+
+#[tokio::test]
 async fn settings_and_rewrites_follow_current_rules() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
     let items = json!([
@@ -274,6 +323,10 @@ async fn settings_and_rewrites_follow_current_rules() {
         .await;
     let items = timeline(&app, json!({})).await;
     assert_eq!(items[1]["settings"], json!({ "sourceContent": true }));
+
+    app.put("/api/actions", json!({ "rules": [] })).await;
+    let items = timeline(&app, json!({})).await;
+    assert_eq!(items[0]["entries"]["title"], "Sponsored: Rust 2.0");
 }
 
 /// Waits for `requests` to have been made.
