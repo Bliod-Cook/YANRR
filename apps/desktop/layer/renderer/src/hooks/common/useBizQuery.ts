@@ -1,32 +1,28 @@
 import type { QueryKey, UseQueryOptions, UseQueryResult } from "@tanstack/react-query"
 import { useQuery } from "@tanstack/react-query"
-import type { FetchError } from "ofetch"
 
-import { useLoginModalShow } from "~/atoms/user"
 import type { DefinedQuery } from "~/lib/defineQuery"
+import { useIsSignedOut } from "~/queries/session"
 
-// TODO split normal define query and infinite define query for better type checking
-export type SafeReturnType<T> = T extends (...args: any[]) => infer R ? R : never
-
-export type CombinedObject<T, U> = T & U
+/** A query that waits while the login modal asks the user to sign in again */
 export function useAuthQuery<
   TQuery extends DefinedQuery<QueryKey, any>,
-  TError = FetchError,
+  TError = Error,
   TQueryFnData = Awaited<ReturnType<TQuery["fn"]>>,
   TData = TQueryFnData,
 >(
   query: TQuery,
   options: Omit<UseQueryOptions<TQueryFnData, TError>, "queryKey" | "queryFn"> = {},
-): CombinedObject<UseQueryResult<TData, TError>, { key: TQuery["key"]; fn: TQuery["fn"] }> {
-  const authFail = useLoginModalShow()
+): UseQueryResult<TData, TError> & { key: TQuery["key"]; fn: TQuery["fn"] } {
+  const isSignedOut = useIsSignedOut()
   // @ts-expect-error
   return Object.assign(
     {},
     useQuery({
+      ...options,
       queryKey: query.key,
       queryFn: query.fn,
-      enabled: !authFail && options.enabled !== false,
-      ...options,
+      enabled: !isSignedOut && (options.enabled ?? true),
     }),
     {
       key: query.key,
