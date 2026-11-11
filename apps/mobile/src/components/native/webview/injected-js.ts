@@ -1,4 +1,6 @@
-// Ported from apps/mobile/native/ios/Modules/SharedWebView/Injected/at_start.js, for Android
+// Ported from apps/mobile/native/ios/Modules/SharedWebView/Injected/at_start.js, for Android.
+// The message names and payloads are declared in packages/internal/shared/src/webview-bridge.ts;
+// this script, the Swift module and at_start.js keep their own copies.
 
 const RNMessageHandlers = `
 if(!window.webkit) {

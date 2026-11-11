@@ -2,6 +2,9 @@ import { EventBus } from "@follow/utils/event-bus"
 import type { NativeModule } from "expo"
 import { requireNativeModule } from "expo"
 
+import { openLink } from "@/src/lib/native"
+
+import { assertBridgeVersion } from "./bridge-version"
 import { htmlUrl } from "./constants"
 
 export interface ImagePreviewEvent {
@@ -24,12 +27,14 @@ declare class ISharedWebViewModule extends NativeModule<{
   onContentHeightChanged: ({ height }: { height: number }) => void
   onImagePreview: (event: ImagePreviewEvent) => void
   onSeekAudio?: (e: { time: number }) => void
+  onOpenLink: (event: { url: string }) => void
+  onBridgeReady: (event: { version: number | null }) => void
 }> {
   load(url: string): void
   dispatch?(type: string, payload?: string): void
 
   // Debug helpers (iOS only)
-  getDebugState?(): WebViewDebugState
+  getDebugState?(): Promise<WebViewDebugState>
   destroyForDebug?(): void
   reloadLastURL?(): void
   flushQueue?(): void
@@ -76,6 +81,8 @@ export const prepareEntryRenderWebView = () => {
     SharedWebViewModule.addListener("onSeekAudio", (event: AudioSeekEvent) => {
       EventBus.dispatch("SEEK_AUDIO", event)
     })
+    SharedWebViewModule.addListener("onOpenLink", ({ url }) => openLink(url))
+    SharedWebViewModule.addListener("onBridgeReady", ({ version }) => assertBridgeVersion(version))
   } catch (error) {
     console.error("Failed to prepare entry render WebView:", error)
   }

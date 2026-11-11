@@ -29,12 +29,9 @@ export function DebugPanel({ mode, onModeToggle }: DebugPanelProps) {
   // Get debug state periodically
   useEffect(() => {
     const id = setInterval(() => {
-      try {
-        const d = SharedWebViewModule.getDebugState?.()
-        if (d) setDebugState(d as WebViewDebugState)
-      } catch {
-        /* empty */
-      }
+      SharedWebViewModule.getDebugState?.()
+        .then(setDebugState)
+        .catch(() => {})
     }, 1000)
     return () => clearInterval(id)
   }, [])

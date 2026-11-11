@@ -1,4 +1,5 @@
 import { useTypeScriptHappyCallback } from "@follow/hooks/shared"
+import type { PageToAppMessage } from "@follow/shared/webview-bridge"
 import { jotaiStore } from "@follow/utils"
 import { atom } from "jotai"
 import type * as React from "react"
@@ -11,6 +12,7 @@ import { openLink } from "@/src/lib/native"
 
 import { useLightboxControls } from "../../ui/lightbox/lightboxState"
 import { createBridgeQueue } from "./bridge-queue"
+import { assertBridgeVersion } from "./bridge-version"
 import { htmlUrl } from "./constants"
 import { atEnd, atStart } from "./injected-js"
 
@@ -102,9 +104,10 @@ export const NativeWebView: React.ComponentType<
         (e: WebViewMessageEvent) => {
           if (!isFromPage(e)) return
           try {
-            const parsed = JSON.parse(e.nativeEvent.data)
+            const parsed = JSON.parse(e.nativeEvent.data) as PageToAppMessage
             switch (parsed.type) {
               case "bridgeReady": {
+                assertBridgeVersion(parsed.payload?.version)
                 bridgeQueue.ready()
                 return
               }
@@ -120,7 +123,7 @@ export const NativeWebView: React.ComponentType<
                   "worklet"
                   // const rect = measureHandle(aviHandle)
                   runOnJS(openLightbox)({
-                    images: (imageUrls as string[]).map((url: string) => ({
+                    images: imageUrls.map((url) => ({
                       uri: url,
                       dimensions: null,
                       thumbUri: url,
