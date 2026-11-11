@@ -1,4 +1,3 @@
-import { useViewport } from "@follow/components/hooks/useViewport.js"
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/EllipsisWithTooltip.js"
 import { nextFrame } from "@follow/utils/dom"
 import { EventBus } from "@follow/utils/event-bus"
@@ -8,10 +7,6 @@ import { AnimatePresence, m } from "motion/react"
 import { memo, use, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react"
 
 import { COMMAND_ID } from "~/modules/command/commands/id"
-import {
-  useWrappedElementPosition,
-  useWrappedElementSize,
-} from "~/providers/wrapped-element-provider"
 
 import { MarkdownRenderContainerRefContext } from "../context"
 import { useScrollTracking, useTocItems } from "./hooks"
@@ -30,9 +25,6 @@ export interface TocProps {
   onItemClick?: (index: number, $el: HTMLElement | null, anchorId: string) => void
 }
 
-const WiderTocStyle = {
-  width: 200,
-} satisfies React.CSSProperties
 export interface TocRef {
   refreshItems: () => void
 }
@@ -56,28 +48,9 @@ export const Toc = ({
     }, [refreshItems]),
   )
 
-  const renderContentElementPosition = useWrappedElementPosition()
-  const renderContentElementSize = useWrappedElementSize()
-  const entryContentInWideMode = false
-  const shouldShowTitle = useViewport((v) => {
-    if (!entryContentInWideMode) return false
-    const { w } = v
-    const xAxis = renderContentElementPosition.x + renderContentElementSize.w
-
-    return w - xAxis > WiderTocStyle.width + 50
-  })
-
   if (toc.length === 0) return null
 
-  return shouldShowTitle ? (
-    <TocContainer
-      className={className}
-      toc={toc}
-      rootDepth={rootDepth}
-      currentScrollRange={currentScrollRange}
-      handleScrollTo={handleScrollTo}
-    />
-  ) : (
+  return (
     <TocHoverCard
       className={className}
       toc={toc}
@@ -85,37 +58,6 @@ export const Toc = ({
       currentScrollRange={currentScrollRange}
       handleScrollTo={handleScrollTo}
     />
-  )
-}
-
-const TocContainer: React.FC<TocContainerProps> = ({
-  className,
-  toc,
-  rootDepth,
-  currentScrollRange,
-  handleScrollTo,
-}) => {
-  return (
-    <div
-      className={cn(
-        "group relative overflow-auto opacity-60 duration-200 scrollbar-none group-hover:opacity-100",
-        "flex flex-col",
-        className,
-      )}
-      style={WiderTocStyle}
-    >
-      {toc.map((heading, index) => (
-        <MemoedItem
-          variant="title-line"
-          heading={heading}
-          key={heading.anchorId}
-          rootDepth={rootDepth}
-          onClick={handleScrollTo}
-          isScrollOut={index < currentScrollRange[0]}
-          range={index === currentScrollRange[0] ? currentScrollRange[1] : 0}
-        />
-      ))}
-    </div>
   )
 }
 
@@ -142,7 +84,6 @@ const TocHoverCard: React.FC<TocHoverCardProps> = ({
               <MemoedItem
                 heading={heading}
                 key={heading.anchorId}
-                rootDepth={rootDepth}
                 onClick={handleScrollTo}
                 isScrollOut={index < currentScrollRange[0]}
                 range={index === currentScrollRange[0] ? currentScrollRange[1] : 0}
@@ -245,12 +186,10 @@ const MemoedItem = memo<TocItemProps>((props) => {
 MemoedItem.displayName = "MemoedItem"
 
 // Types
-interface TocContainerProps {
+interface TocHoverCardProps {
   className?: string
   toc: ITocItem[]
   rootDepth: number
   currentScrollRange: [number, number]
   handleScrollTo: (i: number, $el: HTMLElement | null, anchorId: string) => void
 }
-
-interface TocHoverCardProps extends TocContainerProps {}
