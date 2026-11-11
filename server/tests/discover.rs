@@ -149,13 +149,11 @@ async fn feed_detail_with_entries() {
     let missing: Value = json(app.get("/api/feeds").await).await;
     assert_eq!(missing["code"], 2002);
 
-    // Stored feeds stay public by id.
+    // A feed's URL may hold a private token, so even stored feeds take an account.
     let signed_out = reqwest::get(format!("{}/api/feeds?id={id}", app.url))
         .await
         .unwrap();
-    let detail = json(signed_out).await;
-    assert_eq!(detail["data"]["feed"]["id"], id);
-    assert_eq!(detail["data"].get("subscription"), None);
+    assert_error(signed_out, 401, 1000).await;
 }
 
 #[tokio::test]

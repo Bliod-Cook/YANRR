@@ -34,6 +34,8 @@ async fn subscription_lifecycle() {
     assert_eq!(subscription.get("lists"), None);
     let other_view = json(app.get("/api/subscriptions?view=0").await).await;
     assert_eq!(other_view["data"], json!([]));
+    let all_views = json(app.get("/api/subscriptions?view=-1").await).await;
+    assert_eq!(all_views["data"], listed["data"]);
 
     let title = json!({ "feedId": feed_id, "title": "Mine" });
     app.patch("/api/subscriptions", title).await;
@@ -74,8 +76,11 @@ async fn subscription_input_errors() {
 
     let post = |body| app.post("/api/subscriptions", body);
     assert_error(post(json!({})).await, 422, 2002).await;
-    let bad_view = json!({ "url": fixtures.url("/rss"), "view": 9 });
-    assert_error(post(bad_view).await, 422, 3).await;
+    // All (-1) is a timeline, not a view to put a feed in.
+    for view in [-1, 9] {
+        let bad_view = json!({ "url": fixtures.url("/rss"), "view": view });
+        assert_error(post(bad_view).await, 422, 3).await;
+    }
     assert_error(post(json!({ "feedId": "1" })).await, 404, 2001).await;
     let unreachable = json!({ "url": fixtures.url("/missing") });
     assert_error(post(unreachable).await, 400, 2003).await;

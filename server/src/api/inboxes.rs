@@ -1,7 +1,7 @@
 use axum::{
     Json,
-    extract::State,
-    http::{HeaderMap, header},
+    extract::{FromRequestParts, State},
+    http::{header, request::Parts},
 };
 use chrono::{DateTime, SubsecRound, Utc};
 use reqwest::Url;
@@ -15,7 +15,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::{
-    error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode},
+    error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode, single_view},
     response::{done, ok, synced},
     session::AuthUser,
 };
@@ -275,26 +275,38 @@ async fn deliver(state: &AppState, inbox: &inbox::Model, entry: NewEntry) -> Api
     Ok(())
 }
 
-fn bearer(headers: &HeaderMap) -> Option<&str> {
-    headers
+fn bearer(parts: &Parts) -> Option<&str> {
+    parts
+        .headers
         .get(header::AUTHORIZATION)?
         .to_str()
         .ok()?
         .strip_prefix("Bearer ")
 }
 
+/// The inbox whose secret the request's bearer token is; checked before the body is read.
+pub struct WebhookInbox(inbox::Model);
+
+impl FromRequestParts<AppState> for WebhookInbox {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> ApiResult<Self> {
+        let secret = bearer(parts).ok_or_else(ApiError::unauthorized)?;
+        let inbox = inbox::Entity::find()
+            .filter(inbox::Column::Secret.eq(secret))
+            .one(&state.db)
+            .await?
+            .ok_or_else(ApiError::unauthorized)?;
+        Ok(Self(inbox))
+    }
+}
+
 /// `POST /inboxes/webhook`: the bearer token is the secret of the inbox the entry goes to.
 pub async fn webhook(
     State(state): State<AppState>,
-    headers: HeaderMap,
+    WebhookInbox(inbox): WebhookInbox,
     ApiJson(entry): ApiJson<NewEntry>,
 ) -> ApiResult<Json<Value>> {
-    let secret = bearer(&headers).ok_or_else(ApiError::unauthorized)?;
-    let inbox = inbox::Entity::find()
-        .filter(inbox::Column::Secret.eq(secret))
-        .one(&state.db)
-        .await?
-        .ok_or_else(ApiError::unauthorized)?;
     deliver(&state, &inbox, entry).await?;
     Ok(done())
 }
@@ -324,17 +336,29 @@ pub struct Recipient {
 /// The largest email body accepted, against the default 2 MB that newsletters easily pass.
 pub const EMAIL_BODY_LIMIT: usize = 25 << 20;
 
-/// `POST /inboxes/email`: an email the inbound mail service received, sent with the configured secret. The local
-/// part of the recipient's address is the inbox handle; the domain is not checked.
+/// A request from the inbound mail service, which sends the configured secret; checked before the body is read.
+/// Without a configured secret no request is.
+pub struct MailService;
+
+impl FromRequestParts<AppState> for MailService {
+    type Rejection = ApiError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> ApiResult<Self> {
+        let secret = state.config.inbox.email_secret.as_deref();
+        if secret.is_none() || bearer(parts) != secret {
+            return Err(ApiError::unauthorized());
+        }
+        Ok(Self)
+    }
+}
+
+/// `POST /inboxes/email`: an email the inbound mail service received. The local part of the recipient's address
+/// is the inbox handle; the domain is not checked.
 pub async fn email(
     State(state): State<AppState>,
-    headers: HeaderMap,
+    _sender: MailService,
     ApiJson(email): ApiJson<Email>,
 ) -> ApiResult<Json<Value>> {
-    let secret = state.config.inbox.email_secret.as_deref();
-    if secret.is_none() || bearer(&headers) != secret {
-        return Err(ApiError::unauthorized());
-    }
     let local_part = email.to.address.split('@').next().unwrap_or_default();
     let inbox = inbox::Entity::find_by_id(local_part.to_lowercase())
         .one(&state.db)
@@ -370,7 +394,7 @@ pub async fn email(
     Ok(done())
 }
 
-/// Whether a timeline of `view` shows inbox entries: clients keep inboxes in Articles, which All includes.
+/// Whether a timeline or listing of `view` shows inboxes: clients keep them in Articles.
 pub fn in_view(view: Option<i16>) -> bool {
-    view.is_none_or(|view| view == 0 || view == -1)
+    single_view(view).is_none_or(|view| view == 0)
 }

@@ -44,7 +44,8 @@ async fn settings_rejects_bad_tab_and_payload() {
     let app = TestApp::spawn().await;
     app.sign_up("alice@example.com").await;
 
-    let res = app.patch("/api/settings/unknown", json!({})).await;
+    // No client keeps an integration tab; one would put third-party tokens into the change log.
+    let res = app.patch("/api/settings/integration", json!({})).await;
     assert_eq!(res.status(), 400);
     assert_eq!(res.json::<Value>().await.unwrap()["code"], 7001);
 

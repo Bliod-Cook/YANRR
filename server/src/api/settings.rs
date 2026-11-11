@@ -24,7 +24,7 @@ use crate::{
     time::iso,
 };
 
-const TABS: [&str; 4] = ["ai", "general", "appearance", "integration"];
+const TABS: [&str; 3] = ["ai", "general", "appearance"];
 
 #[derive(Deserialize)]
 pub struct GetQuery {

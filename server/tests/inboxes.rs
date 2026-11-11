@@ -108,7 +108,8 @@ async fn webhook_and_email_delivery() {
         "title": "Hook",
         "content": r#"<p>Hello from the hook.</p><img src="https://example.com/hook.jpg">"#,
     });
-    assert_error(deliver(&app, "wrong", hook.clone()).await, 401, 1000).await;
+    // A wrong secret is refused before the body is read.
+    assert_error(deliver(&app, "wrong", json!({})).await, 401, 1000).await;
     for _ in 0..2 {
         assert_eq!(
             json(deliver(&app, &secret, hook.clone()).await).await,
@@ -138,7 +139,7 @@ async fn webhook_and_email_delivery() {
             .await
             .unwrap()
     };
-    assert_error(mail("wrong", email("news@example.com")).await, 401, 1000).await;
+    assert_error(mail("wrong", json!({})).await, 401, 1000).await;
     assert_error(
         mail("mail-secret", email("nobody@example.com")).await,
         404,
@@ -364,15 +365,42 @@ async fn large_emails_fit_and_oversized_ones_get_413() {
     );
     assert_eq!(stored().await, 1);
 
-    let res = mail(email("<huge@example.com>", 26 << 20)).await;
-    assert_eq!(res.status(), 413);
-    assert_eq!(json(res).await["code"], 4);
+    let huge = || {
+        app.client
+            .post(format!("{}/api/inboxes/email", app.url))
+            .bearer_auth("mail-secret")
+            .header("content-type", "application/json")
+            .body(email("<huge@example.com>", 26 << 20))
+    };
+    assert_eq!(too_large(huge).await, (413, json!(4)));
     assert_eq!(stored().await, 1);
 
     assert_error(mail("{".into()).await, 400, 4).await;
 
     // Other routes keep the default limit.
     let hook = json!({ "guid": "w-1", "publishedAt": "2026-10-01T08:00:00Z", "content": "x".repeat(3 << 20) });
-    assert_eq!(deliver(&app, &secret, hook).await.status(), 413);
+    let hook = || {
+        app.client
+            .post(format!("{}/api/inboxes/webhook", app.url))
+            .bearer_auth(&secret)
+            .json(&hook)
+    };
+    assert_eq!(too_large(hook).await.0, 413);
     assert_eq!(stored().await, 1);
+}
+
+/// The status and `code` of the answer to a request with too large a body. The server answers before it has read
+/// the rest of the body and then drops the connection, which the client may see before the answer; the request
+/// is sent again until the answer is read.
+async fn too_large(request: impl Fn() -> reqwest::RequestBuilder) -> (u16, Value) {
+    for _ in 0..10 {
+        let Ok(response) = request().send().await else {
+            continue;
+        };
+        let status = response.status().as_u16();
+        if let Ok(body) = response.json::<Value>().await {
+            return (status, body["code"].clone());
+        }
+    }
+    panic!("the server never got its answer through");
 }

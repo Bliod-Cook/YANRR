@@ -4,7 +4,8 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::{
-    error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode, view},
+    error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode, single_view, view},
+    inboxes,
     response::{ok, synced},
     session::AuthUser,
 };
@@ -30,7 +31,7 @@ pub async fn list(
     let mut select = subscription::Entity::find()
         .filter(subscription::Column::UserId.eq(&user.id))
         .order_by_asc(subscription::Column::CreatedAt);
-    if let Some(view) = query.view {
+    if let Some(view) = single_view(query.view) {
         select = select.filter(subscription::Column::View.eq(view));
     }
     let rows = select
@@ -43,7 +44,7 @@ pub async fn list(
             Some(json!(wire::Subscription::new(subscription, &feed?)))
         })
         .collect();
-    if query.view.is_none_or(|view| view == 0) {
+    if inboxes::in_view(query.view) {
         let inboxes = inbox::Entity::find()
             .filter(inbox::Column::UserId.eq(user.id))
             .order_by_asc(inbox::Column::CreatedAt)

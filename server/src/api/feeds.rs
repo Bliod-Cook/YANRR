@@ -45,10 +45,10 @@ pub struct GetQuery {
     entries_limit: Option<u64>,
 }
 
-/// `GET /feeds`: a feed with its newest entries, also for signed-out visitors. A new `url` is fetched first.
+/// `GET /feeds`: a feed with its newest entries. A new `url` is fetched first.
 pub async fn get(
     State(state): State<AppState>,
-    user: Option<AuthUser>,
+    user: AuthUser,
     ApiQuery(query): ApiQuery<GetQuery>,
 ) -> ApiResult<Json<Value>> {
     let limit = query.entries_limit.unwrap_or(4);
@@ -64,8 +64,6 @@ pub async fn get(
                 .await?
                 .ok_or_else(ApiError::feed_not_found)?
         }
-        // Fetching stores the feed, which is not open to anyone without an account.
-        (None, Some(_)) if user.is_none() => return Err(ApiError::unauthorized()),
         (None, Some(url)) => fetch::add_feed(&state, &url).await?,
         (None, None) => return Err(ApiError::feed_missing_id()),
     };
@@ -76,13 +74,11 @@ pub async fn get(
         "readCount": 0,
         "subscriptionCount": 0,
     });
-    if let Some(user) = user {
-        let subscription = subscription::Entity::find_by_id((user.id, feed.id))
-            .one(&state.db)
-            .await?;
-        if let Some(subscription) = subscription {
-            data["subscription"] = json!(wire::Subscription::new(subscription, &feed));
-        }
+    let subscription = subscription::Entity::find_by_id((user.id, feed.id))
+        .one(&state.db)
+        .await?;
+    if let Some(subscription) = subscription {
+        data["subscription"] = json!(wire::Subscription::new(subscription, &feed));
     }
     Ok(ok(data))
 }
