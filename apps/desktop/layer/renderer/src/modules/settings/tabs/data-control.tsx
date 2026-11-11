@@ -19,7 +19,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
-import { toast } from "sonner"
 import { z } from "zod"
 
 import { setGeneralSetting, useGeneralSettingValue } from "~/atoms/settings/general"
@@ -82,7 +81,7 @@ export const SettingDataControl = () => {
             type: "title",
             value: t("general.maintenance.title"),
           },
-          ELECTRON_BUILD ? CleanElectronCache : CleanCacheStorage,
+          ELECTRON_BUILD && CleanElectronCache,
           ELECTRON_BUILD && AppCacheLimit,
           {
             label: t("general.rebuild_database.label"),
@@ -190,36 +189,6 @@ const ExportFeedsForm = () => {
         </div>
       </form>
     </Form>
-  )
-}
-
-/**
- * @description clean web app service worker cache
- */
-const CleanCacheStorage = () => {
-  const { t } = useTranslation("settings")
-
-  return (
-    <SettingItemGroup>
-      <SettingActionItem
-        label={
-          <span className="flex items-center gap-1">{t("data_control.clean_cache.button")}</span>
-        }
-        action={async () => {
-          const keys = await caches.keys()
-          return Promise.all(
-            keys.map((key) => {
-              if (key.startsWith("workbox-precache-")) return null
-              return caches.delete(key)
-            }),
-          ).then(() => {
-            toast.success(t("data_control.clean_cache.success"))
-          })
-        }}
-        buttonText={t("data_control.clean_cache.button")}
-      />
-      <SettingDescription>{t("data_control.clean_cache.description_web")}</SettingDescription>
-    </SettingItemGroup>
   )
 }
 
