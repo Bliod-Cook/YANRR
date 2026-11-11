@@ -7,15 +7,6 @@ export const formatTokenCount = (count: number): TokenCount => {
   return { value: String(Math.round(count)), unit: "" }
 }
 
-export const formatTimeRemaining = (ms: number): string => {
-  if (!Number.isFinite(ms) || ms <= 0) return "0m"
-  const minutes = Math.round(ms / 60000)
-  if (minutes < 60) return `${minutes}m`
-  const hours = Math.floor(minutes / 60)
-  const rem = minutes % 60
-  return rem ? `${hours}h ${rem}m` : `${hours}h`
-}
-
 export const formatTokenCountString = (count: number): string => {
   const formatted = formatTokenCount(count)
   return `${formatted.value}${formatted.unit}`

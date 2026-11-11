@@ -1,4 +1,4 @@
-import { cn, sleep } from "@follow/utils/utils"
+import { cn } from "@follow/utils/utils"
 import type { AITask, TaskSchedule } from "@follow-app/client-sdk"
 import dayjs from "dayjs"
 import type { i18n, TFunction } from "i18next"
@@ -133,33 +133,21 @@ export const TaskItem = memo(({ task }: { task: AITask }) => {
       onClick: async () => {
         const loadingId = toast.loading(t("tasks.toast.test_start"))
         try {
-          const testRunResult = await testRunMutation.mutateAsync({ id: task.id })
-          if (testRunResult.data.error) {
-            throw new Error(testRunResult.data.error)
+          const { data } = await testRunMutation.mutateAsync({ id: task.id })
+          if (data.error) {
+            throw new Error(data.error)
           }
-          const { sessionId } = testRunResult.data
-          if (!sessionId) {
+          if (!data.sessionId) {
             throw new Error("No session ID returned from test run")
           }
 
-          // Ensure the session exists in local DB
-          await AIPersistService.ensureSession(sessionId, {
-            title: task.name,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          })
+          // The run reports in the chat it started, which the chat history lists from now on
+          await AIPersistService.ensureSession(data.sessionId, { title: task.name })
+          toast.success(t("tasks.toast.test_success"), { id: loadingId })
 
-          // Switch to the chat
+          // Open the chat where one is shown; it picks up the report as it streams
           setAIPanelVisibility(true)
-          const chatActions = ChatSliceActions.getActiveInstance()
-          if (chatActions) {
-            await sleep(1500) // wait for backend stream to be ready
-            chatActions.switchToChat(sessionId)
-          }
-
-          toast.success(t("tasks.toast.test_success"), {
-            id: loadingId,
-          })
+          await ChatSliceActions.getActiveInstance()?.switchToChat(data.sessionId)
         } catch (error) {
           console.error("Failed to run test:", error)
           toast.dismiss(loadingId)

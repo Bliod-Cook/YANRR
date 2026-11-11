@@ -23,7 +23,6 @@ import { toast } from "sonner"
 import { useCurrentModal } from "~/components/ui/modal/stacked/hooks"
 import { createErrorToaster } from "~/lib/error-parser"
 import { MentionPlugin, ShortcutPlugin } from "~/modules/ai-chat/editor"
-import { AIPersistService } from "~/modules/ai-chat/services"
 import { useCreateAITaskMutation, useUpdateAITaskMutation } from "~/modules/ai-task/query"
 import type { ScheduleType, TaskFormData } from "~/modules/ai-task/types"
 import { createTaskSchema, MAX_PROMPT_LENGTH } from "~/modules/ai-task/types"
@@ -32,11 +31,10 @@ import { ScheduleConfig } from "./schedule-config"
 
 interface AITaskModalProps {
   task?: AITask // Existing task for editing (optional)
-  prompt?: string
 }
 
 // Convert existing task data to form format or use defaults
-const getDefaultFormData = (task?: AITask, prompt?: string): TaskFormData => {
+const getDefaultFormData = (task?: AITask): TaskFormData => {
   // Get current date/time for default values
   const now = dayjs()
 
@@ -44,15 +42,12 @@ const getDefaultFormData = (task?: AITask, prompt?: string): TaskFormData => {
     // Default values for creating new task
     return {
       name: "AI Task",
-      prompt: prompt || "",
+      prompt: "",
       schedule: {
         type: "once",
         date: now.add(1, "hour").toISOString(),
       },
     }
-  }
-  if (prompt) {
-    console.warn("Using provided prompt for existing task, ignoring task prompt", task, prompt)
   }
 
   // Convert existing task data for editing
@@ -105,7 +100,7 @@ const getDefaultFormData = (task?: AITask, prompt?: string): TaskFormData => {
   }
 }
 
-export const AITaskModal = ({ task, prompt }: AITaskModalProps) => {
+export const AITaskModal = ({ task }: AITaskModalProps) => {
   const { dismiss } = useCurrentModal()
   const createAITaskMutation = useCreateAITaskMutation()
   const updateAITaskMutation = useUpdateAITaskMutation()
@@ -127,7 +122,7 @@ export const AITaskModal = ({ task, prompt }: AITaskModalProps) => {
   )
   const form = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
-    defaultValues: getDefaultFormData(task, prompt),
+    defaultValues: getDefaultFormData(task),
   })
 
   const scheduleValue = form.watch("schedule")
@@ -148,16 +143,7 @@ export const AITaskModal = ({ task, prompt }: AITaskModalProps) => {
           ...data,
         },
         {
-          onSuccess: async () => {
-            // If task name changed, sync the AI chat session title (chatId === task.id)
-            const trimmedTitle = data.name?.trim()
-            if (trimmedTitle) {
-              try {
-                await AIPersistService.updateSessionTitle(task.id, trimmedTitle)
-              } catch (err) {
-                console.error("Failed to update AI session title:", err, task, data)
-              }
-            }
+          onSuccess: () => {
             toast.success(t("tasks.toast.updated"))
             dismiss()
           },
