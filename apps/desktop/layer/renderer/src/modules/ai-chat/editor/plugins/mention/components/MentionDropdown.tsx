@@ -3,11 +3,12 @@ import * as React from "react"
 import { useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
+import { HighlightedText } from "../../shared/components/HighlightedText"
 import type { TypeaheadGroup } from "../../shared/components/TypeaheadDropdown"
 import { TypeaheadDropdown } from "../../shared/components/TypeaheadDropdown"
-import { MENTION_TRIGGER_PATTERN } from "../constants"
 import { getDateMentionDisplayName } from "../hooks/dateMentionUtils"
 import type { MentionData } from "../types"
+import { cleanQuery } from "../utils/triggerDetection"
 import { MentionTypeIcon } from "./shared/MentionTypeIcon"
 
 interface MentionDropdownProps {
@@ -51,30 +52,6 @@ const MentionSuggestionItem = React.memo(
       onClick(mention)
     }, [mention, onClick])
 
-    // Highlight matching text
-    const highlightText = (text: string, rawQuery: string) => {
-      const cleanQuery = rawQuery.replace(MENTION_TRIGGER_PATTERN, "").toLowerCase()
-      if (!cleanQuery) return text
-
-      const parts = text.split(new RegExp(`(${cleanQuery})`, "gi"))
-      return parts.map((part, index) => {
-        const isMatch = part.toLowerCase() === cleanQuery
-
-        if (!part) {
-          return null
-        }
-
-        return (
-          <span
-            key={`${mention.id}-${index}`}
-            className={isMatch ? "font-semibold text-text-vibrant" : ""}
-          >
-            {part}
-          </span>
-        )
-      })
-    }
-
     return (
       <div
         className={cn(
@@ -95,7 +72,9 @@ const MentionSuggestionItem = React.memo(
         </span>
 
         {/* Content */}
-        <span className="flex-1 truncate">{highlightText(displayName, query)}</span>
+        <span className="flex-1 truncate">
+          <HighlightedText text={displayName} query={cleanQuery(query)} />
+        </span>
       </div>
     )
   },

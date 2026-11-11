@@ -5,8 +5,10 @@ import { useTranslation } from "react-i18next"
 
 import { useAISettingValue } from "~/atoms/settings/ai"
 
+import { HighlightedText } from "../../shared/components/HighlightedText"
 import { TypeaheadDropdown } from "../../shared/components/TypeaheadDropdown"
 import type { ShortcutData } from "../types"
+import { cleanShortcutQuery } from "../utils/triggerDetection"
 
 interface ShortcutDropdownProps {
   isVisible: boolean
@@ -36,32 +38,6 @@ const ShortcutSuggestionItem = React.memo(
       onClick(shortcut)
     }, [shortcut, onClick])
 
-    const highlightText = useCallback(
-      (text: string, rawQuery: string) => {
-        const cleanQuery = rawQuery.replace(/^\//, "").toLowerCase()
-        if (!cleanQuery) return text
-
-        const parts = text.split(new RegExp(`(${cleanQuery})`, "gi"))
-        return parts.map((part, index) => {
-          const isMatch = part.toLowerCase() === cleanQuery
-
-          if (!part) {
-            return null
-          }
-
-          return (
-            <span
-              key={`${shortcut.id}-${index}`}
-              className={isMatch ? "font-semibold text-text-vibrant" : ""}
-            >
-              {part}
-            </span>
-          )
-        })
-      },
-      [shortcut.id],
-    )
-
     const { shortcuts } = useAISettingValue()
     const matched = React.useMemo(() => {
       return shortcuts.find((s) => s.name === shortcut.name)
@@ -90,7 +66,9 @@ const ShortcutSuggestionItem = React.memo(
             </span>
           )}
         </span>
-        <span className="flex-1 truncate leading-tight">{highlightText(shortcut.name, query)}</span>
+        <span className="flex-1 truncate leading-tight">
+          <HighlightedText text={shortcut.name} query={cleanShortcutQuery(query)} />
+        </span>
       </div>
     )
   },

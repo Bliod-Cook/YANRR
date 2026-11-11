@@ -1,12 +1,4 @@
-import type {
-  DOMConversionMap,
-  DOMConversionOutput,
-  DOMExportOutput,
-  LexicalNode,
-  NodeKey,
-  SerializedLexicalNode,
-  Spread,
-} from "lexical"
+import type { DOMExportOutput, LexicalNode, NodeKey, SerializedLexicalNode, Spread } from "lexical"
 import { DecoratorNode } from "lexical"
 import * as React from "react"
 import { useTranslation } from "react-i18next"
@@ -23,16 +15,6 @@ export type SerializedFileAttachmentNode = Spread<
   SerializedLexicalNode
 >
 
-function convertFileAttachmentElement(domNode: Node): null | DOMConversionOutput {
-  const element = domNode as HTMLElement
-  const { attachmentId } = element.dataset
-  if (attachmentId) {
-    const node = $createFileAttachmentNode(attachmentId)
-    return { node }
-  }
-  return null
-}
-
 export class FileAttachmentNode extends DecoratorNode<React.ReactElement> {
   __attachmentId: string
 
@@ -48,15 +30,6 @@ export class FileAttachmentNode extends DecoratorNode<React.ReactElement> {
     const { attachmentId } = serializedNode
     const node = $createFileAttachmentNode(attachmentId)
     return node
-  }
-
-  static override importDOM(): DOMConversionMap | null {
-    return {
-      span: () => ({
-        conversion: convertFileAttachmentElement,
-        priority: 1,
-      }),
-    }
   }
 
   constructor(attachmentId: string, key?: NodeKey) {

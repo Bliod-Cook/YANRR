@@ -1,5 +1,4 @@
 import type {
-  DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
   LexicalEditor,
@@ -57,14 +56,6 @@ export class ShortcutNode extends DecoratorNode<React.JSX.Element> {
 
   override updateDOM(): false {
     return false
-  }
-
-  static override importDOM(): DOMConversionMap | null {
-    return {
-      span: () => {
-        throw new Error("Not implemented")
-      },
-    }
   }
 
   static override importJSON(serializedNode: SerializedShortcutNode): ShortcutNode {

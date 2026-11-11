@@ -14,6 +14,15 @@ export interface RelativeDateDefinition {
   range: DateRangeFactory
 }
 
+/** The given day of the week (0 is Sunday) in the week of `today`, which starts as its locale says */
+const dayInThisWeek =
+  (dayOfWeek: number): DateRangeFactory =>
+  (today) => {
+    const startOfWeek = today.startOf("week")
+    const target = startOfWeek.add((dayOfWeek - startOfWeek.day() + 7) % 7, "day")
+    return { start: target, end: target }
+  }
+
 export const RELATIVE_DATE_DEFINITIONS: readonly RelativeDateDefinition[] = [
   {
     id: "date:relative:today",
@@ -78,11 +87,7 @@ export const RELATIVE_DATE_DEFINITIONS: readonly RelativeDateDefinition[] = [
       "mentions.date.weekday.prefix.this.search",
       "mentions.date.weekday.day.monday.search",
     ],
-    range: (today) => {
-      const startOfWeek = today.startOf("week")
-      const target = startOfWeek.add(1, "day")
-      return { start: target, end: target }
-    },
+    range: dayInThisWeek(1),
   },
   {
     id: "date:relative:this-week-tuesday",
@@ -91,11 +96,7 @@ export const RELATIVE_DATE_DEFINITIONS: readonly RelativeDateDefinition[] = [
       "mentions.date.weekday.prefix.this.search",
       "mentions.date.weekday.day.tuesday.search",
     ],
-    range: (today) => {
-      const startOfWeek = today.startOf("week")
-      const target = startOfWeek.add(2, "day")
-      return { start: target, end: target }
-    },
+    range: dayInThisWeek(2),
   },
   {
     id: "date:relative:this-week-wednesday",
@@ -104,11 +105,7 @@ export const RELATIVE_DATE_DEFINITIONS: readonly RelativeDateDefinition[] = [
       "mentions.date.weekday.prefix.this.search",
       "mentions.date.weekday.day.wednesday.search",
     ],
-    range: (today) => {
-      const startOfWeek = today.startOf("week")
-      const target = startOfWeek.add(3, "day")
-      return { start: target, end: target }
-    },
+    range: dayInThisWeek(3),
   },
   {
     id: "date:relative:this-week-thursday",
@@ -117,11 +114,7 @@ export const RELATIVE_DATE_DEFINITIONS: readonly RelativeDateDefinition[] = [
       "mentions.date.weekday.prefix.this.search",
       "mentions.date.weekday.day.thursday.search",
     ],
-    range: (today) => {
-      const startOfWeek = today.startOf("week")
-      const target = startOfWeek.add(4, "day")
-      return { start: target, end: target }
-    },
+    range: dayInThisWeek(4),
   },
   {
     id: "date:relative:this-week-friday",
@@ -130,11 +123,7 @@ export const RELATIVE_DATE_DEFINITIONS: readonly RelativeDateDefinition[] = [
       "mentions.date.weekday.prefix.this.search",
       "mentions.date.weekday.day.friday.search",
     ],
-    range: (today) => {
-      const startOfWeek = today.startOf("week")
-      const target = startOfWeek.add(5, "day")
-      return { start: target, end: target }
-    },
+    range: dayInThisWeek(5),
   },
   {
     id: "date:relative:this-week-saturday",
@@ -143,11 +132,7 @@ export const RELATIVE_DATE_DEFINITIONS: readonly RelativeDateDefinition[] = [
       "mentions.date.weekday.prefix.this.search",
       "mentions.date.weekday.day.saturday.search",
     ],
-    range: (today) => {
-      const startOfWeek = today.startOf("week")
-      const target = startOfWeek.add(6, "day")
-      return { start: target, end: target }
-    },
+    range: dayInThisWeek(6),
   },
   {
     id: "date:relative:this-week-sunday",
@@ -156,11 +141,7 @@ export const RELATIVE_DATE_DEFINITIONS: readonly RelativeDateDefinition[] = [
       "mentions.date.weekday.prefix.this.search",
       "mentions.date.weekday.day.sunday.search",
     ],
-    range: (today) => {
-      const startOfWeek = today.startOf("week")
-      const target = startOfWeek.add(0, "day")
-      return { start: target, end: target }
-    },
+    range: dayInThisWeek(0),
   },
 
   {
@@ -180,12 +161,3 @@ export const RELATIVE_DATE_DEFINITIONS: readonly RelativeDateDefinition[] = [
     },
   },
 ]
-
-export type WeekdayPrefix = "auto" | "this" | "last"
-
-export interface WeekdayTranslationDescriptor {
-  id: string
-  index: number
-  labelKey: string
-  searchKey: string
-}

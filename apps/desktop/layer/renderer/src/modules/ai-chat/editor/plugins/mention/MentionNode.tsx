@@ -1,6 +1,5 @@
 import i18next from "i18next"
 import type {
-  DOMConversionMap,
   DOMExportOutput,
   EditorConfig,
   LexicalEditor,
@@ -59,14 +58,6 @@ export class MentionNode extends DecoratorNode<React.JSX.Element> {
 
   override updateDOM(): false {
     return false
-  }
-
-  static override importDOM(): DOMConversionMap | null {
-    return {
-      span: () => {
-        throw new Error("Not implemented")
-      },
-    }
   }
 
   static override importJSON(serializedNode: SerializedMentionNode): MentionNode {
