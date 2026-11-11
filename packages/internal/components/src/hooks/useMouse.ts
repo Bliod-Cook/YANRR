@@ -1,10 +1,9 @@
-import { jotaiStore } from "@follow/utils"
-import { useAtomValue } from "jotai"
+const mousePosition = { x: 0, y: 0 }
 
-import { mouseAtom } from "../atoms/mouse"
-
-export const useMousePosition = () => {
-  return useAtomValue(mouseAtom)
+export const setMousePosition = (x: number, y: number) => {
+  mousePosition.x = x
+  mousePosition.y = y
 }
 
-export const getMousePosition = () => jotaiStore.get(mouseAtom)
+/** The last known pointer position, for imperative reads only; it is not reactive. */
+export const getMousePosition = (): Readonly<typeof mousePosition> => mousePosition

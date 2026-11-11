@@ -1,3 +1,4 @@
+import { getStableRouterNavigate } from "@follow/components/atoms/route.js"
 import { nextFrame } from "@follow/utils/dom"
 import { jotaiStore } from "@follow/utils/jotai"
 import { atom } from "jotai"
@@ -67,7 +68,7 @@ export const registerHistoryStack = () => {
       to = typeof to === "string" ? to : last
 
       if (!last || last !== to) {
-        window.router.navigate(to ?? "/")
+        getStableRouterNavigate()?.(to ?? "/")
 
         nextFrame(() => {
           jotaiStore.set(historyAtom, [])

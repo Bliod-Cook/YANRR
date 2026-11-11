@@ -3,8 +3,8 @@ import { useIsomorphicLayoutEffect } from "foxact/use-isomorphic-layout-effect"
 import { useStore } from "jotai"
 import type { FC } from "react"
 
-import { mouseAtom } from "../atoms/mouse"
 import { viewportAtom } from "../atoms/viewport"
+import { setMousePosition } from "../hooks/useMouse"
 
 export const EventProvider: FC = () => {
   const store = useStore()
@@ -40,11 +40,11 @@ export const EventProvider: FC = () => {
 
   useIsomorphicLayoutEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      store.set(mouseAtom, { x: e.clientX, y: e.clientY })
+      setMousePosition(e.clientX, e.clientY)
     }
     window.addEventListener("mousemove", handleMouseMove)
     return () => window.removeEventListener("mousemove", handleMouseMove)
-  }, [store])
+  }, [])
 
   return null
 }

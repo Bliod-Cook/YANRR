@@ -1,22 +1,15 @@
 import { useLayoutEffect } from "react"
-import type { NavigateFunction } from "react-router"
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router"
 
 import { setNavigate, setRoute } from "../atoms/route"
 
 export interface CustomRoute {}
-export interface GlobalRoute extends CustomRoute {
-  navigate: NavigateFunction
-}
 declare global {
   interface Window {
-    router: GlobalRoute
+    router: CustomRoute
   }
 }
-window.router = {
-  ...window.router,
-  navigate() {},
-} as any
+window.router ||= {} as CustomRoute
 
 /**
  * Why this.
@@ -31,9 +24,7 @@ export const StableRouterProvider = () => {
   const nav = useNavigate()
   const location = useLocation()
 
-  // NOTE: This is a hack to expose the navigate function to the window object, avoid to import `router` circular issue.
   useLayoutEffect(() => {
-    window.router.navigate = nav
     setRoute({
       params,
       searchParams,

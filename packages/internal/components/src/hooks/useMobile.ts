@@ -1,7 +1,9 @@
 import { useViewport } from "./useViewport"
 
+const selectIsMobile = (v: { w: number }) => v.w < 1024 && v.w !== 0
+
 export const useMobile = () => {
-  return useViewport((v) => v.w < 1024 && v.w !== 0)
+  return useViewport(selectIsMobile)
 }
 
 export const isMobile = () => {
