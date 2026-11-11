@@ -18,8 +18,10 @@ import { authClient } from "~/lib/auth"
 import { setAppIsReady } from "./atoms/app"
 import { initializeApp } from "./initialize"
 import { registerAppGlobalShortcuts } from "./initialize/global-shortcuts"
+import { exposeHistoryIsPop } from "./initialize/history"
 import { followApi } from "./lib/api-client"
 import { queryClient } from "./lib/query-client"
+import { showLocalDatabaseError } from "./modules/local-database-error/LocalDatabaseErrorScreen"
 import { router } from "./router"
 
 authClientContext.provide(authClient)
@@ -27,23 +29,34 @@ queryClientContext.provide(queryClient)
 apiContext.provide(followApi)
 syncApiContext.provide(followApi.sync)
 
-initializeApp().finally(() => {
-  import("./push-notification").then(({ registerWebPushNotifications }) => {
-    if (navigator.serviceWorker && WEB_BUILD) {
-      registerWebPushNotifications()
-    }
-  })
-
-  flushSync(() => setAppIsReady(true))
-})
-
-const $container = document.querySelector("#root") as HTMLElement
+exposeHistoryIsPop(router)
 
 if (!IN_ELECTRON) {
   registerAppGlobalShortcuts()
 }
 
-ReactDOM.createRoot($container).render(
+const root = ReactDOM.createRoot(document.querySelector("#root") as HTMLElement)
+
+initializeApp().then(
+  () => {
+    flushSync(() => setAppIsReady(true))
+
+    if (WEB_BUILD && navigator.serviceWorker) {
+      void import("./push-notification").then(
+        ({ listenToNotificationClicks, registerWebPushNotifications }) => {
+          listenToNotificationClicks()
+          void registerWebPushNotifications()
+        },
+      )
+    }
+  },
+  (error: unknown) => {
+    console.error("The local database could not be opened", error)
+    showLocalDatabaseError(root, error)
+  },
+)
+
+root.render(
   <React.StrictMode>
     <RouterProvider router={router} />
   </React.StrictMode>,

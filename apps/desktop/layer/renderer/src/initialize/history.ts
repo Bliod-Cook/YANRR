@@ -1,95 +1,17 @@
-import { getStableRouterNavigate } from "@follow/components/atoms/route.js"
-import { nextFrame } from "@follow/utils/dom"
-import { jotaiStore } from "@follow/utils/jotai"
-import { atom } from "jotai"
-
-import { router } from "~/router"
-
-const historyAtom = atom<string[]>([])
+import type { createBrowserRouter } from "react-router"
 
 declare global {
   interface History {
-    stack: string[]
-
-    returnBack: (to?: string) => void
-
-    get isPop(): boolean
+    /** Whether the page on screen was reached by going back or forward */
+    readonly isPop: boolean
   }
 }
 
-let __isPop = false
-const F = {} as { isPop: boolean }
-let resetTimer: any = null
-Object.defineProperty(F, "isPop", {
-  get() {
-    return __isPop
-  },
-  set(value) {
-    if (!value) return
+type Router = Pick<ReturnType<typeof createBrowserRouter>, "state">
 
-    resetTimer && clearTimeout(resetTimer)
-    resetTimer = setTimeout(() => {
-      __isPop = false
-    }, 1200)
-
-    __isPop = true
-  },
-})
-
-export const registerHistoryStack = () => {
-  const onPopState = (e: PopStateEvent) => {
-    F.isPop = true
-
-    const url = e.state?.url
-    if (url) {
-      jotaiStore.set(historyAtom, jotaiStore.get(historyAtom).slice(0, -1))
-    }
-  }
-  window.addEventListener("popstate", onPopState)
-
-  const unsub = router.subscribe((e) => {
-    const url = e.location.pathname + e.location.search
-    jotaiStore.set(historyAtom, [...jotaiStore.get(historyAtom), url])
-  })
-
-  Object.defineProperty(window.history, "stack", {
-    get() {
-      return jotaiStore.get(historyAtom)
-    },
-    enumerable: false,
-  })
-
-  Object.defineProperty(window.history, "returnBack", {
-    value: (to?: string) => {
-      const stack = jotaiStore.get(historyAtom)
-      F.isPop = true
-      const last = stack.at(-1)
-
-      to = typeof to === "string" ? to : last
-
-      if (!last || last !== to) {
-        getStableRouterNavigate()?.(to ?? "/")
-
-        nextFrame(() => {
-          jotaiStore.set(historyAtom, [])
-        })
-      } else {
-        window.history.back()
-      }
-    },
-    enumerable: false,
-  })
-
+/** Tells code outside the router, such as the shared store, how the page on screen was reached */
+export const exposeHistoryIsPop = (router: Router) => {
   Object.defineProperty(window.history, "isPop", {
-    get() {
-      return F.isPop
-    },
-    enumerable: false,
+    get: () => router.state.historyAction === "POP",
   })
-
-  return () => {
-    window.removeEventListener("popstate", onPopState)
-
-    unsub()
-  }
 }

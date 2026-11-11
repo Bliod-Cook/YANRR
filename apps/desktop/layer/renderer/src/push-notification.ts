@@ -34,13 +34,8 @@ export async function registerWebPushNotifications() {
       return
     }
 
-    const existingRegistration = await navigator.serviceWorker.getRegistration()
-    const registration = existingRegistration
-
-    if (!registration) {
-      return
-    }
-
+    // The service worker only shows push notifications, so it is installed for them alone
+    const registration = await navigator.serviceWorker.register("/sw.js")
     await navigator.serviceWorker.ready
 
     const app = initializeApp(firebaseConfig)
@@ -66,8 +61,6 @@ export async function registerWebPushNotifications() {
       rememberWebPushRegistration({ userId: user.id, token, syncId: response.lastSyncId })
     }
 
-    registerPushNotificationPostMessage()
-
     setAppMessagingToken(token)
 
     return token
@@ -91,7 +84,11 @@ interface NavigateEntryMessage {
 
 type ServiceWorkerMessage = NavigateEntryMessage
 
-const registerPushNotificationPostMessage = () => {
+/**
+ * Opens the entry of a clicked notification. A notification shown since an earlier launch can be
+ * clicked even when this launch does not set up push.
+ */
+export const listenToNotificationClicks = () => {
   navigator.serviceWorker.addEventListener("message", (event) => {
     const message = event.data as ServiceWorkerMessage
 

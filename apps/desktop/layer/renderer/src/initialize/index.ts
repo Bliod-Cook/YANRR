@@ -6,15 +6,16 @@ import { onLocalDataOfAnotherAccount } from "@follow/store/sync/account"
 import { ensureSyncedThroughEngine } from "@follow/store/sync/sync-status"
 import { whoami } from "@follow/store/user/getters"
 import { fetchSessionUser } from "@follow/store/user/hooks"
+import { getStorageNS } from "@follow/utils/ns"
 import { enableMapSet } from "immer"
 
+import { QUERY_PERSIST_KEY } from "~/constants"
 import { initI18n } from "~/i18n"
 import { settingSyncQueue } from "~/modules/settings/helper/sync-queue"
 import { ElectronCloseEvent, ElectronShowEvent } from "~/providers/invalidate-query-provider"
 import { clearLocalDataOfAnotherAccount } from "~/store/utils/clear"
 
 import { appLog } from "../lib/log"
-import { registerHistoryStack } from "./history"
 import { doMigration } from "./migrates"
 import { initializeSettings } from "./settings"
 import { initSyncTriggers } from "./sync"
@@ -27,6 +28,10 @@ declare global {
 
 let clearingForAnotherAccount = false
 
+/**
+ * Rejects when the local database cannot be opened or loaded. Everything that does not need it
+ * is done by then, so the app that explains the failure is translated and set up.
+ */
 export const initializeApp = async () => {
   // Before any session answer can arrive: the data on this device must not be shown to, or
   // sent with the session of, another account.
@@ -35,13 +40,6 @@ export const initializeApp = async () => {
     clearingForAnotherAccount = true
     void clearLocalDataOfAnotherAccount()
   })
-
-  await apm("hydrateDatabaseToStore", () => {
-    return hydrateDatabaseToStore({
-      migrateDatabase: true,
-    })
-  })
-  initSyncTriggers()
 
   if (DEV) {
     const url = "/favicon-dev.ico"
@@ -63,7 +61,6 @@ export const initializeApp = async () => {
 
   const now = Date.now()
   initializeDayjs()
-  registerHistoryStack()
 
   // Set Environment
   document.documentElement.dataset.buildType = ELECTRON_BUILD ? "electron" : "web"
@@ -89,9 +86,16 @@ export const initializeApp = async () => {
   apm("initializeSettings", initializeSettings)
 
   await apm("i18n", initI18n)
+  initSyncTriggers()
+  // Older versions kept the query cache here, the session and its token among them, and the
+  // desktop app a copy of the token
+  localStorage.removeItem(QUERY_PERSIST_KEY)
+  localStorage.removeItem(getStorageNS("auth_session_token"))
+
+  await apm("hydrateDatabaseToStore", () => hydrateDatabaseToStore({ migrateDatabase: true }))
 
   void apm("setting sync", async () => {
-    await settingSyncQueue.init()
+    settingSyncQueue.init()
 
     await fetchSessionUser().catch(() => null)
 
@@ -113,7 +117,7 @@ export const initializeApp = async () => {
   appLog(`Initialize ${APP_NAME} done,`, `${loadingTime}ms`)
 }
 
-const apm = async (label: string, fn: () => Promise<any> | any) => {
+const apm = async <T>(label: string, fn: () => T | Promise<T>) => {
   const start = Date.now()
   const result = await fn()
   const end = Date.now()
