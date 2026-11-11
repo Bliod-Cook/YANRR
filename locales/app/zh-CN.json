@@ -1,7 +1,6 @@
 {
   "ai.open_chat": "打开 AI 对话",
   "ai.summary_not_available": "摘要不可用",
-  "app.floating_action_button": "悬浮操作按钮",
   "app.toggle_sidebar": "切换侧边栏",
   "app_tip.title": "应用提示",
   "clipboard.copy_failed": "无法复制到剪贴板，请确认已授予剪贴板权限。",

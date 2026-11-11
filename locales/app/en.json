@@ -1,7 +1,6 @@
 {
   "ai.open_chat": "Open AI Chat",
   "ai.summary_not_available": "Summary not available",
-  "app.floating_action_button": "Floating action button",
   "app.toggle_sidebar": "Toggle Sidebar",
   "app_tip.title": "App Tip",
   "clipboard.copy_failed": "Unable to copy to clipboard. Please ensure clipboard permissions are granted.",

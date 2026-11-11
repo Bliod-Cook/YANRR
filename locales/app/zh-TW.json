@@ -1,7 +1,6 @@
 {
   "ai.open_chat": "開啟 AI 對話",
   "ai.summary_not_available": "暫無摘要",
-  "app.floating_action_button": "浮動操作按鈕",
   "app.toggle_sidebar": "切換側邊欄",
   "app_tip.title": "應用程式提示",
   "clipboard.copy_failed": "無法複製到剪貼簿，請確認已授予剪貼簿權限。",

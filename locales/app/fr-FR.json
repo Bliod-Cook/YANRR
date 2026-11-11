@@ -1,7 +1,6 @@
 {
   "ai.open_chat": "Ouvrir la discussion IA",
   "ai.summary_not_available": "Résumé non disponible",
-  "app.floating_action_button": "Bouton d'action flottant",
   "app.toggle_sidebar": "Basculer la barre latérale",
   "app_tip.title": "Astuce de l'application",
   "clipboard.copy_failed": "Impossible de copier dans le presse-papiers. Vérifiez que l'accès au presse-papiers est autorisé.",

@@ -1,7 +1,6 @@
 {
   "ai.open_chat": "AI チャットを開く",
   "ai.summary_not_available": "要約は利用できません",
-  "app.floating_action_button": "フローティングアクションボタン",
   "app.toggle_sidebar": "サイドバーを切り替え",
   "app_tip.title": "アプリのヒント",
   "clipboard.copy_failed": "クリップボードにコピーできませんでした。クリップボードへのアクセスが許可されているか確認してください。",
