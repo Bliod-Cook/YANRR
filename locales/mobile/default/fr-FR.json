@@ -34,6 +34,7 @@
   "image.save_to_album": "Enregistrer dans l'album",
   "image.saved": "Image enregistrée dans la photothèque",
   "image.share": "Partager l'image",
+  "image.share_failed": "Échec du partage de l'image : {{error}}",
   "image.share_hint": "Partage l'image avec d'autres applications",
   "login.confirm_password.label": "Confirmer le mot de passe",
   "login.continueWith": "Continuer avec {{provider}}",

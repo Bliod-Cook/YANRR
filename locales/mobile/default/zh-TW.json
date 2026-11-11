@@ -34,6 +34,7 @@
   "image.save_to_album": "儲存到相簿",
   "image.saved": "圖片已儲存到相簿",
   "image.share": "分享圖片",
+  "image.share_failed": "分享圖片失敗：{{error}}",
   "image.share_hint": "將圖片分享到其他應用程式",
   "login.confirm_password.label": "確認密碼",
   "login.continueWith": "透過 {{provider}} 繼續",
