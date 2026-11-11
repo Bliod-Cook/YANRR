@@ -100,12 +100,3 @@ export const checkIsEditableElement = (element: HTMLElement) => {
     element instanceof HTMLTextAreaElement
   )
 }
-
-export const detectIsEditableElement = (element: HTMLElement) => {
-  return (
-    element.isContentEditable ||
-    element.getAttribute("contenteditable") === "true" ||
-    (element instanceof HTMLInputElement && element.type === "text") ||
-    element instanceof HTMLTextAreaElement
-  )
-}

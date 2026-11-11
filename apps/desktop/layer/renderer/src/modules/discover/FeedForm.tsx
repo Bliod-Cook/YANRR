@@ -21,7 +21,7 @@ import { subscriptionSyncService } from "@follow/store/subscription/store"
 import { whoami } from "@follow/store/user/getters"
 import { useIsLoggedIn } from "@follow/store/user/hooks"
 import { cn } from "@follow/utils/utils"
-import type { FeedAnalyticsModel, ParsedEntry } from "@follow-app/client-sdk"
+import type { ParsedEntry } from "@follow-app/client-sdk"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo, useRef } from "react"
@@ -110,7 +110,6 @@ export const FeedForm: Component<{
                         subscriptionData: feedQuery.data?.subscription,
                         entries: feedQuery.data?.entries,
                         feed,
-                        analytics: feedQuery.data?.analytics,
                         placeholderRef,
                       }}
                     />
@@ -150,7 +149,6 @@ export const FeedForm: Component<{
       }, [
         defaultValues,
         feed,
-        feedQuery.data?.analytics,
         feedQuery.data?.entries,
         feedQuery.data?.subscription,
         feedQuery.error,
@@ -180,7 +178,6 @@ const FeedInnerForm = ({
   subscriptionData,
   feed,
   entries,
-  analytics,
 
   placeholderRef,
   isLoading,
@@ -197,7 +194,6 @@ const FeedInnerForm = ({
   }
   feed: FeedModel
   entries?: ParsedEntry[]
-  analytics?: FeedAnalyticsModel
 
   placeholderRef: React.RefObject<HTMLDivElement | null>
   isLoading: boolean
@@ -237,16 +233,6 @@ const FeedInnerForm = ({
       { keepDirtyValues: true },
     )
   }, [form, subscription])
-
-  useEffect(() => {
-    if (typeof analytics?.view === "number" && !subscription && !defaultValues?.view) {
-      // The suggested view is a starting value, not a change of the user's
-      form.reset(
-        { ...form.formState.defaultValues, view: `${analytics.view}` },
-        { keepDirtyValues: true },
-      )
-    }
-  }, [analytics, defaultValues?.view, form, subscription])
 
   const followMutation = useMutation({
     // Whether the form edits the subscription is decided when it is sent: a follow stores the
@@ -319,7 +305,7 @@ const FeedInnerForm = ({
 
   return (
     <div className="flex flex-1 flex-col gap-y-4">
-      <FeedSummary isLoading={isLoading} feed={feed} analytics={analytics} showAnalytics />
+      <FeedSummary isLoading={isLoading} feed={feed} />
       <Form {...form}>
         <form
           id="feed-form"

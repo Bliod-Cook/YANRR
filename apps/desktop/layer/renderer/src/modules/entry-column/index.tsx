@@ -32,7 +32,6 @@ import { EntryColumnShortcutHandler } from "./EntryColumnShortcutHandler"
 import { EntryItemSkeleton } from "./EntryItemSkeleton"
 import { EntryColumnGrid } from "./grid"
 import { useAttachScrollBeyond } from "./hooks/useAttachScrollBeyond"
-import { useSnapEntryIdList } from "./hooks/useEntryIdListSnap"
 import { useEntryMarkReadHandler } from "./hooks/useEntryMarkReadHandler"
 import { EntryListHeader } from "./layouts/EntryListHeader"
 import { EntryEmptyList, EntryList, EntryLoadFailedRow } from "./list"
@@ -91,7 +90,6 @@ function EntryColumnContent() {
     globalThis.requestAnimationFrame?.(runScrollToTop)
   }, [resetScrollInteractionState])
   const { entriesIds, groupedCounts } = state
-  useSnapEntryIdList(entriesIds)
 
   const {
     entryId: activeEntryId,

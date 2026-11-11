@@ -9,8 +9,6 @@ import root from "react-shadow"
 import { useUISettingKeys } from "~/atoms/settings/ui"
 import { useReduceMotion } from "~/hooks/biz/useReduceMotion"
 import { buildAppFontFamily } from "~/lib/font-family"
-import type { TextSelectionEvent } from "~/lib/simple-text-selection"
-import { addTextSelectionListener } from "~/lib/simple-text-selection"
 
 const ShadowDOMContext = createContext(false)
 
@@ -47,35 +45,15 @@ const cloneStylesElement = () => {
 export const ShadowDOM: FC<
   PropsWithChildren<React.HTMLProps<HTMLElement>> & {
     injectHostStyles?: boolean
-    textSelectionEnabled?: boolean
-    onTextSelect?: (event: TextSelectionEvent) => void
-    onSelectionClear?: () => void
   }
 > & {
   useIsShadowDOM: () => boolean
 } = (props) => {
-  const {
-    injectHostStyles = true,
-    textSelectionEnabled = false,
-    onTextSelect,
-    onSelectionClear,
-    ...rest
-  } = props
+  const { injectHostStyles = true, ...rest } = props
 
   const [stylesElements, setStylesElements] = useState<ReactNode[]>(() =>
     injectHostStyles ? cloneStylesElement() : [],
   )
-
-  const [el, setEl] = useState<{ shadowRoot: ShadowRoot } | null>(null)
-
-  useLayoutEffect(() => {
-    if (!el) return
-    const { shadowRoot } = el
-
-    if (!textSelectionEnabled || !shadowRoot || !onTextSelect) return
-
-    return addTextSelectionListener(shadowRoot, onTextSelect, onSelectionClear)
-  }, [textSelectionEnabled, onTextSelect, onSelectionClear, el])
 
   useLayoutEffect(() => {
     if (!injectHostStyles) return
@@ -107,7 +85,7 @@ export const ShadowDOM: FC<
     // The clip margin leaves room for the heading anchors beside the text.
     <div className="contain-paint [overflow-clip-margin:3rem]">
       {/* @ts-expect-error */}
-      <root.div {...rest} ref={setEl}>
+      <root.div {...rest}>
         <ShadowDOMContext value={true}>
           <div
             style={useMemo(

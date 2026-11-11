@@ -39,29 +39,3 @@ export const readFromClipboard = async (): Promise<string> => {
     throw new ClipboardError(message)
   }
 }
-
-export const copyImageToClipboard = async (canvas: HTMLCanvasElement): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        const error = new Error("Failed to create image blob")
-        reject(error)
-        return
-      }
-
-      try {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            [blob.type]: blob,
-          }),
-        ])
-        resolve()
-      } catch (e) {
-        const message = t("clipboard.copy_image_failed")
-        console.error(e)
-        toast.error(message)
-        reject(new ClipboardError(message))
-      }
-    }, "image/png")
-  })
-}
