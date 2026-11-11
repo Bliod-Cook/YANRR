@@ -6,9 +6,10 @@ use quick_xml::{
     Reader, Writer, XmlVersion,
     events::{BytesDecl, BytesStart, BytesText, Event},
 };
+use serde::Deserialize;
 
 /// A feed in an OPML document.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Deserialize)]
 pub struct Outline {
     pub url: String,
     pub title: Option<String>,

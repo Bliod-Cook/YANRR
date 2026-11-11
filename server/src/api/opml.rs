@@ -1,19 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use axum::{
-    Json,
-    body::Bytes,
-    extract::{Multipart, State},
-    http::header,
-    response::IntoResponse,
-};
+use axum::{Json, body::Bytes, extract::State, http::header, response::IntoResponse};
 use futures::{StreamExt, stream};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QueryOrder, TransactionTrait};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
 use super::{
-    error::{ApiError, ApiQuery, ApiResult, ExceptionCode},
+    error::{ApiError, ApiJson, ApiQuery, ApiResult, ExceptionCode, view},
     response::ok,
     session::AuthUser,
 };
@@ -62,47 +56,25 @@ pub async fn parse(user: AuthUser, body: Bytes) -> ApiResult<Json<Value>> {
     ))
 }
 
-/// `POST /subscriptions/import`: follows the feeds of the OPML `file` whose URLs `items` lists, or all of them.
+#[derive(Deserialize)]
+pub struct ImportBody {
+    /// The feeds picked from what `POST /subscriptions/parse-opml` found.
+    items: Vec<opml::Outline>,
+    /// Where new feeds go; Articles when left out.
+    view: Option<i16>,
+}
+
+/// `POST /subscriptions/import`: follows the feeds `items` lists; those followed already are conflicts.
 pub async fn import(
     State(state): State<AppState>,
     user: AuthUser,
-    mut form: Multipart,
+    ApiJson(body): ApiJson<ImportBody>,
 ) -> ApiResult<Json<Value>> {
-    let (mut file, mut items) = (None, None);
-    while let Some(field) = form
-        .next_field()
-        .await
-        .map_err(|err| invalid(err.body_text()))?
-    {
-        match field.name() {
-            Some("file") => {
-                file = Some(
-                    field
-                        .bytes()
-                        .await
-                        .map_err(|err| invalid(err.body_text()))?,
-                )
-            }
-            Some("items") => {
-                items = Some(field.text().await.map_err(|err| invalid(err.body_text()))?)
-            }
-            _ => {}
-        }
-    }
-    let file = file.ok_or_else(|| invalid("file required"))?;
-    let selected: Option<HashSet<String>> = items
-        .map(|items| serde_json::from_str(&items))
-        .transpose()
-        .map_err(|_| invalid("items must be a JSON array of URLs"))?;
+    let view = view(body.view.unwrap_or(0))?;
     let mut seen = HashSet::new();
-    let outlines = opml::parse(&file)
-        .map_err(invalid)?
+    let outlines = body
+        .items
         .into_iter()
-        .filter(|outline| {
-            selected
-                .as_ref()
-                .is_none_or(|urls| urls.contains(&outline.url))
-        })
         .filter(|outline| seen.insert(outline.url.clone()));
 
     let followed: HashMap<_, _> = subscription::Entity::find()
@@ -149,7 +121,7 @@ pub async fn import(
             .clone()
             .filter(|title| feed.title.as_ref() != Some(title));
         let form = Form {
-            view: 0,
+            view,
             category: outline.category.clone(),
             title,
             hide_from_timeline: None,

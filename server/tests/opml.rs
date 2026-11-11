@@ -1,7 +1,6 @@
 mod common;
 
 use common::{Fixtures, TestApp, json};
-use reqwest::multipart::{Form, Part};
 use serde_json::{Value, json};
 use yanrr::opml;
 
@@ -65,26 +64,37 @@ async fn opml_import_and_export() {
     );
     assert_eq!(parsed["data"]["remaining"], 4);
 
-    let import = |items: Option<Value>| {
-        let mut form = Form::new().part("file", Part::text(file.clone()).file_name("feeds.opml"));
-        if let Some(items) = items {
-            form = form.text("items", items.to_string());
-        }
-        app.post_form("/api/subscriptions/import", form)
-    };
-    let imported = json(import(Some(json!([rss, missing, etag]))).await).await;
+    // Clients send the feeds picked from what they parsed.
+    let picked = json!([
+        { "url": rss, "title": "Example", "category": "Tech & Science" },
+        { "url": missing, "title": "Gone", "category": "Nested" },
+        { "url": etag },
+        { "url": rss },
+    ]);
+    let import = async |body: Value| json(app.post("/api/subscriptions/import", body).await).await;
+    let imported = import(json!({ "items": picked })).await;
     let data = &imported["data"];
     assert_eq!(urls(&data["successfulItems"]), [rss.as_str()]);
     assert_eq!(urls(&data["conflictItems"]), [etag.as_str()]);
     assert_eq!(urls(&data["parsedErrorItems"]), [missing.as_str()]);
     assert!(imported["lastSyncId"].is_i64());
-    let everything = json(import(None).await).await;
-    assert_eq!(urls(&everything["data"]["successfulItems"]), [social]);
+    let social_in_view = json!({ "items": [{ "url": social, "title": "Social" }], "view": 1 });
+    let social_imported = import(social_in_view.clone()).await;
+    assert_eq!(urls(&social_imported["data"]["successfulItems"]), [social]);
+    // Nothing new to follow is an answer like any other.
+    let again = import(social_in_view).await;
+    assert_eq!(urls(&again["data"]["conflictItems"]), [social]);
+    assert_eq!(again["data"]["successfulItems"], json!([]));
 
     let listed = json(app.get("/api/subscriptions").await).await;
     let followed = listed["data"].as_array().unwrap();
     let example = followed.iter().find(|s| s["feeds"]["url"] == rss).unwrap();
     assert_eq!(example["category"], "Tech & Science");
+    let social_followed = followed
+        .iter()
+        .find(|s| s["feeds"]["url"] == social)
+        .unwrap();
+    assert_eq!(social_followed["view"], 1);
 
     let export = app
         .get("/api/subscriptions/export?folderMode=category")
@@ -106,9 +116,11 @@ async fn opml_import_and_export() {
     assert_eq!(exported, expected);
     let by_view = app.get("/api/subscriptions/export").await;
     let by_view = opml::parse(&by_view.bytes().await.unwrap()).unwrap();
-    assert!(
-        by_view
-            .iter()
-            .all(|outline| outline.category.as_deref() == Some("Articles"))
-    );
+    for outline in by_view {
+        let view = match outline.url == expanded {
+            true => "SocialMedia",
+            false => "Articles",
+        };
+        assert_eq!(outline.category.as_deref(), Some(view), "{}", outline.url);
+    }
 }
