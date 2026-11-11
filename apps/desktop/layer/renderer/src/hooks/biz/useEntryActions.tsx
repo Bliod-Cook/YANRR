@@ -2,6 +2,7 @@ import { isMobile } from "@follow/components/hooks/useMobile.js"
 import { FeedViewType } from "@follow/constants"
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { useIsEntryStarred } from "@follow/store/collection/hooks"
+import { getEntry } from "@follow/store/entry/getter"
 import { useEntry } from "@follow/store/entry/hooks"
 import { entrySyncServices } from "@follow/store/entry/store"
 import type { EntryModel } from "@follow/store/entry/types"
@@ -19,15 +20,16 @@ import {
   setReadabilityStatus,
   useEntryIsInReadability,
 } from "~/atoms/readability"
+import { useServerCapability } from "~/atoms/server-configs"
 import { useIntegrationSettingValue } from "~/atoms/settings/integration"
 import { useShowSourceContent } from "~/atoms/source-content"
-import { ipcServices } from "~/lib/client"
 import { COMMAND_ID } from "~/modules/command/commands/id"
 import { getCommand, useCommands, useRunCommandFn } from "~/modules/command/hooks/use-command"
 import { useCommandShortcuts } from "~/modules/command/hooks/use-command-binding"
 import { isMutationCommandId } from "~/modules/command/mutation-command-ids"
 import type { FollowCommandId, UnknownCommand } from "~/modules/command/types"
 import { useToolbarOrderMap } from "~/modules/customize-toolbar/hooks"
+import { CustomIntegrationManager } from "~/modules/integration/custom-integration-manager"
 
 import { useRouteParamsSelector } from "./useRouteParams"
 
@@ -59,11 +61,11 @@ export const toggleEntryReadability = async ({ id, url }: { id: string; url: str
     })
     let status: ReadabilityStatus
     try {
-      await entrySyncServices.fetchEntryReadabilityContent(id, async () => {
-        const res = await ipcServices?.reader.readability({ url })
-        return res?.content
-      })
-      status = ReadabilityStatus.SUCCESS
+      await entrySyncServices.fetchEntryReadabilityContent(id)
+      // The server extracts the page, and may find nothing readable on it
+      status = getEntry(id)?.readabilityContent
+        ? ReadabilityStatus.SUCCESS
+        : ReadabilityStatus.FAILURE
     } catch {
       status = ReadabilityStatus.FAILURE
     }
@@ -265,6 +267,7 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
   const isInbox = useIsInbox(entry?.inboxId)
   const isShowSourceContent = useShowSourceContent()
 
+  const aiEnabled = useServerCapability("ai")
   const isShowAISummaryAuto = useShowAISummaryAuto(entry?.summary)
   const isShowAISummaryOnce = useShowAISummaryOnce()
   const isShowAITranslationAuto = useShowAITranslationAuto(!!entry?.translation)
@@ -380,7 +383,7 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
       new EntryActionMenuItem({
         id: COMMAND_ID.entry.toggleAISummary,
         onClick: runCmdFn(COMMAND_ID.entry.toggleAISummary, []),
-        hide: isShowAISummaryAuto || !isArticleLayoutView(view),
+        hide: !aiEnabled || isShowAISummaryAuto || !isArticleLayoutView(view),
         active: isShowAISummaryOnce,
         entryId,
       }),
@@ -388,6 +391,7 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
         id: COMMAND_ID.entry.toggleAITranslation,
         onClick: runCmdFn(COMMAND_ID.entry.toggleAITranslation, []),
         hide:
+          !aiEnabled ||
           isShowAITranslationAuto ||
           ([FeedViewType.SocialMedia, FeedViewType.Videos] as (number | undefined)[]).includes(
             view,
@@ -442,7 +446,9 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
       // Custom Integration with sub-menu
       ...(() => {
         const customIntegrations = integrationSettings.customIntegration || []
-        const enabledIntegrations = customIntegrations.filter((integration) => integration.enabled)
+        const enabledIntegrations = customIntegrations.filter(
+          (integration) => integration.enabled && CustomIntegrationManager.isAvailable(integration),
+        )
 
         if (!integrationSettings.enableCustomIntegration || enabledIntegrations.length === 0) {
           return []
@@ -494,6 +500,7 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
     isInCollection,
     isCurrentVisitEntry,
     isShowSourceContent,
+    aiEnabled,
     isShowAISummaryAuto,
     isShowAISummaryOnce,
     isShowAITranslationAuto,

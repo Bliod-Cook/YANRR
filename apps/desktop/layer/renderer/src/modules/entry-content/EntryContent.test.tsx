@@ -152,10 +152,7 @@ describe("EntryContent", () => {
   test("fetches the readable page of an article without content", async () => {
     await render([createEntry("article", {})], "articles")
 
-    expect(entrySyncServices.fetchEntryReadabilityContent).toHaveBeenCalledWith(
-      "article",
-      expect.any(Function),
-    )
+    expect(entrySyncServices.fetchEntryReadabilityContent).toHaveBeenCalledWith("article")
   })
 
   // The picture layout shows the pictures and the feed content, never the readable page

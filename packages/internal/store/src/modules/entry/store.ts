@@ -567,10 +567,7 @@ class EntrySyncServices {
     return entry
   }
 
-  async fetchEntryReadabilityContent(
-    entryId: EntryId,
-    fallBack?: () => Promise<string | null | undefined>,
-  ) {
+  async fetchEntryReadabilityContent(entryId: EntryId) {
     const entry = getEntry(entryId)
     if (!entry?.url) return entry
     if (
@@ -581,20 +578,10 @@ class EntrySyncServices {
       return entry
     }
 
-    let readabilityContent: string | null | undefined
-
-    try {
-      const { data: contentByFetch } = await api().entries.readability({
-        id: entryId,
-      })
-      readabilityContent = contentByFetch?.content || null
-    } catch (error) {
-      if (fallBack) {
-        readabilityContent = await fallBack()
-      } else {
-        throw error
-      }
-    }
+    const { data } = await api().entries.readability({
+      id: entryId,
+    })
+    const readabilityContent = data?.content
     if (readabilityContent) {
       await entryActions.updateEntryContent({
         entryId,

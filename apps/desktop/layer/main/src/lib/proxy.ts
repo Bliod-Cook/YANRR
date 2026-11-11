@@ -89,7 +89,7 @@ export const updateProxy = () => {
     return
   }
   // The app's own requests go through `net.fetch` and follow the session proxy above. Node's
-  // native fetch, still used by third-party code such as the readability package, knows
+  // native fetch, used by third-party code such as the push receiver to register the device, knows
   // nothing about it, so an explicit proxy is handed to undici as well; the system proxy
   // cannot be, which is why those requests only follow a proxy set in the app.
   // Refer to https://stackoverflow.com/a/76503362/14676508

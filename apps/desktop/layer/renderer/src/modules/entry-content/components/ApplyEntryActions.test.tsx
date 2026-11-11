@@ -32,7 +32,8 @@ const createEntry = (id: string, settings: EntryModel["settings"]) =>
     title: `Entry ${id}`,
     url: `https://example.com/${id}`,
     content: "<p>content</p>",
-    readabilityContent: null,
+    // As the server extracted it from the entry page
+    readabilityContent: "<p>readable content</p>",
     description: null,
     guid: id,
     author: null,
@@ -132,10 +133,7 @@ describe("ApplyEntryActions", () => {
   test("shows the readability content when the entry content mounts", async () => {
     const container = await render("readability-1")
 
-    expect(entrySyncServices.fetchEntryReadabilityContent).toHaveBeenCalledWith(
-      "readability-1",
-      expect.any(Function),
-    )
+    expect(entrySyncServices.fetchEntryReadabilityContent).toHaveBeenCalledWith("readability-1")
     expect(readProbe(container, "content")).toEqual({ isInReadability: true })
     expect(readProbe(container, "layout")).toEqual({
       isInReadability: true,

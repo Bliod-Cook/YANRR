@@ -6,7 +6,6 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses"
 import { MakerDeb } from "@electron-forge/maker-deb"
 import { MakerDMG } from "@electron-forge/maker-dmg"
 import { MakerSquirrel } from "@electron-forge/maker-squirrel"
-import { MakerZIP } from "@electron-forge/maker-zip"
 import { FusesPlugin } from "@electron-forge/plugin-fuses"
 import type { ForgeConfig } from "@electron-forge/shared-types"
 import MakerAppImage from "@pengx17/electron-forge-maker-appimage"
@@ -19,49 +18,16 @@ const mode = process.argv.find((arg) => arg.startsWith("--mode"))?.split("=")[1]
 
 const isStaging = mode === "staging"
 
-const artifactRegex = /.*\.(?:exe|dmg|AppImage|zip|deb)$/
+const artifactRegex = /.*\.(?:exe|dmg|AppImage|deb)$/
 const platformNamesMap = {
   darwin: "macos",
   linux: "linux",
   win32: "windows",
 }
 
-// Keep external runtime modules and their production dependency trees in app.asar.
-// Scoped packages are copied as a whole because cleanSources operates on top-level entries.
-const keepModules = new Set([
-  "@asamuzakjp",
-  "@bramus",
-  "@csstools",
-  "@exodus",
-  "bidi-js",
-  "css-tree",
-  "data-urls",
-  "decimal.js",
-  "entities",
-  "font-list",
-  "html-encoding-sniffer",
-  "is-potential-custom-element-name",
-  "jsdom",
-  "lru-cache",
-  "mdn-data",
-  "parse5",
-  "punycode",
-  "require-from-string",
-  "saxes",
-  "source-map-js",
-  "tldts",
-  "tldts-core",
-  "tough-cookie",
-  "tr46",
-  "undici",
-  "vscode-languagedetection",
-  "w3c-xmlserializer",
-  "webidl-conversions",
-  "whatwg-mimetype",
-  "whatwg-url",
-  "xml-name-validator",
-  "xmlchars",
-])
+// The modules the main process loads at runtime instead of bundling them, kept in app.asar.
+// Neither has dependencies of its own.
+const keepModules = new Set(["font-list", "vscode-languagedetection"])
 const keepLanguages = new Set(["en", "en_GB", "en-US", "en_US"])
 
 // remove folders & files not to be included in the app
@@ -171,7 +137,6 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerZIP({}, ["darwin"]),
     new MakerDMG(
       {
         overwrite: true,
