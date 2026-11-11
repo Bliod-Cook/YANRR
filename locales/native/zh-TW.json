@@ -24,7 +24,6 @@
   "dialog.clearAllData": "您確定要清除所有資料嗎？",
   "dialog.clearAllDataFailed": "無法重設應用程式資料：{{message}}",
   "dialog.clearAllDataSuccess": "已重設應用程式資料",
-  "dialog.confirm": "確認",
   "dialog.no": "否",
   "dialog.open": "開啟",
   "dialog.openExternalApp.message": "確定要使用其他應用程式開啟 {{url}} 嗎？",

@@ -24,7 +24,6 @@
   "dialog.clearAllData": "本当にすべてのデータを消去してもよろしいですか？",
   "dialog.clearAllDataFailed": "アプリのデータをリセットできませんでした：{{message}}",
   "dialog.clearAllDataSuccess": "アプリのデータをリセットしました",
-  "dialog.confirm": "確認",
   "dialog.no": "いいえ",
   "dialog.open": "開く",
   "dialog.openExternalApp.message": "本当に他の外部アプリで \"{{url}}\" を開いてもよろしいですか？",

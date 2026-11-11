@@ -108,6 +108,7 @@
   "entry_actions.custom_integration.disabled": "{{name}} 已禁用",
   "entry_actions.custom_integration.failed": "保存到 {{name}} 失败：{{error}}",
   "entry_actions.custom_integration.invalid_config": "集成配置无效",
+  "entry_actions.custom_integration.network_error": "请求未能发出。请检查地址和网络连接；该服务也可能拒绝来自浏览器的请求。",
   "entry_actions.custom_integration.request_failed": "请求失败，状态码 {{status}}：{{statusText}}",
   "entry_actions.custom_integration.saved": "已成功保存到 {{name}}",
   "entry_actions.custom_integration.url_scheme_blocked": "无法打开 URL Scheme，可能已被弹出窗口拦截程序阻止。",

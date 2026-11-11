@@ -108,6 +108,7 @@
   "entry_actions.custom_integration.disabled": "{{name}} is disabled",
   "entry_actions.custom_integration.failed": "Failed to save to {{name}}: {{error}}",
   "entry_actions.custom_integration.invalid_config": "Invalid integration configuration",
+  "entry_actions.custom_integration.network_error": "The request could not be sent. Check the address and your connection; the service may also refuse requests from a browser.",
   "entry_actions.custom_integration.request_failed": "Request failed with status {{status}}: {{statusText}}",
   "entry_actions.custom_integration.saved": "Saved to {{name}} successfully",
   "entry_actions.custom_integration.url_scheme_blocked": "Failed to open URL scheme. This may be blocked by popup blockers.",

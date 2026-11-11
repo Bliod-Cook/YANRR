@@ -108,6 +108,7 @@
   "entry_actions.custom_integration.disabled": "{{name}} は無効になっています",
   "entry_actions.custom_integration.failed": "{{name}} への保存に失敗しました：{{error}}",
   "entry_actions.custom_integration.invalid_config": "統合の設定が無効です",
+  "entry_actions.custom_integration.network_error": "リクエストを送信できませんでした。アドレスと接続を確認してください。サービスがブラウザーからのリクエストを拒否している可能性もあります。",
   "entry_actions.custom_integration.request_failed": "リクエストに失敗しました（ステータス {{status}}）：{{statusText}}",
   "entry_actions.custom_integration.saved": "{{name}} に保存しました",
   "entry_actions.custom_integration.url_scheme_blocked": "URLスキームを開けませんでした。ポップアップブロッカーによってブロックされた可能性があります。",

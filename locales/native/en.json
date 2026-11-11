@@ -24,7 +24,6 @@
   "dialog.clearAllData": "Are you sure you want to clear all data?",
   "dialog.clearAllDataFailed": "Couldn't reset app data: {{message}}",
   "dialog.clearAllDataSuccess": "App data reset",
-  "dialog.confirm": "Confirm",
   "dialog.no": "No",
   "dialog.open": "Open",
   "dialog.openExternalApp.message": "Are you sure you want to open \"{{url}}\" with other apps?",
