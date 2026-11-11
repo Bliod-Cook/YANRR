@@ -19,9 +19,7 @@ import { ImageContextMenu } from "../image/ImageContextMenu"
 import { getSafeSource } from "../image/utils"
 import { NativePressable } from "../pressable/NativePressable"
 import { VideoPlayer } from "../video/VideoPlayer"
-
-const getMediaKey = (mediaItem: MediaModel) =>
-  mediaItem.url || mediaItem.preview_image_url || `${mediaItem.type}-media`
+import { getCarouselPages } from "./carousel-pages"
 
 export const MediaCarousel = ({
   ref,
@@ -40,16 +38,8 @@ export const MediaCarousel = ({
 }) => {
   const [containerWidth, setContainerWidth] = useState(0)
   const containerHeight = Math.floor(containerWidth / aspectRatio)
-  const hasMany = media.length > 1
-  // Media without an image get no page, so a page's position can differ from its media index
-  const pages = useMemo(
-    () =>
-      media.flatMap((m, index) => {
-        const imageUrl = m.type === "video" ? m.preview_image_url : m.url
-        return imageUrl ? [{ media: m, index, imageUrl }] : []
-      }),
-    [media],
-  )
+  const pages = useMemo(() => getCarouselPages(media), [media])
+  const hasMany = pages.length > 1
 
   // The list recycles this row for other entries, which start at their first image
   const scrollViewRef = useRef<ScrollView>(null)
@@ -138,12 +128,8 @@ export const MediaCarousel = ({
         {/* Indicators */}
         {hasMany && (
           <View className="absolute inset-x-0 bottom-0 flex-row items-center justify-center gap-1">
-            {media.map((mediaItem, mediaIndex) => (
-              <Indicator
-                key={`indicator-${getMediaKey(mediaItem)}`}
-                index={mediaIndex}
-                activeIndex={activeIndex}
-              />
+            {pages.map(({ imageUrl }, position) => (
+              <Indicator key={imageUrl} index={position} activeIndex={activeIndex} />
             ))}
           </View>
         )}
