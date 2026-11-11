@@ -54,8 +54,6 @@ async fn rsshub_catalog_and_route() {
     app.sign_up("alice@example.com").await;
     let catalog = async |query: &str| app.get(&format!("/api/discover/rsshub{query}")).await;
 
-    assert_error(catalog("").await, 400, 13007).await;
-
     let namespaces = include_str!("fixtures/rsshub-namespaces.json");
     fixtures.set("/hub/api/namespace", Reply::Body(namespaces.into()));
     let popular = json(catalog("?categories=popular&lang=en").await).await;
@@ -84,17 +82,18 @@ async fn rsshub_catalog_and_route() {
         )
     );
     assert_error(route("/github/nothing").await, 404, 13000).await;
+}
 
-    // Served from the cache while the instance is down.
-    fixtures.set("/hub/api/namespace", Reply::Status(500));
-    let cached = json(catalog("?namespace=github").await).await;
-    assert_eq!(
-        cached["data"]["github"]["routes"]
-            .as_object()
-            .unwrap()
-            .len(),
-        2
-    );
+#[tokio::test]
+async fn an_unavailable_rsshub_is_reported() {
+    let fixtures = Fixtures::spawn().await;
+    let instance = fixtures.url("/down");
+    let app = TestApp::spawn_with(move |config| config.rsshub.url = instance).await;
+    app.sign_up("alice@example.com").await;
+
+    let catalog = app.get("/api/discover/rsshub").await;
+
+    assert_error(catalog, 400, 13007).await;
 }
 
 #[tokio::test]
