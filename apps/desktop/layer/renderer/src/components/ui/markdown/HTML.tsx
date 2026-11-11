@@ -1,18 +1,11 @@
-import { MemoedDangerousHTMLStyle } from "@follow/components/common/MemoedDangerousHTMLStyle.js"
+import "katex/dist/katex.min.css"
+
 import type { SpotlightRule } from "@follow/shared/spotlight"
-import katexStyle from "katex/dist/katex.min.css?raw"
-import {
-  createElement,
-  Fragment,
-  memo,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useState,
-} from "react"
+import katexStyle from "katex/dist/katex.min.css?inline"
+import { createElement, Fragment, memo, useImperativeHandle, useMemo, useState } from "react"
 import type { JSX } from "react/jsx-runtime"
 
-import { ENTRY_CONTENT_RENDER_CONTAINER_ID } from "~/constants/dom"
+import { ShadowDOM } from "~/components/common/ShadowDOM"
 import { parseHtml } from "~/lib/parse-html"
 import { useWrappedElementSize } from "~/providers/wrapped-element-provider"
 
@@ -49,25 +42,13 @@ const HTMLImpl = <A extends keyof JSX.IntrinsicElements = "div">(props: HTMLProp
     ref,
     ...rest
   } = props
-  const [remarkOptions, setRemarkOptions] = useState({
-    renderInlineStyle,
-    noMedia,
-    spotlightRules,
-  })
-  const [shouldForceReMountKey, setShouldForceReMountKey] = useState(0)
-
-  useEffect(() => {
-    setRemarkOptions((options) => {
-      if (
-        JSON.stringify(options) === JSON.stringify({ renderInlineStyle, noMedia, spotlightRules })
-      ) {
-        return options
-      }
-
-      setShouldForceReMountKey((key) => key + 1)
-      return { ...options, renderInlineStyle, noMedia, spotlightRules }
-    })
-  }, [renderInlineStyle, noMedia, spotlightRules])
+  // The options are compared by value: callers pass a new rules array on every render
+  const optionsKey = JSON.stringify({ renderInlineStyle, noMedia, spotlightRules })
+  const remarkOptions = useMemo(
+    () =>
+      JSON.parse(optionsKey) as Pick<HTMLProps, "renderInlineStyle" | "noMedia" | "spotlightRules">,
+    [optionsKey],
+  )
 
   const [refElement, setRefElement] = useState<HTMLElement | null>(null)
   useImperativeHandle(ref as any, () => refElement)
@@ -85,24 +66,20 @@ const HTMLImpl = <A extends keyof JSX.IntrinsicElements = "div">(props: HTMLProp
 
   const { w: containerWidth } = useWrappedElementSize()
 
+  // The page's own KaTeX stylesheet does not reach into a shadow root
+  const needsKatexStyle =
+    ShadowDOM.useIsShadowDOM() && typeof children === "string" && children.includes("<math")
+
   if (!markdownElement) return null
   return (
     <MarkdownRenderContainerRefContext value={refElement}>
       <MediaContainerWidthProvider width={containerWidth}>
         <MediaInfoRecordProvider mediaInfo={mediaInfo}>
-          <MemoedDangerousHTMLStyle>{katexStyle}</MemoedDangerousHTMLStyle>
-          {createElement(
-            as,
-            {
-              ...rest,
-              id: ENTRY_CONTENT_RENDER_CONTAINER_ID,
-              ref: setRefElement,
-            },
-            markdownElement,
-          )}
+          {needsKatexStyle && <style>{katexStyle}</style>}
+          {createElement(as, { ...rest, ref: setRefElement }, markdownElement)}
         </MediaInfoRecordProvider>
       </MediaContainerWidthProvider>
-      {!!accessory && <Fragment key={shouldForceReMountKey}>{accessory}</Fragment>}
+      {!!accessory && <Fragment key={optionsKey}>{accessory}</Fragment>}
     </MarkdownRenderContainerRefContext>
   )
 }
