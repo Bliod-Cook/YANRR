@@ -28,8 +28,8 @@ export const openTestDB = (path = ":memory:"): Connection => {
 
 /** The migrations the apps bundle with `drizzle/migrations.js` */
 const readMigrations = (): MigrationConfig => {
-  const folder = new URL("drizzle/", import.meta.url)
-  const read = (path: string) => readFileSync(new URL(path, folder), "utf8")
+  // Not `new URL(..., import.meta.url)`: Vite rewrites that under a DOM test environment
+  const read = (path: string) => readFileSync(`${import.meta.dirname}/drizzle/${path}`, "utf8")
   const journal: MigrationConfig["journal"] = JSON.parse(read("meta/_journal.json"))
   return {
     journal,

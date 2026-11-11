@@ -15,18 +15,9 @@ import { apiContext, queryClientContext } from "../../context"
 import type { FollowAPI } from "../../types"
 import { useEntriesQuery } from "./hooks"
 
-// The lists are what is tested, not how the entries are stored. The test database cannot stand in:
-// with the DOM this needs, Vite rewrites the URL its migrations are read from.
-vi.mock("@follow/database/services/entry", () => ({
-  EntryService: { getEntryMany: async () => [], upsertMany: async () => {} },
-}))
-vi.mock("@follow/database/services/feed", () => ({
-  FEED_EXTRA_DATA_KEYS: [],
-  FeedService: { upsertMany: async () => {} },
-}))
-vi.mock("@follow/database/services/collection", () => ({
-  CollectionService: { upsertMany: async () => {}, deleteMany: async () => {} },
-}))
+vi.mock("@follow/database/db", async () =>
+  (await import("@follow/database/test-db")).createTestDB(),
+)
 
 type ServedEntry = { id: string; feedId: string; publishedAt: string; insertedAt: string }
 
