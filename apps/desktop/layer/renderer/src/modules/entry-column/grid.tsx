@@ -17,6 +17,7 @@ import {
   useState,
 } from "react"
 
+import { useGeneralSettingKey } from "~/atoms/settings/general"
 import { useUISettingKey } from "~/atoms/settings/ui"
 import { MediaContainerWidthProvider } from "~/components/ui/media/MediaContainerWidthProvider"
 
@@ -145,8 +146,11 @@ const VirtualGridImpl: FC<
     )
   }, [entriesIds, columns.length])
 
-  const rowCacheKey = `${feedId}-row`
-  const columnCacheKey = `${feedId}-column`
+  const unreadOnly = useGeneralSettingKey("unreadOnly")
+  const sortOrder = useGeneralSettingKey("timelineSortOrder")
+  const cacheKey = `${view}-${feedId}-${unreadOnly}-${sortOrder}`
+  const rowCacheKey = `${cacheKey}-row`
+  const columnCacheKey = `${cacheKey}-column`
   const isResetScrollPending = shouldApplyScrollResetSignal({
     resetSignal: resetScrollSignal,
     appliedResetSignal: appliedResetScrollSignal,
@@ -183,6 +187,8 @@ const VirtualGridImpl: FC<
     estimateSize: () => estimatedRowHeight,
     overscan: 5,
     gap: 8,
+    // By the row's first entry, so rows keep their size and place when entries come in above
+    getItemKey: (index) => rows[index]?.[0] ?? `tail-${index - rows.length}`,
     getScrollElement: () => scrollRef,
     initialOffset: getInitialScrollOffset({
       cachedOffset: offsetCache.get(rowCacheKey),

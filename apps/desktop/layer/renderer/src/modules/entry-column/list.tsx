@@ -9,7 +9,16 @@ import type { Range, VirtualItem, Virtualizer } from "@tanstack/react-virtual"
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual"
 import type { HTMLMotionProps } from "motion/react"
 import type { FC, MutableRefObject, ReactNode } from "react"
-import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import {
+  memo,
+  startTransition,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useTranslation } from "react-i18next"
 
 import { useGeneralSettingKey } from "~/atoms/settings/general"
@@ -168,7 +177,10 @@ export const EntryList: FC<EntryListProps> = memo(
       [groupCounts],
     )
 
-    const cacheKey = `${view}-${feedId}`
+    // What the list shows and in which order, as the remembered offset and sizes belong to it
+    const unreadOnly = useGeneralSettingKey("unreadOnly")
+    const sortOrder = useGeneralSettingKey("timelineSortOrder")
+    const cacheKey = `${view}-${feedId}-${unreadOnly}-${sortOrder}`
     const isResetScrollPending = shouldApplyScrollResetSignal({
       resetSignal: resetScrollSignal,
       appliedResetSignal: appliedResetScrollSignal,
@@ -178,6 +190,8 @@ export const EntryList: FC<EntryListProps> = memo(
       estimateSize: () => 112,
       overscan: 5,
       gap,
+      // By entry, so rows keep their size and place when entries come in above them
+      getItemKey: useCallback((index: number) => entriesIds[index] ?? "footer", [entriesIds]),
       getScrollElement: () => scrollRef,
       initialOffset: getInitialScrollOffset({
         cachedOffset: offsetCache.get(cacheKey),
