@@ -7,6 +7,7 @@ import { useSubscriptionByFeedId } from "@follow/store/subscription/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { useIsLoggedIn } from "@follow/store/user/hooks"
 import { isBizId } from "@follow/utils/utils"
+import { FollowAPIError } from "@follow-app/client-sdk"
 import type { Range, Virtualizer } from "@tanstack/react-virtual"
 import { atom, useAtomValue } from "jotai"
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
@@ -21,18 +22,18 @@ import { useRouteParams, useRouteParamsSelector } from "~/hooks/biz/useRoutePara
 import { useFeedQuery } from "~/queries/feed"
 import { useFeedHeaderTitle } from "~/store/feed/hooks"
 
+import { ActiveEntryShortcuts } from "./ActiveEntryShortcuts"
 import { aiTimelineEnabledAtom } from "./atoms/ai-timeline"
 import { AITimelineLoadingOverlay } from "./components/ai-timeline-loading/AITimelineLoadingOverlay"
 import { EntryColumnWrapper } from "./components/entry-column-wrapper/EntryColumnWrapper"
 import { FooterMarkItem } from "./components/FooterMarkItem"
-import { useEntriesActions, useEntriesState } from "./context/EntriesContext"
+import { EntriesProvider, useEntriesActions, useEntriesState } from "./context/EntriesContext"
 import { EntryColumnShortcutHandler } from "./EntryColumnShortcutHandler"
 import { EntryItemSkeleton } from "./EntryItemSkeleton"
 import { EntryColumnGrid } from "./grid"
 import { useAttachScrollBeyond } from "./hooks/useAttachScrollBeyond"
 import { useSnapEntryIdList } from "./hooks/useEntryIdListSnap"
 import { useEntryMarkReadHandler } from "./hooks/useEntryMarkReadHandler"
-import { useNavigateFirstEntry } from "./hooks/useNavigateFirstEntry"
 import { EntryListHeader } from "./layouts/EntryListHeader"
 import { EntryEmptyList, EntryList, EntryLoadFailedRow } from "./list"
 import {
@@ -89,12 +90,6 @@ function EntryColumnContent() {
     runScrollToTop()
     globalThis.requestAnimationFrame?.(runScrollToTop)
   }, [resetScrollInteractionState])
-  // Register reset handler to keep scroll behavior when data resets
-  useEffect(() => {
-    actions.setOnReset(scrollTimelineToTop)
-    return () => actions.setOnReset(null)
-  }, [actions, scrollTimelineToTop])
-
   const { entriesIds, groupedCounts } = state
   useSnapEntryIdList(entriesIds)
 
@@ -250,9 +245,29 @@ function EntryColumnContent() {
     if (hasNextPage && !state.isFetching) actions.fetchNextPage()
   }, [actions, hasNextPage, state.isFetching])
 
-  const ListComponent = getView(view)?.gridMode ? EntryColumnGrid : EntryList
+  // A new element on every render would defeat the list's memo
+  const footer = useMemo(
+    () =>
+      loadFailed ? (
+        <EntryLoadFailedRow
+          isRetrying={state.isFetching}
+          onRetry={state.isFetchNextPageError ? actions.fetchNextPage : actions.refetch}
+        />
+      ) : isCollection || state.insertedBefore === undefined ? undefined : (
+        <FooterMarkItem view={view} insertedBefore={state.insertedBefore} />
+      ),
+    [
+      actions,
+      isCollection,
+      loadFailed,
+      state.insertedBefore,
+      state.isFetchNextPageError,
+      state.isFetching,
+      view,
+    ],
+  )
 
-  useNavigateFirstEntry(entriesIds, activeEntryId, view, navigate)
+  const ListComponent = getView(view)?.gridMode ? EntryColumnGrid : EntryList
 
   return (
     <Focusable
@@ -312,18 +327,10 @@ function EntryColumnContent() {
             resetScrollSignal={resetScrollSignal}
             suspendMarkRead={isScrollResetPending}
             syncType={state.type}
-            Footer={
-              loadFailed ? (
-                <EntryLoadFailedRow
-                  isRetrying={state.isFetching}
-                  onRetry={state.isFetchNextPageError ? actions.fetchNextPage : actions.refetch}
-                />
-              ) : isCollection || state.insertedBefore === undefined ? undefined : (
-                <FooterMarkItem view={view} insertedBefore={state.insertedBefore} />
-              )
-            }
+            Footer={footer}
           />
         )}
+        <ActiveEntryShortcuts />
         {/* Here for every layout and an empty list, and in the scroll area it focuses */}
         <EntryColumnShortcutHandler
           refetch={actions.refetch}
@@ -342,16 +349,18 @@ function EntryColumnContent() {
 
 function EntryColumnImpl() {
   return (
-    <EntryRootStateContext
-      value={useMemo(
-        () => ({
-          isScrolledBeyondThreshold: atom(false),
-        }),
-        [],
-      )}
-    >
-      <EntryColumnContent />
-    </EntryRootStateContext>
+    <EntriesProvider>
+      <EntryRootStateContext
+        value={useMemo(
+          () => ({
+            isScrolledBeyondThreshold: atom(false),
+          }),
+          [],
+        )}
+      >
+        <EntryColumnContent />
+      </EntryRootStateContext>
+    </EntriesProvider>
   )
 }
 
@@ -375,7 +384,7 @@ const AddFeedHelper = () => {
     return null
   }
 
-  if (feedQuery.error && feedQuery.error.statusCode === 404) {
+  if (feedQuery.error instanceof FollowAPIError && feedQuery.error.status === 404) {
     throw new FeedNotFound()
   }
 }

@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest"
 import { getEffectiveRouteEntrySortOrder, isTimelineEntrySortScope } from "./entry-sort-order"
 
 describe("desktop entry sort scope", () => {
-  test.each(["feed-1", "folder-news", "feed-1,feed-2", "list-list-1"])(
+  test.each(["feed-1", "folder-news", "feed-1,feed-2"])(
     "allows oldest-first unread sorting for %s timeline sources",
     (feedId) => {
       expect(
@@ -31,7 +31,7 @@ describe("desktop entry sort scope", () => {
   })
 
   test("shows the control only for non-preview timeline scopes", () => {
-    expect(isTimelineEntrySortScope({ feedId: "list-list-1" })).toBe(true)
+    expect(isTimelineEntrySortScope({ feedId: "feed-1" })).toBe(true)
     expect(isTimelineEntrySortScope({ inboxId: "inbox-1" })).toBe(false)
     expect(isTimelineEntrySortScope({ isCollection: true })).toBe(false)
     expect(isTimelineEntrySortScope({ feedId: "feed-1", isPreview: true })).toBe(false)

@@ -80,7 +80,7 @@ describe("useEntriesByView", () => {
   let result: ReturnType<typeof useEntriesByView> | undefined
 
   const Probe = () => {
-    result = useEntriesByView({})
+    result = useEntriesByView()
     return null
   }
 

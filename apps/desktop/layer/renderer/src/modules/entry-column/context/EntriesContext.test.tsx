@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client"
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest"
 
 import type { useEntriesByView as useEntriesByViewType } from "../hooks/useEntriesByView"
-import { EntriesProvider, useEntriesActions } from "./EntriesContext"
+import { EntriesProvider, useEntriesState } from "./EntriesContext"
 
 const mocks = vi.hoisted(() => ({
   useEntriesByView: vi.fn(),
@@ -48,15 +48,11 @@ describe("EntriesProvider", () => {
     vi.restoreAllMocks()
   })
 
-  test("runs the registered reset callback before refetching entries", async () => {
-    const events: string[] = []
-    const refetch = vi.fn(async () => {
-      events.push("refetch")
-    })
-
-    useEntriesByViewMock.mockReturnValue({
-      type: "remote",
-      entriesIds: [],
+  test("keeps its state while the entries hook returns the same data in a new object", async () => {
+    const entriesIds = ["entry-1"]
+    const value = () => ({
+      type: "remote" as const,
+      entriesIds,
       groupedCounts: undefined,
       hasNextPage: false,
       isFetchingNextPage: false,
@@ -66,49 +62,36 @@ describe("EntriesProvider", () => {
       error: null,
       isFetchNextPageError: false,
       insertedBefore: undefined,
-      refetch,
+      refetch: vi.fn(),
       fetchNextPage: vi.fn(),
       hasNext: false,
       isRefetching: false,
       isReady: true,
     })
+    useEntriesByViewMock.mockReturnValue(value())
 
-    let refetchEntries: (() => void | Promise<void>) | undefined
-    const reset = vi.fn(() => {
-      events.push("reset")
-    })
-
+    const seen: unknown[] = []
     const Consumer = () => {
-      const actions = useEntriesActions()
-
-      React.useEffect(() => {
-        actions.setOnReset(reset)
-        refetchEntries = actions.refetch
-
-        return () => {
-          actions.setOnReset(null)
-        }
-      }, [actions])
-
+      seen.push(useEntriesState())
       return null
     }
+    const tree = () => (
+      <EntriesProvider>
+        <Consumer />
+      </EntriesProvider>
+    )
 
     container = document.createElement("div")
     document.body.append(container)
     root = createRoot(container)
-
     await act(async () => {
-      root?.render(
-        <EntriesProvider>
-          <Consumer />
-        </EntriesProvider>,
-      )
+      root?.render(tree())
+    })
+    useEntriesByViewMock.mockReturnValue(value())
+    await act(async () => {
+      root?.render(tree())
     })
 
-    await act(async () => {
-      await refetchEntries?.()
-    })
-
-    expect(events).toEqual(["reset", "refetch"])
+    expect(new Set(seen).size).toBe(1)
   })
 })

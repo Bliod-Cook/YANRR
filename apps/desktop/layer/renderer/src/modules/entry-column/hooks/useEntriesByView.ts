@@ -1,6 +1,5 @@
 import { FeedViewType, getView } from "@follow/constants"
 import { useCollectionEntryList } from "@follow/store/collection/hooks"
-import { isOnboardingEntryUrl } from "@follow/store/constants/onboarding"
 import {
   useEntriesQuery,
   useEntryIdsByFeedId,
@@ -12,7 +11,6 @@ import { entryActions, entrySyncServices, useEntryStore } from "@follow/store/en
 import type { UseEntriesReturn } from "@follow/store/entry/types"
 import { useFolderFeedsByFeedId } from "@follow/store/subscription/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
-import { nextFrame } from "@follow/utils"
 import { useMutation } from "@tanstack/react-query"
 import { debounce } from "es-toolkit/compat"
 import { useAtomValue } from "jotai"
@@ -26,6 +24,7 @@ import { useRouteParams } from "~/hooks/biz/useRouteParams"
 import { aiTimelineEnabledAtom } from "../atoms/ai-timeline"
 import { getEffectiveRouteEntrySortOrder } from "./entry-sort-order"
 import { getVisibleLocalEntryIds } from "./filter-local-entry-ids"
+import { countEntriesByDate } from "./group-counts"
 import type { RemoteEntriesReturn } from "./remote-entries-fallback"
 import { getRemoteEntriesFallback } from "./remote-entries-fallback"
 import { useIsPreviewFeed } from "./useIsPreviewFeed"
@@ -128,17 +127,25 @@ const useLocalEntries = (enabled: boolean): UseEntriesReturn => {
     feedId,
     view,
   })
-  const entryIdsByView = useEntryIdsByView(view, enabled)
-  const entryIdsByCollections = useCollectionEntryList(view, enabled)
-  const entryIdsByFeedId = useEntryIdsByFeedId(feedId, enabled)
-  const entryIdsByCategory = useEntryIdsByFeedIds(folderIds, enabled)
-  const entryIdsByInboxId = useEntryIdsByInboxId(inboxId, enabled)
-
   const showEntriesByView =
     (!feedId || feedId === ROUTE_FEED_PENDING) &&
     folderIds.length === 0 &&
     !isCollection &&
     !inboxId
+
+  // Each of these sorts a source, so only the one the route shows is computed
+  const isFolder = folderIds.length > 0
+  const entryIdsByView = useEntryIdsByView(view, enabled && showEntriesByView)
+  const entryIdsByCollections = useCollectionEntryList(view, enabled && !!isCollection)
+  const entryIdsByFeedId = useEntryIdsByFeedId(
+    feedId,
+    enabled && !isCollection && !inboxId && !isFolder && !showEntriesByView,
+  )
+  const entryIdsByCategory = useEntryIdsByFeedIds(
+    folderIds,
+    enabled && !isCollection && !inboxId && isFolder,
+  )
+  const entryIdsByInboxId = useEntryIdsByInboxId(inboxId, enabled && !isCollection)
 
   const localQueryKey = useMemo(
     () =>
@@ -242,7 +249,7 @@ const useLocalEntries = (enabled: boolean): UseEntriesReturn => {
   }
 }
 
-export const useEntriesByView = ({ onReset }: { onReset?: () => void }) => {
+export const useEntriesByView = () => {
   const { view } = useRouteParams()
 
   const remoteQuery = useRemoteEntries()
@@ -260,16 +267,6 @@ export const useEntriesByView = ({ onReset }: { onReset?: () => void }) => {
   const query = remoteQuery.isReady ? remoteQuery : localQuery
   const entryIds: string[] = query.entriesIds
 
-  const isFetchingFirstPage = remoteQuery.isFetching && !remoteQuery.isFetchingNextPage
-
-  useEffect(() => {
-    if (isFetchingFirstPage) {
-      nextFrame(() => {
-        onReset?.()
-      })
-    }
-  }, [isFetchingFirstPage, query.queryKey])
-
   const groupByDate = useGeneralSettingKey("groupByDate")
   const groupedCounts: number[] | undefined = useMemo(() => {
     const viewDefinition = getView(view)
@@ -279,28 +276,7 @@ export const useEntriesByView = ({ onReset }: { onReset?: () => void }) => {
     if (!groupByDate) {
       return
     }
-    const entriesId2Map = entryActions.getFlattenMapEntries()
-    const counts = [] as number[]
-    let lastDate = ""
-    for (const id of entryIds) {
-      const entry = entriesId2Map[id]
-      if (!entry) {
-        continue
-      }
-      if (isOnboardingEntryUrl(entry.url)) {
-        continue
-      }
-      const date = new Date(entry.publishedAt).toDateString()
-      if (date !== lastDate) {
-        counts.push(1)
-        lastDate = date
-      } else {
-        const last = counts.pop()
-        if (last) counts.push(last + 1)
-      }
-    }
-
-    return counts
+    return countEntriesByDate(entryIds, entryActions.getFlattenMapEntries())
   }, [groupByDate, entryIds, view])
 
   return {

@@ -20,7 +20,6 @@ import { getI18n } from "~/i18n"
 import { EnvironmentIndicator } from "~/modules/app/EnvironmentIndicator"
 import { LoginModalContent } from "~/modules/auth/LoginModalContent"
 import { DebugRegistry } from "~/modules/debug/registry"
-import { EntriesProvider } from "~/modules/entry-column/context/EntriesContext"
 import { SearchCmdK } from "~/modules/panel/cmdk"
 import { CmdNTrigger } from "~/modules/panel/cmdn"
 
@@ -33,108 +32,8 @@ const errorTypes = [
 ] as ErrorComponentType[]
 
 /**
- * MainDestopLayout Component
- *
- * The main desktop layout that serves as the primary container for the Follow application.
- * This layout is responsible for:
- * - Providing the root layout structure with subscription sidebar and main content area
- * - Handling authentication states and displaying login modals
- * - Managing error boundaries for critical app errors
- * - Rendering app-wide panels (search, commands, notifications)
- *
- * ## Layout Scenarios
- *
- * ### Scenario 1: Timeline View (/timeline/1/feed-123/entry-456)
- * ```
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ MainDestopLayout                                                │
- * ├─────────────┬───────────────────────────────────────────────────┤
- * │ Subscription│ TimelineEntryTwoColumnLayout                      │
- * │ Column      ├─────────────────┬─────────────────────────────────┤
- * │             │ EntryColumn     │ EntryContentView                │
- * │ ┌─────────┐ │ ┌─────────────┐ │ ┌─────────────────────────────┐ │
- * │ │ Feeds   │ │ │ Entry List  │ │ │ Article Content             │ │
- * │ │ - Tech  │ │ │ - Article 1 │ │ │                             │ │
- * │ │ - News  │ │ │ - Article 2 │ │ │ # Article Title             │ │
- * │ │ - Blog  │ │ │ - Article 3 │ │ │ Article content here...     │ │
- * │ └─────────┘ │ └─────────────┘ │ └─────────────────────────────┘ │
- * └─────────────┴─────────────────┴─────────────────────────────────┘
- * ```
- *
- * ### Scenario 2: Discover Page (/discover)
- * ```
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ MainDestopLayout                                                │
- * ├─────────────┬───────────────────────────────────────────────────┤
- * │ Subscription│ SubviewLayout (Full-screen Modal)                 │
- * │ Column      │ ┌─────────────────────────────────────────────────┐ │
- * │             │ │ ◄ Back    Discover Feeds    [Import] [Add] │ │
- * │ ┌─────────┐ │ ├─────────────────────────────────────────────────┤ │
- * │ │ Feeds   │ │ │                                             │ │
- * │ │ - Tech  │ │ │        🔍 Search for feeds...               │ │
- * │ │ - News  │ │ │                                             │ │
- * │ │ - Blog  │ │ │ ┌─────────┐ ┌─────────┐ ┌─────────┐         │ │
- * │ └─────────┘ │ │ │ Tech    │ │ News    │ │ Design  │         │ │
- * │             │ │ │ Feeds   │ │ Sources │ │ Blogs   │         │ │
- * │             │ │ └─────────┘ └─────────┘ └─────────┘         │ │
- * │             │ └─────────────────────────────────────────────────┘ │
- * └─────────────┴───────────────────────────────────────────────────┘
- * ```
- *
- * ### Scenario 3: AI Chat (/ai)
- * ```
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ MainDestopLayout                                                │
- * ├─────────────┬───────────────────────────────────────────────────┤
- * │ Subscription│ AIChatLayout                                      │
- * │ Column      │ ┌─────────────────────────────────────────────────┐ │
- * │             │ │ 🤖 AI Assistant                             ⚙️ │ │
- * │ ┌─────────┐ │ ├─────────────────────────────────────────────────┤ │
- * │ │ Feeds   │ │ │ 💬 How can I help you today?                   │ │
- * │ │ - Tech  │ │ │                                             │ │
- * │ │ - News  │ │ │ 👤 Summarize my latest tech articles        │ │
- * │ │ - Blog  │ │ │                                             │ │
- * │ └─────────┘ │ │ 🤖 Here's a summary of your recent tech...  │ │
- * │             │ │                                             │ │
- * │             │ ├─────────────────────────────────────────────────┤ │
- * │             │ │ Type a message... [📎] [🎙️] [📤]            │ │
- * │             │ └─────────────────────────────────────────────────┘ │
- * └─────────────┴───────────────────────────────────────────────────┘
- * ```
- *
- * ### Scenario 4: Default View (/) - Timeline Home
- * ```
- * ┌─────────────────────────────────────────────────────────────────┐
- * │ MainDestopLayout                                                │
- * ├─────────────┬───────────────────────────────────────────────────┤
- * │ Subscription│ Default Timeline (All Feeds)                      │
- * │ Column      │ ┌─────────────────────────────────────────────────┐ │
- * │             │ │ 📰 All Articles                             ⚙️ │ │
- * │ ┌─────────┐ │ ├─────────────────────────────────────────────────┤ │
- * │ │ 📌 Today │ │ │ [Tech Blog] New React Features              │ │
- * │ │ ⭐ Starred │ │ │ [News Site] Breaking: AI Breakthrough      │ │
- * │ │ 📚 All   │ │ │ [Design Blog] UI Trends 2024               │ │
- * │ │         │ │ │ [Tech News] JavaScript Updates              │ │
- * │ │ Feeds:  │ │ │ [Blog] How to Build Better Apps            │ │
- * │ │ • Tech  │ │ │                                             │ │
- * │ │ • News  │ │ │ Load more articles...                       │ │
- * │ │ • Design│ │ │                                             │ │
- * │ └─────────┘ │ └─────────────────────────────────────────────────┘ │
- * └─────────────┴───────────────────────────────────────────────────┘
- * ```
- *
- * ## Router Outlet Flow
- * The `<Outlet />` in this component renders different child layouts based on the current route:
- * - `/` → Default timeline view
- * - `/timeline/*` → TimelineEntryTwoColumnLayout (two-column feed reader)
- * - `/discover` → SubviewLayout (full-screen discovery)
- * - `/ai` → AIChatLayout (AI chat interface)
- * - `/action`, `/rsshub` → SubviewLayout (utility pages)
- *
- * @component
- * @example
- * // This component is automatically rendered by React Router
- * // based on the route configuration in generated-routes.ts
+ * Shell of the signed-in app: the subscription column on the left and the routed page
+ * (`<Outlet />`) in the main area. It also shows the login modal when the session is lost.
  */
 export function MainDestopLayout() {
   const { t } = useTranslation()
@@ -143,49 +42,22 @@ export function MainDestopLayout() {
 
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  // const { shouldShowNewUserGuide } = useNewUserGuideState()
-  // // Auto-trigger new user guide modal
-  // useEffect(() => {
-  //   if (!shouldShowNewUserGuide) return
-
-  //   import("~/modules/app-tip/AppTipModalContent").then((m) => {
-  //     window.presentModal({
-  //       title: getI18n().t("new_user_dialog.title"),
-  //       content: ({ dismiss }) => (
-  //         <m.AppTipModalContent
-  //           onClose={() => {
-  //             dismiss()
-  //           }}
-  //         />
-  //       ),
-  //       CustomModalComponent: PlainWithAnimationModal,
-  //       modalContainerClassName: "flex items-center justify-center",
-  //       modalClassName: "w-full max-w-5xl",
-  //       canClose: false,
-  //       clickOutsideToDismiss: false,
-  //       overlay: false,
-  //     })
-  //   })
-  // }, [shouldShowNewUserGuide])
-
   return (
     <RootContainer ref={containerRef}>
       {!PROD && <EnvironmentIndicator />}
 
-      <EntriesProvider>
-        <SubscriptionColumnContainer />
+      <SubscriptionColumnContainer />
 
-        <main
-          ref={setMainContainerElement}
-          className="flex min-w-0 flex-1 bg-theme-background pt-[calc(var(--fo-window-padding-top)_-10px)] !outline-none"
-          // NOTE: tabIndex for main element can get by `document.activeElement`
-          tabIndex={-1}
-        >
-          <AppErrorBoundary errorType={errorTypes}>
-            <Outlet />
-          </AppErrorBoundary>
-        </main>
-      </EntriesProvider>
+      <main
+        ref={setMainContainerElement}
+        className="flex min-w-0 flex-1 bg-theme-background pt-[calc(var(--fo-window-padding-top)_-10px)] !outline-none"
+        // NOTE: tabIndex for main element can get by `document.activeElement`
+        tabIndex={-1}
+      >
+        <AppErrorBoundary errorType={errorTypes}>
+          <Outlet />
+        </AppErrorBoundary>
+      </main>
 
       {isAuthFail && !user && (
         <RootPortal>

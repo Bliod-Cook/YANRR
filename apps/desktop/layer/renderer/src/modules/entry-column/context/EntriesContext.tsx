@@ -26,51 +26,19 @@ type EntriesStateContextValue = {
 type EntriesActionsContextValue = {
   fetchNextPage: () => void | Promise<void>
   refetch: () => void | Promise<void>
-  setOnReset: (cb: (() => void) | null) => void
-  getNeighbors: (entryId: string) => {
-    hasPrev: boolean
-    hasNext: boolean
-    prevId: string | null
-    nextId: string | null
-  }
 }
 
 const EntriesStateContext = createContext<EntriesStateContextValue | undefined>(undefined)
 const EntriesActionsContext = createContext<EntriesActionsContextValue | undefined>(undefined)
 
 export const EntriesProvider: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const onResetRef = useRef<(() => void) | null>(null)
   const { view } = useRouteParams()
 
-  const entries = useEntriesByView({
-    onReset: () => {
-      onResetRef.current?.()
-    },
-  })
+  const entries = useEntriesByView()
 
   const { type: syncType } = entries
 
-  const idToIndex = useMemo(() => {
-    const map = new Map<string, number>()
-    let i = 0
-    for (const id of entries.entriesIds) {
-      map.set(id, i)
-      i++
-    }
-    return map
-  }, [entries.entriesIds])
-
   // Keep latest dynamic values in refs for stable actions
-  const entriesIdsRef = useRef(entries.entriesIds)
-  useLayoutEffect(() => {
-    entriesIdsRef.current = entries.entriesIds
-  }, [entries.entriesIds])
-
-  const idToIndexRef = useRef(idToIndex)
-  useLayoutEffect(() => {
-    idToIndexRef.current = idToIndex
-  }, [idToIndex])
-
   const fetchNextPageRef = useRef(entries.fetchNextPage)
   useLayoutEffect(() => {
     fetchNextPageRef.current = entries.fetchNextPage
@@ -83,57 +51,59 @@ export const EntriesProvider: React.FC<React.PropsWithChildren> = ({ children })
 
   // Stable actions that reference latest refs
   const fetchNextPageStable = useCallback(() => fetchNextPageRef.current?.(), [])
-  const refetchStable = useCallback(() => {
-    onResetRef.current?.()
-    return refetchRef.current?.()
-  }, [])
-  const setOnResetStable = useCallback((cb: (() => void) | null) => {
-    onResetRef.current = cb
-  }, [])
-  const getNeighborsStable = useCallback<EntriesActionsContextValue["getNeighbors"]>((entryId) => {
-    const index = idToIndexRef.current.get(entryId)
-    if (index == null) {
-      return { hasPrev: false, hasNext: false, prevId: null, nextId: null }
-    }
-    const ids = entriesIdsRef.current
-    const prevIndex = index - 1
-    const nextIndex = index + 1
-    const prevId = prevIndex >= 0 ? (ids[prevIndex] ?? null) : null
-    const nextId = nextIndex < ids.length ? (ids[nextIndex] ?? null) : null
-    return {
-      hasPrev: prevId != null,
-      hasNext: nextId != null,
-      prevId,
-      nextId,
-    }
-  }, [])
+  const refetchStable = useCallback(() => refetchRef.current?.(), [])
 
+  // Listed by field: `entries` is a new object on every render, which would rebuild the value
+  // and re-render every consumer each time
+  const {
+    entriesIds,
+    groupedCounts,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetching,
+    isLoading,
+    isOffline,
+    error,
+    isFetchNextPageError,
+    insertedBefore,
+  } = entries
   const stateValue: EntriesStateContextValue = useMemo(
     () => ({
       type: syncType,
-      entriesIds: entries.entriesIds,
-      groupedCounts: entries.groupedCounts,
-      hasNextPage: entries.hasNextPage,
-      isFetchingNextPage: entries.isFetchingNextPage,
-      isFetching: entries.isFetching,
-      isLoading: entries.isLoading,
-      isOffline: entries.isOffline,
-      error: entries.error ?? null,
-      isFetchNextPageError: entries.isFetchNextPageError,
+      entriesIds,
+      groupedCounts,
+      hasNextPage,
+      isFetchingNextPage,
+      isFetching,
+      isLoading,
+      isOffline,
+      error: error ?? null,
+      isFetchNextPageError,
       view: view!,
-      insertedBefore: entries.insertedBefore,
+      insertedBefore,
     }),
-    [entries, view, syncType],
+    [
+      syncType,
+      entriesIds,
+      groupedCounts,
+      hasNextPage,
+      isFetchingNextPage,
+      isFetching,
+      isLoading,
+      isOffline,
+      error,
+      isFetchNextPageError,
+      view,
+      insertedBefore,
+    ],
   )
 
   const actionsValue: EntriesActionsContextValue = useMemo(
     () => ({
       fetchNextPage: fetchNextPageStable,
       refetch: refetchStable,
-      setOnReset: setOnResetStable,
-      getNeighbors: getNeighborsStable,
     }),
-    [fetchNextPageStable, refetchStable, setOnResetStable, getNeighborsStable],
+    [fetchNextPageStable, refetchStable],
   )
 
   return (
