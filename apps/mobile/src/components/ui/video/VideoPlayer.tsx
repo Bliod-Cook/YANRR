@@ -85,11 +85,14 @@ export function VideoPlayer({
         }}
       />
       {status !== "readyToPlay" && <View className="absolute inset-0">{placeholder}</View>}
-      <PlayerAction
-        iconSize={32}
-        mediaState={status === "readyToPlay" ? "paused" : "loading"}
-        onPress={handlePressPlay}
-      />
+      {/* A video that failed to load keeps its poster, with nothing to play */}
+      {status !== "error" && (
+        <PlayerAction
+          iconSize={32}
+          mediaState={status === "readyToPlay" ? "paused" : "loading"}
+          onPress={handlePressPlay}
+        />
+      )}
     </View>
   )
 }
