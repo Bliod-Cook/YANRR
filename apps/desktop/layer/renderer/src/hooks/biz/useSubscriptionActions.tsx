@@ -63,10 +63,7 @@ export const useDeleteSubscription = ({ onSuccess }: { onSuccess?: () => void } 
           label: (
             <span className={"flex items-center gap-1 px-1"}>
               {t("words.undo")}
-              <Kbd
-                wrapButton={false}
-                className="inline-flex items-center border border-border bg-transparent bg-none text-white"
-              >
+              <Kbd className="inline-flex items-center border border-border bg-transparent bg-none text-white">
                 $mod+Z
               </Kbd>
             </span>
@@ -127,6 +124,10 @@ export const useBatchUpdateSubscription = () => {
         feedIds: feedIdList,
         view,
       })
+    },
+    // The store rolls the change back
+    onError: (error) => {
+      toastFetchError(error)
     },
   })
 }

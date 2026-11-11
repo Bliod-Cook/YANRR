@@ -353,7 +353,7 @@ const FeedItem = memo(function FeedItem({
             onScope(feedId)
           }}
         >
-          <Kbd wrapButton={false}>Tab</Kbd>
+          <Kbd>Tab</Kbd>
         </button>
       }
       onSelect={() => {
@@ -410,7 +410,10 @@ const SearchItem: FC<{
       styles["content-visually"],
     )}
     value={value}
-    onSelect={onSelect}
+    onSelect={() => {
+      onSelect()
+      setAppSearchOpen(false)
+    }}
   >
     <div className="relative flex w-full items-start px-1 py-2">
       {icon}

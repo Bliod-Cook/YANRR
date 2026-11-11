@@ -1,8 +1,6 @@
 import { cn, getOS } from "@follow/utils/utils"
-import type { FC } from "react"
-import * as React from "react"
+import type { ComponentProps, FC, SVGProps } from "react"
 import { Fragment, memo } from "react"
-import { isHotkeyPressed } from "react-hotkeys-hook"
 
 const os = getOS()
 
@@ -54,7 +52,7 @@ export const KbdCombined: FC<{
   children: string
   className?: string
   joint?: boolean
-  kbdProps?: Partial<React.ComponentProps<typeof Kbd>>
+  kbdProps?: Partial<ComponentProps<typeof Kbd>>
   abbr?: string
 }> = ({ children, joint, className, kbdProps, abbr }) => {
   // A trailing "," is the comma key itself (e.g. "$mod+,"), not a separator
@@ -87,267 +85,18 @@ export const KbdCombined: FC<{
   )
 }
 
-// Key: `[` `1` `Meta+B`
-function simulateKeyPress(key: string) {
-  const keyCodes = {
-    "0": 48,
-    "1": 49,
-    "2": 50,
-    "3": 51,
-    "4": 52,
-    "5": 53,
-    "6": 54,
-    "7": 55,
-    "8": 56,
-    "9": 57,
-    a: 65,
-    b: 66,
-    c: 67,
-    d: 68,
-    e: 69,
-    f: 70,
-    g: 71,
-    h: 72,
-    i: 73,
-    j: 74,
-    k: 75,
-    l: 76,
-    m: 77,
-    n: 78,
-    o: 79,
-    p: 80,
-    q: 81,
-    r: 82,
-    s: 83,
-    t: 84,
-    u: 85,
-    v: 86,
-    w: 87,
-    x: 88,
-    y: 89,
-    z: 90,
-    "[": 219,
-    "]": 221,
-    "\\": 220,
-    ";": 186,
-    "'": 222,
-    ",": 188,
-    ".": 190,
-    "/": 191,
-    "`": 192,
-    "-": 189,
-    "=": 187,
-    backspace: 8,
-    tab: 9,
-    enter: 13,
-    shift: 16,
-    ctrl: 17,
-    alt: 18,
-    meta: 91,
-    escape: 27,
-    space: 32,
-    pageup: 33,
-    pagedown: 34,
-    end: 35,
-    home: 36,
-    arrowleft: 37,
-    arrowup: 38,
-    arrowright: 39,
-    arrowdown: 40,
-  }
-
-  // Handle combination keys like "Meta+B"
-  if (key.includes("+")) {
-    const keys = key.split("+")
-    const modifiers = {
-      meta: false,
-      ctrl: false,
-      alt: false,
-      shift: false,
-    }
-
-    let mainKey = ""
-
-    // Process each part of the combination
-    keys.forEach((k) => {
-      const lowerK = k.toLowerCase().trim()
-      switch (lowerK) {
-        case "meta":
-        case "command":
-        case "cmd": {
-          modifiers.meta = true
-
-          break
-        }
-        case "ctrl":
-        case "control": {
-          modifiers.ctrl = true
-
-          break
-        }
-        case "alt":
-        case "option": {
-          modifiers.alt = true
-
-          break
-        }
-        case "shift": {
-          modifiers.shift = true
-
-          break
-        }
-        default: {
-          mainKey = k
-        }
-      }
-    })
-
-    if (mainKey) {
-      const code =
-        keyCodes[mainKey.toLowerCase() as keyof typeof keyCodes] || mainKey.codePointAt(0)
-      const event = new KeyboardEvent("keydown", {
-        key: mainKey.length === 1 ? mainKey : mainKey.toLowerCase(),
-        code: mainKey.length === 1 ? `Key${mainKey.toUpperCase()}` : mainKey,
-        keyCode: code,
-        which: code,
-        metaKey: modifiers.meta,
-        ctrlKey: modifiers.ctrl,
-        altKey: modifiers.alt,
-        shiftKey: modifiers.shift,
-        bubbles: true,
-        cancelable: true,
-      })
-
-      document.dispatchEvent(event)
-    }
-    return
-  }
-
-  // Handle single keys
-  const lowerKey = key.toLowerCase().trim()
-  const code = keyCodes[lowerKey as keyof typeof keyCodes] || key.codePointAt(0)
-
-  const keyCode = code
-  let keyName = key
-  let codeStr = `Key${key.toUpperCase()}`
-
-  // Special handling for non-letter keys
-  if (key.length === 1 && !/[a-z]/i.test(key)) {
-    codeStr = key
-    switch (key) {
-      case "[": {
-        codeStr = "BracketLeft"
-        break
-      }
-      case "]": {
-        codeStr = "BracketRight"
-        break
-      }
-      case "\\": {
-        codeStr = "Backslash"
-        break
-      }
-      case ";": {
-        codeStr = "Semicolon"
-        break
-      }
-      case "'": {
-        codeStr = "Quote"
-        break
-      }
-      case ",": {
-        codeStr = "Comma"
-        break
-      }
-      case ".": {
-        codeStr = "Period"
-        break
-      }
-      case "/": {
-        codeStr = "Slash"
-        break
-      }
-      case "`": {
-        codeStr = "Backquote"
-        break
-      }
-      case "-": {
-        codeStr = "Minus"
-        break
-      }
-      case "=": {
-        codeStr = "Equal"
-        break
-      }
-      case "0":
-      case "1":
-      case "2":
-      case "3":
-      case "4":
-      case "5":
-      case "6":
-      case "7":
-      case "8":
-      case "9": {
-        codeStr = `Digit${key}`
-        break
-      }
-    }
-  } else if (lowerKey === "space") {
-    keyName = " "
-    codeStr = "Space"
-  } else if (lowerKey.startsWith("arrow")) {
-    codeStr = lowerKey.charAt(0).toUpperCase() + lowerKey.slice(1)
-  }
-
-  const event = new KeyboardEvent("keydown", {
-    key: keyName,
-    code: codeStr,
-    keyCode,
-    which: keyCode,
-    bubbles: true,
-    cancelable: true,
-  })
-
-  document.dispatchEvent(event)
-}
 export const Kbd: FC<{
   children: string
   className?: string
-  wrapButton?: boolean
   abbr?: string
-}> = memo(({ children, className, wrapButton = true, abbr }) => {
+}> = memo(({ children, className, abbr }) => {
   let specialKeys = (SpecialKeys as any)[os] as Record<string, string>
   specialKeys = { ...SharedKeys, ...specialKeys }
 
-  const [isKeyPressed, setIsKeyPressed] = React.useState(false)
-  React.useEffect(() => {
-    const handler = () => {
-      setIsKeyPressed(isHotkeyPressed(children.toLowerCase()))
-    }
-    document.addEventListener("keydown", handler)
-    document.addEventListener("keyup", handler)
-
-    return () => {
-      document.removeEventListener("keydown", handler)
-      document.removeEventListener("keyup", handler)
-    }
-  }, [children])
-
-  const handleClick = React.useCallback(() => {
-    setIsKeyPressed(true)
-    setTimeout(() => {
-      setIsKeyPressed(false)
-    }, 100)
-
-    simulateKeyPress(children.trim())
-  }, [children])
-
-  const KbdElement = (
+  return (
     <kbd
       className={cn(
         "kbd box-border h-5 space-x-1 font-sans text-[0.7rem] tabular-nums text-text transition-all duration-200",
-        wrapButton && isKeyPressed && "scale-95 opacity-80",
         className,
       )}
       {...(abbr && { title: abbr })}
@@ -398,16 +147,9 @@ export const Kbd: FC<{
       })}
     </kbd>
   )
-  return wrapButton ? (
-    <button type="button" className="contents" onClick={handleClick}>
-      {KbdElement}
-    </button>
-  ) : (
-    KbdElement
-  )
 })
 
-function MaterialSymbolsKeyboardCommandKey(props: React.SVGProps<SVGSVGElement>) {
+function MaterialSymbolsKeyboardCommandKey(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>
       <path
@@ -418,7 +160,7 @@ function MaterialSymbolsKeyboardCommandKey(props: React.SVGProps<SVGSVGElement>)
   )
 }
 
-function MaterialSymbolsKeyboardOptionKey(props: React.SVGProps<SVGSVGElement>) {
+function MaterialSymbolsKeyboardOptionKey(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>
       <path fill="currentColor" d="M14.775 19L7.85 7H3V5h6l6.925 12H21v2zM15 7V5h6v2z" />
@@ -426,7 +168,7 @@ function MaterialSymbolsKeyboardOptionKey(props: React.SVGProps<SVGSVGElement>) 
   )
 }
 
-function MaterialSymbolsKeyboardControlKey(props: React.SVGProps<SVGSVGElement>) {
+function MaterialSymbolsKeyboardControlKey(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>
       <path fill="currentColor" d="M6.4 13.4L5 12l7-7l7 7l-1.4 1.4L12 7.825z" />
@@ -434,7 +176,7 @@ function MaterialSymbolsKeyboardControlKey(props: React.SVGProps<SVGSVGElement>)
   )
 }
 
-function MaterialSymbolsShiftOutlineRounded(props: React.SVGProps<SVGSVGElement>) {
+function MaterialSymbolsShiftOutlineRounded(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>
       <path
@@ -445,7 +187,7 @@ function MaterialSymbolsShiftOutlineRounded(props: React.SVGProps<SVGSVGElement>
   )
 }
 
-function MaterialSymbolsKeyboardTabRounded(props: React.SVGProps<SVGSVGElement>) {
+function MaterialSymbolsKeyboardTabRounded(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>
       <path
@@ -456,7 +198,7 @@ function MaterialSymbolsKeyboardTabRounded(props: React.SVGProps<SVGSVGElement>)
   )
 }
 
-function MaterialSymbolsSpaceBarRounded(props: React.SVGProps<SVGSVGElement>) {
+function MaterialSymbolsSpaceBarRounded(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>
       <path
@@ -467,7 +209,7 @@ function MaterialSymbolsSpaceBarRounded(props: React.SVGProps<SVGSVGElement>) {
   )
 }
 
-export function IcOutlineBackspace(props: React.SVGProps<SVGSVGElement>) {
+export function IcOutlineBackspace(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>
       <path
@@ -478,7 +220,7 @@ export function IcOutlineBackspace(props: React.SVGProps<SVGSVGElement>) {
   )
 }
 
-function MaterialSymbolsWindowOutlineSharp(props: React.SVGProps<SVGSVGElement>) {
+function MaterialSymbolsWindowOutlineSharp(props: SVGProps<SVGSVGElement>) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" {...props}>
       <path

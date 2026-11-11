@@ -40,11 +40,7 @@ export const ShortcutItem = ({ shortcut, onDelete, onToggle, onEdit }: ShortcutI
           <div className="flex items-center gap-2">
             <i className={shortcut.icon || "i-mgc-hotkey-cute-re"} />
             <h4 className="text-sm font-medium text-text">{shortcut.name}</h4>
-            {shortcut.hotkey && (
-              <KbdCombined kbdProps={{ wrapButton: false }} joint={false}>
-                {shortcut.hotkey}
-              </KbdCombined>
-            )}
+            {shortcut.hotkey && <KbdCombined joint={false}>{shortcut.hotkey}</KbdCombined>}
           </div>
           <div className="flex flex-wrap gap-1.5">
             {shortcut.displayTargets?.map((target) => (

@@ -24,11 +24,20 @@ const styles = {
 
 const DropdownMenu: typeof DropdownMenuPrimitive.Root = (props) => {
   const setGlobalFocusableScope = useSetGlobalFocusableScope()
+  const isOpenRef = React.useRef(false)
+  // The owner can unmount while the menu is open, which never reports it closing
+  React.useEffect(
+    () => () => {
+      if (isOpenRef.current) setGlobalFocusableScope(HotkeyScope.DropdownMenu, "remove")
+    },
+    [setGlobalFocusableScope],
+  )
   return (
     <DropdownMenuPrimitive.Root
       {...props}
       onOpenChange={useTypeScriptHappyCallback(
         (open) => {
+          isOpenRef.current = open
           if (open) {
             setGlobalFocusableScope(HotkeyScope.DropdownMenu, "append")
           } else {
@@ -190,9 +199,7 @@ const DropdownMenuItem = ({
     {!!shortcut && (
       <>
         <span className="ml-4" />
-        <Kbd wrapButton={false} className="ml-auto">
-          {shortcut}
-        </Kbd>
+        <Kbd className="ml-auto">{shortcut}</Kbd>
       </>
     )}
     {checked && !shortcut && (

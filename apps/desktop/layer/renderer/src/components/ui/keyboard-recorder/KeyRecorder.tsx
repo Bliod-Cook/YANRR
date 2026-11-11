@@ -61,9 +61,7 @@ export const KeyRecorder: FC<KeyRecorderProps> = ({ onChange, onBlur }) => {
     >
       {currentKeys.length > 0 ? (
         <div className="pr-4">
-          <KbdCombined kbdProps={{ wrapButton: false }} joint={false}>
-            {currentKeys.join("+")}
-          </KbdCombined>
+          <KbdCombined joint={false}>{currentKeys.join("+")}</KbdCombined>
         </div>
       ) : (
         <span className="pr-4 text-text-secondary">{t("settings.shortcuts.press_to_record")}</span>

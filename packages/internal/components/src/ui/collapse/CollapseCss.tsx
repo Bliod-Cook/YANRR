@@ -91,6 +91,7 @@ export const CollapseCss: FC<CollapseProps> = ({
 }) => {
   const reactId = React.useId()
   const id = collapseId ?? reactId
+  const contentId = `${reactId}-content`
   const { openStates, setOpenState } = useCollapseContext()
 
   // Use controlled value if provided, otherwise use context state or defaultOpen
@@ -112,9 +113,12 @@ export const CollapseCss: FC<CollapseProps> = ({
   }))
   return (
     <div className={cn("flex flex-col", className)} data-state={isOpened ? "open" : "hidden"}>
-      <div
-        className="relative flex w-full cursor-pointer items-center justify-between"
-        onClick={controlledIsOpened === undefined ? handleToggle : undefined}
+      <button
+        type="button"
+        className="relative flex w-full cursor-pointer items-center justify-between text-left"
+        aria-expanded={isOpened}
+        aria-controls={contentId}
+        onClick={handleToggle}
       >
         <span className="w-0 shrink grow truncate">{title}</span>
         {!hideArrow && (
@@ -127,8 +131,9 @@ export const CollapseCss: FC<CollapseProps> = ({
             />
           </div>
         )}
-      </div>
+      </button>
       <CollapseCssContent
+        id={contentId}
         isOpened={isOpened}
         className={contentClassName}
         innerClassName={innerClassName}
@@ -140,6 +145,7 @@ export const CollapseCss: FC<CollapseProps> = ({
 }
 
 interface CollapseContentProps {
+  id: string
   isOpened: boolean
   className?: string
   children: React.ReactNode
@@ -147,6 +153,7 @@ interface CollapseContentProps {
 }
 
 const CollapseCssContent: FC<CollapseContentProps> = ({
+  id,
   isOpened,
   className,
   children,
@@ -156,6 +163,7 @@ const CollapseCssContent: FC<CollapseContentProps> = ({
 
   return (
     <div
+      id={id}
       ref={contentRef}
       className={cn(
         "overflow-hidden [interpolate-size:allow-keywords] [transition-behavior:allow-discrete]",

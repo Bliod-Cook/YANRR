@@ -72,10 +72,7 @@ export const MarkAllReadButton = ({
           label: (
             <span className="flex items-center gap-1">
               {t("mark_all_read_button.undo")}
-              <Kbd
-                wrapButton={false}
-                className="inline-flex items-center border border-border bg-transparent bg-none text-white"
-              >
+              <Kbd className="inline-flex items-center border border-border bg-transparent bg-none text-white">
                 $mod+z
               </Kbd>
             </span>

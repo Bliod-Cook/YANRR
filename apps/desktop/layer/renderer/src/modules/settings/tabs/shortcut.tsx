@@ -216,9 +216,7 @@ const ShortcutInputWrapper = memo(
                 }}
               />
             ) : (
-              <KbdCombined kbdProps={{ wrapButton: false }} joint={false}>
-                {shortcut}
-              </KbdCombined>
+              <KbdCombined joint={false}>{shortcut}</KbdCombined>
             )}
           </div>
         </TooltipTrigger>
