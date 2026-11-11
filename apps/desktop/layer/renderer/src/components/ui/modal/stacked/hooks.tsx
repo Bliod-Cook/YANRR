@@ -17,9 +17,8 @@ import {
   CurrentModalStateContext,
   PresentModalContextInternal,
 } from "./context"
-import type { DialogInstance, ModalProps } from "./types"
+import type { DialogInstance } from "./types"
 
-export const modalIdToPropsMap = {} as Record<string, ModalProps>
 export const useModalStack = () => {
   const present = use(PresentModalContextInternal)
 

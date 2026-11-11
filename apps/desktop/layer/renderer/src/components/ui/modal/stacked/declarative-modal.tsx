@@ -1,7 +1,7 @@
 import { cn } from "@follow/utils/utils"
 import { AnimatePresence } from "motion/react"
 import type { FC, ReactNode } from "react"
-import { useCallback, useEffect, useId, useMemo, useState } from "react"
+import { useCallback, useId, useMemo, useState } from "react"
 
 import { jotaiStore } from "~/lib/jotai"
 
@@ -27,7 +27,8 @@ const DeclarativeModalImpl: FC<DeclarativeModalProps> = ({
   ...rest
 }) => {
   const index = useMemo(() => jotaiStore.get(modalStackAtom).length, [])
-  const [internalOpen, setInternalOpen] = useState(defaultOpen ?? false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen ?? false)
+  const internalOpen = open ?? uncontrolledOpen
   const id = useId()
   const item = useMemo(
     () => ({
@@ -40,16 +41,11 @@ const DeclarativeModalImpl: FC<DeclarativeModalProps> = ({
   )
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      setInternalOpen(open)
+      setUncontrolledOpen(open)
       onOpenChange?.(open)
     },
-    [onOpenChange, setInternalOpen],
+    [onOpenChange],
   )
-  useEffect(() => {
-    if (open !== undefined && open !== internalOpen) {
-      setInternalOpen(open)
-    }
-  }, [open, internalOpen, setInternalOpen])
   return (
     <AnimatePresence>
       {internalOpen && (

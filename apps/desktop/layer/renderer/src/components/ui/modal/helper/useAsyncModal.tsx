@@ -62,11 +62,11 @@ const LazyContent = () => {
 const Presentable: FC<{
   data: any
 }> = ({ data }) => {
-  const { present, dismissTop } = useModalStack()
+  const { present, dismiss } = useModalStack()
   const ctx = use(AsyncModalContext)
 
   useOnce(() => {
-    dismissTop()
+    dismiss(ctx.id)
     present({
       id: `presentable-${ctx.id}`,
       content: (props) => createElement(ctx.content, { data, ...props }),

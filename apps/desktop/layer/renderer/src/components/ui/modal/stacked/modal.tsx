@@ -97,9 +97,11 @@ export const ModalInternal = memo(function Modal({
   const { animateController, playNoticeAnimation, playExitAnimation, isClosing, readyToClose } =
     useModalAnimate(!!isTop, item.id)
 
-  // Simple dismiss logic
+  // Escape or the X button can ask again while the exit animation plays
+  const isClosingRef = useRef(false)
   const close = useEventCallback(async (forceClose = false) => {
-    if (!canClose && !forceClose) return
+    if ((!canClose && !forceClose) || isClosingRef.current) return
+    isClosingRef.current = true
     readyToClose()
     try {
       if (CustomModalComponent) {

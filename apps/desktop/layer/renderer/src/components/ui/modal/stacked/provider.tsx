@@ -9,7 +9,6 @@ import { jotaiStore } from "~/lib/jotai"
 import { modalStackAtom } from "./atom"
 import { ModalEventBus } from "./bus"
 import { PresentModalContextInternal } from "./context"
-import { modalIdToPropsMap } from "./hooks"
 import { ModalStack } from "./modal-stack"
 import type { ModalProps } from "./types"
 
@@ -45,17 +44,13 @@ export const ModalStackProvider: FC<PropsWithChildren> = ({ children }) => {
           draggable: uiSettings.modalDraggable,
           modal: true,
         }
-        jotaiStore.set(modalStackAtom, (p) => {
-          const modalProps: ModalProps = {
+        jotaiStore.set(modalStackAtom, (p) =>
+          p.concat({
+            id: modalId,
             ...modalConfig,
             ...props,
-          }
-          modalIdToPropsMap[modalId] = modalProps
-          return p.concat({
-            id: modalId,
-            ...modalProps,
-          })
-        })
+          }),
+        )
       }
     }
 
