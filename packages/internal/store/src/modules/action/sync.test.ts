@@ -160,30 +160,28 @@ describe("action rules and the sync engine", () => {
     expect(JSON.parse(documents.get("model:action")!).rules).toMatchObject([{ name: "Mine" }])
   })
 
-  it("keeps the rules as loaded next to the user's edits", async () => {
-    const handler = getSyncModelHandler("action")!
-    getMock.mockResolvedValue({ code: 0, data: { rules: [rule("Loaded")] } })
-    putMock.mockResolvedValue({ code: 0 })
+  it("keeps edits made while a save is in flight, on top of the saved version", async () => {
+    getMock.mockResolvedValue({ code: 0, data: { rules: [rule("Loaded")], updatedAt: V1 } })
     await actionSyncService.ensureRules()
-    expect(actionActions.getLoadedRules()).toMatchObject([{ name: "Loaded" }])
+    actionActions.patchRule(0, { name: "Saved" })
+    let answerSave!: (response: unknown) => void
+    putMock.mockReturnValueOnce(new Promise((resolve) => (answerSave = resolve)))
 
-    actionActions.patchRule(0, { name: "Edited" })
-    await handler.apply({
-      id: 2,
-      model: "action",
-      modelId: null,
-      action: "U",
-      data: { rules: [rule("Changed elsewhere")] },
-      createdAt: "2026-09-17T00:00:00.000Z",
-    })
-    // The edits still change the rules they started from
-    expect(actionActions.getLoadedRules()).toMatchObject([{ name: "Loaded" }])
+    const saving = actionSyncService.saveRules()
+    actionActions.patchRule(0, { name: "Edited while saving" })
+    answerSave({ code: 0, updatedAt: V2 })
+    await saving
 
+    expect(useActionStore.getState().rules).toMatchObject([{ name: "Edited while saving" }])
+    expect(useActionStore.getState().isDirty).toBe(true)
+    expect(JSON.parse(documents.get("model:action")!).rules).toMatchObject([{ name: "Saved" }])
+    // The next save replaces the rules the first one saved, not those loaded before it
+    putMock.mockResolvedValueOnce({ code: 0, updatedAt: V3 })
     await actionSyncService.saveRules()
-    expect(actionActions.getLoadedRules()).toMatchObject([{ name: "Edited" }])
-
-    await actionActions.reset()
-    expect(actionActions.getLoadedRules()).toEqual([])
+    expect(putMock).toHaveBeenLastCalledWith({
+      rules: [expect.objectContaining({ name: "Edited while saving" })],
+      expectedUpdatedAt: V2,
+    })
   })
 
   it("saves against the version it loaded and keeps the version the save made", async () => {

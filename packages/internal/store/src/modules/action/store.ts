@@ -8,14 +8,13 @@ import type {
 } from "@follow-app/client-sdk"
 import { ExceptionCodeMap, FollowAPIError } from "@follow-app/client-sdk"
 import { merge } from "es-toolkit/compat"
-import { t } from "i18next"
 
 import { api } from "../../context"
 import type { Hydratable, Resetable } from "../../lib/base"
 import { createImmerSetter, createZustandStore } from "../../lib/helper"
 import { registerSyncModel } from "../../sync/model-registry"
 import { ensureSyncedThroughEngine } from "../../sync/sync-status"
-import { getFilterFieldType } from "./constant"
+import { filterOperatorOptions, getFilterFieldType } from "./constant"
 
 export type ActionItem = Omit<ActionItemRes, "condition"> & {
   condition: ActionFilterItem[][]
@@ -25,7 +24,18 @@ export type ActionItem = Omit<ActionItemRes, "condition"> & {
 type ActionStore = {
   rules: ActionItem[]
   isDirty: boolean
+  /** Whether confirmed rules are in the store, from the local database or from the server. */
+  isLoaded: boolean
 }
+
+/** Why rules could not be imported, or how many were. */
+export type ActionRulesImportResult =
+  | { ok: true; count: number }
+  | { ok: false; reason: "parse_failed"; detail: string }
+  | {
+      ok: false
+      reason: "invalid_structure" | "invalid_name" | "invalid_condition" | "invalid_result"
+    }
 
 type ActionRules = ActionItem[]
 export type ActionModel = ActionItem
@@ -54,6 +64,7 @@ export type SaveActionRulesOptions = {
 export const useActionStore = createZustandStore<ActionStore>("action")(() => ({
   rules: [],
   isDirty: false,
+  isLoaded: false,
 }))
 
 const immerSet = createImmerSetter(useActionStore)
@@ -68,7 +79,7 @@ const ACTION_RULES_DOCUMENT_KEY = "model:action"
 const normalizeRules = (rules: ActionItemRes[] | null | undefined): ActionItem[] =>
   (rules ?? []).map((rule, index) => {
     const { condition } = rule
-    // fix old data
+    // Older clients wrote a single group as a flat list
     const finalCondition =
       condition.length === 0 || Array.isArray(condition[0]) ? condition : [condition]
 
@@ -78,6 +89,20 @@ const normalizeRules = (rules: ActionItemRes[] | null | undefined): ActionItem[]
       index,
     }
   })
+
+/**
+ * A condition on `field` filled in as far as the field allows: with its operator when it has only
+ * one, and the default value of a status.
+ */
+const createCondition = (field: ActionFeedField): ActionFilterItem => {
+  const type = getFilterFieldType(field)
+  const operators = filterOperatorOptions.filter((option) => option.types.includes(type))
+  return {
+    field,
+    ...(operators.length === 1 && { operator: operators[0]!.value }),
+    ...(type === "status" && { value: "collected" }),
+  }
+}
 
 class ActionSyncService {
   /**
@@ -121,9 +146,10 @@ class ActionSyncService {
     if (!isDirty) {
       return null
     }
-    // Saving replaces every rule on the server, so it must wait until they were loaded
+    // Saving replaces every rule on the server, so it must wait until they were loaded. The
+    // editors offer no rules to edit before, so this is never shown to the user.
     if (!actionActions.isLoaded()) {
-      throw new Error(t("actions.load_failed", { ns: "settings" }))
+      throw new Error("The action rules were not loaded")
     }
 
     // An unknown version cannot be checked, so such a save replaces the rules unconditionally
@@ -132,29 +158,19 @@ class ActionSyncService {
       rules: rules as any,
       ...(expectedUpdatedAt !== undefined && { expectedUpdatedAt }),
     })
-    await actionActions.setConfirmedRules(rules, {
-      overwriteLocalEdits: true,
-      version: toRulesVersion(res.updatedAt),
-    })
+    await actionActions.setSavedRules(rules, toRulesVersion(res.updatedAt))
     return res
   }
 }
 
 class ActionActions implements Hydratable, Resetable {
-  private loaded = false
-  // The confirmed rules the rules in the store started from, before any unsaved edit
-  private loadedRules: ActionRules = []
-  // The version of `loadedRules`, which a save sends so it fails if the rules changed since
+  // The version of the confirmed rules the rules in the store started from, which a save sends
+  // so it fails if the rules changed since
   private loadedVersion: ActionRulesVersion = undefined
 
   /** Whether confirmed rules are in the store, from the local database or from the server. */
   isLoaded() {
-    return this.loaded
-  }
-
-  /** The confirmed rules the rules in the store started from: what the user's edits change. */
-  getLoadedRules(): readonly ActionItem[] {
-    return this.loadedRules
+    return useActionStore.getState().isLoaded
   }
 
   /** The version of the rules the store's rules started from. */
@@ -166,9 +182,18 @@ class ActionActions implements Hydratable, Resetable {
     immerSet((state) => {
       state.rules = rules
       state.isDirty = false
+      state.isLoaded = true
     })
-    this.loadedRules = rules
     this.loadedVersion = version
+  }
+
+  private async storeConfirmedRules(rules: ActionRules, version: ActionRulesVersion) {
+    await SyncMetaService.set(
+      ACTION_RULES_DOCUMENT_KEY,
+      JSON.stringify({ rules, updatedAt: version }),
+    ).catch((error) => {
+      console.error("[action] failed to store the rules", error)
+    })
   }
 
   private async readConfirmedRules(): Promise<{
@@ -194,7 +219,6 @@ class ActionActions implements Hydratable, Resetable {
     const confirmed = await this.readConfirmedRules()
     if (!confirmed) return
     this.showConfirmedRules(confirmed.rules, confirmed.version)
-    this.loaded = true
   }
 
   /**
@@ -212,8 +236,8 @@ class ActionActions implements Hydratable, Resetable {
   }
 
   async reset() {
-    this.loaded = false
-    this.showConfirmedRules([], undefined)
+    useActionStore.setState({ rules: [], isDirty: false, isLoaded: false })
+    this.loadedVersion = undefined
   }
 
   /**
@@ -227,15 +251,26 @@ class ActionActions implements Hydratable, Resetable {
     const version = options?.version
     if (options?.overwriteLocalEdits || !useActionStore.getState().isDirty) {
       this.showConfirmedRules(rules, version)
+    } else {
+      immerSet((state) => {
+        state.isLoaded = true
+      })
     }
-    this.loaded = true
+    await this.storeConfirmedRules(rules, version)
+  }
 
-    await SyncMetaService.set(
-      ACTION_RULES_DOCUMENT_KEY,
-      JSON.stringify({ rules, updatedAt: version }),
-    ).catch((error) => {
-      console.error("[action] failed to store the rules", error)
-    })
+  /**
+   * Rules a save made the server's. Edits made while the save was on its way stay unsaved, but
+   * now change the saved version, so the next save does not take that one for a change made
+   * elsewhere.
+   */
+  async setSavedRules(rules: ActionRules, version: ActionRulesVersion) {
+    if (useActionStore.getState().rules === rules) {
+      this.showConfirmedRules(rules, version)
+    } else {
+      this.loadedVersion = version
+    }
+    await this.storeConfirmedRules(rules, version)
   }
 
   updateRules(rules: ActionRules) {
@@ -286,7 +321,7 @@ class ActionActions implements Hydratable, Resetable {
       group[index.conditionIndex] =
         getFilterFieldType(item.field) === getFilterFieldType(field)
           ? { ...item, field }
-          : { field }
+          : createCondition(field)
       state.isDirty = true
     })
   }
@@ -478,74 +513,43 @@ class ActionActions implements Hydratable, Resetable {
     return JSON.stringify(exportData)
   }
 
-  importRules(jsonData: string): { success: boolean; message: string; importedCount?: number } {
+  importRules(jsonData: string): ActionRulesImportResult {
+    let parsedData: { rules?: unknown }
     try {
-      const parsedData = JSON.parse(jsonData)
-
-      // Validate the structure
-      if (!parsedData.rules || !Array.isArray(parsedData.rules)) {
-        return {
-          success: false,
-          message: t("actions.import_result.invalid_structure", { ns: "settings" }),
-        }
-      }
-
-      // Validate each rule structure
-      for (const rule of parsedData.rules) {
-        // An empty name is allowed: the editor saves it and shows a numbered default instead
-        if (typeof rule.name !== "string") {
-          return {
-            success: false,
-            message: t("actions.import_result.invalid_name", { ns: "settings" }),
-          }
-        }
-        if (!rule.condition || !Array.isArray(rule.condition)) {
-          return {
-            success: false,
-            message: t("actions.import_result.invalid_condition", { ns: "settings" }),
-          }
-        }
-        if (!rule.result || typeof rule.result !== "object") {
-          return {
-            success: false,
-            message: t("actions.import_result.invalid_result", { ns: "settings" }),
-          }
-        }
-      }
-
-      // Import the rules
-      const importedRules: ActionRules = parsedData.rules.map((rule: any, index: number) => ({
-        name: rule.name,
-        condition: rule.condition,
-        result: rule.result,
-        index,
-      }))
-
-      immerSet((state) => {
-        state.rules = importedRules
-        state.isDirty = true
-      })
-
-      return {
-        success: true,
-        message: t("actions.import_result.success", {
-          ns: "settings",
-          count: importedRules.length,
-        }),
-        importedCount: importedRules.length,
-      }
+      parsedData = JSON.parse(jsonData)
     } catch (error) {
-      return {
-        success: false,
-        message: t("actions.import_result.parse_failed", {
-          ns: "settings",
-          error:
-            error instanceof Error
-              ? error.message
-              : t("actions.import_result.unknown_error", { ns: "settings" }),
-        }),
+      return { ok: false, reason: "parse_failed", detail: String(error) }
+    }
+
+    const { rules } = parsedData ?? {}
+    if (!Array.isArray(rules)) {
+      return { ok: false, reason: "invalid_structure" }
+    }
+    for (const rule of rules) {
+      // An empty name is allowed: the editor saves it and shows a numbered default instead
+      if (typeof rule?.name !== "string") {
+        return { ok: false, reason: "invalid_name" }
+      }
+      if (!Array.isArray(rule.condition)) {
+        return { ok: false, reason: "invalid_condition" }
+      }
+      if (!rule.result || typeof rule.result !== "object") {
+        return { ok: false, reason: "invalid_result" }
       }
     }
+
+    const importedRules = normalizeRules(
+      (rules as ActionItemRes[]).map(({ name, condition, result }) => ({
+        name,
+        condition,
+        result,
+      })),
+    )
+    immerSet((state) => {
+      state.rules = importedRules
+      state.isDirty = true
+    })
+    return { ok: true, count: importedRules.length }
   }
 }
 

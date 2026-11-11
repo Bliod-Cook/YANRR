@@ -4,7 +4,7 @@ import { useCallback } from "react"
 
 import type { GeneralMutationOptions } from "../../types"
 import type { ActionItem, SaveActionRulesOptions } from "./store"
-import { actionActions, actionSyncService, useActionStore } from "./store"
+import { actionSyncService, useActionStore } from "./store"
 
 export const usePrefetchActions = () => {
   return useQuery({
@@ -62,15 +62,13 @@ export const useIsActionDataDirty = () => {
   return useActionStore((state) => state.isDirty)
 }
 
+/** Whether confirmed rules are in the store, from the local database or from the server. */
+export const useIsActionRulesLoaded = () => {
+  return useActionStore((state) => state.isLoaded)
+}
+
 export const useHasNotificationActions = () => {
   return useActionStore((state) => {
     return state.rules.some((rule) => !!rule.result.newEntryNotification && !rule.result.disabled)
   })
-}
-
-export const useActionImportExport = () => {
-  return {
-    exportRules: () => actionActions.exportRules(),
-    importRules: (jsonData: string) => actionActions.importRules(jsonData),
-  }
 }

@@ -128,8 +128,6 @@ export type ActionAction = {
   icon: SFSymbol
   iconClassname: string
   settingsPath?: string
-
-  prefixElement?: React.ReactNode
 }
 
 export const availableActionMap: Record<ActionId, ActionAction> = {
