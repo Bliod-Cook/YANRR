@@ -228,7 +228,6 @@ describe("useEntriesQuery", () => {
     await vi.waitFor(() => {
       expect(entriesQuery?.isFetching).toBe(true)
     })
-    expect(entriesQuery?.hasNextPage).toBe(true)
 
     // Asked for meanwhile, the next page would join the refresh and load nothing. It is asked
     // for again once the refresh is done, so the list reaches its end.

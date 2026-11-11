@@ -210,8 +210,8 @@ function useRemoteEntries(props?: UseEntriesProps): RemoteTimelineEntries {
   const refetchReportingFailure = useCallback(
     () =>
       joinRefreshAttempt(refreshAttemptRef, async () => {
-        const result = await query.refetch()
-        if (result.isError) toastFetchError(result.error)
+        const error = await query.refetch()
+        if (error) toastFetchError(error)
       }),
     [query],
   )

@@ -4,11 +4,9 @@ import type { FetchNextPageOptions, QueryState } from "@tanstack/react-query"
  * Asks an entry list for its next page.
  *
  * TanStack folds a request made while the list is refetched from its first page into that
- * refetch, which loads no page. A refresh trims the list to its first page, so a short list
- * asks for its empty end page again while the refresh runs. When the same entries come back,
- * the list data keeps its identity and a list that only asks when its data changes, like the
- * mobile one, would show its loading footer forever. Such a request is made again once the
- * refetch succeeded.
+ * refetch, which loads no page. When the refetch brings the same first page back, the list data
+ * keeps its identity and a list that only asks when its data changes, like the mobile one, would
+ * show its loading footer forever. Such a request is made again once the refetch succeeded.
  */
 export const fetchNextPageAfterRefetch = async <
   TResult extends { hasNextPage: boolean; isSuccess: boolean },
