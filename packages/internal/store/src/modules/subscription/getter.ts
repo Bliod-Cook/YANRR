@@ -37,7 +37,10 @@ export const getSubscribedFeedIdAndInboxHandlesByView = ({
     (i) => !excludeHidden || !state.data[i]?.hideFromTimeline,
   )
 
-  const inboxIds = view === FeedViewType.Articles ? getInboxList().map((i) => i.id) : []
+  const inboxIds =
+    view === FeedViewType.Articles || view === FeedViewType.All
+      ? getInboxList().map((i) => i.id)
+      : []
 
   return [...feedIds, ...inboxIds]
 }
@@ -111,7 +114,10 @@ const sortByUnread = (leftSubscriptionId: string, rightSubscriptionId: string) =
 // Store selector functions (for React hooks)
 export const getSubscriptionIdsByViewSelector = (state: StateType) => (view: FeedViewType) => {
   const feedIds = Array.from(state.feedIdByView[view] ?? [])
-  const inboxIds = view === FeedViewType.Articles ? getInboxList().map((i) => i.id) : []
+  const inboxIds =
+    view === FeedViewType.Articles || view === FeedViewType.All
+      ? getInboxList().map((i) => i.id)
+      : []
 
   return [...feedIds, ...inboxIds]
 }
