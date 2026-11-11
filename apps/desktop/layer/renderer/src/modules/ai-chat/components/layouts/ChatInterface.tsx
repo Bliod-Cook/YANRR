@@ -21,7 +21,6 @@ import { ROUTE_FEED_IN_FOLDER } from "~/constants"
 import { getRouteParams } from "~/hooks/biz/useRouteParams"
 import { useRequireLogin } from "~/hooks/common/useRequireLogin"
 import { useAutoScroll } from "~/modules/ai-chat/hooks/useAutoScroll"
-import { useLoadMessages } from "~/modules/ai-chat/hooks/useLoadMessages"
 import { useMainEntryId } from "~/modules/ai-chat/hooks/useMainEntryId"
 import {
   useBlockActions,
@@ -85,21 +84,6 @@ const ChatInterfaceContent = ({ centerInputOnEmpty, visualOffsetY }: ChatInterfa
     handleScrollPositioning,
     updateContentHeightSnapshot,
   } = useChatScroller(currentChatId)
-
-  const { isLoading: isLoadingHistory, isSyncingRemote } = useLoadMessages(currentChatId || "", {
-    onLoad: () => {
-      nextFrame(() => {
-        const $scrollArea = scrollAreaRef
-        const scrollHeight = $scrollArea?.scrollHeight
-
-        if (scrollHeight) {
-          $scrollArea?.scrollTo({
-            top: scrollHeight,
-          })
-        }
-      })
-    },
-  })
 
   const autoScrollWhenStreaming = useAISettingKey("autoScrollWhenStreaming")
 
@@ -260,8 +244,6 @@ const ChatInterfaceContent = ({ centerInputOnEmpty, visualOffsetY }: ChatInterfa
           <ChatMessageContainer
             currentChatId={currentChatId}
             hasMessages={hasMessages}
-            isLoadingHistory={isLoadingHistory}
-            isSyncingRemote={isSyncingRemote}
             bottomPanelHeight={bottomPanelHeight}
             messageContainerMinHeight={messageContainerMinHeight}
             messagesContentRef={messagesContentRef}

@@ -24,7 +24,7 @@ const createActions = (state: TestState, messages: unknown[] = [{ id: "m1", part
   }
   const get = () => state
   const chatInstance = { chatState: { messages } } as unknown as ZustandChat
-  return new ChatSliceActions([set, get, {}] as never, { chatInstance, hasChatId: false })
+  return new ChatSliceActions([set, get, {}] as never, chatInstance)
 }
 
 describe("ChatSliceActions.adoptStoredTitle", () => {

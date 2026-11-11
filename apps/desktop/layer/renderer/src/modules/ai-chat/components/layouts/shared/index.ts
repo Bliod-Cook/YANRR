@@ -5,4 +5,3 @@ export {
   type SessionItemProps,
 } from "./ChatSessionComponents"
 export { useChatSessionHandlers, type UseChatSessionHandlersProps } from "./useChatSessionHandlers"
-export { isTaskSession, isUnreadSession } from "./utils"

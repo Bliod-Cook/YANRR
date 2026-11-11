@@ -16,15 +16,10 @@ import { COMMAND_ID } from "~/modules/command/commands/id"
 import { getCommand } from "~/modules/command/hooks/use-command"
 import { useCommandShortcut } from "~/modules/command/hooks/use-command-binding"
 
-import { FileUploadPlugin, MentionPlugin, SelectedTextPlugin, ShortcutPlugin } from "../../editor"
+import { FileUploadPlugin, MentionPlugin, ShortcutPlugin } from "../../editor"
 import { useMainEntryId } from "../../hooks/useMainEntryId"
 import { AIPanelRefsContext } from "../../store/AIChatContext"
-import {
-  useChatActions,
-  useChatBlockSelector,
-  useChatScene,
-  useChatStatus,
-} from "../../store/hooks"
+import { useChatActions, useChatBlockSelector, useChatStatus } from "../../store/hooks"
 import { AIChatSendButton } from "./AIChatSendButton"
 import { AIModelIndicator } from "./AIModelIndicator"
 
@@ -48,6 +43,7 @@ const chatInputVariants = cva(
 )
 
 const chatInputEditorPlugins = { tabIndentation: false }
+const chatInputPlugins = [MentionPlugin, ShortcutPlugin, FileUploadPlugin]
 
 interface ChatInputProps extends VariantProps<typeof chatInputVariants> {
   onSend: (message: EditorState | string, editor: LexicalEditor | null) => void
@@ -117,8 +113,6 @@ export const ChatInput = memo(
       [onEditorStateChange],
     )
 
-    const scene = useChatScene()
-
     const handleSend = useCallback(async () => {
       if (currentEditor && editorRef.current && !editorRef.current.isEmpty()) {
         const editorState = currentEditor?.getEditorState()
@@ -179,22 +173,14 @@ export const ChatInput = memo(
             <LexicalRichEditor
               initalEditorState={initialDraftState}
               ref={editorRef}
-              placeholder={
-                scene === "onboarding"
-                  ? t("chat.placeholder.onboarding")
-                  : t(mainEntryId ? "chat.placeholder.entry" : "chat.placeholder.timeline")
-              }
+              placeholder={t(mainEntryId ? "chat.placeholder.entry" : "chat.placeholder.timeline")}
               className="h-14"
               onChange={handleEditorChange}
               onKeyDown={handleKeyDown}
               // Tab moves on to the controls below instead of indenting the message
               enabledPlugins={chatInputEditorPlugins}
               autoFocus
-              plugins={
-                scene === "onboarding"
-                  ? []
-                  : [MentionPlugin, ShortcutPlugin, FileUploadPlugin, SelectedTextPlugin]
-              }
+              plugins={chatInputPlugins}
               namespace="AIChatRichEditor"
             />
           </ScrollArea>
@@ -208,19 +194,17 @@ export const ChatInput = memo(
           </div>
         </div>
 
-        {/* Context Bar - only shown in non-onboarding scene, positioned below the input area */}
-        {scene !== "onboarding" && (
-          <div className="relative z-10 border-t border-border/20 bg-transparent">
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <div className="min-w-0 flex-1 shrink">
-                <AIChatContextBar className="border-0 bg-transparent p-0" />
-              </div>
-              <div className="flex items-center gap-3 self-start">
-                <AIModelIndicator className="-mr-1.5 ml-1 translate-y-[2px]" />
-              </div>
+        {/* Context Bar, below the input area */}
+        <div className="relative z-10 border-t border-border/20 bg-transparent">
+          <div className="flex items-center justify-between px-4 py-2.5">
+            <div className="min-w-0 flex-1 shrink">
+              <AIChatContextBar className="border-0 bg-transparent p-0" />
+            </div>
+            <div className="flex items-center gap-3 self-start">
+              <AIModelIndicator className="-mr-1.5 ml-1 translate-y-[2px]" />
             </div>
           </div>
-        )}
+        </div>
       </div>
     )
   },

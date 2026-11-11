@@ -44,16 +44,9 @@ export class ChatSliceActions {
   private switchToken = 0
   constructor(
     private params: Parameters<StateCreator<ChatSlice, [], [], ChatSlice>>,
-
-    options: {
-      chatInstance: ZustandChat
-      hasChatId: boolean
-    },
+    chatInstance: ZustandChat,
   ) {
-    if (options.hasChatId) {
-      options.chatInstance.resumeStream()
-    }
-    this.chatInstance = options.chatInstance
+    this.chatInstance = chatInstance
     return autoBindThis(this)
   }
 
@@ -63,42 +56,6 @@ export class ChatSliceActions {
 
   get get() {
     return this.params[1]
-  }
-
-  private computeSyncStatus(isLocal: boolean): "local" | "synced" {
-    return isLocal ? "local" : "synced"
-  }
-
-  private setSyncState(isLocal: boolean) {
-    this.set((state) => {
-      const nextStatus = this.computeSyncStatus(isLocal)
-      if (state.isLocal === isLocal && state.syncStatus === nextStatus) {
-        return state
-      }
-      return {
-        isLocal,
-        syncStatus: nextStatus,
-      }
-    })
-  }
-
-  async markSessionSynced() {
-    const currentChatId = this.get().chatId
-    if (!currentChatId) {
-      return
-    }
-
-    if (!this.get().isLocal) {
-      return
-    }
-
-    this.setSyncState(false)
-
-    try {
-      await AIPersistService.markSessionSynced(currentChatId)
-    } catch (error) {
-      console.error("Failed to mark chat session as synced:", error)
-    }
   }
 
   // Direct message management methods (delegating to chat instance state)
@@ -245,7 +202,7 @@ export class ChatSliceActions {
       // Use the AI SDK's sendMessage method
       const finalOptions = merge(
         {
-          body: { scene: this.get().scene },
+          body: { scene: "general" },
           headers: createDesktopAPIHeaders({ version: PKG.version }),
         },
         options,
@@ -263,7 +220,7 @@ export class ChatSliceActions {
       // Use the AI SDK's regenerate method
       const finalOptions = merge(
         {
-          body: { scene: this.get().scene },
+          body: { scene: "general" },
         },
         options,
       )
@@ -326,8 +283,6 @@ export class ChatSliceActions {
       isStreaming: false,
       currentTitle: undefined,
       chatInstance: newChatInstance,
-      isLocal: true,
-      syncStatus: "local",
     }))
 
     // Update the reference
@@ -372,8 +327,6 @@ export class ChatSliceActions {
         isStreaming: false,
         currentTitle: chatSession?.title || undefined,
         chatInstance: newChatInstance,
-        isLocal: chatSession ? chatSession.isLocal : true,
-        syncStatus: chatSession ? chatSession.syncStatus : "local",
       }))
 
       // Take over before resuming: resumeStream only settles when the resumed answer has
@@ -389,35 +342,5 @@ export class ChatSliceActions {
       this.setStatus("ready")
       throw error
     }
-  }
-
-  setScene = (scene: ChatSlice["scene"]) => {
-    this.set((state) => ({ ...state, scene }))
-  }
-
-  setTimelineSummaryManualOverride = (override: boolean) => {
-    this.set((state) => {
-      if (state.timelineSummaryManualOverride === override) {
-        return state
-      }
-      return { ...state, timelineSummaryManualOverride: override }
-    })
-  }
-
-  getTimelineSummaryManualOverride = () => {
-    return this.get().timelineSummaryManualOverride
-  }
-
-  setTimelineSummaryWasInAutoContext = (isInAutoContext: boolean) => {
-    this.set((state) => {
-      if (state.timelineSummaryWasInAutoContext === isInAutoContext) {
-        return state
-      }
-      return { ...state, timelineSummaryWasInAutoContext: isInAutoContext }
-    })
-  }
-
-  getTimelineSummaryWasInAutoContext = () => {
-    return this.get().timelineSummaryWasInAutoContext
   }
 }

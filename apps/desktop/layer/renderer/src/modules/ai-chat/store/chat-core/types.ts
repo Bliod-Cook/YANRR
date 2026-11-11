@@ -11,8 +11,6 @@ export interface ChatSlice {
   status: ChatStatus
   error: Error | undefined
   isStreaming: boolean
-  isLocal: boolean
-  syncStatus: "local" | "synced"
 
   // UI state
   currentTitle: string | undefined
@@ -22,10 +20,4 @@ export interface ChatSlice {
 
   // Actions
   chatActions: ChatSliceActions
-
-  // Scene
-  scene: "general" | "onboarding" | "timeline-summary"
-
-  timelineSummaryManualOverride: boolean
-  timelineSummaryWasInAutoContext: boolean
 }

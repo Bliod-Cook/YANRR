@@ -1,43 +1,22 @@
-import { useMemo } from "react"
-import { useEventCallback } from "usehooks-ts"
+import { useCallback, useState } from "react"
 
-import { AIChatSessionService } from "~/modules/ai-chat-session/service"
-import { aiChatSessionStoreActions, useAIChatSessionStore } from "~/modules/ai-chat-session/store"
+import { AIPersistService } from "../services"
+import type { ChatSession } from "../types/ChatSession"
 
 export const useChatHistory = () => {
-  const state = useAIChatSessionStore()
+  const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const { sessions } = state
-  const loading = state.isLoading || state.isSyncing
-
-  const loadHistory = useEventCallback(async () => {
-    if (state.isLoading) return
-
-    aiChatSessionStoreActions.setLoading(true)
-    aiChatSessionStoreActions.clearError()
-
+  const loadHistory = useCallback(async () => {
+    setLoading(true)
     try {
-      // 1) Always hydrate latest local first so UI updates immediately
-      await AIChatSessionService.loadSessionsFromDb()
-      // 2) Then sync remote → upsert into local DB → reload from DB inside service
-      await aiChatSessionStoreActions.fetchRemoteSessions()
+      setSessions(await AIPersistService.getChatSessions())
     } catch (error) {
       console.error("Failed to load chat history:", error)
-      aiChatSessionStoreActions.setError(error instanceof Error ? error.message : "Unknown error")
     } finally {
-      aiChatSessionStoreActions.setLoading(false)
+      setLoading(false)
     }
-  })
+  }, [])
 
-  return useMemo(
-    () => ({
-      sessions,
-      loading,
-      loadHistory,
-      stats: state.stats,
-      lastSyncedAt: state.lastSyncedAt,
-      error: state.error,
-    }),
-    [sessions, loading, loadHistory, state.stats, state.lastSyncedAt, state.error],
-  )
+  return { sessions, loading, loadHistory }
 }

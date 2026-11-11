@@ -2,7 +2,7 @@ import { cn, sleep } from "@follow/utils/utils"
 import type { AITask, TaskSchedule } from "@follow-app/client-sdk"
 import dayjs from "dayjs"
 import type { i18n, TFunction } from "i18next"
-import { memo, useCallback, useMemo, useState } from "react"
+import { memo } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
@@ -11,8 +11,6 @@ import { useDialog, useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { toastFetchError } from "~/lib/error-parser"
 import { AIPersistService } from "~/modules/ai-chat/services"
 import { ChatSliceActions } from "~/modules/ai-chat/store/chat-core/chat-actions"
-import { AIChatSessionService } from "~/modules/ai-chat-session"
-import { useAIChatSessionListQuery } from "~/modules/ai-chat-session/query"
 import type { ActionButton } from "~/modules/ai-task/components/ai-item-actions"
 import { ItemActions } from "~/modules/ai-task/components/ai-item-actions"
 
@@ -117,16 +115,8 @@ export const TaskItem = memo(({ task }: { task: AITask }) => {
   const testRunMutation = useTestRunAITaskMutation()
   const { ask } = useDialog()
   const { t, i18n } = useTranslation("ai")
-  const sessions = useAIChatSessionListQuery()
-  // const chatActions = useChatActions()
-  const [openingReport, setOpeningReport] = useState(false)
   const status = getTaskStatus(task)
   const statusColorClass = getStatusColor(status)
-
-  const taskSession = useMemo(
-    () => sessions?.find((s) => s.chatId.startsWith(`ai-task-${task.id}`)),
-    [sessions, task.id],
-  )
 
   const handleEditTask = (task: AITask) => {
     present({
@@ -137,41 +127,7 @@ export const TaskItem = memo(({ task }: { task: AITask }) => {
 
   const isDeleting = deleteTaskMutation.isPending
 
-  const handleOpenReport = useCallback(async () => {
-    if (!taskSession) {
-      toast.error(t("tasks.toast.no_report"))
-      return
-    }
-    setOpeningReport(true)
-    try {
-      await AIChatSessionService.fetchAndPersistMessages(taskSession)
-    } catch (e) {
-      console.error("Failed to sync chat session messages:", e)
-      toast.error(t("tasks.toast.load_failed"))
-    }
-    setAIPanelVisibility(true)
-    const chatActions = ChatSliceActions.getActiveInstance()
-    if (!chatActions) {
-      console.error("No active chat session found.")
-    }
-    chatActions?.switchToChat(taskSession.chatId)
-    setOpeningReport(false)
-    toast(t("tasks.toast.switch_to_chat"))
-  }, [taskSession, t])
-
   const actions: ActionButton[] = [
-    // Only show if the task has at least one run
-    ...(taskSession
-      ? [
-          {
-            icon: "i-mgc-history-cute-re",
-            onClick: handleOpenReport,
-            title: t("tasks.actions.view_reports"),
-            loading: openingReport,
-            disabled: openingReport,
-          } satisfies ActionButton,
-        ]
-      : []),
     {
       icon: "i-mgc-test-tube-cute-re",
       onClick: async () => {

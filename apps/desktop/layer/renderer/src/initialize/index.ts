@@ -8,9 +8,7 @@ import { whoami } from "@follow/store/user/getters"
 import { fetchSessionUser } from "@follow/store/user/hooks"
 import { enableMapSet } from "immer"
 
-import { getFeature } from "~/hooks/biz/useFeature"
 import { initI18n } from "~/i18n"
-import { hydrateSessionsFromLocalDb } from "~/modules/ai-chat-session"
 import { settingSyncQueue } from "~/modules/settings/helper/sync-queue"
 import { ElectronCloseEvent, ElectronShowEvent } from "~/providers/invalidate-query-provider"
 import { clearLocalDataOfAnotherAccount } from "~/store/utils/clear"
@@ -67,10 +65,6 @@ export const initializeApp = async () => {
   initializeDayjs()
   registerHistoryStack()
 
-  // AI chat sessions only exist with AI on; the server configs of the last session are known here.
-  if (getFeature("ai")) {
-    hydrateSessionsFromLocalDb()
-  }
   // Set Environment
   document.documentElement.dataset.buildType = ELECTRON_BUILD ? "electron" : "web"
 

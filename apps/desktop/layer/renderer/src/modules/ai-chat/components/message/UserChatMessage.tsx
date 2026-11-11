@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next"
 
 import { RelativeTime } from "~/components/ui/datetime"
 import { useEditingMessageId, useSetEditingMessageId } from "~/modules/ai-chat/atoms/session"
-import { useChatActions, useChatScene, useChatStatus } from "~/modules/ai-chat/store/hooks"
+import { useChatActions, useChatStatus } from "~/modules/ai-chat/store/hooks"
 import type { AIChatContextBlock, BizUIMessage } from "~/modules/ai-chat/store/types"
 
 import { AIDataBlockPart } from "./AIDataBlockPart"
@@ -109,13 +109,11 @@ export const UserChatMessage: React.FC<UserChatMessageProps> = React.memo(({ mes
     chatActions.regenerate({ messageId })
   }, [chatActions, isStreaming, messageId])
 
-  const scene = useChatScene()
-
   return (
     <AIMessageIdContext value={messageId}>
       <div className="relative flex flex-col gap-3">
         {/* Render data-block parts separately, outside the chat bubble */}
-        {dataBlockParts.length > 0 && scene !== "onboarding" && dataBlockParts.length > 0 && (
+        {dataBlockParts.length > 0 && (
           <div ref={dataBlockRef} className="flex justify-end">
             <div className="max-w-[calc(100%-1rem)]">
               {dataBlockParts.map((part) => {

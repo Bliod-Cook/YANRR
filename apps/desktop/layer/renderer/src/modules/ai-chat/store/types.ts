@@ -1,5 +1,5 @@
 import type { BizUIMetadata, BizUITools, ToolWithState } from "@folo-services/ai-tools"
-import type { IdGenerator, UIMessage, UIMessagePart } from "ai"
+import type { UIMessage, UIMessagePart } from "ai"
 
 export interface FileAttachment {
   id: string
@@ -40,14 +40,6 @@ export type AIChatContextBlockInput =
   Omit<ValueContextBlock, "id"> | Omit<FileAttachmentContextBlock, "id">
 
 export type AIChatContextBlockType = AIChatContextBlock["type"]
-
-export interface AIChatStoreInitial {
-  blocks: AIChatContextBlock[]
-  chatId?: string
-  generateId?: IdGenerator
-  isLocal?: boolean
-  syncStatus?: "local" | "synced"
-}
 
 export interface AIChatContextBlocks {
   blocks: AIChatContextBlock[]

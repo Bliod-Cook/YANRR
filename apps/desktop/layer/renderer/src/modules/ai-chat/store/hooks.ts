@@ -92,21 +92,6 @@ export const useLastUserMessage = () => {
   })
 }
 
-export const useIsLocalChat = () => {
-  const store = useAIChatStore()
-  return store((state) => state.isLocal)
-}
-
-export const useSyncStatus = () => {
-  const store = useAIChatStore()
-  return store((state) => state.syncStatus)
-}
-
-export const useSyncStateActions = () => {
-  const store = useAIChatStore()
-  return store((state) => state.chatActions)
-}
-
 export const useChatBlockActions = () => useAIChatStore()((state) => state.blockActions)
 /**
  * Hook to get the chat status
@@ -122,14 +107,6 @@ export const useChatStatus = () => {
 export const useChatError = () => {
   const store = useAIChatStore()
   return store((state) => state.error)
-}
-
-/**
- * Hook to get the chat scene
- */
-export const useChatScene = () => {
-  const store = useAIChatStore()
-  return store((state) => state.scene)
 }
 
 export const useChatBlockSelector = <T>(selector: (state: Pick<BlockSlice, "blocks">) => T) => {

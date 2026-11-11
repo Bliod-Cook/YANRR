@@ -13,7 +13,6 @@ import {
   useAIChatPanelStyle,
 } from "~/atoms/settings/ai"
 import { useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
-import { useTimelineSummaryAutoContext } from "~/modules/ai-chat/hooks/useTimelineSummaryAutoContext"
 import {
   useBlockActions,
   useChatActions,
@@ -27,7 +26,6 @@ import { AIIcon } from "../AIIcon"
 import { ChatHistoryDropdown } from "./ChatHistoryDropdown"
 import { ChatMoreDropdown } from "./ChatMoreDropdown"
 import { AIHeaderTitle } from "./ChatTitle"
-import { TaskReportDropdown } from "./TaskReportDropdown"
 
 // Base header layout with shared logic inside
 const ChatHeaderLayout = ({
@@ -48,7 +46,6 @@ const ChatHeaderLayout = ({
   const chatActions = useChatActions()
   const blockActions = useBlockActions()
   const { t } = useTranslation("ai")
-  const shouldDisableTimelineSummary = useTimelineSummaryAutoContext()
   const settingModalPresent = useSettingModal()
   const panelStyle = useAIChatPanelStyle()
 
@@ -61,13 +58,9 @@ const ChatHeaderLayout = ({
       return
     }
 
-    if (shouldDisableTimelineSummary) {
-      chatActions.setTimelineSummaryManualOverride(true)
-    }
-
     chatActions.newChat()
     blockActions.clearBlocks({ keepSpecialTypes: true })
-  }, [chatActions, blockActions, shouldDisableTimelineSummary])
+  }, [chatActions, blockActions])
 
   const handleTogglePanelStyle = useCallback(() => {
     const newStyle =
@@ -200,8 +193,6 @@ export const ChatPageHeader = () => {
           <ActionButton tooltip={t("common.new_chat")} onClick={onNewChatClick}>
             <i className="i-mgc-edit-cute-re size-5 text-text-secondary" />
           </ActionButton>
-
-          <TaskReportDropdown />
 
           <div className="mx-2 h-5 w-px bg-border" />
           <ChatMoreDropdown

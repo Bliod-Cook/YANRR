@@ -4,18 +4,16 @@ import type { ChatSlice } from "./chat-core/types"
 import type { BlockSlice } from "./slices/block.slice"
 import { createBlockSlice } from "./slices/block.slice"
 import { createChatSlice } from "./slices/chat.slice"
-import type { AIChatStoreInitial } from "./types"
 
 export type AiChatStore = BlockSlice &
   ChatSlice & {
     reset: () => void
   }
 
-export const createAIChatStore = (initialState?: Partial<AIChatStoreInitial>) => {
-  const { blocks, chatId, generateId } = initialState || {}
+export const createAIChatStore = () => {
   return createWithEqualityFn<AiChatStore>((...a) => {
-    const blockSlice = createBlockSlice(blocks)(...a)
-    const chatSlice = createChatSlice({ chatId, generateId })(...a)
+    const blockSlice = createBlockSlice()(...a)
+    const chatSlice = createChatSlice()(...a)
 
     return {
       ...blockSlice,
