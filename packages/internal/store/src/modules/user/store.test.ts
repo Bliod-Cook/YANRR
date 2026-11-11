@@ -23,7 +23,7 @@ describe("userSyncService.whoami", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useUserStore.setState({ users: {}, whoami: me })
+    useUserStore.setState({ whoami: me })
     apiContext.provide({ auth: { getSession: getSessionMock } } as unknown as FollowAPI)
   })
 
@@ -64,7 +64,7 @@ describe("userSyncService.updateProfile", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    useUserStore.setState({ users: {}, whoami: me })
+    useUserStore.setState({ whoami: me })
     authClientContext.provide({ updateUser: updateUserMock } as unknown as AuthClient)
   })
 

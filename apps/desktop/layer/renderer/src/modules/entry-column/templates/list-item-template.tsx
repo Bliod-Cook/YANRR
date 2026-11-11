@@ -83,7 +83,6 @@ export function ListItem({
   const feed = useFeedById(entry?.feedId, (feed) => {
     return {
       type: feed.type,
-      ownerUserId: feed.ownerUserId,
       id: feed.id,
       title: feed.title,
       url: (feed as any).url || "",

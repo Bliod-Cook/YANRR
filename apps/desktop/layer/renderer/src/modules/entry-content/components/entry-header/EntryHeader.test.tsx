@@ -45,7 +45,6 @@ const post = {
   feedId: "social",
   inboxHandle: null,
   read: false,
-  sources: null,
   settings: null,
 } as EntryModel
 

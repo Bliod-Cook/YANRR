@@ -54,12 +54,6 @@ export const getEntryIdsByInboxIdSelector = (state: StateType) => (inboxId: stri
   return Array.from(ids).sort((a, b) => sortEntryIdsByPublishDate(a, b))
 }
 
-export const getEntryIdsByCategorySelector = (state: StateType) => (category: string) => {
-  const ids = state.entryIdByCategory[category]
-  if (!ids) return null
-  return Array.from(ids).sort((a, b) => sortEntryIdsByPublishDate(a, b))
-}
-
 export const getEntryIsInboxSelector = (state: StateType) => (entryId: string) => {
   const entry = state.data[entryId]
   if (!entry) return false
@@ -72,5 +66,4 @@ export const getEntryIdsByView = createStaticGetter(getState, getEntryIdsByViewS
 export const getEntryIdsByFeedId = createSingleArgGetter(getState, getEntryIdsByFeedIdSelector)
 export const getEntryIdsByFeedIds = createSingleArgGetter(getState, getEntryIdsByFeedIdsSelector)
 export const getEntryIdsByInboxId = createSingleArgGetter(getState, getEntryIdsByInboxIdSelector)
-export const getEntryIdsByCategory = createSingleArgGetter(getState, getEntryIdsByCategorySelector)
 export const isEntryInbox = createSingleArgGetter(getState, getEntryIsInboxSelector)

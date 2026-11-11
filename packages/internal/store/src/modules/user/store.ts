@@ -22,14 +22,16 @@ export type MeModel = Omit<
   | "emailVerified"
   | "twoFactorEnabled"
   | "lastLoginMethod"
+  | "handle"
+  | "bio"
+  | "website"
+  | "socialLinks"
 >
 export type UserStore = {
-  users: Record<string, UserModel>
   whoami: MeModel | null
 }
 
 const defaultState: UserStore = {
-  users: {},
   whoami: null,
 }
 
@@ -143,7 +145,6 @@ class UserActions implements Hydratable, Resetable {
   upsertManyInSession(users: UserModel[]) {
     immerSet((state) => {
       for (const user of users) {
-        state.users[user.id] = user
         if (user.isMe) {
           state.whoami = { ...user } as MeModel
         }

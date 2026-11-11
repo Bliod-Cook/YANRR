@@ -47,7 +47,6 @@ const episode = {
   feedId: "podcast",
   inboxHandle: null,
   read: false,
-  sources: null,
   settings: null,
 } as EntryModel
 

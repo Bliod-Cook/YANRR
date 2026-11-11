@@ -10,15 +10,12 @@ import type { Hydratable, Resetable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
 import { readNdjsonStream } from "../../lib/stream"
 import { apiMorph } from "../../morph/api"
-import { dbStoreMorph } from "../../morph/db-store"
-import { storeDbMorph } from "../../morph/store-db"
 import { entryReadOverlayKey } from "../../sync/overlay-keys"
 import { transactionQueue } from "../../sync/transaction-queue"
 import { collectionActions } from "../collection/store"
 import { clearAllFeedUnreadDirty, clearFeedUnreadDirty } from "../feed/hooks"
 import { feedActions } from "../feed/store"
 import { getSubscriptionById } from "../subscription/getter"
-import { getDefaultCategory } from "../subscription/utils"
 import type {
   FeedIdOrInboxHandle,
   InsertedBeforeTimeRangeFilter,
@@ -36,12 +33,10 @@ import { getEffectiveEntrySortOrder, getEntriesParams, isTimelineEntriesSource }
 type EntryId = string
 type FeedId = string
 type InboxId = string
-type Category = string
 
 interface EntryState {
   data: Record<EntryId, EntryModel>
   entryIdByView: Record<FeedViewType, Set<EntryId>>
-  entryIdByCategory: Record<Category, Set<EntryId>>
   entryIdByFeed: Record<FeedId, Set<EntryId>>
   entryIdByInbox: Record<InboxId, Set<EntryId>>
   entryIdSet: Set<EntryId>
@@ -58,7 +53,6 @@ const defaultState: EntryState = {
     [FeedViewType.SocialMedia]: new Set(),
     [FeedViewType.Videos]: new Set(),
   },
-  entryIdByCategory: {},
   entryIdByFeed: {},
   entryIdByInbox: {},
   entryIdSet: new Set(),
@@ -72,7 +66,7 @@ const immerSet = createImmerSetter(useEntryStore)
 class EntryActions implements Hydratable, Resetable {
   async hydrate() {
     const entries = await EntryService.getEntriesToHydrate()
-    entryActions.upsertManyInSession(entries.map((e) => dbStoreMorph.toEntryModel(e)))
+    entryActions.upsertManyInSession(entries)
   }
 
   getFlattenMapEntries() {
@@ -97,27 +91,6 @@ class EntryActions implements Hydratable, Resetable {
         draft.entryIdByView[subscription.view]?.add(entryId)
       }
       draft.entryIdByView[FeedViewType.All]!.add(entryId)
-    }
-  }
-
-  private addEntryIdToCategory({
-    draft,
-    feedId,
-    entryId,
-  }: {
-    draft: EntryState
-    feedId?: FeedId | null
-    entryId: EntryId
-  }) {
-    if (!feedId) return
-    const subscription = getSubscriptionById(feedId)
-    const category = subscription?.category || getDefaultCategory(subscription)
-    if (!category) return
-    const entryIdSetByCategory = draft.entryIdByCategory[category]
-    if (!entryIdSetByCategory) {
-      draft.entryIdByCategory[category] = new Set([entryId])
-    } else {
-      entryIdSetByCategory.add(entryId)
     }
   }
 
@@ -197,12 +170,6 @@ class EntryActions implements Hydratable, Resetable {
           feedId,
           entryId: nextEntry.id,
         })
-
-        this.addEntryIdToCategory({
-          draft,
-          feedId,
-          entryId: nextEntry.id,
-        })
       }
     })
   }
@@ -214,7 +181,7 @@ class EntryActions implements Hydratable, Resetable {
     })
 
     tx.persist(() => {
-      return EntryService.upsertMany(entries.map((e) => storeDbMorph.toEntrySchema(e)))
+      return EntryService.upsertMany(entries)
     })
 
     await tx.run()
@@ -395,13 +362,6 @@ class EntryActions implements Hydratable, Resetable {
     if (view === undefined) return
     immerSet((draft) => {
       draft.entryIdByView[view] = new Set(entries.map((e) => e.id))
-    })
-  }
-
-  resetByCategory({ category, entries }: { category?: Category; entries: EntryModel[] }) {
-    if (!category) return
-    immerSet((draft) => {
-      draft.entryIdByCategory[category] = new Set(entries.map((e) => e.id))
     })
   }
 

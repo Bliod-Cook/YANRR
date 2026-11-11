@@ -10,10 +10,7 @@ import type { ImageProps } from "../image/Image"
 import { Image } from "../image/Image"
 import { FallbackIcon } from "./fallback-icon"
 
-export type FeedIconRequiredFeed = Pick<
-  FeedSchema,
-  "ownerUserId" | "id" | "title" | "url" | "image"
-> & {
+export type FeedIconRequiredFeed = Pick<FeedSchema, "id" | "title" | "url" | "image"> & {
   type: FeedViewType
   siteUrl?: string
 }

@@ -1,7 +1,6 @@
 import type { FeedSchema, InboxSchema } from "@follow/database/schemas/types"
 import { getDateISOString } from "@follow/utils/utils"
 import type {
-  AddFeedsResponse,
   AuthUser,
   EntryGetByIdResponse,
   EntryListResponse,
@@ -60,7 +59,6 @@ class APIMorph {
       feedId: data.feeds.id,
       inboxHandle: "feeds" in data ? (data.feeds.type === "inbox" ? data.feeds.id : null) : null,
       read: data.read ?? current?.read ?? false,
-      sources: null,
       settings: "settings" in data ? data.settings || null : null,
     }
   }
@@ -98,7 +96,6 @@ class APIMorph {
           errorAt: feed.errorAt!,
           errorMessage: feed.errorMessage!,
           image: feed.image!,
-          ownerUserId: feed.ownerUserId!,
           siteUrl: feed.siteUrl!,
           title: feed.title!,
           url: feed.url,
@@ -181,7 +178,6 @@ class APIMorph {
         feedId: item.feeds.id,
         inboxHandle: item.feeds.type === "inbox" ? item.feeds.id : null,
         read: item.read,
-        sources: "from" in item && Array.isArray(item.from) ? item.from : null,
         settings: item.settings ?? null,
       })
     }
@@ -196,22 +192,6 @@ class APIMorph {
       url: data.url,
       image: data.image,
       description: data.description,
-      ownerUserId: data.ownerUserId,
-      errorAt: data.errorAt,
-      errorMessage: data.errorMessage,
-      siteUrl: data.siteUrl,
-    }
-  }
-
-  toFeedFromAddFeeds(data: AddFeedsResponse["data"][number]): FeedModel {
-    return {
-      type: "feed",
-      id: data.id,
-      title: data.title,
-      url: data.url,
-      image: data.image,
-      description: data.description,
-      ownerUserId: data.ownerUserId,
       errorAt: data.errorAt,
       errorMessage: data.errorMessage,
       siteUrl: data.siteUrl,
@@ -223,11 +203,7 @@ class APIMorph {
       id: data.id,
       name: data.name,
       email: data.email,
-      handle: data.handle,
       image: data.image,
-      bio: data.bio,
-      website: data.website,
-      socialLinks: data.socialLinks,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       isAnonymous: data.isAnonymous,

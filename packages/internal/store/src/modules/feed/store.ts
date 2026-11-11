@@ -111,25 +111,6 @@ class FeedActions implements Hydratable, Resetable {
     )
   }
 
-  patchInSession(feedId: string, patch: Partial<FeedSchema>) {
-    immerSet((state) => {
-      const feed = state.feeds[feedId]
-      if (!feed) return
-      Object.assign(feed, patch)
-    })
-  }
-
-  async patch(feedId: string, patch: Partial<FeedSchema>) {
-    const tx = createTransaction()
-    tx.store(() => {
-      this.patchInSession(feedId, patch)
-    })
-    tx.persist(() => {
-      return FeedService.patch(feedId, patch)
-    })
-    await tx.run()
-  }
-
   async reset() {
     const tx = createTransaction()
     tx.store(() => {

@@ -61,7 +61,6 @@ test("refreshes a followed feed on the server, then loads its entries again", as
       id: feedId,
       url: "https://example.com/feed.xml",
       title: "Example",
-      ownerUserId: null,
     },
   ])
   void subscriptionActions.upsertManyInSession([

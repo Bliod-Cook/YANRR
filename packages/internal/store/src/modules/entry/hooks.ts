@@ -15,7 +15,6 @@ import { useFeedUnreadIsDirty } from "../feed/hooks"
 import { useSyncUnreadWhenUnMatch } from "../unread/hooks"
 import type { UnreadListScope } from "../unread/types"
 import {
-  getEntryIdsByCategorySelector,
   getEntryIdsByFeedIdSelector,
   getEntryIdsByFeedIdsSelector,
   getEntryIdsByInboxIdSelector,
@@ -478,12 +477,6 @@ export const useEntryIdsByInboxId = (inboxId: string | undefined, enabled = true
       (state) => (enabled ? getEntryIdsByInboxIdSelector(state)(inboxId) : null),
       [enabled, inboxId],
     ),
-  )
-}
-
-export const useEntryIdsByCategory = (category: string) => {
-  return useEntryStore(
-    useCallback((state) => getEntryIdsByCategorySelector(state)(category), [category]),
   )
 }
 

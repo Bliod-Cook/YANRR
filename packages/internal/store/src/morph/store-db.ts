@@ -1,19 +1,12 @@
-import type { EntrySchema, SubscriptionSchema } from "@follow/database/schemas/types"
+import type { SubscriptionSchema } from "@follow/database/schemas/types"
 
-import type { EntryModel } from "../modules/entry/types"
 import type { SubscriptionModel } from "../modules/subscription/types"
 
 class StoreDbMorph {
   toSubscriptionSchema(subscription: SubscriptionModel): SubscriptionSchema {
     return {
       ...subscription,
-      isPrivate: false,
       id: buildSubscriptionDbId(subscription),
-    }
-  }
-  toEntrySchema(entry: EntryModel): EntrySchema {
-    return {
-      ...entry,
     }
   }
 }

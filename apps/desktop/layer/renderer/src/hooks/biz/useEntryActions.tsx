@@ -257,7 +257,6 @@ export const useEntryActions = ({ entryId, view }: { entryId: string; view: Feed
   const feed = useFeedById(entry?.feedId, (feed) => {
     return {
       type: feed.type,
-      ownerUserId: feed.ownerUserId,
       id: feed.id,
       siteUrl: feed.siteUrl,
     }

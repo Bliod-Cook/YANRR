@@ -53,7 +53,6 @@ const createEntry = (id: string, fields: Partial<EntryModel>) =>
     feedId: "feed-1",
     inboxHandle: null,
     read: false,
-    sources: null,
     settings: null,
     ...fields,
   }) as EntryModel

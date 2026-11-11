@@ -1,4 +1,3 @@
-import { Skeleton } from "@follow/components/ui/skeleton/index.jsx"
 import {
   Tooltip,
   TooltipContent,
@@ -33,10 +32,8 @@ import { HighlightedText } from "~/modules/spotlight/HighlightedText"
 import { getPreferredTitle } from "~/store/feed/hooks"
 
 import { StarIcon } from "../star-icon"
-import { readableContentMaxWidth } from "../styles"
 import type { EntryItemStatelessProps, UniversalItemProps } from "../types"
-
-const ViewTag = IN_ELECTRON ? "webview" : "iframe"
+import { VideoPreview } from "./video-preview"
 
 const entrySelector = (state: EntryModel) => {
   /// keep-sorted
@@ -93,7 +90,6 @@ export function AllItem({ entryId, translation, currentFeedTitle }: UniversalIte
   const feed = useFeedById(entry?.feedId, (feed) => {
     return {
       type: feed.type,
-      ownerUserId: feed.ownerUserId,
       id: feed.id,
       title: feed.title,
       url: (feed as any).url || "",
@@ -243,25 +239,6 @@ export function AllItemStateLess({ entry, feed }: EntryItemStatelessProps) {
   )
 }
 
-export const AllItemSkeleton = (
-  <div className={`relative w-full select-none ${readableContentMaxWidth}`}>
-    <div className="group relative flex py-4">
-      <Skeleton className="mr-2 size-5 shrink-0 overflow-hidden" />
-      <div className="-mt-0.5 line-clamp-4 flex-1 text-sm leading-tight">
-        <div className="flex gap-1 text-[10px] font-bold text-material-opaque">
-          <Skeleton className="h-3 w-32 truncate" />
-          <span>·</span>
-          <Skeleton className="h-3 w-12 shrink-0" />
-        </div>
-        <div className="relative my-0.5 break-words">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="mt-2 h-4 w-3/4" />
-        </div>
-      </div>
-    </div>
-  </div>
-)
-
 function AudioIcon({ entryId, src }: { entryId: string; src: string }) {
   const playStatus = useAudioPlayerAtomSelector(
     (playerValue) => (playerValue.src === src && playerValue.show ? playerValue.status : false),
@@ -314,8 +291,7 @@ function VideoIcon({ src }: { src: string }) {
         <TooltipPortal>
           <TooltipContent className="flex-col gap-1" side={"bottom"}>
             <div className="flex items-center gap-1">
-              <ViewTag
-                referrerPolicy="strict-origin-when-cross-origin"
+              <VideoPreview
                 src={src}
                 className={cn(
                   "pointer-events-none aspect-video w-[575px] shrink-0 rounded-md bg-black object-cover",

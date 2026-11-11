@@ -48,7 +48,6 @@ const createEntry = (id: string, settings: EntryModel["settings"]) =>
     feedId: "feed-1",
     inboxHandle: null,
     read: false,
-    sources: null,
     settings,
   }) as EntryModel
 
