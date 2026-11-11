@@ -1,5 +1,4 @@
-import type { FeedViewType } from "@follow/constants"
-import { and, eq, inArray, notInArray } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 
 import { db } from "../db"
 import { feedsTable, inboxesTable, subscriptionsTable } from "../schemas"
@@ -36,21 +35,6 @@ class SubscriptionServiceStatic implements Resetable {
 
   async patchMany({ feedIds, data }: { feedIds: string[]; data: Partial<SubscriptionSchema> }) {
     await db.update(subscriptionsTable).set(data).where(inArray(subscriptionsTable.feedId, feedIds))
-  }
-
-  async deleteNotExists(existsIds: string[], view?: FeedViewType) {
-    const notExistsIds = await db.query.subscriptionsTable.findMany({
-      where: and(
-        notInArray(subscriptionsTable.id, existsIds),
-        typeof view === "number" ? eq(subscriptionsTable.view, view) : undefined,
-      ),
-      columns: {
-        id: true,
-      },
-    })
-    if (notExistsIds.length === 0) return
-
-    this.delete(notExistsIds.map((s) => s.id))
   }
 
   async delete(id: string | string[]) {
