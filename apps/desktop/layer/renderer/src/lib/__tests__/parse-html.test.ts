@@ -1,5 +1,10 @@
+import * as React from "react"
+import { act, createElement } from "react"
+import { createRoot } from "react-dom/client"
 import { renderToString } from "react-dom/server"
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
+
+import { ShadowDOM } from "~/components/common/ShadowDOM"
 
 import { extractCodeFromHtml, parseHtml } from "../parse-html"
 
@@ -450,5 +455,74 @@ describe("parseHtml paragraphs", () => {
 
     expect(html.startsWith("<p")).toBe(true)
     expect(hasDivInsideParagraph(html)).toBe(false)
+  })
+})
+
+describe("parseHtml style blocks", () => {
+  const renderStyles = async (css: string) => {
+    const container = document.createElement("div")
+    document.body.append(container)
+    const root = createRoot(container)
+    await act(async () =>
+      root.render(
+        createElement(
+          ShadowDOM,
+          { injectHostStyles: false },
+          parseHtml(`<style>${css}</style>`, { renderInlineStyle: true }).toContent(),
+        ),
+      ),
+    )
+    const { shadowRoot } = [...container.querySelectorAll("div")].find((div) => div.shadowRoot)!
+    const styles = [...shadowRoot!.querySelectorAll("style")].map((style) => ({
+      text: style.textContent,
+      elements: style.children.length,
+    }))
+    await act(async () => root.unmount())
+    container.remove()
+    return styles
+  }
+
+  beforeAll(() => {
+    ;(globalThis as typeof globalThis & { React: typeof React }).React = React
+    ;(
+      globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true
+
+    // react-shadow attaches again on every render and expects the NotSupportedError browsers
+    // throw for a second shadow root; happy-dom throws an unnamed DOMException
+    const { attachShadow } = Element.prototype
+    Element.prototype.attachShadow = function (init) {
+      if (this.shadowRoot) throw new DOMException("Already a shadow host", "NotSupportedError")
+      return attachShadow.call(this, init)
+    }
+  })
+
+  it("should point html and body selectors at the article and leave the rest alone", async () => {
+    const css = [
+      "html, body { margin: 0 }",
+      "body.dark p {}",
+      "@media (min-width: 1px) { body { color: red } }",
+      "tbody td, .email-body, #body, a[href*=body] {}",
+      "div { background: url(/body/a.html) }",
+    ]
+
+    expect(await renderStyles(css.join("\n"))).toEqual([
+      {
+        text: [
+          "#shadow-html, #shadow-html { margin: 0 }",
+          "#shadow-html.dark p {}",
+          "@media (min-width: 1px) { #shadow-html { color: red } }",
+          "tbody td, .email-body, #body, a[href*=body] {}",
+          "div { background: url(/body/a.html) }",
+        ].join("\n"),
+        elements: 0,
+      },
+    ])
+  })
+
+  it("should render the text as text, never as markup", async () => {
+    expect(await renderStyles('p::after { content: "<b>x</b>" }')).toEqual([
+      { text: 'p::after { content: "<b>x</b>" }', elements: 0 },
+    ])
   })
 })

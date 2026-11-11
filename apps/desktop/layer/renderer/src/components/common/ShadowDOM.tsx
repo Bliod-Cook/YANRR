@@ -1,4 +1,3 @@
-import { MemoedDangerousHTMLStyle } from "@follow/components/common/MemoedDangerousHTMLStyle.js"
 import { useIsDark } from "@follow/hooks"
 import { getAccentColorValue } from "@follow/shared/settings/constants"
 import { hexToHslString } from "@follow/utils"
@@ -29,12 +28,7 @@ const cloneStylesElement = () => {
       weakMapElementKey.set($style, key)
     }
 
-    reactNodes.push(
-      createElement(MemoedDangerousHTMLStyle, {
-        key,
-        children: $style.innerHTML,
-      }),
-    )
+    reactNodes.push(createElement("style", { key }, $style.textContent))
   }
 
   // Once per linked sheet, independent of the inline styles above
@@ -45,13 +39,7 @@ const cloneStylesElement = () => {
       weakMapElementKey.set(style.ref, key)
     }
 
-    reactNodes.push(
-      createElement(MemoedDangerousHTMLStyle, {
-        key,
-        children: style.cssText,
-        ["data-href"]: style.ref.href,
-      }),
-    )
+    reactNodes.push(createElement("style", { key, "data-href": style.ref.href }, style.cssText))
   }
 
   return reactNodes
@@ -114,28 +102,33 @@ export const ShadowDOM: FC<
   ])
 
   return (
-    // @ts-expect-error
-    <root.div {...rest} ref={setEl}>
-      <ShadowDOMContext value={true}>
-        <div
-          style={useMemo(
-            () => ({
-              fontFamily: buildAppFontFamily(uiFont),
-              "--pointer": usePointerCursor ? "pointer" : "default",
-              "--fo-a": hexToHslString(getAccentColorValue(accentColor)[dark ? "dark" : "light"]),
-            }),
-            [uiFont, usePointerCursor, accentColor, dark],
-          )}
-          id="shadow-html"
-          data-motion-reduce={reduceMotion}
-          data-theme={dark ? "dark" : "light"}
-          className="font-theme"
-        >
-          {injectHostStyles ? stylesElements : null}
-          {props.children}
-        </div>
-      </ShadowDOMContext>
-    </root.div>
+    // Content styles can restyle the host through :host, even with !important, but not this
+    // wrapper: its paint containment keeps everything, fixed positioning included, in this box.
+    // The clip margin leaves room for the heading anchors beside the text.
+    <div className="contain-paint [overflow-clip-margin:3rem]">
+      {/* @ts-expect-error */}
+      <root.div {...rest} ref={setEl}>
+        <ShadowDOMContext value={true}>
+          <div
+            style={useMemo(
+              () => ({
+                fontFamily: buildAppFontFamily(uiFont),
+                "--pointer": usePointerCursor ? "pointer" : "default",
+                "--fo-a": hexToHslString(getAccentColorValue(accentColor)[dark ? "dark" : "light"]),
+              }),
+              [uiFont, usePointerCursor, accentColor, dark],
+            )}
+            id="shadow-html"
+            data-motion-reduce={reduceMotion}
+            data-theme={dark ? "dark" : "light"}
+            className="font-theme"
+          >
+            {injectHostStyles ? stylesElements : null}
+            {props.children}
+          </div>
+        </ShadowDOMContext>
+      </root.div>
+    </div>
   )
 }
 

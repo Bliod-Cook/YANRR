@@ -1,6 +1,8 @@
 import { FeedViewType } from "@follow/constants"
 import { useEntry } from "@follow/store/entry/hooks"
 import { getFeedById } from "@follow/store/feed/getter"
+import { resolveContentUrl } from "@follow/utils/content-url"
+import { timeStringToSeconds } from "@follow/utils/utils"
 import { useMemo } from "react"
 import type { JSX } from "react/jsx-runtime"
 
@@ -15,7 +17,6 @@ import type { MarkdownImage, MarkdownRenderActions } from "~/components/ui/markd
 
 import { TimeStamp } from "./components/TimeStamp"
 import { EntryInfoContext } from "./context"
-import { useImageContextMenu } from "./hooks/useImageContextMenu"
 import type { EntryContentRendererProps } from "./types"
 
 export function EntryContentHTMLRenderer<AS extends keyof JSX.IntrinsicElements = "div">({
@@ -47,26 +48,17 @@ export function EntryContentHTMLRenderer<AS extends keyof JSX.IntrinsicElements 
     [media],
   )
   const coverImageUrl = media?.[0]?.type === "photo" ? media[0].url : undefined
-  const onImageContextMenu = useImageContextMenu(entry?.url)
   const actions: MarkdownRenderActions = useMemo(() => {
     return {
       isAudio() {
         return view === FeedViewType.Audios
       },
       transformUrl(url) {
-        if (!url || url.startsWith("http")) return url
-
-        const feed = getFeedById(feedId)
-        if (url.startsWith("/") && feed?.siteUrl) return safeUrl(url, feed.siteUrl)
-
-        if (url?.startsWith(".") && entry?.url) return safeUrl(url, entry?.url)
-
-        return url
+        return url && resolveContentUrl(url, entry?.url || getFeedById(feedId)?.siteUrl)
       },
       ensureAndRenderTimeStamp,
-      onImageContextMenu,
     }
-  }, [entry?.url, feedId, onImageContextMenu, view])
+  }, [entry?.url, feedId, view])
   return (
     <MarkdownImageRecordContext.Provider value={images}>
       <MarkdownRenderActionContext value={actions}>
@@ -86,22 +78,13 @@ export function EntryContentHTMLRenderer<AS extends keyof JSX.IntrinsicElements 
   )
 }
 
-const safeUrl = (url: string, baseUrl: string) => {
-  try {
-    return new URL(url, baseUrl).href
-  } catch {
-    return url
-  }
-}
-
 const ensureAndRenderTimeStamp = (children: string) => {
   const firstPart = children.replace(" ", " ").split(" ")[0]
   // 00:00 , 00:00:00
   if (!firstPart) {
     return
   }
-  const isTime = isValidTimeString(firstPart.trim())
-  if (isTime) {
+  if (timeStringToSeconds(firstPart.trim()) !== null) {
     return (
       <>
         <TimeStamp time={firstPart} />
@@ -110,8 +93,4 @@ const ensureAndRenderTimeStamp = (children: string) => {
     )
   }
   return false
-}
-function isValidTimeString(time: string): boolean {
-  const timeRegex = /^\d{1,2}:[0-5]\d(?::[0-5]\d)?$/
-  return timeRegex.test(time)
 }

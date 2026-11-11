@@ -1,15 +1,15 @@
-import { MemoedDangerousHTMLStyle } from "@follow/components/common/MemoedDangerousHTMLStyle.jsx"
 import { Checkbox } from "@follow/components/ui/checkbox/index.jsx"
 import { LazyKateX } from "@follow/components/ui/katex/lazy.js"
 import type { SpotlightRule } from "@follow/shared/spotlight"
 import { applySpotlightToHast, parseHtml as parseHtmlGeneral } from "@follow/utils/html"
 import type { Element, ElementContent, Root } from "hast"
 import type { Components } from "hast-util-to-jsx-runtime"
-import { createElement } from "react"
+import { createElement, use } from "react"
 import { renderToString } from "react-dom/server"
 
 import { ShadowDOM } from "~/components/common/ShadowDOM"
 import { ShikiHighLighter } from "~/components/ui/code-highlighter"
+import { MarkdownRenderActionContext } from "~/components/ui/markdown/context"
 import { MarkdownBlockImage, MarkdownLink, MarkdownP } from "~/components/ui/markdown/renderers"
 import { useIsInParagraphContext } from "~/components/ui/markdown/renderers/ctx"
 import { createHeadingRenderer } from "~/components/ui/markdown/renderers/Heading"
@@ -100,27 +100,7 @@ export const parseHtml = (
         return createHeadingRenderer(6)(props)
       },
       style: Style,
-
-      video: ({ node, ...props }) => {
-        const sourceElement = Array.isArray(props.children)
-          ? props.children.find((i) => i.type === "source")
-          : // Children is only the source element
-            props.children &&
-              typeof props.children === "object" &&
-              "type" in props.children &&
-              props.children.type === "source"
-            ? props.children
-            : null
-
-        const src = props.src || sourceElement?.props.src
-        return createElement(Media, {
-          ...props,
-          popper: true,
-          type: "video",
-          previewImageUrl: props.poster,
-          src,
-        })
-      },
+      video: Video,
 
       p: ({ node, ref, ...props }) => {
         if (node?.children && node.children.length !== 1) {
@@ -165,35 +145,7 @@ export const parseHtml = (
         }
         return createElement("input", props)
       },
-      iframe: ({ node, ...props }) => {
-        const { width, height, src, referrerPolicy, ...rest } = props
-
-        // Apply security sandbox attributes and responsive styling
-        return createElement("iframe", {
-          ...rest,
-          src,
-          width: width || "100%",
-          height: height || "315",
-          className: "max-w-full rounded",
-          sandbox: "allow-scripts allow-same-origin allow-popups allow-forms",
-          allowFullScreen: true,
-          loading: "lazy",
-          // Avoid YouTube Error 153 https://developers.google.com/youtube/terms/required-minimum-functionality#embedded-player-api-client-identity
-          ...(typeof src === "string" &&
-            youtubeEmbedRegex.test(src) && {
-              referrerPolicy:
-                !referrerPolicy ||
-                referrerPolicy === "no-referrer" ||
-                referrerPolicy === "same-origin"
-                  ? "strict-origin-when-cross-origin"
-                  : referrerPolicy,
-            }),
-          style: {
-            aspectRatio: width && height ? `${width} / ${height}` : "16 / 9",
-            ...rest.style,
-          },
-        })
-      },
+      iframe: Iframe,
       pre: ({ node, ...props }) => {
         if (!props.children) return null
 
@@ -272,18 +224,13 @@ export const parseHtml = (
 }
 
 const Img: Components["img"] = ({ node, ...props }) => {
-  const nextProps = {
-    ...props,
-    preferOrigin: true,
-    proxy: { height: 0, width: 700 },
-  }
   const widthPx = Number.parseInt(props.width as string)
 
   return createElement(
     node?.properties.inline && (Number.isNaN(widthPx) || widthPx < 600)
       ? MarkdownInlineImage
       : MarkdownBlockImage,
-    nextProps,
+    props,
   )
 }
 
@@ -348,14 +295,70 @@ export function extractCodeFromHtml(htmlString: string) {
   return tempDiv.textContent
 }
 
+const Video: Components["video"] = ({ node, ...props }) => {
+  const { transformUrl } = use(MarkdownRenderActionContext)
+  const sourceElement = Array.isArray(props.children)
+    ? props.children.find((i) => i.type === "source")
+    : // Children is only the source element
+      props.children &&
+        typeof props.children === "object" &&
+        "type" in props.children &&
+        props.children.type === "source"
+      ? props.children
+      : null
+
+  return createElement(Media, {
+    ...props,
+    popper: true,
+    type: "video",
+    previewImageUrl: transformUrl(props.poster),
+    src: transformUrl(props.src || sourceElement?.props.src),
+  })
+}
+
+// The sandbox comes from the sanitizer, whatever the content set
+const Iframe: Components["iframe"] = ({ node, width, height, src, referrerPolicy, ...rest }) => {
+  const { transformUrl } = use(MarkdownRenderActionContext)
+  const url = transformUrl(src)
+  // The sandbox allows scripts and the frame's own origin, so a frame from the app's origin could
+  // lift it
+  if (!url || new URL(url, window.location.href).origin === window.location.origin) return null
+
+  return createElement("iframe", {
+    ...rest,
+    src: url,
+    width: width || "100%",
+    height: height || "315",
+    className: "max-w-full rounded",
+    allowFullScreen: true,
+    loading: "lazy",
+    // Avoid YouTube Error 153 https://developers.google.com/youtube/terms/required-minimum-functionality#embedded-player-api-client-identity
+    ...(youtubeEmbedRegex.test(url) && {
+      referrerPolicy:
+        !referrerPolicy || referrerPolicy === "no-referrer" || referrerPolicy === "same-origin"
+          ? "strict-origin-when-cross-origin"
+          : referrerPolicy,
+    }),
+    style: {
+      aspectRatio: width && height ? `${width} / ${height}` : "16 / 9",
+      ...rest.style,
+    },
+  })
+}
+
+// `html` or `body` as a type selector: not part of a longer name, a class, an id or a URL
+const rootTypeSelector = /(^|[\s,>+~(){};])(?:html|body)(?=[\s,>+~).:#[{]|$)/gi
+
+// The content renders inside #shadow-html, which stands in for its page's html and body. As
+// children, React writes the text as text: the style never parses into markup
 const Style: Components["style"] = ({ node, ...props }) => {
   const isShadowDOM = ShadowDOM.useIsShadowDOM()
 
   if (isShadowDOM && typeof props.children === "string") {
     return createElement(
-      MemoedDangerousHTMLStyle,
+      "style",
       null,
-      props.children.replaceAll(/html|body/g, "#shadow-html"),
+      props.children.replaceAll(rootTypeSelector, "$1#shadow-html"),
     )
   }
   return null

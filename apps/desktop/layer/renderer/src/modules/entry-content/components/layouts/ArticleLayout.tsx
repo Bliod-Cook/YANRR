@@ -77,7 +77,7 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
         hasTranscript={!!subtitles}
       />
 
-      <WrappedElementProvider boundingDetection>
+      <WrappedElementProvider>
         <div className="mx-auto mb-32 mt-6 max-w-full cursor-auto text-[0.94rem]">
           {shouldShowAISummary && <AISummary entryId={entryId} />}
           <ErrorBoundary fallback={EntryRenderError}>
