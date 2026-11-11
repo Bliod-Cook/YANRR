@@ -5,7 +5,6 @@
   "app.toggle_sidebar": "Basculer la barre latérale",
   "app_tip.title": "Astuce de l'application",
   "clipboard.copy_failed": "Impossible de copier dans le presse-papiers. Vérifiez que l'accès au presse-papiers est autorisé.",
-  "clipboard.copy_image_failed": "Impossible de copier l'image dans le presse-papiers. Vérifiez que l'accès au presse-papiers est autorisé.",
   "clipboard.read_failed": "Impossible de lire le presse-papiers. Vérifiez que l'accès au presse-papiers est autorisé.",
   "discover.default_option": " (défaut)",
   "discover.feed_description": "La description de ce flux est la suivante, et vous pouvez remplir le formulaire de paramètres avec les informations pertinentes.",
