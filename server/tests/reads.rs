@@ -71,6 +71,22 @@ async fn read_marks_flip_once() {
     );
 }
 
+#[tokio::test]
+async fn unread_marks_go_with_their_subscription() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    subscribe(&app, &fixtures.url("/rss"), json!({})).await;
+
+    app.state
+        .db
+        .execute_unprepared("DELETE FROM subscriptions")
+        .await
+        .unwrap();
+
+    let unread = unread::Entity::find().count(&app.state.db).await.unwrap();
+    assert_eq!(unread, 0);
+}
+
 /// Waits until `count` sessions wait for a lock.
 async fn lock_waiters(app: &TestApp, count: i64) {
     let sql = "SELECT count(*) AS n FROM pg_stat_activity WHERE wait_event_type = 'Lock'";

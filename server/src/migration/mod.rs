@@ -48,6 +48,10 @@ impl MigratorTrait for Migrator {
             sql!("m20261027_000001_timeline_index", "timeline_index.sql"),
             sql!("m20261030_000001_ai_cache", "ai_cache.sql"),
             sql!("m20261109_000001_search_queue", "search_queue.sql"),
+            sql!(
+                "m20261112_000001_unread_subscriptions",
+                "unread_subscriptions.sql"
+            ),
         ]
     }
 }

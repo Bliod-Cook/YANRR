@@ -11,7 +11,7 @@ use serde_json::{Value, json};
 
 use super::{
     entries::{INBOX_TIMELINE, Params, Scope, TIMELINE},
-    error::{ApiJson, ApiQuery, ApiResult},
+    error::{ApiJson, ApiQuery, ApiResult, single_view},
     inboxes,
     response::{ok, synced},
     session::AuthUser,
@@ -151,8 +151,8 @@ pub async fn mark_unread(
             let condition = format!("e.id = {entry_id}");
             flip_inbox(&txn, false, &condition, params).await?
         } else {
-            // The subscription is locked, so an unsubscribe in flight either waits and then drops this row
-            // too, or removes the subscription first and leaves nothing to insert.
+            // The subscription is locked, so an unsubscribe in flight either waits and then takes this row
+            // along, or removes the subscription first and leaves nothing to insert.
             let sql = format!(
                 "INSERT INTO unreads (user_id, entry_id, feed_id)
                 SELECT s.user_id, e.id, e.feed_id
@@ -253,6 +253,26 @@ struct Count {
     count: i64,
 }
 
+/// The query of the user's unread entries per feed and inbox in `view`, or every view, as `counter` and `count`.
+fn count_query(user_id: String, view: Option<i16>) -> (String, Params) {
+    let mut params = Params(vec![user_id.into()]);
+    let mut sql = "SELECT u.feed_id::text AS counter, count(*) AS count FROM unreads u
+        JOIN subscriptions s ON s.user_id = u.user_id AND s.feed_id = u.feed_id
+        WHERE u.user_id = $1"
+        .to_string();
+    if let Some(view) = single_view(view) {
+        sql += &format!(" AND s.view = {}", params.bind(view));
+    }
+    sql += " GROUP BY u.feed_id";
+    if inboxes::in_view(view) {
+        sql += &format!(
+            " UNION ALL SELECT e.inbox_handle, count(*) {INBOX_TIMELINE} WHERE NOT e.read
+            GROUP BY e.inbox_handle"
+        );
+    }
+    (sql, params)
+}
+
 /// `GET /reads`: unread entries per feed and inbox, with the change log id the counts include, so a client
 /// replaying the log does not count those changes twice.
 pub async fn counts(
@@ -260,21 +280,7 @@ pub async fn counts(
     user: AuthUser,
     ApiQuery(query): ApiQuery<CountQuery>,
 ) -> ApiResult<Json<Value>> {
-    let mut params = Params(vec![user.id.into()]);
-    let mut sql = "SELECT u.feed_id::text AS counter, count(*) AS count FROM unreads u
-        JOIN subscriptions s ON s.user_id = u.user_id AND s.feed_id = u.feed_id
-        WHERE u.user_id = $1"
-        .to_string();
-    if let Some(view) = query.view.filter(|view| *view != -1) {
-        sql += &format!(" AND s.view = {}", params.bind(view));
-    }
-    sql += " GROUP BY u.feed_id";
-    if inboxes::in_view(query.view) {
-        sql += &format!(
-            " UNION ALL SELECT e.inbox_handle, count(*) {INBOX_TIMELINE} WHERE NOT e.read
-            GROUP BY e.inbox_handle"
-        );
-    }
+    let (sql, params) = count_query(user.id, query.view);
     let txn = sync::snapshot(&state.db).await?;
     let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
     let counts = Count::find_by_statement(statement).all(&txn).await?;
@@ -289,13 +295,11 @@ pub async fn counts(
     ))
 }
 
-/// `GET /reads/total-count`
+/// `GET /reads/total-count`: what `GET /reads` counts for every view, added up.
 pub async fn total(State(state): State<AppState>, user: AuthUser) -> ApiResult<Json<Value>> {
-    let sql = format!(
-        "SELECT (SELECT count(*) FROM unreads WHERE user_id = $1)
-            + (SELECT count(*) {INBOX_TIMELINE} WHERE NOT e.read) AS count"
-    );
-    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, [user.id.into()]);
+    let (counts, params) = count_query(user.id, None);
+    let sql = format!("SELECT COALESCE(sum(count), 0)::bigint AS count FROM ({counts}) counts");
+    let statement = Statement::from_sql_and_values(DbBackend::Postgres, sql, params.0);
     let row = state
         .db
         .query_one_raw(statement)
