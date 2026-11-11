@@ -4,7 +4,7 @@ use std::{
     collections::HashMap,
     io::Write,
     sync::{
-        Arc, Mutex,
+        Arc, Mutex, Weak,
         atomic::{AtomicUsize, Ordering},
     },
     time::Duration,
@@ -30,12 +30,36 @@ use yanrr::{
 
 pub const PASSWORD: &str = "correct-horse-battery";
 
-/// A running server backed by its own PostgreSQL instance, stopped on drop.
+/// The PostgreSQL server the running tests of this binary share; it stops when the last of them ends.
+static POSTGRES: tokio::sync::Mutex<Weak<PostgreSQL>> = tokio::sync::Mutex::const_new(Weak::new());
+static DATABASES: AtomicUsize = AtomicUsize::new(0);
+
+/// The shared PostgreSQL server, started when no test holds it.
+async fn postgres() -> Arc<PostgreSQL> {
+    let mut shared = POSTGRES.lock().await;
+    if let Some(postgres) = shared.upgrade() {
+        return postgres;
+    }
+    // initdb on Windows easily exceeds the 5 s default, and the tests of a binary together may open more
+    // connections than the default 100.
+    let settings = SettingsBuilder::new()
+        .timeout(Some(Duration::from_secs(60)))
+        .config("max_connections", "300")
+        .build();
+    let mut postgres = PostgreSQL::new(settings);
+    postgres.setup().await.unwrap();
+    postgres.start().await.unwrap();
+    let postgres = Arc::new(postgres);
+    *shared = Arc::downgrade(&postgres);
+    postgres
+}
+
+/// A running server backed by its own database on the shared PostgreSQL server.
 pub struct TestApp {
     pub url: String,
     pub client: Client,
     pub state: AppState,
-    _postgres: PostgreSQL,
+    _postgres: Arc<PostgreSQL>,
     _search: TempDir,
 }
 
@@ -45,15 +69,9 @@ impl TestApp {
     }
 
     pub async fn spawn_with(customize: impl FnOnce(&mut Config)) -> Self {
-        // initdb on Windows easily exceeds the 5 s default.
-        let mut postgres = PostgreSQL::new(
-            SettingsBuilder::new()
-                .timeout(Some(Duration::from_secs(60)))
-                .build(),
-        );
-        postgres.setup().await.unwrap();
-        postgres.start().await.unwrap();
-        postgres.create_database("yanrr").await.unwrap();
+        let postgres = postgres().await;
+        let database = format!("test{}", DATABASES.fetch_add(1, Ordering::Relaxed));
+        postgres.create_database(&database).await.unwrap();
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
@@ -67,7 +85,7 @@ impl TestApp {
             [auth]
             secret = "test-secret-that-is-at-least-32-characters"
             "#,
-            database = postgres.settings().url("yanrr"),
+            database = postgres.settings().url(&database),
         ))
         .unwrap();
         // Each server writes its own index; tests running at once would otherwise fight over its lock.
@@ -443,8 +461,9 @@ pub fn fake_fcm(fixtures: &Fixtures) -> (PushConfig, NamedTempFile) {
 /// Where [`fake_ai`] takes chat completions.
 pub const AI_PATH: &str = "/v1/chat/completions";
 
-/// Answers like a model: a user message mentioning `fail` fails, a JSON array of strings comes back translated as
-/// `T: …` in a Markdown code block, and anything else is summarized as `Summary: …`.
+/// Answers like a model: a user message mentioning `fail` fails, one mentioning `hang` is never answered, a JSON
+/// array of strings comes back translated as `T: …` in a Markdown code block, and anything else is summarized as
+/// `Summary: …`.
 async fn chat(
     State(state): State<FixtureState>,
     uri: Uri,
@@ -459,6 +478,9 @@ async fn chat(
     record(&state, &uri, &headers, body);
     if content.contains("fail") {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+    if content.contains("hang") {
+        return std::future::pending().await;
     }
     let answer = match serde_json::from_str::<Vec<String>>(&content) {
         Ok(texts) => {
