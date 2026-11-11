@@ -1,7 +1,6 @@
 export * from "./DateTimePicker"
 export * from "./Input"
 export * from "./InputV2"
-export * from "./OTP"
 export * from "./TextArea"
 export * from "./TextAreaWrapper"
 export * from "./TimeSelect"

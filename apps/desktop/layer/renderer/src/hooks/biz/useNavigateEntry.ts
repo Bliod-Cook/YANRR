@@ -1,6 +1,4 @@
 import { getReadonlyRoute, getStableRouterNavigate } from "@follow/components/atoms/route.js"
-import { useMobile } from "@follow/components/hooks/useMobile.js"
-import { useSheetContext } from "@follow/components/ui/sheet/context.js"
 import type { FeedViewType } from "@follow/constants"
 import { getEntry } from "@follow/store/entry/getter"
 import { getSubscriptionByFeedId } from "@follow/store/subscription/getter"
@@ -33,17 +31,7 @@ export type NavigateEntryOptions = Partial<{
  * @description a hook to navigate to `feedId`, `entryId`, add search for `view`, `level`
  */
 export const useNavigateEntry = () => {
-  const sheetContext = useSheetContext()
-  const isMobile = useMobile()
-  return useCallback(
-    (options: NavigateEntryOptions) => {
-      navigateEntry(options)
-      if (isMobile && sheetContext) {
-        sheetContext.dismiss()
-      }
-    },
-    [isMobile, sheetContext],
-  )
+  return useCallback((options: NavigateEntryOptions) => navigateEntry(options), [])
 }
 
 type ParsedNavigateEntryOptions = {
