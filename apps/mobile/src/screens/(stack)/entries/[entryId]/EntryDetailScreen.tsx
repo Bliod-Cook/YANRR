@@ -14,6 +14,7 @@ import { View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useColor } from "react-native-uikit-colors"
 
+import { useAiEnabled } from "@/src/atoms/server-configs"
 import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { BottomTabBarHeightContext } from "@/src/components/layouts/tabbar/contexts/BottomTabBarHeightContext"
 import { SafeNavigationScrollView } from "@/src/components/layouts/views/SafeNavigationScrollView"
@@ -52,7 +53,7 @@ export const EntryDetailScreen: NavigationControllerView<{
     readability: state.settings?.readability,
     sourceContent: state.settings?.sourceContent,
   }))
-  // Onboarding entries have no link outside the app, and relative links resolve first
+  // Relative links resolve against the feed's site first
   const externalUrl = useEntryExternalUrl(entryId)
   const isLoggedIn = useIsLoggedIn()
   useAutoMarkAsRead(entryId, !!entry && isLoggedIn)
@@ -154,7 +155,8 @@ const EntryContentWebViewWithContext = ({ entryId }: { entryId: string }) => {
   const translationMode = useGeneralSettingKey("translationMode")
   const showTranslationOnce = useAtomValue(showAITranslationAtom)
   const actionLanguage = useActionLanguage()
-  const showTranslation = translationSetting || showTranslationOnce
+  const aiEnabled = useAiEnabled()
+  const showTranslation = aiEnabled && (translationSetting || showTranslationOnce)
   const entry = useEntry(entryId, (state) => ({
     content: state.content,
     readabilityContent: state.readabilityContent,

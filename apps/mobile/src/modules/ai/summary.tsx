@@ -21,9 +21,12 @@ import { Text } from "@/src/components/ui/typography/Text"
 import { AiCuteReIcon } from "@/src/icons/ai_cute_re"
 import { CloseCuteReIcon } from "@/src/icons/close_cute_re"
 import { CopyCuteReIcon } from "@/src/icons/copy_cute_re"
-import { getFetchErrorMessage } from "@/src/lib/error-parser"
+import { getFetchErrorInfo, getFetchErrorMessage } from "@/src/lib/error-parser"
 import { isAndroid, isIOS } from "@/src/lib/platform"
 import { toast } from "@/src/lib/toast"
+
+/** The server answers this when AI is not configured: the feature is off, not broken */
+const MISSING_CONFIGURATION_CODE = 5
 
 export const AISummary: FC<{
   className?: string
@@ -92,6 +95,9 @@ export const AISummary: FC<{
   const summaryText = typeof summary === "string" ? summary : ""
   const summaryTextForSheet = (rawSummaryForCopy || summaryText).trim()
   if (!pending && !summary && !error) return null
+  if (error instanceof Error && getFetchErrorInfo(error).code === MISSING_CONFIGURATION_CODE) {
+    return null
+  }
   const renderSummaryContent = (forMeasurement: boolean) => {
     if (pending) {
       return (

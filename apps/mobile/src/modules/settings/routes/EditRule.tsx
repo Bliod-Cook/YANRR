@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next"
 import { View } from "react-native"
 import * as DropdownMenu from "zeego/dropdown-menu"
 
+import { useAiEnabled } from "@/src/atoms/server-configs"
 import { SwipeableItem } from "@/src/components/common/SwipeableItem"
 import {
   NavigationBlurEffectHeaderView,
@@ -278,16 +279,22 @@ const extendedAvailableActionList = Object.values(
 ) as (ActionAction & {
   onNavigate?: (router: Navigation, index: number) => void
 })[]
+const AI_ACTIONS = new Set<ActionId>(["summary", "translation"])
+
 const ActionSection: React.FC<{
   rule: ActionModel
   index: number
 }> = ({ rule, index }) => {
   const { t } = useTranslation("settings")
-  const enabledActions = extendedAvailableActionList.filter(
+  const aiEnabled = useAiEnabled()
+  const availableActions = aiEnabled
+    ? extendedAvailableActionList
+    : extendedAvailableActionList.filter((action) => !AI_ACTIONS.has(action.value))
+  const enabledActions = availableActions.filter(
     (action) =>
       (rule.result as Record<string, unknown>)[action.value as unknown as string] !== undefined,
   )
-  const notEnabledActions = extendedAvailableActionList.filter(
+  const notEnabledActions = availableActions.filter(
     (action) =>
       (rule.result as Record<string, unknown>)[action.value as unknown as string] === undefined,
   )
