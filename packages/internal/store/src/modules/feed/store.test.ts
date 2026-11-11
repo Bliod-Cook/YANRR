@@ -14,6 +14,13 @@ vi.mock("@follow/database/db", async () =>
 
 const RESOLVED_URLS_KEY = "feed:resolved-urls"
 
+const resetFeeds = () =>
+  Promise.all([
+    useFeedStore.setState({ feeds: {}, resolvedUrls: {} }),
+    FeedService.reset(),
+    SyncMetaService.delete(RESOLVED_URLS_KEY),
+  ])
+
 const feed = (patch: Partial<FeedModel>) =>
   ({
     type: "feed",
@@ -30,7 +37,7 @@ describe("feedSyncServices.fetchFeed", () => {
   const getFeed = vi.fn()
 
   beforeEach(async () => {
-    await feedActions.reset()
+    await resetFeeds()
     getFeed.mockResolvedValue({ data: { feed: feed({ id: "1328554886337265664" }) } })
     apiContext.provide({ feeds: { get: getFeed } } as unknown as FollowAPI)
   })
@@ -58,7 +65,7 @@ describe("a feed the server keeps under another URL than its address", () => {
   const url = "rsshub://test/sort"
 
   beforeEach(async () => {
-    await feedActions.reset()
+    await resetFeeds()
     const getFeed = vi.fn(async () => ({ data: { feed: feed({ id: "feed-sort", url }) } }))
     apiContext.provide({ feeds: { get: getFeed } } as unknown as FollowAPI)
   })
@@ -105,14 +112,5 @@ describe("a feed the server keeps under another URL than its address", () => {
     expect(stored).not.toHaveProperty(["http://localhost:1200/test/0"])
     expect(Object.entries(stored).at(-1)).toEqual(["http://localhost:1200/test/1", "rsshub://one"])
     expect(useFeedStore.getState().resolvedUrls).toEqual(stored)
-  })
-
-  it("forgets the addresses on sign-out", async () => {
-    await feedActions.setResolvedUrl(address, url)
-
-    await feedActions.reset()
-
-    expect(useFeedStore.getState().resolvedUrls).toEqual({})
-    expect(await SyncMetaService.get(RESOLVED_URLS_KEY)).toBeNull()
   })
 })

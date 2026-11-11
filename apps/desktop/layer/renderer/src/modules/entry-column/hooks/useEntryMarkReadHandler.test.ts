@@ -5,7 +5,7 @@ import { batchMarkRead } from "./useEntryMarkReadHandler"
 
 vi.mock("@follow/store/unread/store", () => ({
   unreadSyncService: {
-    queueEntriesAsRead: vi.fn(),
+    markEntriesAsRead: vi.fn(),
   },
 }))
 
@@ -13,6 +13,6 @@ describe("batchMarkRead", () => {
   it("queues ids without requiring entries to exist in the local store", () => {
     batchMarkRead(["entry-1", "entry-2"])
 
-    expect(unreadSyncService.queueEntriesAsRead).toHaveBeenCalledWith(["entry-1", "entry-2"])
+    expect(unreadSyncService.markEntriesAsRead).toHaveBeenCalledWith(["entry-1", "entry-2"])
   })
 })

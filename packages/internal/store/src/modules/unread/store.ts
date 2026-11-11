@@ -413,13 +413,6 @@ class UnreadSyncService {
     }
   }
 
-  /**
-   * @deprecated `markEntriesAsRead` already batches through the transaction queue.
-   */
-  queueEntriesAsRead(entryIds: string[]) {
-    return this.markEntriesAsRead(entryIds)
-  }
-
   private async markEntryReadStatus({ entryId, read }: { entryId: string; read: boolean }) {
     if (read) {
       return this.markEntriesAsRead([entryId])

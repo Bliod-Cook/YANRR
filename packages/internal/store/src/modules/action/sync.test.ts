@@ -55,7 +55,7 @@ describe("action rules and the sync engine", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     documents.clear()
-    await actionActions.reset()
+    useActionStore.setState({ rules: [], isDirty: false, isLoaded: false })
     apiContext.provide({ actions: { get: getMock, put: putMock } } as unknown as FollowAPI)
   })
 

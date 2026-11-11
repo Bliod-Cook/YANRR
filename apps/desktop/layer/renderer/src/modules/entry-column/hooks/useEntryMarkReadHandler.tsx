@@ -58,5 +58,5 @@ export const useEntryMarkReadHandler = (
 
 export function batchMarkRead(ids: string[]) {
   if (ids.length === 0) return
-  void unreadSyncService.queueEntriesAsRead(ids)
+  void unreadSyncService.markEntriesAsRead(ids)
 }

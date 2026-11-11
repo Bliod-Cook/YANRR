@@ -1,4 +1,5 @@
 import { db } from "@follow/database/db"
+import { summaryService } from "@follow/database/services/summary"
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
 import { apiContext } from "../../context"
@@ -6,7 +7,7 @@ import type { FollowAPI } from "../../types"
 import { useEntryStore } from "../entry/store"
 import type { EntryModel } from "../entry/types"
 import { SummaryGeneratingStatus } from "./enum"
-import { summaryActions, summarySyncService, useSummaryStore } from "./store"
+import { summarySyncService, useSummaryStore } from "./store"
 import { getGenerateSummaryStatusId } from "./utils"
 
 vi.mock("@follow/database/db", async () =>
@@ -33,7 +34,8 @@ describe("summarySyncService", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
-    await summaryActions.reset()
+    useSummaryStore.setState({ data: {}, generatingStatus: {} })
+    await summaryService.reset()
 
     useEntryStore.setState({
       data: {

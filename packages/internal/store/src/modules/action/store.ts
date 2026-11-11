@@ -10,7 +10,7 @@ import { ExceptionCodeMap, FollowAPIError } from "@follow-app/client-sdk"
 import { merge } from "es-toolkit/compat"
 
 import { api } from "../../context"
-import type { Hydratable, Resetable } from "../../lib/base"
+import type { Hydratable } from "../../lib/base"
 import { createImmerSetter, createZustandStore } from "../../lib/helper"
 import { registerSyncModel } from "../../sync/model-registry"
 import { ensureSyncedThroughEngine } from "../../sync/sync-status"
@@ -163,7 +163,7 @@ class ActionSyncService {
   }
 }
 
-class ActionActions implements Hydratable, Resetable {
+class ActionActions implements Hydratable {
   // The version of the confirmed rules the rules in the store started from, which a save sends
   // so it fails if the rules changed since
   private loadedVersion: ActionRulesVersion = undefined
@@ -233,11 +233,6 @@ class ActionActions implements Hydratable, Resetable {
       return
     }
     await actionSyncService.fetchRules()
-  }
-
-  async reset() {
-    useActionStore.setState({ rules: [], isDirty: false, isLoaded: false })
-    this.loadedVersion = undefined
   }
 
   /**

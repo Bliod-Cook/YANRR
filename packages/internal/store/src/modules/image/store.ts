@@ -1,7 +1,7 @@
 import type { ImageSchema } from "@follow/database/schemas/types"
 import { ImagesService } from "@follow/database/services/image"
 
-import type { Hydratable, Resetable } from "../../lib/base"
+import type { Hydratable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
 
 export type ImageModel = ImageSchema
@@ -15,22 +15,12 @@ const defaultState: ImageStore = {
 
 export const useImagesStore = createZustandStore<ImageStore>("images")(() => defaultState)
 
-const set = useImagesStore.setState
 const immerSet = createImmerSetter(useImagesStore)
 
-class ImageActions implements Hydratable, Resetable {
+class ImageActions implements Hydratable {
   async hydrate() {
     const images = await ImagesService.getImagesToHydrate()
     imageActions.upsertManyInSession(images)
-  }
-
-  async reset() {
-    const tx = createTransaction()
-    tx.store(() => {
-      set(defaultState)
-    })
-    tx.persist(() => ImagesService.reset())
-    await tx.run()
   }
 
   upsertManyInSession(images: ImageModel[]) {

@@ -4,7 +4,7 @@ import { SyncMetaService } from "@follow/database/services/sync-meta"
 import { isBizId } from "@follow/utils"
 
 import { api } from "../../context"
-import type { Hydratable, Resetable } from "../../lib/base"
+import type { Hydratable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
 import { apiMorph } from "../../morph/api"
 import type { FeedModel } from "./types"
@@ -27,7 +27,6 @@ const initialFeedStore: FeedState = {
 export const useFeedStore = createZustandStore<FeedState>("feed")(() => initialFeedStore)
 
 const get = useFeedStore.getState
-const set = useFeedStore.setState
 const immerSet = createImmerSetter(useFeedStore)
 
 // The server fetches a feed it has not stored yet and gives its source 70 s before it answers
@@ -59,7 +58,7 @@ const readResolvedUrls = async (): Promise<Record<string, string>> => {
   }
 }
 
-class FeedActions implements Hydratable, Resetable {
+class FeedActions implements Hydratable {
   async hydrate() {
     const [feeds, resolvedUrls] = await Promise.all([FeedService.getFeedAll(), readResolvedUrls()])
     feedActions.upsertManyInSession(feeds)
@@ -109,24 +108,6 @@ class FeedActions implements Hydratable, Resetable {
         console.error("[feed] failed to store the resolved URLs", error)
       },
     )
-  }
-
-  async reset() {
-    const tx = createTransaction()
-    tx.store(() => {
-      set(initialFeedStore)
-    })
-
-    tx.persist(async () => {
-      await Promise.all([
-        FeedService.reset(),
-        SyncMetaService.delete(RESOLVED_URLS_KEY).catch((error) => {
-          console.error("[feed] failed to clear the resolved URLs", error)
-        }),
-      ])
-    })
-
-    await tx.run()
   }
 }
 

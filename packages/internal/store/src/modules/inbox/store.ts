@@ -2,7 +2,7 @@ import type { InboxSchema } from "@follow/database/schemas/types"
 import { InboxService } from "@follow/database/services/inbox"
 
 import { api } from "../../context"
-import type { Hydratable, Resetable } from "../../lib/base"
+import type { Hydratable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
 import type { InboxModel } from "./types"
 
@@ -20,7 +20,7 @@ const get = useInboxStore.getState
 const set = useInboxStore.setState
 const immerSet = createImmerSetter(useInboxStore)
 
-class InboxActions implements Hydratable, Resetable {
+class InboxActions implements Hydratable {
   async hydrate() {
     const inboxes = await InboxService.getInboxAll()
     inboxActions.upsertManyInSession(inboxes)
@@ -56,19 +56,6 @@ class InboxActions implements Hydratable, Resetable {
     immerSet((state) => {
       delete state.inboxes[id]
     })
-  }
-
-  async reset() {
-    const tx = createTransaction()
-    tx.store(() => {
-      set(defaultState)
-    })
-
-    tx.persist(() => {
-      return InboxService.reset()
-    })
-
-    await tx.run()
   }
 }
 

@@ -1,10 +1,11 @@
 import { db } from "@follow/database/db"
+import { TranslationService } from "@follow/database/services/translation"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { apiContext } from "../../context"
 import type { FollowAPI } from "../../types"
 import { useEntryStore } from "../entry/store"
-import { translationActions, translationSyncService } from "./store"
+import { translationActions, translationSyncService, useTranslationStore } from "./store"
 import type { TranslationMode } from "./types"
 
 vi.mock("@follow/database/db", async () =>
@@ -23,7 +24,8 @@ const sendRequests = () => vi.advanceTimersByTimeAsync(1000)
 describe("translationSyncService.generateTranslation", () => {
   beforeEach(async () => {
     vi.useFakeTimers()
-    await translationActions.reset()
+    useTranslationStore.setState({ data: {} })
+    await TranslationService.reset()
     useEntryStore.setState({
       data: {
         [entryId]: {

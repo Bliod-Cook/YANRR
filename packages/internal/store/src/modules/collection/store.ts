@@ -4,7 +4,7 @@ import { CollectionService } from "@follow/database/services/collection"
 import type { WithLastSyncId } from "@follow-app/client-sdk"
 
 import { api } from "../../context"
-import type { Hydratable, Resetable } from "../../lib/base"
+import type { Hydratable } from "../../lib/base"
 import { createTransaction, createZustandStore } from "../../lib/helper"
 import { collectionOverlayKey, isCollectionOverlayKey } from "../../sync/overlay-keys"
 import type { ServerSuccess } from "../../sync/transaction-queue"
@@ -144,7 +144,7 @@ const getPendingCollectionChanges = () => {
   return { pendingStars, pendingUnstars }
 }
 
-class CollectionActions implements Hydratable, Resetable {
+class CollectionActions implements Hydratable {
   async hydrate() {
     const collections = await CollectionService.getCollectionAll()
     collectionActions.upsertManyInSession(collections)
@@ -241,19 +241,6 @@ class CollectionActions implements Hydratable, Resetable {
     tx.persist(() => {
       return CollectionService.deleteMany(normalizedEntryId)
     })
-    await tx.run()
-  }
-
-  async reset() {
-    const tx = createTransaction()
-    tx.store(() => {
-      set(defaultState)
-    })
-
-    tx.persist(() => {
-      return CollectionService.reset()
-    })
-
     await tx.run()
   }
 }

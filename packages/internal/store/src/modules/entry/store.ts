@@ -6,7 +6,7 @@ import { cloneDeep } from "es-toolkit"
 import { debounce } from "es-toolkit/compat"
 
 import { api } from "../../context"
-import type { Hydratable, Resetable } from "../../lib/base"
+import type { Hydratable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
 import { readNdjsonStream } from "../../lib/stream"
 import { apiMorph } from "../../morph/api"
@@ -63,7 +63,7 @@ export const useEntryStore = createZustandStore<EntryState>("entry")(() => defau
 const get = useEntryStore.getState
 const immerSet = createImmerSetter(useEntryStore)
 
-class EntryActions implements Hydratable, Resetable {
+class EntryActions implements Hydratable {
   async hydrate() {
     const entries = await EntryService.getEntriesToHydrate()
     entryActions.upsertManyInSession(entries)
@@ -389,19 +389,6 @@ class EntryActions implements Hydratable, Resetable {
       draft.entryIdByInbox[entry.inboxHandle!]?.delete(entryId)
       draft.entryIdByView[FeedViewType.All]!.delete(entryId)
     })
-  }
-
-  async reset() {
-    const tx = createTransaction()
-    tx.store(() => {
-      immerSet(() => defaultState)
-    })
-
-    tx.persist(() => {
-      return EntryService.reset()
-    })
-
-    await tx.run()
   }
 }
 

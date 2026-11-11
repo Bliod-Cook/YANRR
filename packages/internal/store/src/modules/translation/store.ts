@@ -6,8 +6,8 @@ import { checkLanguage } from "@follow/utils/language"
 import { create, indexedResolver, windowScheduler } from "@yornaath/batshit"
 
 import { api } from "../../context"
-import type { Hydratable, Resetable } from "../../lib/base"
-import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
+import type { Hydratable } from "../../lib/base"
+import { createImmerSetter, createZustandStore } from "../../lib/helper"
 import { readNdjsonStream } from "../../lib/stream"
 import { getEntry } from "../entry/getter"
 import type { EntryTranslation, TranslationFieldArray, TranslationMode } from "./types"
@@ -32,23 +32,12 @@ export const useTranslationStore = createZustandStore<TranslationState>("transla
 )
 
 const get = useTranslationStore.getState
-const set = useTranslationStore.setState
 const immerSet = createImmerSetter(useTranslationStore)
 
-class TranslationActions implements Hydratable, Resetable {
+class TranslationActions implements Hydratable {
   async hydrate() {
     const translations = await TranslationService.getTranslationToHydrate()
     translationActions.upsertManyInSession(translations)
-  }
-
-  async reset() {
-    const tx = createTransaction()
-    tx.store(() => {
-      set(defaultState)
-    })
-    tx.persist(() => TranslationService.reset())
-
-    await tx.run()
   }
 
   upsertManyInSession(translations: TranslationModel[]) {

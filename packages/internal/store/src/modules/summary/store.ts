@@ -4,8 +4,8 @@ import type { SupportedActionLanguage } from "@follow/shared"
 import { toApiSupportedActionLanguage } from "@follow/shared"
 
 import { api } from "../../context"
-import type { Hydratable, Resetable } from "../../lib/base"
-import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
+import type { Hydratable } from "../../lib/base"
+import { createImmerSetter, createZustandStore } from "../../lib/helper"
 import { getEntry } from "../entry/getter"
 import { SummaryGeneratingStatus } from "./enum"
 import type { StatusID } from "./utils"
@@ -35,9 +35,8 @@ export const useSummaryStore = createZustandStore<SummaryState>("summary")(() =>
 }))
 
 const get = useSummaryStore.getState
-const set = useSummaryStore.setState
 const immerSet = createImmerSetter(useSummaryStore)
-class SummaryActions implements Resetable, Hydratable {
+class SummaryActions implements Hydratable {
   async hydrate() {
     const summaries = await summaryService.getSummariesToHydrate()
     this.upsertManyInSession(summaries)
@@ -60,19 +59,6 @@ class SummaryActions implements Resetable, Hydratable {
     this.upsertManyInSession(summaries)
 
     await Promise.all(summaries.map((summary) => summaryService.insertSummary(summary)))
-  }
-
-  async reset() {
-    const tx = createTransaction()
-    tx.store(() => {
-      set({
-        data: emptyDataSet,
-        generatingStatus: {},
-      })
-    })
-    tx.persist(() => summaryService.reset())
-
-    await tx.run()
   }
 }
 

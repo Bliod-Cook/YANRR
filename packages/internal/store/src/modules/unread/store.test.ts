@@ -193,8 +193,8 @@ describe("unreadSyncService", () => {
     await seedUnread({ feed1: 2 })
     markAsReadMock.mockResolvedValue({ code: 0 })
 
-    await unreadSyncService.queueEntriesAsRead(["entry1"])
-    await unreadSyncService.queueEntriesAsRead(["entry2"])
+    await unreadSyncService.markEntriesAsRead(["entry1"])
+    await unreadSyncService.markEntriesAsRead(["entry2"])
 
     expect(markAsReadMock).not.toHaveBeenCalled()
 
