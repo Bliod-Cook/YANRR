@@ -2,7 +2,7 @@ import { userSyncService } from "@follow/store/user/store"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
 import i18next from "i18next"
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import type { Control } from "react-hook-form"
 import { useController, useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
@@ -132,17 +132,19 @@ export function EmailLogin() {
 
 // Signup
 
-const signupFormSchema = z
-  .object({
-    email: z.string().email(),
-    password: z.string().min(8).max(128),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: i18next.t("login.passwords_do_not_match"),
-    path: ["confirmPassword"],
-  })
-type SignupFormValue = z.infer<typeof signupFormSchema>
+// Built when needed, as the message follows the language of the moment
+const createSignupFormSchema = () =>
+  z
+    .object({
+      email: z.string().email(),
+      password: z.string().min(8).max(128),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: i18next.t("login.passwords_do_not_match"),
+      path: ["confirmPassword"],
+    })
+type SignupFormValue = z.infer<ReturnType<typeof createSignupFormSchema>>
 function SignupInput({
   control,
   name,
@@ -166,6 +168,7 @@ function SignupInput({
 }
 export function EmailSignUp() {
   const { t } = useTranslation()
+  const signupFormSchema = useMemo(createSignupFormSchema, [t])
   const { control, handleSubmit } = useForm<SignupFormValue>({
     resolver: zodResolver(signupFormSchema),
     mode: "onChange",
@@ -204,10 +207,15 @@ export function EmailSignUp() {
       Navigation.rootNavigation.back()
     },
   })
-  const signup = handleSubmit((values) => {
-    void KeyboardController.dismiss()
-    submitMutation.mutate(values)
-  })
+  const signup = handleSubmit(
+    (values) => {
+      void KeyboardController.dismiss()
+      submitMutation.mutate(values)
+    },
+    (errors) => {
+      Alert.alert(t("login.invalid_email_or_password"), Object.values(errors)[0]?.message)
+    },
+  )
 
   return (
     <View className="mx-auto flex w-full max-w-sm">

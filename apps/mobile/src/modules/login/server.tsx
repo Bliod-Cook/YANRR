@@ -65,18 +65,22 @@ export function ServerForm({ onCancel }: { onCancel?: () => void }) {
 /** Offers to change the server unless the build comes with its own */
 export function CurrentServer({ server, onChange }: { server: string; onChange?: () => void }) {
   const { t } = useTranslation()
+  const { host, protocol } = new URL(server)
   return (
-    <View className="flex-row items-center justify-center gap-1.5">
-      <Text className="text-secondary-label">
-        {t("login.server", { host: new URL(server).host })}
-      </Text>
-      {onChange && (
-        <>
-          <Text className="text-secondary-label">·</Text>
-          <Pressable testID="login-server-change" hitSlop={10} onPress={onChange}>
-            <Text className="text-accent">{t("login.server_change")}</Text>
-          </Pressable>
-        </>
+    <View className="items-center gap-1">
+      <View className="flex-row items-center justify-center gap-1.5">
+        <Text className="text-secondary-label">{t("login.server", { host })}</Text>
+        {onChange && (
+          <>
+            <Text className="text-secondary-label">·</Text>
+            <Pressable testID="login-server-change" hitSlop={10} onPress={onChange}>
+              <Text className="text-accent">{t("login.server_change")}</Text>
+            </Pressable>
+          </>
+        )}
+      </View>
+      {protocol === "http:" && (
+        <Text className="text-center text-red">{t("login.server_insecure")}</Text>
       )}
     </View>
   )

@@ -5,6 +5,7 @@ import { Pressable, TouchableWithoutFeedback, View } from "react-native"
 import { KeyboardAvoidingView, KeyboardController } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
+import { useRegistrationOpen } from "@/src/atoms/server-configs"
 import { Logo } from "@/src/components/ui/logo"
 import { Text } from "@/src/components/ui/typography/Text"
 import { useIsTabletLayout, useReadableContainerStyle, useScaleHeight } from "@/src/lib/responsive"
@@ -25,7 +26,10 @@ export function Login() {
   const lineHeight = scaledHeight(32)
   const { t } = useTranslation()
   // Whoever signed in on this device before, as before an expired session, comes back to sign in
-  const [isRegister, setIsRegister] = useState(() => !hasSignedInBefore())
+  const [wantsRegister, setWantsRegister] = useState(() => !hasSignedInBefore())
+  // A server that closed registration offers the sign-in only
+  const registrationOpen = useRegistrationOpen()
+  const isRegister = registrationOpen && wantsRegister
   const server = useServerUrl()
   const [isChangingServer, setIsChangingServer] = useState(false)
   // The server comes first: the credentials are for an account on it
@@ -80,16 +84,22 @@ export function Login() {
             )}
           </View>
         </TouchableWithoutFeedback>
-        {!isTablet && currentServer && (
+        {!isTablet && currentServer && registrationOpen && (
           <View className="mt-14">
-            <AuthModeToggle isRegister={isRegister} onToggle={() => setIsRegister(!isRegister)} />
+            <AuthModeToggle
+              isRegister={isRegister}
+              onToggle={() => setWantsRegister(!isRegister)}
+            />
           </View>
         )}
       </KeyboardAvoidingView>
-      {isTablet && currentServer && (
+      {isTablet && currentServer && registrationOpen && (
         <View style={contentWidthStyle}>
           <View className="mt-8">
-            <AuthModeToggle isRegister={isRegister} onToggle={() => setIsRegister(!isRegister)} />
+            <AuthModeToggle
+              isRegister={isRegister}
+              onToggle={() => setWantsRegister(!isRegister)}
+            />
           </View>
         </View>
       )}
