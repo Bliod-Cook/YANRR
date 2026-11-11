@@ -21,7 +21,11 @@ describe("BlockSliceAction file attachments", () => {
     blockActions.addFileAttachment(createAttachment("file-1"))
     blockActions.addFileAttachment(createAttachment("file-2"))
 
-    blockActions.updateFileAttachmentStatus("file-1", "error", "upload failed")
+    blockActions.updateFileAttachment("file-1", {
+      ...createAttachment("file-1"),
+      uploadStatus: "error",
+      errorMessage: "upload failed",
+    })
     blockActions.removeFileAttachment("file-2")
 
     expect(store.getState().blocks).toEqual([

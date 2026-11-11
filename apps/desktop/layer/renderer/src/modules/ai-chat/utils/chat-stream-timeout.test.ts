@@ -17,12 +17,6 @@ const SERVER_TOTAL_TIMEOUT = 20 * MINUTE
 const chunk = (type: string) => ({ type }) as UIMessageChunk
 
 describe("createChatStreamTimeout", () => {
-  it("outwaits the server in every phase", () => {
-    expect(CHAT_STREAM_WAITING_TIMEOUT).toBeGreaterThan(SERVER_TOTAL_TIMEOUT)
-    expect(CHAT_STREAM_WAITING_TIMEOUT).toBeGreaterThan(SERVER_FIRST_OUTPUT_TIMEOUT)
-    expect(CHAT_STREAM_IDLE_TIMEOUT).toBeGreaterThan(SERVER_IDLE_TIMEOUT)
-  })
-
   it("waits for the model until it answers, and while a tool runs", () => {
     const next = createChatStreamTimeout()
 

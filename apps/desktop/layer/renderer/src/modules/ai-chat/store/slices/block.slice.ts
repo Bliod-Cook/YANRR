@@ -3,7 +3,6 @@ import { produce } from "immer"
 import { nanoid } from "nanoid"
 import type { StateCreator } from "zustand"
 
-import { cleanupFileAttachment } from "../../utils/file-processing"
 import type { AIChatContextBlock, AIChatContextBlockInput, FileAttachment } from "../types"
 
 export interface BlockSlice {
@@ -11,15 +10,11 @@ export interface BlockSlice {
   blockActions: BlockSliceAction
 }
 
-export const createBlockSlice: (
-  initialBlocks?: AIChatContextBlock[],
-) => StateCreator<BlockSlice, [], [], BlockSlice> =
-  (initialBlocks?: AIChatContextBlock[]) =>
+export const createBlockSlice: () => StateCreator<BlockSlice, [], [], BlockSlice> =
+  () =>
   (...params) => {
-    const defaultBlocks: AIChatContextBlock[] = initialBlocks || []
-
     return {
-      blocks: defaultBlocks,
+      blocks: [],
       blockActions: new BlockSliceAction(params),
     }
   }
@@ -68,10 +63,6 @@ export class BlockSliceAction {
   removeBlock(id: string) {
     this.set(
       produce((state: BlockSlice) => {
-        const blockToRemove = state.blocks.find((block) => block.id === id)
-        if (blockToRemove && blockToRemove.type === "fileAttachment") {
-          cleanupFileAttachment(blockToRemove.attachment)
-        }
         state.blocks = state.blocks.filter((block) => block.id !== id)
       }),
     )
@@ -124,12 +115,6 @@ export class BlockSliceAction {
   clearBlocks({ keepSpecialTypes = false }: { keepSpecialTypes?: boolean } = {}) {
     this.set(
       produce((state: BlockSlice) => {
-        // Clean up file attachments before clearing
-        state.blocks.forEach((block) => {
-          if (block.type === "fileAttachment") {
-            cleanupFileAttachment(block.attachment)
-          }
-        })
         state.blocks = keepSpecialTypes
           ? state.blocks.filter((b) =>
               Object.values(BlockSliceAction.SPECIAL_TYPES).includes(b.type),
@@ -142,12 +127,6 @@ export class BlockSliceAction {
   resetContext() {
     this.set(
       produce((state: BlockSlice) => {
-        // Clean up file attachments before resetting
-        state.blocks.forEach((block) => {
-          if (block.type === "fileAttachment") {
-            cleanupFileAttachment(block.attachment)
-          }
-        })
         state.blocks = []
       }),
     )
@@ -175,24 +154,6 @@ export class BlockSliceAction {
         )
         if (block && block.type === "fileAttachment") {
           block.attachment = updatedAttachment
-        }
-      }),
-    )
-  }
-
-  updateFileAttachmentStatus(
-    fileId: string,
-    status: FileAttachment["uploadStatus"],
-    errorMessage?: string,
-  ) {
-    this.set(
-      produce((state: BlockSlice) => {
-        const block = state.blocks.find((b) => b.id === fileId)
-        if (block && block.type === "fileAttachment") {
-          block.attachment.uploadStatus = status
-          if (errorMessage) {
-            block.attachment.errorMessage = errorMessage
-          }
         }
       }),
     )

@@ -167,13 +167,6 @@ function fileToDataUrl(file: File): Promise<string> {
   })
 }
 
-// Utility to clean up object URLs to prevent memory leaks
-export function cleanupFileAttachment(fileAttachment: FileAttachment) {
-  if (fileAttachment.previewUrl?.startsWith("blob:")) {
-    URL.revokeObjectURL(fileAttachment.previewUrl)
-  }
-}
-
 export async function uploadFileAttachment(
   fileAttachment: FileAttachment,
   onProgressUpdate?: (attachment: FileAttachment) => void,
