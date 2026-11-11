@@ -463,6 +463,16 @@ describe("subscriptionSyncService", () => {
     expect(getConfirmedSubscriptionChange("leaving")).toBeUndefined()
   })
 
+  test("puts the selection back when something else than the server answered its unfollow", async () => {
+    await seed([createSubscription("leaving", FeedViewType.Articles, null)])
+    mocks.deleteSubscriptions.mockResolvedValue("<html>Sign in</html>")
+
+    await expect(subscriptionSyncService.unsubscribe(["leaving"])).rejects.toThrow("not the server")
+
+    expect(Object.keys(useSubscriptionStore.getState().data)).toEqual(["leaving"])
+    expect(getConfirmedSubscriptionChange("leaving")).toBeUndefined()
+  })
+
   test("fails a follow the server answered without what it followed, storing nothing", async () => {
     const url = "https://example.com/new-feed.xml"
     await seed([])
@@ -478,6 +488,25 @@ describe("subscriptionSyncService", () => {
         title: null,
       }),
     ).rejects.toThrow("feed.follow_failed")
+
+    expect(useSubscriptionStore.getState().data).toEqual({})
+    expect(await storedCategories()).toEqual({})
+  })
+
+  test("fails a follow answered by something else than the server, storing nothing", async () => {
+    await seed([])
+    mocks.create.mockResolvedValue("<html>Sign in</html>")
+
+    await expect(
+      subscriptionSyncService.subscribe({
+        url: "https://example.com/new-feed.xml",
+        feedId: undefined,
+        view: FeedViewType.Articles,
+        category: null,
+        hideFromTimeline: null,
+        title: null,
+      }),
+    ).rejects.toThrow("not the server")
 
     expect(useSubscriptionStore.getState().data).toEqual({})
     expect(await storedCategories()).toEqual({})

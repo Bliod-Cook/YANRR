@@ -16,7 +16,7 @@ import {
 } from "../../sync/overlay-keys"
 import { catchUpThroughEngine, ensureSyncedThroughEngine } from "../../sync/sync-status"
 import type { AcknowledgedChangeKind } from "../../sync/transaction-queue"
-import { transactionQueue } from "../../sync/transaction-queue"
+import { requireServerSuccess, transactionQueue } from "../../sync/transaction-queue"
 import { invalidateEntriesQuery } from "../entry/hooks"
 import { getFeedById } from "../feed/getter"
 import { feedActions } from "../feed/store"
@@ -439,7 +439,7 @@ class SubscriptionSyncService {
   }
 
   async subscribe(subscription: SubscriptionForm) {
-    const data = await api().subscriptions.create(subscription)
+    const data = requireServerSuccess(await api().subscriptions.create(subscription))
     // The server can answer without following anything, as when two accounts follow the same
     // new feed at once; a retry follows it
     if (!data.feed) {
@@ -483,9 +483,9 @@ class SubscriptionSyncService {
     let failed = false
     if (requested.length > 0) {
       try {
-        const response = await api().subscriptions.delete({
-          feedIdList: requested.map((s) => s.feedId!),
-        })
+        const response = requireServerSuccess(
+          await api().subscriptions.delete({ feedIdList: requested.map((s) => s.feedId!) }),
+        )
         trackConfirmedChanges(
           requested.map((subscription) => ({
             id: getSubscriptionStoreId(subscription),

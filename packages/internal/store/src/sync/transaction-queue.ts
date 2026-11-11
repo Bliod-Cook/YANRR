@@ -30,6 +30,17 @@ export interface ServerSuccess {
 const isServerSuccess = (result: unknown): result is ServerSuccess =>
   typeof result === "object" && result !== null && (result as { code?: unknown }).code === 0
 
+/**
+ * The answer, once it is this server's. Anything else, such as the HTML of a sign-in page or a
+ * captive portal after following a redirect, is not a confirmation.
+ */
+export const requireServerSuccess = <T>(answer: T): T & ServerSuccess => {
+  if (!isServerSuccess(answer)) {
+    throw new Error("[transaction-queue] the answer is not the server's")
+  }
+  return answer as T & ServerSuccess
+}
+
 export interface TransactionKind<P, R extends ServerSuccess = ServerSuccess> {
   kind: string
   /**
@@ -539,12 +550,9 @@ class TransactionQueue {
 
       let result: ServerSuccess
       try {
-        const answer: unknown = await definition.execute(batch.map((record) => record.payload))
-        // Such as the HTML of a sign-in page or a captive portal, after following a redirect
-        if (!isServerSuccess(answer)) {
-          throw new Error("[transaction-queue] the answer is not the server's")
-        }
-        result = answer
+        result = requireServerSuccess(
+          await definition.execute(batch.map((record) => record.payload)),
+        )
       } catch (error) {
         this.inFlight.clear()
         this.touch()
