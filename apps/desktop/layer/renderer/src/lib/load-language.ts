@@ -84,7 +84,7 @@ export const loadLanguageAndApply = async (lang: string) => {
     } else {
       importFilePath = `/locales/${lang}.js`
     }
-    const res = await eval(`import('${importFilePath}')`)
+    const res = await import(/* @vite-ignore */ importFilePath)
       .then((res: any) => res?.default || res)
       .catch(() => {
         toast.error(`${t("common:tips.load-lng-error")}: ${lang}`)
