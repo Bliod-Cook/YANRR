@@ -30,6 +30,18 @@ describe("createBridgeQueue", () => {
     expect(sent).toEqual(["setNoMedia:true"])
   })
 
+  it("holds settings again once the page is gone, until the next page is ready", () => {
+    const { queue, sent } = setup()
+    queue.ready()
+
+    queue.reset()
+    queue.dispatch("setEntry", "{}")
+    expect(sent).toEqual([])
+
+    queue.ready()
+    expect(sent).toEqual(["setEntry:{}"])
+  })
+
   it("sends the latest of each again when another page says it is ready", () => {
     const { queue, sent } = setup()
     queue.ready()

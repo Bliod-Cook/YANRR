@@ -1,4 +1,4 @@
-// Ported from apps/mobile/native/ios/Modules/SharedWebView/Injected/at_start.js
+// Ported from apps/mobile/native/ios/Modules/SharedWebView/Injected/at_start.js, for Android
 
 const RNMessageHandlers = `
 if(!window.webkit) {
@@ -20,11 +20,8 @@ export const atStart = `
   }
 
   window.bridge = {
-    measure: () => {
-      send({
-        type: "measure",
-      })
-    },
+    // Nothing to do: the ResizeObserver set up at the end reports every height change
+    measure: () => {},
     setContentHeight: (height) => {
       send({
         type: "setContentHeight",

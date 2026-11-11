@@ -16,5 +16,9 @@ export const createBridgeQueue = (send: (type: string, payload?: string) => void
       isReady = true
       for (const [type, payload] of latest) send(type, payload)
     },
+    /** For a page that is gone; the next one says again when it is ready */
+    reset() {
+      isReady = false
+    },
   }
 }

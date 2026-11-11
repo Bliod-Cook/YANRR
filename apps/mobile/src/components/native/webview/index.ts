@@ -26,7 +26,6 @@ declare class ISharedWebViewModule extends NativeModule<{
   onSeekAudio?: (e: { time: number }) => void
 }> {
   load(url: string): void
-  evaluateJavaScript(js: string): void
   dispatch?(type: string, payload?: string): void
 
   // Debug helpers (iOS only)
