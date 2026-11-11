@@ -265,13 +265,13 @@ class EntryActions implements Hydratable, Resetable {
       })
     })
 
-    tx.persist(() => {
+    tx.persist(async () => {
       if (content) {
-        EntryService.patch({ id: entryId, content })
+        await EntryService.patch({ id: entryId, content })
       }
 
       if (readabilityContent) {
-        EntryService.patch({ id: entryId, readabilityContent, readabilityUpdatedAt })
+        await EntryService.patch({ id: entryId, readabilityContent, readabilityUpdatedAt })
       }
     })
 
@@ -292,12 +292,12 @@ class EntryActions implements Hydratable, Resetable {
       })
     })
 
-    tx.persist(() => {
-      for (const { entryId, content } of contents) {
-        if (content) {
-          EntryService.patch({ id: entryId, content })
-        }
-      }
+    tx.persist(async () => {
+      await Promise.all(
+        contents.flatMap(({ entryId, content }) =>
+          content ? [EntryService.patch({ id: entryId, content })] : [],
+        ),
+      )
     })
 
     await tx.run()
@@ -574,22 +574,20 @@ class EntrySyncServices {
 
     await entryActions.upsertMany(entries)
 
-    if (typeof view === "number") {
-      const { collections, entryIdsNotInCollections } = apiMorph.toCollections(res.data, view)
-      const effectiveLimit = limit !== undefined ? Math.min(limit, 100) : 20
-      const shouldResetCollection =
-        params.isCollection && !pageParam && entries.length < effectiveLimit
-      await collectionActions.reconcileFromRemote({
-        collections,
-        entryIdsNotInCollections,
-        // A full reset is only safe once the first page proves there are no more collection rows.
-        reset: shouldResetCollection,
-      })
-    }
+    const { collections, entryIdsNotInCollections } = apiMorph.toCollections(res.data)
+    const effectiveLimit = limit !== undefined ? Math.min(limit, 100) : 20
+    const shouldResetCollection =
+      params.isCollection && !pageParam && entries.length < effectiveLimit
+    await collectionActions.reconcileFromRemote({
+      collections,
+      entryIdsNotInCollections,
+      // A full reset is only safe once the first page proves there are no more collection rows.
+      reset: shouldResetCollection,
+    })
 
     const dataFeeds = res.data?.map((e) => e.feeds).filter((f) => f.type === "feed")
     const feeds = dataFeeds?.map((f) => apiMorph.toFeed(f)) ?? []
-    feedActions.upsertMany(feeds)
+    await feedActions.upsertMany(feeds)
 
     return res
   }
@@ -602,7 +600,7 @@ class EntrySyncServices {
       currentEntry?.inboxHandle || isInbox
         ? await api().entries.inbox.get({ id: entryId })
         : await api().entries.get({ id: entryId })
-    const entry = apiMorph.toEntry(res.data)
+    const entry = apiMorph.toEntry(res.data, currentEntry)
     if (!currentEntry && entry) {
       await entryActions.upsertMany([entry])
     } else {
@@ -662,7 +660,7 @@ class EntrySyncServices {
   /**
    * Entries whose content was asked for this session. An entry the server has no content for
    * would otherwise come first in every batch and keep the ones after it from ever being fetched;
-   * opening it still loads it in full.
+   * opening it still loads it in full. Entries of a failed request are asked for again.
    */
   private contentRequested = new Set<string>()
 
@@ -675,40 +673,44 @@ class EntrySyncServices {
     if (nextIds.length === 0) return
     for (const id of nextIds) this.contentRequested.add(id)
 
-    const readStream = async () => {
-      const response = await api().entries.stream({
-        ids: nextIds,
-      })
+    try {
+      await this.readContentStream(nextIds)
+    } catch (error) {
+      for (const id of nextIds) this.contentRequested.delete(id)
+      console.error("Failed to fetch entry contents:", error)
+    }
+  }
 
-      if (!response.ok) {
-        console.error("Failed to fetch stream:", response.statusText, await response.text())
-        return
-      }
-
-      // The lines of one network chunk are stored together, so a batch of entries updates the
-      // store, and every timeline selector over it, once per chunk instead of once per entry
-      let pending: { entryId: string; content: string }[] = []
-      let flushTimer: ReturnType<typeof setTimeout> | undefined
-      const flush = () => {
-        flushTimer = undefined
-        const contents = pending
-        pending = []
-        if (contents.length > 0) {
-          void entryActions.updateEntryContents(contents)
-        }
-      }
-
-      await readNdjsonStream<{ id: string; content: string }>(response, (json) => {
-        pending.push({ entryId: json.id, content: json.content })
-        flushTimer ??= setTimeout(flush, 0)
-      })
-      clearTimeout(flushTimer)
-      flush()
+  private async readContentStream(ids: string[]) {
+    const response = await api().entries.stream({ ids })
+    if (!response.ok) {
+      throw new Error(`${response.status} ${response.statusText}: ${await response.text()}`)
     }
 
-    readStream().catch((error) => {
-      console.error("Failed to fetch entry contents:", error)
+    // The lines of one network chunk are stored together, so a batch of entries updates the
+    // store, and every timeline selector over it, once per chunk instead of once per entry
+    let pending: { entryId: string; content: string }[] = []
+    let flushTimer: ReturnType<typeof setTimeout> | undefined
+    const writes: Promise<void>[] = []
+    const flush = () => {
+      flushTimer = undefined
+      const contents = pending
+      pending = []
+      if (contents.length > 0) {
+        const write = entryActions.updateEntryContents(contents)
+        // Its failure is reported once the stream is read
+        write.catch(() => {})
+        writes.push(write)
+      }
+    }
+
+    await readNdjsonStream<{ id: string; content: string }>(response, (json) => {
+      pending.push({ entryId: json.id, content: json.content })
+      flushTimer ??= setTimeout(flush, 0)
     })
+    clearTimeout(flushTimer)
+    flush()
+    await Promise.all(writes)
   }
 
   async deleteInboxEntry(entryId: string) {
@@ -736,6 +738,6 @@ class EntrySyncServices {
 export const entrySyncServices = new EntrySyncServices()
 export const entryActions = new EntryActions()
 export const debouncedFetchEntryContentByStream = debounce(
-  entrySyncServices.fetchEntryContentByStream,
+  (ids?: string[]) => entrySyncServices.fetchEntryContentByStream(ids),
   1000,
 )

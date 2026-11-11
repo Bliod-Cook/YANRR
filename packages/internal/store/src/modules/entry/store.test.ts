@@ -5,7 +5,7 @@ import { apiContext } from "../../context"
 import type { FollowAPI } from "../../types"
 import { useCollectionStore } from "../collection/store"
 import { useFeedStore } from "../feed/store"
-import { entrySyncServices, useEntryStore } from "./store"
+import { debouncedFetchEntryContentByStream, entrySyncServices, useEntryStore } from "./store"
 
 const {
   collectionDeleteManyMock,
@@ -39,7 +39,6 @@ vi.mock("@follow/database/services/entry", () => ({
 }))
 
 vi.mock("@follow/database/services/feed", () => ({
-  FEED_EXTRA_DATA_KEYS: [],
   FeedService: {
     getFeedAll: vi.fn(),
     reset: vi.fn(),
@@ -47,7 +46,7 @@ vi.mock("@follow/database/services/feed", () => ({
   },
 }))
 
-const createCollectionResponseItem = (index: number) => ({
+const createCollectionResponseItem = (index: number, view?: FeedViewType) => ({
   read: true,
   feeds: {
     id: "feed-1",
@@ -79,6 +78,7 @@ const createCollectionResponseItem = (index: number) => ({
   },
   collections: {
     createdAt: `2026-03-${String(index).padStart(2, "0")}T00:00:00.000Z`,
+    view,
   },
 })
 
@@ -152,6 +152,31 @@ describe("entrySyncServices.fetchEntries", () => {
 
     expect(Object.keys(useCollectionStore.getState().collections)).toHaveLength(25)
     expect(useCollectionStore.getState().collections["entry-1"]).toBeDefined()
+  })
+
+  it("keeps the view an entry was starred in when another timeline lists it", async () => {
+    const starred = { entryId: "entry-2", feedId: "feed-1", view: FeedViewType.Articles }
+    useCollectionStore.setState({ collections: { "entry-2": { ...starred, createdAt: null } } })
+    listEntriesMock.mockResolvedValue({
+      data: [
+        createCollectionResponseItem(1, FeedViewType.Pictures),
+        // Without the view, only the time it was starred is known
+        createCollectionResponseItem(2),
+        createCollectionResponseItem(3),
+      ],
+    })
+
+    await entrySyncServices.fetchEntries({ view: FeedViewType.All })
+
+    expect(useCollectionStore.getState().collections).toEqual({
+      "entry-1": {
+        entryId: "entry-1",
+        feedId: "feed-1",
+        view: FeedViewType.Pictures,
+        createdAt: "2026-03-01T00:00:00.000Z",
+      },
+      "entry-2": { ...starred, createdAt: "2026-03-02T00:00:00.000Z" },
+    })
   })
 
   it("uses the forward cursor when entries are sorted oldest first", async () => {
@@ -305,6 +330,49 @@ describe("entrySyncServices.fetchEntryContentByStream", () => {
     ])
 
     expect(stream).toHaveBeenCalledTimes(1)
+  })
+
+  it("asks again for entries whose request failed", async () => {
+    const ids = entriesWithoutContent("failed", 3)
+    store(ids)
+    const stream = streamApi()
+    stream.mockResolvedValueOnce(new Response("", { status: 503 }))
+
+    await entrySyncServices.fetchEntryContentByStream(ids)
+    await entrySyncServices.fetchEntryContentByStream(ids)
+
+    expect(stream).toHaveBeenCalledTimes(2)
+  })
+
+  it("is prefetched through the debounced export", async () => {
+    const ids = entriesWithoutContent("debounced", 3)
+    store(ids)
+    const stream = streamApi()
+
+    debouncedFetchEntryContentByStream(ids)
+    await debouncedFetchEntryContentByStream.flush()
+
+    expect(stream).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("entrySyncServices.fetchEntryDetail", () => {
+  const id = "1328554886337265664"
+  const { feeds, entries } = createCollectionResponseItem(1)
+  const getEntryMock = vi.fn()
+
+  beforeEach(() => {
+    useEntryStore.setState({ data: {}, entryIdSet: new Set() })
+    apiContext.provide({ entries: { get: getEntryMock } } as unknown as FollowAPI)
+  })
+
+  it("stores the read state the server reports, keeping the known one when it reports none", async () => {
+    getEntryMock.mockResolvedValue({ data: { feeds, entries: { ...entries, id }, read: true } })
+    await entrySyncServices.fetchEntryDetail(id)
+    expect(useEntryStore.getState().data[id]?.read).toBe(true)
+
+    getEntryMock.mockResolvedValue({ data: { feeds, entries: { ...entries, id } } })
+    expect((await entrySyncServices.fetchEntryDetail(id))?.read).toBe(true)
   })
 })
 

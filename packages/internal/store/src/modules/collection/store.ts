@@ -9,6 +9,7 @@ import { collectionOverlayKey, isCollectionOverlayKey } from "../../sync/overlay
 import { defineTransactionKind, transactionQueue } from "../../sync/transaction-queue"
 import { getEntry } from "../entry/getter"
 import { invalidateEntriesQuery } from "../entry/hooks"
+import type { RemoteCollectionModel } from "./types"
 
 interface CollectionState {
   collections: Record<string, CollectionSchema>
@@ -176,22 +177,27 @@ class CollectionActions implements Hydratable, Resetable {
 
   /**
    * Apply a server snapshot of collections while keeping local stars and unstars that the
-   * server has not acknowledged yet.
+   * server has not acknowledged yet. A collection listed without its view keeps the stored one.
    */
   async reconcileFromRemote({
     collections,
     entryIdsNotInCollections,
     reset,
   }: {
-    collections: CollectionSchema[]
+    collections: RemoteCollectionModel[]
     entryIdsNotInCollections: string[]
     reset?: boolean
   }) {
     const { pendingStars, pendingUnstars } = getPendingCollectionChanges()
     const pendingStarIds = new Set(pendingStars.map((collection) => collection.entryId))
+    const stored = get().collections
 
     await this.upsertMany(
-      collections.filter((collection) => !pendingUnstars.has(collection.entryId)),
+      collections.flatMap((collection) => {
+        const view = collection.view ?? stored[collection.entryId]?.view
+        if (view === undefined || pendingUnstars.has(collection.entryId)) return []
+        return [{ ...collection, view }]
+      }),
       { reset },
     )
     if (reset && pendingStars.length > 0) {
