@@ -16,44 +16,38 @@ import { useMutation } from "@tanstack/react-query"
 import { useEffect } from "react"
 import { Platform } from "react-native"
 
-import { followClient } from "@/src/lib/api-client"
-import { kv } from "@/src/lib/kv"
 import {
   registerMessagingToken,
   shouldRetryMessagingTokenRegistration,
 } from "@/src/lib/messaging-registration"
 import { useNavigation } from "@/src/lib/navigation/hooks"
-import { requestNotificationPermission } from "@/src/lib/permission"
-import { PUSH_TOKEN_STORAGE_KEY } from "@/src/lib/push-token"
+import { hasNotificationPermission } from "@/src/lib/permission"
+import { registerPushToken } from "@/src/lib/push-token"
 import { EntryDetailScreen } from "@/src/screens/(stack)/entries/[entryId]/EntryDetailScreen"
 
 // Push needs the Firebase project of the deployment, which the build may not provide
 const hasFirebase = () => getApps().length > 0
-
-async function saveMessagingToken(token: string) {
-  await followClient.api.messaging.createToken({ token, channel: Platform.OS })
-  kv.set(PUSH_TOKEN_STORAGE_KEY, token)
-}
 
 export function useUpdateMessagingToken() {
   const whoami = useWhoami()
   const hasNotificationActions = useHasNotificationActions()
   const { mutate } = useMutation({
     scope: { id: "mobile-push-token-registration" },
-    mutationFn: async ({ token }: { token?: string }) => {
+    mutationFn: async ({ userId, token }: { userId: string; token?: string }) => {
       if (token) {
-        await saveMessagingToken(token)
+        await registerPushToken(userId, token)
         return token
       }
 
       const messaging = getMessaging(getApp())
       return registerMessagingToken({
         platform: Platform.OS,
-        requestPermission: requestNotificationPermission,
+        // Starting the app never asks for the permission: that is left to the user
+        requestPermission: hasNotificationPermission,
         registerDeviceForRemoteMessages: () => registerDeviceForRemoteMessages(messaging),
         getAPNSToken: () => getAPNSToken(messaging),
         getToken: () => getToken(messaging),
-        saveToken: saveMessagingToken,
+        saveToken: (token) => registerPushToken(userId, token),
       })
     },
     retry: shouldRetryMessagingTokenRegistration,
@@ -64,14 +58,15 @@ export function useUpdateMessagingToken() {
   })
 
   useEffect(() => {
-    if (!whoami?.id || !hasNotificationActions || !hasFirebase()) return
+    const userId = whoami?.id
+    if (!userId || !hasNotificationActions || !hasFirebase()) return
 
     const messaging = getMessaging(getApp())
     const unsubscribe = onTokenRefresh(messaging, (token) => {
-      mutate({ token })
+      mutate({ userId, token })
     })
 
-    mutate({})
+    mutate({ userId })
     return unsubscribe
   }, [hasNotificationActions, mutate, whoami?.id])
 }

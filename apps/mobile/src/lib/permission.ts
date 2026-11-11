@@ -5,23 +5,29 @@ import { Platform } from "react-native"
 import { getUISettings } from "../atoms/settings/ui"
 import { toast } from "./toast"
 
-export async function requestNotificationPermission() {
-  if (Platform.OS === "android") {
-    Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: "#FF231F7C",
-    })
-  }
+function ensureNotificationChannel() {
+  if (Platform.OS !== "android") return
+  void Notifications.setNotificationChannelAsync("default", {
+    name: "default",
+    importance: Notifications.AndroidImportance.MAX,
+    vibrationPattern: [0, 250, 250, 250],
+    lightColor: "#FF231F7C",
+  })
+}
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync()
-  let finalStatus = existingStatus
-  if (existingStatus !== "granted") {
-    const { status } = await Notifications.requestPermissionsAsync()
-    finalStatus = status
-  }
-  if (finalStatus !== "granted") {
+/** Checks the notification permission without asking for it */
+export async function hasNotificationPermission() {
+  ensureNotificationChannel()
+  const { status } = await Notifications.getPermissionsAsync()
+  return status === "granted"
+}
+
+/** Asks for the notification permission, which only the user's own action may do */
+export async function requestNotificationPermission() {
+  if (await hasNotificationPermission()) return true
+
+  const { status } = await Notifications.requestPermissionsAsync()
+  if (status !== "granted") {
     toast.error(t("permission.notification_denied"))
     return false
   }
