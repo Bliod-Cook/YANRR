@@ -5,7 +5,7 @@ YANRR is one server (with the web app built in) plus PostgreSQL. The desktop and
 ## Requirements
 
 - A Linux server (amd64 or arm64) with Docker and its Compose plugin (`docker compose`, not `docker-compose`).
-- A domain whose DNS A/AAAA record points at the server, with ports 80 and 443 open. The bundled Caddy uses them to get an HTTPS certificate, and the Android app only connects over HTTPS.
+- A domain whose DNS A/AAAA record points at the server, with ports 80 and 443 open. The bundled Caddy uses them to get an HTTPS certificate.
 
 ## Install
 
@@ -68,7 +68,7 @@ location / {
 
 If the proxy runs in Docker, attach it to YANRR's Compose network and proxy to `yanrr:3000`.
 
-**Home network without HTTPS**: set `YANRR_SERVER__PUBLIC_URL=http://<server IP>:3000`, remove `COMPOSE_PROFILES`, and change the port in `compose.yaml` to `"3000:3000"`. The web and desktop apps work this way; the Android app does not.
+**Home network without HTTPS**: set `YANRR_SERVER__PUBLIC_URL=http://<server IP>:3000`, remove `COMPOSE_PROFILES`, and change the port in `compose.yaml` to `"3000:3000"`. The web, desktop and Android apps all work this way.
 
 ## Configuration
 
@@ -181,7 +181,7 @@ Logs: `docker compose logs yanrr` (or `caddy`).
 | `yanrr` keeps restarting; the log says *Secret key cannot be empty* or *must be at least 32 characters* | Set `YANRR_AUTH__SECRET` (see Install). |
 | Signing in fails with *Invalid origin* | You opened a different address than `YANRR_SERVER__PUBLIC_URL`. Scheme, host and port must all match. |
 | Signing in seems to work, but you're signed out right away | One side uses `https://` and the other `http://`. |
-| The Android app says *No server answers at this address* | Use the `https://` address, and check that the phone can reach it. |
+| The Android app says *No server answers at this address* | Check the address, including `http://` or `https://`, and that the phone can reach it. |
 | Caddy can't get a certificate | Check that the domain's DNS points at this server and that ports 80 and 443 are open. |
 | *This RSSHub instance is unavailable currently*, or `rsshub://` feeds stop updating | The public instance is rate limited; [run your own](#your-own-rsshub). |
 | Sign-up fails | Registration is off (`YANRR_AUTH__REGISTRATION=false`). |

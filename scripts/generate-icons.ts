@@ -150,8 +150,6 @@ const outputs: Record<string, () => Promise<Buffer>> = {
   // Android shows the middle 61% of an adaptive icon at most; its background color is set in app.config.base.ts
   [mobile("assets/adaptive-icon.png")]: () => glyphOnly(1024, "#FFFFFF", 0.4),
   [mobile("assets/splash-icon.png")]: () => rounded(1024, { scale: 0.67 }),
-  [mobile("ios/Folo/Images.xcassets/AppIcon.appiconset/App-Icon-1024x1024@1x.png")]: () =>
-    square(1024),
 }
 
 for (const [file, create] of Object.entries(outputs)) {

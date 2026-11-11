@@ -1,10 +1,7 @@
 node_modules
 dist
-out/*
-!out/
-!out/rn-web
-!out/rn-web/
-!out/rn-web/**
+# Prebuild builds the web app of apps/mobile on the worker
+/out/
 .next
 .open-next
 next-env.d.ts

@@ -1,10 +1,9 @@
-const { withPodfile, withPodfileProperties } = require("expo/config-plugins")
+const { withPodfile } = require("expo/config-plugins")
 
 const { mergeContents } = require("./merge-contents")
 
 const STATIC_FRAMEWORK_TAG = "follow-rnfb-static-framework"
 const RNFB_IOS_COMPAT_TAG = "follow-rnfb-ios-compat"
-const RNFB_STATIC_PODS = ["RNFBApp", "RNFBMessaging"]
 
 // Finds the `end` that closes `post_install do |installer|`: the next line at the same indentation.
 // Anchoring there instead of a fixed line offset keeps the generated block inside the hook, after
@@ -19,27 +18,25 @@ function findPostInstallEnd(lines) {
   return lines.findIndex((line, index) => index > startIndex && line.trimEnd() === `${indent}end`)
 }
 
-module.exports = function withRNFBBuildProperties(config) {
-  config = withPodfileProperties(config, (config) => {
-    config.modResults["ios.useFrameworks"] = "static"
-    config.modResults["ios.forceStaticLinking"] = JSON.stringify(RNFB_STATIC_PODS)
-    return config
-  })
+/**
+ * React Native Firebase is always linked, and statically (see `forceStaticLinking`), which its
+ * Swift Package Manager setup refuses in `pod install`. The app links its CocoaPods instead,
+ * whether the build has a Firebase config or not.
+ */
+const addRNFBPodfileSettings = (contents) => {
+  contents = mergeContents({
+    tag: STATIC_FRAMEWORK_TAG,
+    src: contents,
+    newSrc: "$RNFirebaseAsStaticFramework = true\n$RNFirebaseDisableSPM = true",
+    anchor: /podfile_properties = JSON\.parse/,
+    offset: 1,
+    comment: "#",
+  }).contents
 
-  config = withPodfile(config, (config) => {
-    config.modResults.contents = mergeContents({
-      tag: STATIC_FRAMEWORK_TAG,
-      src: config.modResults.contents,
-      newSrc: "$RNFirebaseAsStaticFramework = true",
-      anchor: /podfile_properties = JSON\.parse/,
-      offset: 1,
-      comment: "#",
-    }).contents
-
-    config.modResults.contents = mergeContents({
-      tag: RNFB_IOS_COMPAT_TAG,
-      src: config.modResults.contents,
-      newSrc: `    installer.pods_project.targets.each do |target|
+  return mergeContents({
+    tag: RNFB_IOS_COMPAT_TAG,
+    src: contents,
+    newSrc: `    installer.pods_project.targets.each do |target|
       if target.name.start_with?('RNFB')
         target.build_configurations.each do |config|
           config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
@@ -69,14 +66,18 @@ module.exports = function withRNFBBuildProperties(config) {
         end
       end
     end`,
-      anchor: findPostInstallEnd,
-      // Insert right before the closing `end`, so the block runs last in `post_install`.
-      offset: -1,
-      comment: "#",
-    }).contents
+    anchor: findPostInstallEnd,
+    // Insert right before the closing `end`, so the block runs last in `post_install`.
+    offset: -1,
+    comment: "#",
+  }).contents
+}
 
+const withRNFBBuildProperties = (config) =>
+  withPodfile(config, (config) => {
+    config.modResults.contents = addRNFBPodfileSettings(config.modResults.contents)
     return config
   })
 
-  return config
-}
+module.exports = withRNFBBuildProperties
+module.exports.addRNFBPodfileSettings = addRNFBPodfileSettings
