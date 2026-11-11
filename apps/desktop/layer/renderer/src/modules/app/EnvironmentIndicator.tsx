@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from "@follow/components/ui/tooltip/index.jsx"
 import { getDBFile } from "@follow/database/db"
-import { DEV, MODE } from "@follow/shared/constants"
+import { DEV, MODE, PROD } from "@follow/shared/constants"
 import { env } from "@follow/shared/env.desktop"
 
 import { useDebugFeatureValue, useSetDebugFeatureValue } from "~/atoms/debug-feature"
@@ -36,29 +36,32 @@ export const EnvironmentDebugModalContent = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium text-text">Debug override features</div>
-          <Switch checked={overrideEnabled} onCheckedChange={handleToggleOverride} />
-        </div>
-        <p className="text-xs text-text-secondary">
-          When enabled, the switches below override server feature flags locally.
-        </p>
-        <div className="rounded-md bg-material-medium p-2">
-          <div className="grid grid-cols-1 gap-2">
-            {featureKeys.map((key) => (
-              <div key={key} className="flex items-center justify-between rounded-md p-2">
-                <span className="text-sm text-text">{key}</span>
-                <Switch
-                  checked={!!debugValues[key]}
-                  onCheckedChange={(v) => handleToggleFeature(key, v)}
-                  disabled={!overrideEnabled}
-                />
-              </div>
-            ))}
+      {/* The overrides only apply outside release builds */}
+      {!PROD && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium text-text">Debug override features</div>
+            <Switch checked={overrideEnabled} onCheckedChange={handleToggleOverride} />
+          </div>
+          <p className="text-xs text-text-secondary">
+            When enabled, the switches below override server feature flags locally.
+          </p>
+          <div className="rounded-md bg-material-medium p-2">
+            <div className="grid grid-cols-1 gap-2">
+              {featureKeys.map((key) => (
+                <div key={key} className="flex items-center justify-between rounded-md p-2">
+                  <span className="text-sm text-text">{key}</span>
+                  <Switch
+                    checked={!!debugValues[key]}
+                    onCheckedChange={(v) => handleToggleFeature(key, v)}
+                    disabled={!overrideEnabled}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-2">
         <div className="text-sm font-medium text-text">Debug actions</div>
