@@ -252,7 +252,6 @@
   "feed_form.updated": "🎉 Mis à jour.",
   "feed_form.view": "Vue",
   "feed_item.error_since": "Erreur depuis",
-  "feed_item.onboarding_feed": "Ceci est un flux d'intégration",
   "login.confirm_password.label": "Confirmer le mot de passe",
   "login.continueWith": "Continuer avec {{provider}}",
   "login.email": "Email",

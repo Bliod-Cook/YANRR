@@ -252,7 +252,6 @@
   "feed_form.updated": "🎉 更新成功",
   "feed_form.view": "視圖",
   "feed_item.error_since": "RSS 摘要失效：",
-  "feed_item.onboarding_feed": "這是一個入門引導訂閱源",
   "login.confirm_password.label": "確認密碼",
   "login.continueWith": "透過 {{provider}} 繼續",
   "login.email": "電子信箱",
