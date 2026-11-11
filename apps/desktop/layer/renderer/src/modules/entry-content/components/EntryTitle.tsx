@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next"
 import { useShallow } from "zustand/shallow"
 
 import { useShowAITranslation } from "~/atoms/ai-translation"
-import { useActionLanguage } from "~/atoms/settings/general"
+import { useActionLanguage, useGeneralSettingKey } from "~/atoms/settings/general"
 import { RelativeTime } from "~/components/ui/datetime"
 import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { useFeedSafeUrl } from "~/hooks/common/useFeedSafeUrl"
@@ -65,9 +65,11 @@ export const EntryTitle = ({ entryId, compact, containerClassName }: EntryLinkPr
   const populatedFullHref = useFeedSafeUrl(entryId)
   const enableTranslation = useShowAITranslation()
   const actionLanguage = useActionLanguage()
+  const translationMode = useGeneralSettingKey("translationMode")
   const translation = useEntryTranslation({
     entryId,
     language: actionLanguage,
+    mode: translationMode,
     enabled: enableTranslation,
   })
 

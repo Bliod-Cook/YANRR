@@ -31,9 +31,11 @@ export const EntryGridFooter = ({
   }))
   const enableTranslation = useGeneralSettingKey("translation")
   const actionLanguage = useActionLanguage()
+  const translationMode = useGeneralSettingKey("translationMode")
   const translation = useEntryTranslation({
     entryId,
     language: actionLanguage,
+    mode: translationMode,
     enabled: enableTranslation,
   })
   const feed = useFeedById(entry?.feedId || "")
@@ -59,7 +61,7 @@ export const EntryGridFooter = ({
         )}
       </View>
       <View className="flex-row items-center gap-1.5">
-        <FeedIcon fallback feed={feed} size={14} />
+        <FeedIcon feed={feed} size={14} />
         <Text numberOfLines={1} className="shrink text-xs font-medium text-secondary-label">
           {feedTitle}
         </Text>

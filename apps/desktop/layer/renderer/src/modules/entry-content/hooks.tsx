@@ -48,6 +48,7 @@ export const useEntryContent = (entryId: string) => {
   const contentTranslated = useEntryTranslation({
     entryId,
     language: actionLanguage,
+    mode: translationMode,
     enabled: enableTranslation,
   })
   usePrefetchEntryTranslation({

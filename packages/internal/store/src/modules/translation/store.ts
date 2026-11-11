@@ -17,7 +17,11 @@ type TranslationModel = Omit<TranslationSchema, "createdAt">
 type TranslationBatchRequest = Parameters<ReturnType<typeof api>["ai"]["translationBatch"]>[0]
 
 interface TranslationState {
-  data: Record<string, Partial<Record<SupportedActionLanguage, EntryTranslation>>>
+  /** Translations by entry id, language and mode */
+  data: Record<
+    string,
+    Partial<Record<SupportedActionLanguage, Partial<Record<TranslationMode, EntryTranslation>>>>
+  >
 }
 const defaultState: TranslationState = {
   data: {},
@@ -49,23 +53,19 @@ class TranslationActions implements Hydratable, Resetable {
 
   upsertManyInSession(translations: TranslationModel[]) {
     immerSet((state) => {
-      translations.forEach((translation) => {
-        if (!state.data[translation.entryId]) {
-          state.data[translation.entryId] = {}
-        }
-
-        if (!state.data[translation.entryId]![translation.language]) {
-          state.data[translation.entryId]![translation.language] = {
-            title: null,
-            description: null,
-            content: null,
-            readabilityContent: null,
-          }
-        }
+      translations.forEach(({ entryId, language, mode, ...fields }) => {
+        const byLanguage = (state.data[entryId] ??= {})
+        const byMode = (byLanguage[language] ??= {})
+        const translation = (byMode[mode] ??= {
+          title: null,
+          description: null,
+          content: null,
+          readabilityContent: null,
+        })
 
         translationFields.forEach((field) => {
-          if (translation[field]) {
-            state.data[translation.entryId]![translation.language]![field] = translation[field]
+          if (fields[field]) {
+            translation[field] = fields[field]
           }
         })
       })
@@ -80,35 +80,23 @@ class TranslationActions implements Hydratable, Resetable {
     )
   }
 
-  getTranslation(entryId: string, language: SupportedActionLanguage) {
-    return get().data[entryId]?.[language]
+  getTranslation(entryId: string, language: SupportedActionLanguage, mode: TranslationMode) {
+    return get().data[entryId]?.[language]?.[mode]
   }
 }
 
 export const translationActions = new TranslationActions()
 
+type TranslationTarget = "content" | "readabilityContent"
+
 class TranslationSyncService {
-  private currentMode?: TranslationMode
-
-  private async ensureMode(mode: TranslationMode) {
-    if (!this.currentMode) {
-      this.currentMode = mode
-      return
-    }
-
-    if (this.currentMode === mode) return
-
-    this.currentMode = mode
-    await translationActions.reset()
-  }
-
   private translationBatcher = create({
     fetcher: async (keys: string[]) => {
       // key format: `${entryId}|${language}|${target}|${fields}|${mode}`
       type KeyParts = {
         entryId: string
         language: SupportedActionLanguage
-        target: "content" | "readabilityContent"
+        target: TranslationTarget
         fields: string
         mode: TranslationMode
       }
@@ -117,11 +105,11 @@ class TranslationSyncService {
         const [entryId, language, target, fields, mode] = key.split("|") as [
           string,
           SupportedActionLanguage,
-          "content" | "readabilityContent",
+          TranslationTarget,
           string,
-          TranslationMode | undefined,
+          TranslationMode,
         ]
-        return { entryId, language, target, fields, mode: mode ?? "bilingual" }
+        return { entryId, language, target, fields, mode }
       }
 
       const requests = keys.map(parseKey)
@@ -159,54 +147,41 @@ class TranslationSyncService {
 
       // Execute each group sequentially to keep memory small; groups are already windowed by scheduler
       for (const [, group] of grouped) {
-        if (this.currentMode && this.currentMode !== group.mode) {
-          for (const id of group.ids) {
-            if (!group.keyById[id]) continue
-            results[group.keyById[id]] = null
-          }
-          continue
+        const request: TranslationBatchRequest & { mode: TranslationMode } = {
+          ids: group.ids,
+          language: toApiSupportedActionLanguage(group.language),
+          fields: group.fields,
+          mode: group.mode,
         }
+        const response = await api().ai.translationBatch(request)
 
-        try {
-          const request: TranslationBatchRequest & { mode?: TranslationMode } = {
-            ids: group.ids,
-            language: toApiSupportedActionLanguage(group.language),
-            fields: group.fields,
+        await readNdjsonStream<{
+          id: string
+          data: Partial<Record<keyof TranslationModel, string>>
+        }>(response, async (json) => {
+          const key = group.keyById[json.id]
+          if (!key) return
+
+          const translation: TranslationModel = {
+            entryId: json.id,
+            language: group.language,
             mode: group.mode,
+            title: null,
+            description: null,
+            content: null,
+            readabilityContent: null,
           }
-          const response = await api().ai.translationBatch(request)
 
-          await readNdjsonStream<{
-            id: string
-            data: Partial<Record<keyof TranslationModel, string>>
-          }>(response, async (json) => {
-            const key = group.keyById[json.id]
-            if (!key) return
+          const { title, description, content, readabilityContent } = json.data || {}
+          if (typeof title === "string") translation.title = title
+          if (typeof description === "string") translation.description = description
+          if (typeof content === "string") translation.content = content
+          if (typeof readabilityContent === "string")
+            translation.readabilityContent = readabilityContent
 
-            if (this.currentMode && this.currentMode !== group.mode) return
-
-            const translation: TranslationModel = {
-              entryId: json.id,
-              language: group.language,
-              title: null,
-              description: null,
-              content: null,
-              readabilityContent: null,
-            }
-
-            const { title, description, content, readabilityContent } = json.data || {}
-            if (typeof title === "string") translation.title = title
-            if (typeof description === "string") translation.description = description
-            if (typeof content === "string") translation.content = content
-            if (typeof readabilityContent === "string")
-              translation.readabilityContent = readabilityContent
-
-            results[key] = translation
-            await translationActions.upsertMany([translation])
-          })
-        } catch (e) {
-          console.error("Translation stream request failed:", e)
-        }
+          results[key] = translation
+          await translationActions.upsertMany([translation])
+        })
       }
 
       return results
@@ -225,16 +200,13 @@ class TranslationSyncService {
     entryId: string
     language: SupportedActionLanguage
     withContent?: boolean
-    target: "content" | "readabilityContent"
-    mode?: TranslationMode
+    target: TranslationTarget
+    mode: TranslationMode
   }) {
-    const translationMode = mode ?? "bilingual"
-    await this.ensureMode(translationMode)
-
     const entry = getEntry(entryId)
 
     if (!entry) return
-    const translationSession = translationActions.getTranslation(entryId, language)
+    const translationSession = translationActions.getTranslation(entryId, language, mode)
 
     const fields = (
       ["title", "description", ...(withContent ? [target] : [])] as TranslationFieldArray
@@ -252,7 +224,7 @@ class TranslationSyncService {
 
     if (fields.length === 0) return null
 
-    const key = `${entryId}|${language}|${target}|${fields.join(",")}|${translationMode}`
+    const key = `${entryId}|${language}|${target}|${fields.join(",")}|${mode}`
     const result = await this.translationBatcher.fetch(key)
     return result || null
   }

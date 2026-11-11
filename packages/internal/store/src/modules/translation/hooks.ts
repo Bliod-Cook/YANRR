@@ -1,15 +1,13 @@
 import type { SupportedActionLanguage } from "@follow/shared"
 import type { SupportedLanguages } from "@follow-app/client-sdk"
-import { useQueries, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect } from "react"
+import { useQueries } from "@tanstack/react-query"
+import { useCallback } from "react"
 
 import { useEntry, useEntryList } from "../entry/hooks"
 import type { EntryModel } from "../entry/types"
 import { useIsLoggedIn } from "../user/hooks"
 import { translationSyncService, useTranslationStore } from "./store"
 import type { TranslationMode } from "./types"
-
-let lastTranslationMode: TranslationMode | null = null
 
 export const usePrefetchEntryTranslation = ({
   entryIds,
@@ -24,27 +22,11 @@ export const usePrefetchEntryTranslation = ({
   target?: "content" | "readabilityContent"
   enabled: boolean
   language: SupportedActionLanguage
-  mode?: TranslationMode
+  mode: TranslationMode
 }) => {
-  const translationMode = mode ?? "bilingual"
-  const queryClient = useQueryClient()
   const entryList = (useEntryList(entryIds)?.filter(
     (entry) => entry !== null && (enabled || !!entry?.settings?.translation),
   ) || []) as EntryModel[]
-
-  useEffect(() => {
-    if (lastTranslationMode === null) {
-      lastTranslationMode = translationMode
-      return
-    }
-
-    if (lastTranslationMode === translationMode) return
-
-    lastTranslationMode = translationMode
-    void queryClient.invalidateQueries({
-      predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === "translation",
-    })
-  }, [queryClient, translationMode])
 
   const isLoggedIn = useIsLoggedIn()
 
@@ -57,14 +39,14 @@ export const usePrefetchEntryTranslation = ({
           const finalWithContent = withContent && !!targetContent
 
           return {
-            queryKey: ["translation", entryId, language, finalWithContent, target, translationMode],
+            queryKey: ["translation", entryId, language, finalWithContent, target, mode],
             queryFn: () =>
               translationSyncService.generateTranslation({
                 entryId,
                 language,
                 withContent: finalWithContent,
                 target,
-                mode: translationMode,
+                mode,
               }),
           }
         })
@@ -75,10 +57,12 @@ export const usePrefetchEntryTranslation = ({
 export const useEntryTranslation = ({
   entryId,
   language,
+  mode,
   enabled,
 }: {
   entryId: string
   language: SupportedLanguages
+  mode: TranslationMode
   enabled: boolean
 }) => {
   const actionSetting = useEntry(entryId, (state) => state.settings?.translation)
@@ -87,9 +71,9 @@ export const useEntryTranslation = ({
     useCallback(
       (state) => {
         if (!enabled && !actionSetting) return
-        return state.data[entryId]?.[language as SupportedActionLanguage]
+        return state.data[entryId]?.[language as SupportedActionLanguage]?.[mode]
       },
-      [actionSetting, entryId, language, enabled],
+      [actionSetting, entryId, language, mode, enabled],
     ),
   )
 }

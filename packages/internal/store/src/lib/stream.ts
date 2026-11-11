@@ -7,12 +7,14 @@ const processNdjsonText = async <T = unknown>(text: string, onLine: LineHandler<
     const trimmed = line.trim()
     if (!trimmed) continue
 
+    let json: T
     try {
-      const json = JSON.parse(trimmed) as T
-      await onLine(json)
+      json = JSON.parse(trimmed) as T
     } catch (error) {
       console.error("Failed to parse NDJSON line:", error)
+      continue
     }
+    await onLine(json)
   }
 }
 

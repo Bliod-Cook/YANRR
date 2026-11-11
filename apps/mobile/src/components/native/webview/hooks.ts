@@ -4,11 +4,13 @@ import { useEntryTranslation } from "@follow/store/translation/hooks"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { PixelRatio } from "react-native"
 
-import { useActionLanguage } from "@/src/atoms/settings/general"
+import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { useSpotlightSettingKey } from "@/src/atoms/settings/spotlight"
 import { useUISettingKey } from "@/src/atoms/settings/ui"
+import { useScreenIsAppeared } from "@/src/lib/navigation/bottom-tab/hooks"
 
 import { prepareEntryRenderWebView } from "./index"
+import type { WebViewEntry } from "./webview-manager"
 import { WebViewManager } from "./webview-manager"
 
 interface UseWebViewEntryOptions {
@@ -49,11 +51,19 @@ export function useWebViewEntry({
   showReadability,
   showTranslation,
 }: UseWebViewEntryOptions) {
-  const entry = useEntry(entryId, (state) => state)
+  const entry = useEntry(entryId, (state) => ({
+    content: state.content,
+    readabilityContent: state.readabilityContent,
+    url: state.url,
+    media: state.media,
+    attachments: state.attachments,
+  }))
   const language = useActionLanguage()
+  const translationMode = useGeneralSettingKey("translationMode")
   const translation = useEntryTranslation({
     entryId,
     language,
+    mode: translationMode,
     enabled: showTranslation ?? false,
   })
 
@@ -86,29 +96,17 @@ export function useWebViewEntry({
     }
   }, [useDifferentFontSizeForContent, mobileContentFontSize, useSystemFontScaling, customFontScale])
 
-  // Prepare entry data for WebView
-  const entryInWebview = useMemo(() => {
-    if (!entry) return null
-
-    const entryContent = showReadability ? entry?.readabilityContent : entry?.content
-    const translatedContent = showReadability
-      ? translation?.readabilityContent
-      : translation?.content
-    const content = showTranslation ? translatedContent || entryContent : entryContent
-
-    return {
-      ...entry,
-      content,
-      spotlightRules,
-    }
-  }, [
-    entry,
-    showReadability,
-    showTranslation,
-    spotlightRules,
-    translation?.content,
-    translation?.readabilityContent,
-  ])
+  const hasEntry = !!entry
+  const entryContent = showReadability ? entry?.readabilityContent : entry?.content
+  const translatedContent = showReadability ? translation?.readabilityContent : translation?.content
+  const content = showTranslation ? translatedContent || entryContent : entryContent
+  const url = entry?.url
+  const media = entry?.media
+  const attachments = entry?.attachments
+  const entryInWebview = useMemo<WebViewEntry | null>(
+    () => (hasEntry ? { content, url, media, attachments, spotlightRules } : null),
+    [hasEntry, content, url, media, attachments, spotlightRules],
+  )
 
   // Update WebView settings when dependencies change
   useEffect(() => {
@@ -135,16 +133,14 @@ export function useWebViewEntry({
     WebViewManager.setSpotlights(spotlightRules)
   }, [spotlightRules])
 
+  // A screen pushed over this one shows its own entry in the WebView, which iOS shares between
+  // screens, so the entry goes again once this screen shows again
+  const isScreenAppeared = useScreenIsAppeared()
   useEffect(() => {
-    WebViewManager.setEntry(entryInWebview)
-  }, [entryInWebview])
+    if (isScreenAppeared) WebViewManager.setEntry(entryInWebview)
+  }, [entryInWebview, isScreenAppeared])
 
-  return {
-    entry,
-    entryInWebview,
-    translation,
-    isLoading: showReadability ? !entry?.readabilityContent : !entry?.content,
-  }
+  return { isLoading: !entryContent }
 }
 
 /**

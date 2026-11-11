@@ -67,9 +67,11 @@ export const EntryNormalItem = memo(
     }))
     const enableTranslation = useGeneralSettingKey("translation")
     const actionLanguage = useActionLanguage()
+    const translationMode = useGeneralSettingKey("translationMode")
     const translation = useEntryTranslation({
       entryId,
       language: actionLanguage,
+      mode: translationMode,
       enabled: enableTranslation,
     })
     const from = getInboxFrom(entry)
@@ -125,7 +127,7 @@ export const EntryNormalItem = memo(
           )}
           <View className="flex-1 space-y-2 self-start">
             <View className="mb-1 flex-row items-center gap-1.5 pr-2">
-              <FeedIcon fallback feed={feed} size={view === FeedViewType.Notifications ? 14 : 16} />
+              <FeedIcon feed={feed} size={view === FeedViewType.Notifications ? 14 : 16} />
               <Text numberOfLines={1} className="shrink text-xs font-medium text-secondary-label">
                 {feedTitle || from || t("entry_list.unknown_feed")}
               </Text>

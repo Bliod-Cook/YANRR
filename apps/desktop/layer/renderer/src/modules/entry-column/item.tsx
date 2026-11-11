@@ -28,6 +28,7 @@ const EntryItemImpl = memo(function EntryItemImpl({
   const translation = useEntryTranslation({
     entryId,
     language: actionLanguage,
+    mode: translationMode,
     enabled: enableTranslation,
   })
   usePrefetchEntryTranslation({

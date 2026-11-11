@@ -49,9 +49,11 @@ export const EntrySocialItem = memo(
     }))
     const enableTranslation = useGeneralSettingKey("translation")
     const actionLanguage = useActionLanguage()
+    const translationMode = useGeneralSettingKey("translationMode")
     const translation = useEntryTranslation({
       entryId,
       language: actionLanguage,
+      mode: translationMode,
       enabled: enableTranslation,
     })
     const { openLightbox } = useLightboxControls()

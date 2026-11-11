@@ -19,9 +19,11 @@ export const EntryTitle = ({ title, entryId }: { title: string; entryId: string 
   const showTranslationOnce = useAtomValue(showAITranslationAtom)
   const enableTranslation = useGeneralSettingKey("translation") || showTranslationOnce
   const actionLanguage = useActionLanguage()
+  const translationMode = useGeneralSettingKey("translationMode")
   const translation = useEntryTranslation({
     entryId,
     language: actionLanguage,
+    mode: translationMode,
     enabled: enableTranslation,
   })
   const { titleHeightAtom } = use(EntryContentContext)

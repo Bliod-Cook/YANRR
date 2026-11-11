@@ -332,10 +332,12 @@ const MasonryRender: React.ComponentType<
 > = ({ data, index }) => {
   const firstScreenReady = use(FirstScreenReadyContext)
   const enableTranslation = useGeneralSettingKey("translation")
+  const translationMode = useGeneralSettingKey("translationMode")
   const actionLanguage = useActionLanguage()
   const translation = useEntryTranslation({
     entryId: data.entryId,
     language: actionLanguage,
+    mode: translationMode,
     enabled: enableTranslation,
   })
 
