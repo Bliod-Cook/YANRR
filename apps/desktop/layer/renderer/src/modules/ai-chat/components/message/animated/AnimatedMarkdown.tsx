@@ -8,7 +8,6 @@ import { cn, isBizId } from "@follow/utils"
 import * as React from "react"
 import type { Components } from "react-markdown"
 import ReactMarkdown from "react-markdown"
-import rehypeRaw from "rehype-raw"
 import remarkGfm from "remark-gfm"
 
 import { MemoizedShikiCode } from "~/components/ui/code-highlighter"
@@ -18,6 +17,7 @@ import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { usePeekModal } from "~/hooks/biz/usePeekModal"
 
 import { ANIMATION_STYLE as ANIMATION_STYLE_DEFAULT } from "./constants"
+import { rehypeMentionTags } from "./rehype-mention-tags"
 import { TokenizedText } from "./TokenizedText"
 
 interface MarkdownAnimateTextProps {
@@ -169,18 +169,24 @@ const createAiMessageMarkdownElementsRender = (canAnimate: boolean) => {
 
 const animatedComponents = createAiMessageMarkdownElementsRender(true)
 const staticComponents = createAiMessageMarkdownElementsRender(false)
-export const MarkdownAnimateText: React.FC<MarkdownAnimateTextProps> = ({
-  content,
-  isStreaming,
-}) => {
-  const components = isStreaming ? animatedComponents : staticComponents
+const remarkPlugins = [remarkGfm]
+const rehypePlugins = [rehypeMentionTags]
 
-  return (
-    <ReactMarkdown components={components} remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
-      {content}
-    </ReactMarkdown>
-  )
-}
+export const MarkdownAnimateText: React.FC<MarkdownAnimateTextProps> = React.memo(
+  ({ content, isStreaming }) => {
+    const components = isStreaming ? animatedComponents : staticComponents
+
+    return (
+      <ReactMarkdown
+        components={components}
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
+      >
+        {content}
+      </ReactMarkdown>
+    )
+  },
+)
 
 type BaseInlineEntityReferenceProps = {
   type: "entry" | "feed"

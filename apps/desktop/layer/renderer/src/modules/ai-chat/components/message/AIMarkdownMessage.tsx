@@ -1,8 +1,8 @@
 import { cn, stopPropagation } from "@follow/utils"
-import { memo, useRef } from "react"
+import { memo, useMemo, useRef } from "react"
 
 import { MarkdownAnimateText } from "./animated/AnimatedMarkdown"
-import { parseIncompleteMarkdown } from "./parse-incomplete-markdown"
+import { toMarkdownBlocks } from "./markdown-blocks"
 
 export const AIMarkdownStreamingMessage = memo(
   ({
@@ -23,13 +23,20 @@ export const AIMarkdownStreamingMessage = memo(
   [&_ol>li]:list-decimal
   `
 
+    // A message that streamed keeps its animated elements once it ends, so they don't remount
     const stableStreamingState = useRef(isStreaming)
+    const blocks = useMemo(() => toMarkdownBlocks(text, !!isStreaming), [text, isStreaming])
+
     return (
       <div onContextMenu={stopPropagation} className={cn(className, classNameProp)}>
-        <MarkdownAnimateText
-          content={parseIncompleteMarkdown(text)}
-          isStreaming={stableStreamingState.current}
-        />
+        {blocks.map((block, index) => (
+          <MarkdownAnimateText
+            // Blocks only grow at the end, so the index identifies a block while it streams
+            key={index}
+            content={block}
+            isStreaming={stableStreamingState.current}
+          />
+        ))}
       </div>
     )
   },
