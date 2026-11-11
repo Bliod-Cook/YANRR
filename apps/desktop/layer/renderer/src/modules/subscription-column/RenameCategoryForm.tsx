@@ -44,7 +44,13 @@ export const RenameCategoryForm = ({
 
       onFinished()
     },
-    onError: createErrorToaster(t("sidebar.feed_column.context_menu.rename_category_error")),
+    onError: (error, { lastCategory, newCategory }) => {
+      // The store rolls the rename back, so the route must not stay on the new name
+      if (getRouteParams().folderName === newCategory) {
+        navigate({ folderName: lastCategory })
+      }
+      createErrorToaster(t("sidebar.feed_column.context_menu.rename_category_error"))(error)
+    },
     onSuccess: () => {
       toast.success(t("sidebar.feed_column.context_menu.rename_category_success"))
     },

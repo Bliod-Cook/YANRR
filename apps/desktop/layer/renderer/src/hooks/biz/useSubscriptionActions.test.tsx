@@ -6,12 +6,13 @@ import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
-import { useDeleteSubscription } from "./useSubscriptionActions"
+import { useBatchUpdateSubscription, useDeleteSubscription } from "./useSubscriptionActions"
 
 const mocks = vi.hoisted(() => ({
   unsubscribe: vi.fn(),
   subscribe: vi.fn(),
   refresh: vi.fn(),
+  batchUpdateSubscription: vi.fn(),
   toastWarning: vi.fn(),
   toastFetchError: vi.fn(),
 }))
@@ -21,6 +22,7 @@ vi.mock("@follow/store/subscription/store", () => ({
     unsubscribe: mocks.unsubscribe,
     subscribe: mocks.subscribe,
     refresh: mocks.refresh,
+    batchUpdateSubscription: mocks.batchUpdateSubscription,
   },
 }))
 
@@ -57,9 +59,11 @@ const subscription: SubscriptionModel = {
 }
 
 let deleteSubscription: ReturnType<typeof useDeleteSubscription> | null = null
+let batchUpdate: ReturnType<typeof useBatchUpdateSubscription> | null = null
 
 const Probe = () => {
   deleteSubscription = useDeleteSubscription()
+  batchUpdate = useBatchUpdateSubscription()
   return null
 }
 
@@ -107,6 +111,20 @@ describe("useDeleteSubscription undo", () => {
     root = null
     host = null
     deleteSubscription = null
+    batchUpdate = null
+  })
+
+  test("reports a category or view change the server rejects", async () => {
+    const error = new Error("Server is down")
+    mocks.batchUpdateSubscription.mockRejectedValue(error)
+
+    await act(async () => {
+      await batchUpdate
+        ?.mutateAsync({ feedIdList: ["feed-1"], category: "Tech", view: 0 })
+        .catch(() => {})
+    })
+
+    expect(mocks.toastFetchError).toHaveBeenCalledWith(error)
   })
 
   test("follows the feed again with the custom title it had", async () => {
