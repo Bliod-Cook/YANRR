@@ -1,4 +1,5 @@
 import type { DetailedHTMLProps, HTMLAttributes } from "react"
+import * as React from "react"
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
 import { useEventListener } from "usehooks-ts"
 

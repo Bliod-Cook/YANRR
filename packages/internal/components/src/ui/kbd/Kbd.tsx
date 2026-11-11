@@ -1,5 +1,6 @@
 import { cn, getOS } from "@follow/utils/utils"
 import type { ComponentProps, FC, SVGProps } from "react"
+import * as React from "react"
 import { Fragment, memo } from "react"
 
 const os = getOS()
