@@ -1,11 +1,7 @@
-import type { ElectronAPI } from "@electron-toolkit/preload"
-
+// What the desktop app's preload script hands the page
 declare const globalThis: {
-  window: Window & {
-    electron?: ElectronAPI
-    api?: { canWindowBlur: boolean }
-  }
-  electron?: ElectronAPI
+  window?: { api?: { canWindowBlur: boolean } }
+  electron?: object
 }
 
 export enum ModeEnum {
@@ -18,15 +14,14 @@ export const MODE = import.meta.env?.MODE as ModeEnum
 
 export const { PROD } = import.meta.env ?? {}
 
-export const DEV =
-  "process" in globalThis ? process.env.NODE_ENV === "development" : import.meta.env.DEV
+// Fixed when the desktop app is built, so that nothing in the environment an installed app runs
+// in turns its development behaviour on. Only the mobile bundler has no `import.meta.env`.
+export const DEV: boolean = import.meta.env?.DEV ?? process.env.NODE_ENV === "development"
 
 export const APP_ID = "io.github.bliodcook.yanrr"
 export const APP_PROTOCOL = DEV ? "yanrr-dev" : "yanrr"
 
-export const SYSTEM_CAN_UNDER_BLUR_WINDOW = globalThis?.window?.electron
-  ? globalThis?.window.api?.canWindowBlur
-  : false
+export const SYSTEM_CAN_UNDER_BLUR_WINDOW = globalThis.window?.api?.canWindowBlur ?? false
 
 declare const ELECTRON: boolean
 /**
