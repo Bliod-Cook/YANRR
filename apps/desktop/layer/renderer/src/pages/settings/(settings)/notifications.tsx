@@ -1,5 +1,4 @@
 import { SettingNotifications } from "~/modules/settings/tabs/notifications"
-import { SettingsTitle } from "~/modules/settings/title"
 import { defineSettingPageData } from "~/modules/settings/utils"
 
 const iconName = "i-mgc-notification-cute-re"
@@ -12,10 +11,5 @@ export const handle = defineSettingPageData({
 })
 
 export function Component() {
-  return (
-    <>
-      <SettingsTitle />
-      <SettingNotifications />
-    </>
-  )
+  return <SettingNotifications />
 }

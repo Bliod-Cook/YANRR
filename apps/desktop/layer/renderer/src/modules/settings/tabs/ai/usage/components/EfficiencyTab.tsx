@@ -15,9 +15,7 @@ export const EfficiencyTab = ({ byModel }: EfficiencyTabProps) => {
   return (
     <Card className="mx-4">
       <CardHeader>
-        <CardTitle className="text-base text-text">
-          {t("analytics.efficiency_analysis", { defaultValue: "Efficiency analysis" })}
-        </CardTitle>
+        <CardTitle className="text-base text-text">{t("analytics.efficiency_analysis")}</CardTitle>
       </CardHeader>
       <CardContent>
         {byModel?.length > 0 ? (

@@ -1,5 +1,5 @@
 // HACK: Use expose the navigate function in the window object, avoid to import `router` circular issue.
-import type { SettingModalOptions } from "./useSettingModal"
+import type { SettingModalOptions } from "./usePresentSettingModal"
 
 const getShowSettings = () => {
   const showSettings = window.router?.showSettings

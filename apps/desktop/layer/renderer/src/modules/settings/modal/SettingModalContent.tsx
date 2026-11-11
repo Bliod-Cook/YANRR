@@ -12,7 +12,6 @@ import {
   useState,
 } from "react"
 import { useTranslation } from "react-i18next"
-import { useLoaderData } from "react-router"
 
 import { ModalClose } from "~/components/ui/modal/stacked/components"
 import { useRequireLogin } from "~/hooks/common/useRequireLogin"
@@ -116,7 +115,7 @@ const Content: FC<{
   const pages = getSettingPages()
   const page = key ? pages[key] : undefined
   const Component = page?.Component
-  const loader = page?.loader
+  const config = page?.loader as SettingPageConfig | undefined
 
   const [scrollerAtTop, setScrollerAtTop] = useState(true)
   const [scroller, setScroller] = useState<HTMLDivElement | null>(null)
@@ -165,14 +164,13 @@ const Content: FC<{
     }
   }, [initialSection, scrollToSection])
 
-  const config = (useLoaderData() || loader || {}) as SettingPageConfig
-  if (!Component || !activeSetting) return null
+  if (!Component || !config || !activeSetting) return null
 
   if (!tabAccessible) {
     return (
       <>
         <SettingsTitle
-          loader={loader}
+          config={config}
           className={clsx(
             "relative mb-0 border-b border-transparent px-8 transition-colors duration-200",
             !scrollerAtTop ? "border-border" : "",
@@ -193,7 +191,7 @@ const Content: FC<{
   return (
     <Suspense>
       <SettingsTitle
-        loader={loader}
+        config={config}
         className={clsx(
           "relative mb-0 border-b border-transparent px-8 transition-colors duration-200",
           !scrollerAtTop ? "border-border" : "",

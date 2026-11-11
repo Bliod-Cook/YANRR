@@ -1,11 +1,8 @@
 import { EllipsisHorizontalTextWithTooltip } from "@follow/components/ui/typography/index.js"
 import { cn } from "@follow/utils/utils"
 import { Slot } from "@radix-ui/react-slot"
-import { use } from "react"
 import { useTranslation } from "react-i18next"
-import { useLoaderData } from "react-router"
 
-import { IsInSettingIndependentWindowContext } from "./context"
 import { getMemoizedSettings } from "./settings-glob"
 import type { SettingPageConfig } from "./utils"
 
@@ -31,31 +28,21 @@ export const SettingsSidebarTitle = ({ path, className }: { path: string; classN
 
 export const SettingsTitle = ({
   className,
-  loader,
+  config,
 }: {
   className?: string
-  loader?: () => SettingPageConfig
+  config: SettingPageConfig
 }) => {
   const { t } = useTranslation("settings")
-  const {
-    icon: iconName,
-    name,
-    title,
-    headerIcon,
-  } = (useLoaderData() || loader || {}) as SettingPageConfig
+  const { icon: iconName, name, title, headerIcon } = config
 
   const usedIcon = headerIcon || iconName
   const usedTitle = title || name
-  const isInSettingIndependentWindow = use(IsInSettingIndependentWindowContext)
-  if (!usedTitle) {
-    return null
-  }
   return (
     <div
       className={cn(
         "flex items-center gap-2 pb-2 pt-6 text-xl font-bold",
         "sticky top-0 mb-4",
-        isInSettingIndependentWindow ? "z-[99] bg-background" : "",
         className,
       )}
     >

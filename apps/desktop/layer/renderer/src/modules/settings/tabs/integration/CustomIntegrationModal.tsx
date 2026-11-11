@@ -19,6 +19,7 @@ import type {
 } from "@follow/shared/settings/interface"
 import { nextFrame } from "@follow/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
+import type { TFunction } from "i18next"
 import { memo, useCallback, useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { useTranslation } from "react-i18next"
@@ -30,22 +31,21 @@ import { CustomIntegrationPreview } from "~/modules/integration/CustomIntegratio
 import { PlaceholderHelp } from "~/modules/integration/PlaceholderHelp"
 import { URLSchemePreview } from "~/modules/integration/URLSchemePreview"
 
-const httpTemplateSchema = z.object({
-  method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
-  url: z.string().url("URL is required"),
-  headers: z.record(z.string(), z.string()),
-  body: z.string().optional(),
-})
+const createFormSchema = (t: TFunction<"settings">) => {
+  const httpTemplateSchema = z.object({
+    method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
+    url: z.string().url(t("integration.custom_integrations.form.url.required")),
+    headers: z.record(z.string(), z.string()),
+    body: z.string().optional(),
+  })
+  const urlSchemeTemplateSchema = z.object({
+    scheme: z.string().url(t("integration.custom_integrations.form.scheme.required")),
+  })
 
-const urlSchemeTemplateSchema = z.object({
-  scheme: z.string().url("URL scheme is required"),
-})
-
-const createFormSchema = () =>
-  z
+  return z
     .object({
-      name: z.string().min(1, "Name is required"),
-      icon: z.string().min(1, "Icon is required"),
+      name: z.string().min(1, t("integration.custom_integrations.form.name.required")),
+      icon: z.string().min(1, t("integration.custom_integrations.form.icon.required")),
       type: z.enum(["http", "url-scheme"]),
       fetchTemplate: z.any().optional(),
       urlSchemeTemplate: z.any().optional(),
@@ -73,6 +73,7 @@ const createFormSchema = () =>
         }
       }
     })
+}
 
 type FormData = z.infer<ReturnType<typeof createFormSchema>>
 
@@ -230,7 +231,7 @@ export const CustomIntegrationModalContent = ({
     }
   }, [integration, commonIcons])
 
-  const formSchema = useMemo(() => createFormSchema(), [])
+  const formSchema = useMemo(() => createFormSchema(t), [t])
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -591,23 +592,19 @@ export const CustomIntegrationModalContent = ({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="pl-2.5">
-                            {t("integration.custom_integrations.form.scheme.label", "URL Scheme")}
+                            {t("integration.custom_integrations.form.scheme.label")}
                           </FormLabel>
                           <FormControl>
                             <MemoizedInput
                               placeholder={t(
                                 "integration.custom_integrations.form.scheme.placeholder",
-                                "e.g., obsidian://new?vault=MyVault&name=[title]&content=[content_markdown]",
                               )}
                               {...field}
                               className="font-mono text-sm"
                             />
                           </FormControl>
                           <FormDescription className="pl-2.5">
-                            {t(
-                              "integration.custom_integrations.form.scheme.description",
-                              "Enter the URL scheme for the external application. Use placeholders like [title], [url], [content_markdown], etc.",
-                            )}
+                            {t("integration.custom_integrations.form.scheme.description")}
                           </FormDescription>
                           <FormMessage className="pl-2.5" />
                         </FormItem>

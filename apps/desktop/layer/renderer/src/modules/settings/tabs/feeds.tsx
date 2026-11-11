@@ -323,10 +323,11 @@ const SortedFeedsList: FC<{
 }> = ({ feeds, sortField, sortDirection, selectedFeeds, onSelect }) => {
   const scrollContainerElement = useScrollViewElement()
 
+  // Sorts a copy: the ids are the subscription store's own array
   const sortedFeedIds = useMemo(() => {
     switch (sortField) {
       case "date": {
-        return feeds.sort((a, b) => {
+        return [...feeds].sort((a, b) => {
           const aSubscription = getSubscriptionByFeedId(a)
           const bSubscription = getSubscriptionByFeedId(b)
           if (!aSubscription || !bSubscription) return 0
@@ -339,7 +340,7 @@ const SortedFeedsList: FC<{
         })
       }
       case "view": {
-        return feeds.sort((a, b) => {
+        return [...feeds].sort((a, b) => {
           const aSubscription = getSubscriptionByFeedId(a)
           const bSubscription = getSubscriptionByFeedId(b)
           if (!aSubscription || !bSubscription) return 0
@@ -349,7 +350,7 @@ const SortedFeedsList: FC<{
         })
       }
       case "name": {
-        return feeds.sort((a, b) => {
+        return [...feeds].sort((a, b) => {
           const aSubscription = getSubscriptionByFeedId(a)
           const bSubscription = getSubscriptionByFeedId(b)
           if (!aSubscription || !bSubscription) return 0

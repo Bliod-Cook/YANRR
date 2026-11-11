@@ -100,35 +100,14 @@ const getColorButtonByValue = (container: HTMLElement, value: string, index = 0)
   return button
 }
 
-const getReactProps = <T extends object>(element: HTMLElement): T => {
-  const reactPropsKey = Object.keys(element).find((key) => key.startsWith("__reactProps"))
-  if (!reactPropsKey) {
-    throw new Error("React props key not found")
-  }
-
-  return (element as unknown as Record<string, T>)[reactPropsKey] as T
-}
-
+// Typing as the browser reports it: the native setter bypasses the value React tracks, so the
+// input event that follows reads as a change
 const setInputValue = async (input: HTMLInputElement, value: string) => {
   const descriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")
-  expect(descriptor?.set).toBeDefined()
 
   await act(async () => {
-    input.focus()
     descriptor!.set!.call(input, value)
-    input.setAttribute("value", value)
-    input.dispatchEvent(
-      new InputEvent("input", { bubbles: true, data: value, inputType: "insertText" }),
-    )
-    input.dispatchEvent(new Event("change", { bubbles: true }))
-    const reactProps = getReactProps<{ onChange?: (event: { target: HTMLInputElement }) => void }>(
-      input,
-    )
-    reactProps.onChange?.({
-      target: input,
-    })
-    input.blur()
-    await Promise.resolve()
+    input.dispatchEvent(new Event("input", { bubbles: true }))
   })
 }
 

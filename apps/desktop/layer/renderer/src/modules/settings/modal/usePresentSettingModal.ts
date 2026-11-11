@@ -21,7 +21,12 @@ const normalizeOptions = (options?: SettingModalOptions) => {
   return options
 }
 
-export const useSettingModal = () => {
+/**
+ * Presents the settings modal in the modal stack of the caller. Only the provider that exposes it
+ * as `window.router.showSettings` uses it; everything else opens settings through
+ * `use-setting-modal-hack`, which calls that.
+ */
+export const usePresentSettingModal = () => {
   const { t } = useTranslation()
   const { present } = useModalStack()
 

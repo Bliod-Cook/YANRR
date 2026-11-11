@@ -1,3 +1,4 @@
+import { getStableRouterNavigate } from "@follow/components/atoms/route.js"
 import { Routes } from "@follow/constants"
 import { registerGlobalContext } from "@follow/shared/bridge"
 import { env } from "@follow/shared/env.desktop"
@@ -15,8 +16,8 @@ import { useDiscoverRSSHubRouteModal } from "~/hooks/biz/useDiscoverRSSHubRoute"
 import { useFollow } from "~/hooks/biz/useFollow"
 import { navigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { queryClient } from "~/lib/query-client"
-import type { SettingModalOptions } from "~/modules/settings/modal/useSettingModal"
-import { useSettingModal } from "~/modules/settings/modal/useSettingModal"
+import type { SettingModalOptions } from "~/modules/settings/modal/usePresentSettingModal"
+import { usePresentSettingModal } from "~/modules/settings/modal/usePresentSettingModal"
 
 declare module "@follow/components/providers/stable-router-provider.js" {
   interface CustomRoute {
@@ -26,13 +27,13 @@ declare module "@follow/components/providers/stable-router-provider.js" {
 
 export const ExtensionExposeProvider = () => {
   const { present } = useModalStack()
-  const showSettings = useSettingModal()
+  const showSettings = usePresentSettingModal()
   const location = useLocation()
 
   useEffect(() => {
     registerGlobalContext({
       goToDiscover: () => {
-        window.router.navigate(Routes.Discover)
+        getStableRouterNavigate()?.(Routes.Discover)
       },
       goToFeed: ({ id, view }: { id: string; view?: number }) => {
         navigateEntry({ feedId: id, view: view ?? 0, backPath: location.pathname })

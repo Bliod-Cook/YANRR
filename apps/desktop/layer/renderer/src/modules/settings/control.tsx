@@ -1,34 +1,13 @@
 import { Button } from "@follow/components/ui/button/index.js"
-import { Checkbox } from "@follow/components/ui/checkbox/index.jsx"
-import { Input, TextArea } from "@follow/components/ui/input/index.js"
+import { Input } from "@follow/components/ui/input/index.js"
 import { Label } from "@follow/components/ui/label/index.jsx"
 import { SegmentGroup, SegmentItem } from "@follow/components/ui/segment/index.jsx"
 import { Switch } from "@follow/components/ui/switch/index.jsx"
 import { cn } from "@follow/utils/utils"
 import type { ChangeEventHandler, FocusEventHandler, KeyboardEventHandler, ReactNode } from "react"
-import { useId, useState } from "react"
+import { useId } from "react"
 
 import { useTitleCaseIfEnglish } from "~/hooks/common/useTitleCaseIfEnglish"
-
-export const SettingCheckbox: Component<{
-  label: string
-  checked: boolean
-  onCheckedChange: (checked: boolean) => void
-}> = ({ checked, label, onCheckedChange }) => {
-  const id = useId()
-  const titleCaseIfEnglish = useTitleCaseIfEnglish()
-  return (
-    <div className="mb-2 flex items-center gap-4">
-      <Checkbox
-        id={id}
-        checked={checked}
-        onCheckedChange={onCheckedChange}
-        className="cursor-auto"
-      />
-      <Label htmlFor={id}>{titleCaseIfEnglish(label)}</Label>
-    </div>
-  )
-}
 
 export const SettingSwitch: Component<{
   label: string
@@ -89,35 +68,6 @@ export const SettingInput: Component<{
   )
 }
 
-export const SettingTextArea: Component<{
-  label: string
-  value: string
-  onChange: ChangeEventHandler<HTMLTextAreaElement>
-  vertical?: boolean
-  labelClassName?: string
-}> = ({ value, label, onChange, labelClassName, className, vertical }) => {
-  const id = useId()
-  const titleCaseIfEnglish = useTitleCaseIfEnglish()
-
-  return (
-    <div
-      className={cn(
-        "mb-1 flex",
-        vertical ? "mb-2 flex-col gap-3" : "flex-row items-center justify-between gap-12",
-        className,
-      )}
-    >
-      <Label
-        className={cn("shrink-0 text-sm font-medium leading-none", labelClassName)}
-        htmlFor={id}
-      >
-        {titleCaseIfEnglish(label)}
-      </Label>
-      <TextArea id={id} value={value} onChange={onChange} className="text-xs" />
-    </div>
-  )
-}
-
 export const SettingTabbedSegment: Component<{
   label: ReactNode
   value: string
@@ -125,7 +75,6 @@ export const SettingTabbedSegment: Component<{
   values: { value: string; label: string; icon?: ReactNode }[]
   description?: string
 }> = ({ label, className, value, values, onValueChanged, description }) => {
-  const [currentValue, setCurrentValue] = useState(value)
   const titleCaseIfEnglish = useTitleCaseIfEnglish()
 
   return (
@@ -135,14 +84,7 @@ export const SettingTabbedSegment: Component<{
           {typeof label === "string" ? titleCaseIfEnglish(label) : label}
         </label>
 
-        <SegmentGroup
-          className="h-8"
-          value={currentValue}
-          onValueChanged={(v) => {
-            setCurrentValue(v)
-            onValueChanged?.(v)
-          }}
-        >
+        <SegmentGroup className="h-8" value={value} onValueChanged={onValueChanged}>
           {values.map((v) => (
             <SegmentItem
               key={v.value}

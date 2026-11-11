@@ -1,5 +1,4 @@
 import { SettingGeneral } from "~/modules/settings/tabs/general"
-import { SettingsTitle } from "~/modules/settings/title"
 import { defineSettingPageData } from "~/modules/settings/utils"
 
 const iconName = "i-mgc-settings-7-cute-re"
@@ -12,10 +11,5 @@ export const handle = defineSettingPageData({
 })
 
 export function Component() {
-  return (
-    <>
-      <SettingsTitle />
-      <SettingGeneral />
-    </>
-  )
+  return <SettingGeneral />
 }

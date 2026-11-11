@@ -18,9 +18,7 @@ export const OverviewTab = ({ dailyTotals, peakDay }: OverviewTabProps) => {
       {dailyTotals.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base text-text">
-              {t("analytics.usage_trends", { defaultValue: "Usage trends" })}
-            </CardTitle>
+            <CardTitle className="text-base text-text">{t("analytics.usage_trends")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-44 w-full">

@@ -1,6 +1,5 @@
 import { getFeature } from "~/hooks/biz/useFeature"
 import { SettingAI } from "~/modules/settings/tabs/ai"
-import { SettingsTitle } from "~/modules/settings/title"
 import { defineSettingPageData } from "~/modules/settings/utils"
 
 const iconName = "i-mgc-ai-cute-re"
@@ -14,10 +13,5 @@ export const handle = defineSettingPageData({
 })
 
 export function Component() {
-  return (
-    <>
-      <SettingsTitle />
-      <SettingAI />
-    </>
-  )
+  return <SettingAI />
 }

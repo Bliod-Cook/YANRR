@@ -225,30 +225,6 @@ const textSizeMap = {
   large: 20,
 }
 
-export const TextSize = () => {
-  const { t } = useTranslation("settings")
-  const uiTextSize = useUISettingSelector((state) => state.uiTextSize)
-
-  return (
-    <div className="mb-3 flex items-center justify-between">
-      <span className="shrink-0 text-sm font-medium">{t("appearance.text_size.label")}</span>
-      <ResponsiveSelect
-        defaultValue={textSizeMap.default.toString()}
-        value={uiTextSize.toString() || textSizeMap.default.toString()}
-        onValueChange={(value) => {
-          setUISetting("uiTextSize", Number.parseInt(value) || textSizeMap.default)
-        }}
-        size="sm"
-        triggerClassName="w-48 capitalize"
-        items={Object.entries(textSizeMap).map(([size, value]) => ({
-          label: t(`appearance.text_size.${size as keyof typeof textSizeMap}`),
-          value: value.toString(),
-        }))}
-      />
-    </div>
-  )
-}
-
 // Global Font Size component that combines UI and content font size
 const GlobalFontSize = () => {
   const { t } = useTranslation("settings")

@@ -1,5 +1,4 @@
 import { SettingAppearance } from "~/modules/settings/tabs/appearance"
-import { SettingsTitle } from "~/modules/settings/title"
 import { defineSettingPageData } from "~/modules/settings/utils"
 
 const iconName = "i-mgc-palette-cute-re"
@@ -12,10 +11,5 @@ export const handle = defineSettingPageData({
 })
 
 export function Component() {
-  return (
-    <>
-      <SettingsTitle />
-      <SettingAppearance />
-    </>
-  )
+  return <SettingAppearance />
 }

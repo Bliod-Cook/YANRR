@@ -8,6 +8,15 @@ interface HistoryTabProps {
   analysis: AnalyticsData | null
 }
 
+// Operations of other types are shown as the server names them
+const operationTypeLabels = {
+  chat: "analytics.operation_types.chat",
+  onboarding: "analytics.operation_types.onboarding",
+  task: "analytics.operation_types.task",
+  title_generation: "analytics.operation_types.title_generation",
+} as const
+type OperationType = keyof typeof operationTypeLabels
+
 export const HistoryTab = ({ analysis }: HistoryTabProps) => {
   const { t } = useTranslation("ai")
 
@@ -37,9 +46,10 @@ export const HistoryTab = ({ analysis }: HistoryTabProps) => {
                 <span className="truncate text-sm font-medium text-text">
                   {item.operationType
                     ? t("analytics.history_operation", {
-                        operation: t(`analytics.operation_types.${item.operationType}`, {
-                          defaultValue: item.operationType,
-                        }),
+                        operation:
+                          item.operationType in operationTypeLabels
+                            ? t(operationTypeLabels[item.operationType as OperationType])
+                            : item.operationType,
                       })
                     : t("analytics.history_usage")}
                 </span>

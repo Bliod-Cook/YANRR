@@ -2,7 +2,6 @@ import { Divider } from "@follow/components/ui/divider/Divider.js"
 
 import { ProfileSettingForm } from "~/modules/profile/profile-setting-form"
 import { UpdatePasswordForm } from "~/modules/profile/update-password-form"
-import { SettingsTitle } from "~/modules/settings/title"
 import { defineSettingPageData } from "~/modules/settings/utils"
 
 const iconName = "i-mgc-user-setting-cute-re"
@@ -15,15 +14,12 @@ export const handle = defineSettingPageData({
 
 export function Component() {
   return (
-    <>
-      <SettingsTitle />
-      <section className="mt-4">
-        <ProfileSettingForm />
+    <section className="mt-4">
+      <ProfileSettingForm />
 
-        <Divider className="mb-6 mt-8" />
+      <Divider className="mb-6 mt-8" />
 
-        <UpdatePasswordForm />
-      </section>
-    </>
+      <UpdatePasswordForm />
+    </section>
   )
 }

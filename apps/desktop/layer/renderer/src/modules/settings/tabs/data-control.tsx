@@ -9,12 +9,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@follow/components/ui/form/index.js"
-import { Input } from "@follow/components/ui/input/Input.js"
 import { Label } from "@follow/components/ui/label/index.jsx"
 import { RadioGroup, RadioGroupItem } from "@follow/components/ui/radio-group/motion.js"
 import { Slider } from "@follow/components/ui/slider/index.js"
 import { exportDB } from "@follow/database/db"
 import { ELECTRON_BUILD } from "@follow/shared/constants"
+import { transactionQueue } from "@follow/store/sync/transaction-queue"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQuery } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
@@ -87,10 +87,19 @@ export const SettingDataControl = () => {
           {
             label: t("general.rebuild_database.label"),
             action: () => {
+              // Changes made offline wait in the local database, so rebuilding it drops them
+              const pendingCount = transactionQueue.getPendingCount()
               ask({
                 title: t("general.rebuild_database.title"),
                 variant: "danger",
-                message: `${t("general.rebuild_database.warning.line1")}\n${t("general.rebuild_database.warning.line2")}`,
+                message: [
+                  t("general.rebuild_database.warning.line1"),
+                  pendingCount > 0 &&
+                    t("general.rebuild_database.warning.pending", { count: pendingCount }),
+                  t("general.rebuild_database.warning.line2"),
+                ]
+                  .filter(Boolean)
+                  .join("\n"),
                 confirmText: t("ok", { ns: "common" }),
                 onConfirm: async () => {
                   await clearLocalPersistStoreData()
@@ -116,8 +125,6 @@ export const SettingDataControl = () => {
 }
 
 const exportFeedFormSchema = z.object({
-  // Optional: a field that was typed in and cleared holds an empty string
-  rsshubUrl: z.string().url().optional().or(z.literal("")),
   folderMode: z.enum(["view", "category"]),
 })
 
@@ -127,21 +134,16 @@ const ExportFeedsForm = () => {
   const form = useForm<z.infer<typeof exportFeedFormSchema>>({
     resolver: zodResolver(exportFeedFormSchema),
     defaultValues: {
-      rsshubUrl: "",
       folderMode: "view",
     },
   })
 
   async function onSubmit(values: z.infer<typeof exportFeedFormSchema>) {
-    const query: Record<string, string> = { folderMode: values.folderMode }
-    if (values.rsshubUrl) {
-      query.RSSHubURL = values.rsshubUrl
-    }
     try {
       // Fetched through the API client, which is signed in on desktop too, and saved from a blob,
       // so the file is named yanrr.opml whatever name the server suggests
       const response = await followClient.request<Response>("/subscriptions/export", {
-        query,
+        query: { folderMode: values.folderMode },
         asRaw: true,
       })
       downloadBlob(await response.blob(), "yanrr.opml")
@@ -153,20 +155,6 @@ const ExportFeedsForm = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 text-sm">
-        <FormField
-          control={form.control}
-          name="rsshubUrl"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{t("general.export.rsshub_url.label")}</FormLabel>
-              <FormControl>
-                <Input type="url" placeholder="https://rsshub.app" {...field} />
-              </FormControl>
-              <FormDescription>{t("general.export.rsshub_url.description")}</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         <FormField
           control={form.control}
           name="folderMode"

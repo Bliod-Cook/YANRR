@@ -1,5 +1,4 @@
 import { SettingFeeds } from "~/modules/settings/tabs/feeds"
-import { SettingsTitle } from "~/modules/settings/title"
 import { defineSettingPageData } from "~/modules/settings/utils"
 
 const iconName = "i-mgc-certificate-cute-re"
@@ -12,10 +11,5 @@ export const handle = defineSettingPageData({
 })
 
 export function Component() {
-  return (
-    <>
-      <SettingsTitle />
-      <SettingFeeds />
-    </>
-  )
+  return <SettingFeeds />
 }

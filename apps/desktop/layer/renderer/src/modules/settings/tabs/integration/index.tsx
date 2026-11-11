@@ -13,6 +13,7 @@ import {
   SimpleIconsZotero,
 } from "@follow/components/ui/platform-icon/icons.js"
 import { IN_ELECTRON } from "@follow/shared/constants"
+import type { IntegrationSettings } from "@follow/shared/settings/interface"
 import type { FC } from "react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -551,7 +552,9 @@ const BottomTip = () => {
       const jsonData = JSON.stringify(settings, null, 2)
       const filename = `yanrr-integration-settings-${new Date().toISOString().split("T")[0]}.json`
       downloadJsonFile(jsonData, filename)
-      toast.success(t("integration.export.success"))
+      toast.success(t("integration.export.success"), {
+        description: t("integration.export.credentials_warning"),
+      })
     } catch (error) {
       console.error("Failed to export integration settings:", error)
       toast.error(t("integration.export.error"))
@@ -568,16 +571,20 @@ const BottomTip = () => {
         throw new Error("Invalid settings format")
       }
 
-      // Get current settings to use as a base for validation
       const currentSettings = getIntegrationSettings()
 
-      // Only apply settings that exist in the current schema
+      // Only settings that exist, with a value of their kind: a list where a list belongs, a
+      // switch where a switch does, as the integrations break on anything else
       let importCount = 0
       Object.entries(settings).forEach(([key, value]) => {
-        if (key in currentSettings) {
-          setIntegrationSetting(key as any, value)
-          importCount++
-        }
+        if (!(key in currentSettings)) return
+        const current: unknown = currentSettings[key as keyof IntegrationSettings]
+        const isSameKind = Array.isArray(current)
+          ? Array.isArray(value)
+          : typeof value === typeof current
+        if (!isSameKind) return
+        setIntegrationSetting(key as keyof IntegrationSettings, value as never)
+        importCount++
       })
 
       if (importCount === 0) {
