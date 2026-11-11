@@ -10,9 +10,10 @@ const useDragAndDrop = ({ callback }: { callback: (file: FileList) => void | Pro
   const onDrop = useCallback(
     async (event: DragEvent<HTMLLabelElement>) => {
       event.preventDefault()
+      // Reset also when the payload is not a file (e.g. dragged text), or the highlight would stick
+      dragCounter.current = 0
       setIsDragging(false)
       if (event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
-        dragCounter.current = 0
         await callback(event.dataTransfer.files)
         event.dataTransfer.clearData()
       }
@@ -76,7 +77,16 @@ export const DropZone = ({ id, accept, children, className, onDrop }: DropZonePr
         id={id}
         type="file"
         accept={accept}
-        onChange={(e) => e.target.files && onDrop(e.target.files)}
+        onChange={async (e) => {
+          const input = e.currentTarget
+          if (!input.files) return
+          try {
+            await onDrop(input.files)
+          } finally {
+            // Let the same file be picked again
+            input.value = ""
+          }
+        }}
         className="hidden"
       />
     </label>

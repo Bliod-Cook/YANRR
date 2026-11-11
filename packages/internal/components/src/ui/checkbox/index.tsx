@@ -19,15 +19,14 @@ function Checkbox({
   size = "md",
   ...props
 }: CheckboxProps) {
-  const [isChecked, setIsChecked] = React.useState(props?.checked ?? props?.defaultChecked ?? false)
-
-  React.useEffect(() => {
-    if (props?.checked !== undefined) setIsChecked(props.checked)
-  }, [props?.checked])
+  const [uncontrolledChecked, setUncontrolledChecked] = React.useState(
+    props.defaultChecked ?? false,
+  )
+  const isChecked = props.checked ?? uncontrolledChecked
 
   const handleCheckedChange = React.useCallback(
     (checked: boolean) => {
-      setIsChecked(checked)
+      setUncontrolledChecked(checked)
       onCheckedChange?.(checked)
     },
     [onCheckedChange],

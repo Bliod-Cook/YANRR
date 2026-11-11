@@ -34,7 +34,6 @@ export const MotionButtonBase = ({
   const isMobile = useMobile()
   return (
     <m.button
-      layout="size"
       initial
       disabled={disabled}
       {...(disabled ? {} : motionBaseMap[isMobile ? "mobile" : "pc"])}
@@ -80,6 +79,8 @@ export const Button = ({
   return (
     <MotionButtonBase
       ref={ref}
+      // Animates the width change when the loading spinner appears
+      layout={typeof isLoading === "boolean" ? "size" : undefined}
       className={cn(
         styledButtonVariant({
           variant,

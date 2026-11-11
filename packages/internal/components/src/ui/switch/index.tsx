@@ -38,16 +38,15 @@ function Switch({
   size = "md",
   ...props
 }: SwitchProps) {
-  const [isChecked, setIsChecked] = React.useState(props.checked ?? props.defaultChecked ?? false)
+  const [uncontrolledChecked, setUncontrolledChecked] = React.useState(
+    props.defaultChecked ?? false,
+  )
+  const isChecked = props.checked ?? uncontrolledChecked
   const [isTapped, setIsTapped] = React.useState(false)
-
-  React.useEffect(() => {
-    setIsChecked(props.checked ?? props.defaultChecked ?? false)
-  }, [props.checked, props.defaultChecked])
 
   const handleChange = React.useCallback(
     (checked: boolean) => {
-      setIsChecked(checked)
+      setUncontrolledChecked(checked)
       onCheckedChange?.(checked)
       onChange?.(checked)
     },
@@ -59,10 +58,8 @@ function Switch({
   const switchWidth = size === "sm" ? SWITCH_WIDTH_SM : SWITCH_WIDTH
 
   const currentAnimation = useMemo(() => {
-    return !props.checked
-      ? { left: thumbPadding }
-      : { left: switchWidth - thumbPadding - thumbSize }
-  }, [props.checked, thumbPadding, thumbSize, switchWidth])
+    return !isChecked ? { left: thumbPadding } : { left: switchWidth - thumbPadding - thumbSize }
+  }, [isChecked, thumbPadding, thumbSize, switchWidth])
 
   return (
     <SwitchPrimitive

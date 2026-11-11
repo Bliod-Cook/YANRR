@@ -71,11 +71,15 @@ export const TextArea = ({
         onContextMenu={stopPropagation}
         {...inputProps}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+          if (
+            e.key === "Enter" &&
+            (e.metaKey || e.ctrlKey) &&
+            !inputProps.isCompositionRef.current
+          ) {
             onCmdEnter?.(e)
           }
-          rest.onKeyDown?.(e)
-          inputProps.onKeyDown?.(e)
+          // Forwards to `rest.onKeyDown` unless an IME composition is in progress
+          inputProps.onKeyDown(e)
         }}
         onInput={(e) => {
           if (autoHeight) {

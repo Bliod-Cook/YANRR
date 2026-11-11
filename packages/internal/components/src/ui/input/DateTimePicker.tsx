@@ -126,7 +126,8 @@ export const DateTimePicker = memo<DateTimePickerProps>(
         .second(0)
         .millisecond(0)
 
-      onChange?.(newDateTime.toISOString())
+      // Ensure the new time is not before min date
+      onChange?.((newDateTime.isBefore(minDateObj) ? minDateObj : newDateTime).toISOString())
     }
 
     const formatRangeButtonLabel = (): string => {

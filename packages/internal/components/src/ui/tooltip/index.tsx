@@ -6,14 +6,24 @@ import * as React from "react"
 import { Spring } from "../../constants/spring"
 import { tooltipStyle, tooltipStyles } from "./styles"
 
-const TooltipProvider = TooltipPrimitive.Provider
 const TooltipRoot = TooltipPrimitive.Root
 
-const Tooltip: typeof TooltipProvider = ({ children, ...props }) => (
-  <TooltipProvider delayDuration={200} skipDelayDuration={1000} {...props}>
-    <TooltipPrimitive.Tooltip>{children}</TooltipPrimitive.Tooltip>
-  </TooltipProvider>
+const HasTooltipProviderContext = React.createContext(false)
+
+/** Share one provider so that moving between neighbouring tooltips skips the open delay. */
+const TooltipProvider = ({ children }: React.PropsWithChildren) => (
+  <HasTooltipProviderContext value>
+    <TooltipPrimitive.Provider delayDuration={200} skipDelayDuration={1000}>
+      {children}
+    </TooltipPrimitive.Provider>
+  </HasTooltipProviderContext>
 )
+
+const Tooltip = (props: React.ComponentProps<typeof TooltipPrimitive.Root>) => {
+  const hasProvider = React.use(HasTooltipProviderContext)
+  const tooltip = <TooltipPrimitive.Root {...props} />
+  return hasProvider ? tooltip : <TooltipProvider>{tooltip}</TooltipProvider>
+}
 
 const TooltipTrigger = TooltipPrimitive.Trigger
 
@@ -54,6 +64,6 @@ const TooltipContent = ({
 )
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-export { Tooltip, TooltipContent, TooltipRoot, TooltipTrigger }
+export { Tooltip, TooltipContent, TooltipProvider, TooltipRoot, TooltipTrigger }
 
 export { RootPortal as TooltipPortal } from "../portal"

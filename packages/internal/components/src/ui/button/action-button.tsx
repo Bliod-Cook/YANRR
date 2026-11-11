@@ -132,9 +132,12 @@ export const ActionButton = ({
           ? async (e) => {
               setShouldHighlightMotion(false)
               if (loading) return
+              const result = onClick(e) as void | Promise<void>
+              // Only an async handler shows the loading state
+              if (!(result instanceof Promise)) return
               setLoading(true)
               try {
-                await (onClick(e) as void | Promise<void>)
+                await result
               } finally {
                 setLoading(false)
               }
