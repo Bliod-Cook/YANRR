@@ -88,6 +88,20 @@ const canShareWithSystem = () => (IN_ELECTRON ? getOS() === "macOS" : "share" in
 export const SharePanel = ({ entryId }: SharePanelProps) => {
   const { t } = useTranslation()
 
+  const copyLink = useCallback(
+    async (url: string) => {
+      try {
+        await copyToClipboard(url)
+      } catch {
+        // copyToClipboard has already shown its own error; the panel stays for another choice
+        return
+      }
+      toast.success(t("share.link_copied"))
+      dismissPopover()
+    },
+    [t],
+  )
+
   const handleNativeShare = useCallback(async () => {
     const shareContent = getShareContent(entryId)
 
@@ -107,29 +121,17 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
       if (error instanceof DOMException && error.name === "AbortError") return
 
       // If sharing fails, copy link as fallback
-      try {
-        await copyToClipboard(shareContent.url)
-        toast.success(t("share.link_copied"))
-        dismissPopover()
-      } catch {
-        toast.error(t("share.copy_failed"))
-      }
+      await copyLink(shareContent.url)
     }
-  }, [entryId, t])
+  }, [copyLink, entryId])
 
   const handleCopyLink = useCallback(async () => {
     const shareContent = getShareContent(entryId)
 
     if (!shareContent) return
 
-    try {
-      await copyToClipboard(shareContent.url)
-      toast.success(t("share.link_copied"))
-      dismissPopover()
-    } catch {
-      toast.error(t("share.copy_failed"))
-    }
-  }, [entryId, t])
+    await copyLink(shareContent.url)
+  }, [copyLink, entryId])
 
   const handleSocialShare = useCallback(
     (shareUrlTemplate: string) => {

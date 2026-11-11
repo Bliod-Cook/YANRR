@@ -144,7 +144,9 @@ describe("SharePanel", () => {
 
     await clickAction(container, "share.copy_link")
 
-    expect(mocks.toastError).toHaveBeenCalledWith("share.copy_failed")
+    // The clipboard has reported the failure itself
+    expect(mocks.toastError).not.toHaveBeenCalled()
+    expect(mocks.toastSuccess).not.toHaveBeenCalled()
     expect(mocks.dismissPopover).not.toHaveBeenCalled()
   })
 
