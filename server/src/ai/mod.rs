@@ -1,5 +1,5 @@
 //! Summaries and translations by a model behind an OpenAI-compatible Chat Completions API, cached for every user
-//! by the text they are made from.
+//! by the model, the prompt and the text they are made from.
 
 pub mod html;
 
@@ -65,7 +65,9 @@ impl Language {
 
 #[derive(Debug)]
 pub enum AiError {
-    Model(String),
+    /// The model failed or answered with what can't be used; what it said was logged, as it may name the
+    /// service's account or address.
+    Model,
     Db(DbErr),
 }
 
@@ -83,21 +85,19 @@ pub async fn summarize(
     article: &str,
 ) -> Result<String, AiError> {
     let article = &article[..article.floor_char_boundary(SUMMARY_INPUT)];
-    let hash = hash(article);
-    let mut cached = cached(&state.db, SUMMARY, language, vec![hash.clone()]).await?;
-    if let Some(summary) = cached.remove(&hash) {
-        return Ok(summary);
-    }
     let system = format!(
         "Summarize the user's article in {}: a few sentences, or a short Markdown list for an article with \
         several points. Reply with the summary only.",
         language.name()
     );
-    let summary = complete(&state.http, config, &system, article)
-        .await
-        .map_err(AiError::Model)?;
+    let key = key(config, &system, article);
+    let mut cached = cached(&state.db, SUMMARY, language, vec![key.clone()]).await?;
+    if let Some(summary) = cached.remove(&key) {
+        return Ok(summary);
+    }
+    let summary = complete(&state.http, config, &system, article).await?;
     let summary = summary.trim().to_string();
-    store(&state.db, SUMMARY, language, &[(hash, summary.clone())]).await?;
+    store(&state.db, SUMMARY, language, &[(key, summary.clone())]).await?;
     Ok(summary)
 }
 
@@ -108,58 +108,73 @@ pub async fn translate(
     language: Language,
     texts: &[String],
 ) -> Result<Vec<String>, AiError> {
-    let hashes: Vec<_> = texts.iter().map(|text| hash(text)).collect();
-    let mut translations = cached(&state.db, TRANSLATION, language, hashes.clone()).await?;
+    let system = format!(
+        "Translate each string of the JSON array the user sends into {}, leaving code and URLs as they are. \
+        Reply with only a JSON array of the translations, in the same order.",
+        language.name()
+    );
+    let keys: Vec<_> = texts
+        .iter()
+        .map(|text| key(config, &system, text))
+        .collect();
+    let mut translations = cached(&state.db, TRANSLATION, language, keys.clone()).await?;
     let mut seen = HashSet::new();
-    let missing: Vec<_> = hashes
+    let missing: Vec<_> = keys
         .iter()
         .zip(texts)
-        .filter(|(hash, _)| !translations.contains_key(*hash) && seen.insert(*hash))
-        .map(|(hash, text)| (hash.clone(), text.as_str()))
+        .filter(|(key, _)| !translations.contains_key(*key) && seen.insert(*key))
+        .map(|(key, text)| (key.clone(), text.as_str()))
         .collect();
     // Made before streaming: a stream mapping borrowed chunks fails the compiler's `Send` check of the handler.
     let calls: Vec<_> = chunks(&missing)
         .into_iter()
-        .map(|chunk| translate_chunk(state, config, language, chunk))
+        .map(|chunk| translate_chunk(state, config, &system, language, chunk))
         .collect();
     let translated: Vec<_> = stream::iter(calls)
         .buffered(CONCURRENCY)
         .try_collect()
         .await?;
     translations.extend(translated.into_iter().flatten());
-    Ok(hashes
-        .iter()
-        .map(|hash| translations[hash].clone())
-        .collect())
+    Ok(keys.iter().map(|key| translations[key].clone()).collect())
 }
 
-/// Translates `texts`, each by the hash of it, with one call, and caches the translations.
+/// Translates `texts`, each by its key, with one call, and caches the translations. When the model merges or
+/// splits texts, which a long list makes likelier, each half is translated on its own.
 async fn translate_chunk(
     state: &AppState,
     config: &AiConfig,
+    system: &str,
     language: Language,
     texts: &[(Vec<u8>, &str)],
 ) -> Result<Vec<(Vec<u8>, String)>, AiError> {
-    let system = format!(
-        "Translate each string of the JSON array the user sends into {}, leaving code and URLs as they are. \
-        Reply with only a JSON array of the translations, in the same order.",
-        language.name()
-    );
-    let originals: Vec<_> = texts.iter().map(|(_, text)| text).collect();
-    let answer = complete(&state.http, config, &system, &json!(originals).to_string())
-        .await
-        .map_err(AiError::Model)?;
-    let translations = json_array(&answer)
-        .and_then(|array| serde_json::from_str::<Vec<String>>(array).ok())
-        .filter(|translations| translations.len() == texts.len())
-        .ok_or_else(|| AiError::Model(format!("Not one translation per text: {answer}")))?;
-    let translations: Vec<_> = texts
-        .iter()
-        .map(|(hash, _)| hash.clone())
-        .zip(translations)
-        .collect();
-    store(&state.db, TRANSLATION, language, &translations).await?;
-    Ok(translations)
+    let mut translated = Vec::new();
+    let mut pending = vec![texts];
+    while let Some(texts) = pending.pop() {
+        let originals: Vec<_> = texts.iter().map(|(_, text)| text).collect();
+        let answer = complete(&state.http, config, system, &json!(originals).to_string()).await?;
+        let translations =
+            json_array(&answer).and_then(|array| serde_json::from_str::<Vec<String>>(array).ok());
+        match translations {
+            Some(translations) if translations.len() == texts.len() => {
+                let translations: Vec<_> = texts
+                    .iter()
+                    .map(|(key, _)| key.clone())
+                    .zip(translations)
+                    .collect();
+                store(&state.db, TRANSLATION, language, &translations).await?;
+                translated.extend(translations);
+            }
+            Some(_) if texts.len() > 1 => {
+                let (first, second) = texts.split_at(texts.len() / 2);
+                pending.extend([second, first]);
+            }
+            _ => {
+                tracing::warn!("the model gave not one translation per text: {answer}");
+                return Err(AiError::Model);
+            }
+        }
+    }
+    Ok(translated)
 }
 
 /// `texts` in runs of up to [`CHUNK`] bytes.
@@ -205,7 +220,7 @@ async fn complete(
     config: &AiConfig,
     system: &str,
     user: &str,
-) -> Result<String, String> {
+) -> Result<String, AiError> {
     let url = format!("{}/chat/completions", config.base_url.trim_end_matches('/'));
     let body = json!({
         "model": config.model,
@@ -215,29 +230,44 @@ async fn complete(
     if let Some(key) = &config.api_key {
         request = request.bearer_auth(key);
     }
-    let response = successful(request.send().await.map_err(describe)?).await?;
-    let completion: Completion = response.json().await.map_err(describe)?;
-    let choice = completion.choices.into_iter().next();
-    choice
-        .map(|choice| choice.message.content)
-        .ok_or_else(|| "The model gave no answer".into())
+    let answer = async {
+        let response = successful(request.send().await.map_err(describe)?).await?;
+        let completion: Completion = response.json().await.map_err(describe)?;
+        let choice = completion.choices.into_iter().next();
+        choice
+            .map(|choice| choice.message.content)
+            .ok_or_else(|| "The model gave no answer".to_string())
+    };
+    answer.await.map_err(|err| {
+        tracing::warn!("the model failed: {err}");
+        AiError::Model
+    })
 }
 
-fn hash(text: &str) -> Vec<u8> {
-    Sha256::digest(text).to_vec()
+/// What an output is cached by: the model, the prompt, which tells what was asked for, and the text it was made
+/// from.
+fn key(config: &AiConfig, system: &str, text: &str) -> Vec<u8> {
+    Sha256::new()
+        .chain_update(&config.model)
+        .chain_update(b"\0")
+        .chain_update(system)
+        .chain_update(b"\0")
+        .chain_update(text)
+        .finalize()
+        .to_vec()
 }
 
-/// What was made of `kind` in `language` from the texts with `hashes`, by hash.
+/// What was made of `kind` in `language` with `keys`, by key.
 async fn cached(
     db: &DatabaseConnection,
     kind: &str,
     language: Language,
-    hashes: Vec<Vec<u8>>,
+    keys: Vec<Vec<u8>>,
 ) -> Result<HashMap<Vec<u8>, String>, DbErr> {
     let rows = ai_cache::Entity::find()
         .filter(ai_cache::Column::Kind.eq(kind))
         .filter(ai_cache::Column::Language.eq(language.name()))
-        .filter(ai_cache::Column::SourceHash.is_in(hashes))
+        .filter(ai_cache::Column::SourceHash.is_in(keys))
         .all(db)
         .await?;
     Ok(rows
@@ -246,17 +276,17 @@ async fn cached(
         .collect())
 }
 
-/// Caches `outputs` of `kind` in `language` by the hashes of the texts they were made from.
+/// Caches `outputs` of `kind` in `language` by their keys.
 async fn store(
     db: &DatabaseConnection,
     kind: &str,
     language: Language,
     outputs: &[(Vec<u8>, String)],
 ) -> Result<(), DbErr> {
-    let rows = outputs.iter().map(|(hash, output)| ai_cache::ActiveModel {
+    let rows = outputs.iter().map(|(key, output)| ai_cache::ActiveModel {
         kind: Set(kind.into()),
         language: Set(language.name().into()),
-        source_hash: Set(hash.clone()),
+        source_hash: Set(key.clone()),
         output: Set(output.clone()),
     });
     let key = [

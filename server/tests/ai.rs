@@ -3,8 +3,8 @@ mod common;
 use std::{collections::HashMap, time::Duration};
 
 use common::{
-    AI_PATH, Fixtures, Recorded, Reply, TestApp, assert_error, create_inbox, deliver, fake_ai,
-    json, json_feed, subscribe,
+    AI_FAILURE, AI_PATH, Fixtures, PASSWORD, Recorded, Reply, TestApp, assert_error, create_inbox,
+    deliver, fake_ai, json, json_feed, subscribe,
 };
 use reqwest::header;
 use serde_json::{Value, json};
@@ -182,6 +182,141 @@ async fn batches_stream_a_line_per_translated_entry() {
     let unknown = json!({ "ids": [hello], "language": "zh-CN", "fields": "title,author" });
     let unknown = app.post("/api/ai/translation/batch", unknown).await;
     assert_error(unknown, 400, 4).await;
+}
+
+#[tokio::test]
+async fn model_failures_are_not_shown_to_clients() {
+    let fixtures = Fixtures::spawn().await;
+    let item = json!([{ "id": "post", "title": "Post", "content_html": "<p>Please fail</p>" }]);
+    let app = following(&fixtures, item).await;
+    let id = entry_id(&app, "post").await;
+
+    let summary = app
+        .get(&format!("/api/ai/summary?id={id}&language=en"))
+        .await;
+
+    assert_eq!(summary.status(), 500);
+    let summary = json(summary).await;
+    assert_eq!(summary["code"], 1005);
+    assert!(!summary["message"].as_str().unwrap().contains(AI_FAILURE));
+}
+
+#[tokio::test]
+async fn summaries_are_cached_per_model() {
+    let fixtures = Fixtures::spawn().await;
+    let item = json!([{ "id": "post", "title": "Post", "content_html": "<p>Body</p>" }]);
+    let app = following(&fixtures, item).await;
+    let path = format!(
+        "/api/ai/summary?id={}&language=en",
+        entry_id(&app, "post").await
+    );
+    app.get(&path).await;
+
+    // The same database, summarized by another model
+    let database = app.state.config.database.url.clone();
+    let mut ai = fake_ai(&fixtures);
+    ai.model = "other-model".into();
+    let other = TestApp::spawn_with(|config| {
+        config.database.url = database;
+        config.ai = Some(ai);
+    })
+    .await;
+    let sign_in = json!({ "email": "alice@example.com", "password": PASSWORD });
+    other.post("/api/better-auth/sign-in/email", sign_in).await;
+    other.get(&path).await;
+    app.get(&path).await;
+
+    let models: Vec<_> = fixtures
+        .requests(AI_PATH)
+        .iter()
+        .map(|request| serde_json::from_str::<Value>(&request.body).unwrap()["model"].clone())
+        .collect();
+    assert_eq!(models, ["test-model", "other-model"]);
+}
+
+#[tokio::test]
+async fn a_long_article_is_summarized_from_its_start() {
+    let fixtures = Fixtures::spawn().await;
+    let content = format!("<p>{}</p>", "a".repeat(40 << 10));
+    let item = json!([{ "id": "long", "title": "Long", "content_html": content }]);
+    let app = following(&fixtures, item).await;
+    let id = entry_id(&app, "long").await;
+
+    app.get(&format!("/api/ai/summary?id={id}&language=en"))
+        .await;
+
+    let request: Value = serde_json::from_str(&fixtures.requests(AI_PATH)[0].body).unwrap();
+    let article = request["messages"][1]["content"].as_str().unwrap();
+    assert_eq!(article.len(), 32 << 10);
+    assert!(article.starts_with("Long\n\naaa"));
+}
+
+#[tokio::test]
+async fn long_content_is_translated_a_few_runs_at_a_time() {
+    let fixtures = Fixtures::spawn().await;
+    // Two of them fit in one call, three don't.
+    let paragraphs: Vec<_> = (1..=3)
+        .map(|n| format!("{n} {}", ["word"; 300].join(" ")))
+        .collect();
+    let content: String = paragraphs.iter().map(|p| format!("<p>{p}</p>")).collect();
+    let item = json!([{ "id": "long", "title": "Long", "content_html": content }]);
+    let app = following(&fixtures, item).await;
+    let id = entry_id(&app, "long").await;
+
+    let batch =
+        json!({ "ids": [id], "language": "ja", "fields": "content", "mode": "translation-only" });
+    let lines = translate(&app, batch).await;
+
+    let translated: String = paragraphs
+        .iter()
+        .map(|p| format!("<p>T: {p}</p>"))
+        .collect();
+    assert_eq!(lines[&id], json!({ "content": translated }));
+    let mut sizes: Vec<_> = fixtures
+        .requests(AI_PATH)
+        .iter()
+        .map(|request| texts(request).as_array().unwrap().len())
+        .collect();
+    sizes.sort();
+    assert_eq!(sizes, [1, 2]);
+}
+
+#[tokio::test]
+async fn texts_the_model_merges_are_translated_again_in_halves() {
+    let fixtures = Fixtures::spawn().await;
+    let content = "<p>One</p><p>Two, merge</p><p>Three</p><p>Four</p>";
+    let items = json!([
+        { "id": "merged", "title": "Merged", "content_html": content },
+        { "id": "split", "title": "Please split" },
+    ]);
+    let app = following(&fixtures, items).await;
+    let merged = entry_id(&app, "merged").await;
+    let split = entry_id(&app, "split").await;
+
+    let batch = json!({
+        "ids": [merged, split],
+        "language": "ja",
+        "fields": "title,content",
+        "mode": "translation-only",
+    });
+    let lines = translate(&app, batch).await;
+
+    let content = "<p>T: One</p><p>T: Two, merge</p><p>T: Three</p><p>T: Four</p>";
+    assert_eq!(
+        lines,
+        HashMap::from([(merged, json!({ "title": "T: Merged", "content": content }))])
+    );
+    let asked: Vec<_> = fixtures.requests(AI_PATH).iter().map(texts).collect();
+    for texts in [
+        json!(["Merged", "One", "Two, merge", "Three", "Four"]),
+        json!(["Merged", "One"]),
+        json!(["Two, merge", "Three", "Four"]),
+        // A text split even when alone can't be translated.
+        json!(["Please split"]),
+    ] {
+        assert!(asked.contains(&texts), "{texts}");
+    }
+    assert_eq!(asked.len(), 4);
 }
 
 #[tokio::test]

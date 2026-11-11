@@ -149,7 +149,7 @@ impl From<FetchError> for ApiError {
 impl From<AiError> for ApiError {
     fn from(err: AiError) -> Self {
         match err {
-            AiError::Model(message) => Self::new(ExceptionCode::InternalError, message),
+            AiError::Model => Self::new(ExceptionCode::InternalError, "The model failed"),
             AiError::Db(err) => err.into(),
         }
     }

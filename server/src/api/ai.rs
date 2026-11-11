@@ -53,7 +53,7 @@ pub async fn summary(
     let Some(html) = html(&state, &entry, query.target).await? else {
         return Ok(ok(Value::Null));
     };
-    let text = ai::html::texts(&html).join("\n");
+    let text = whole_document(move || ai::html::texts(&html).join("\n")).await?;
     if text.is_empty() {
         return Ok(ok(Value::Null));
     }
@@ -148,56 +148,64 @@ async fn translated(
     let mut sources = Vec::new();
     for &field in &body.fields {
         if let Some(source) = source(state, &entry, field).await? {
-            sources.push((field, source));
+            let texts = source.texts().await?;
+            sources.push((field, source, texts));
         }
     }
-    let texts: Vec<_> = sources.iter().map(|(_, source)| source.texts()).collect();
-    let translations = ai::translate(state, config, body.language, &texts.concat()).await?;
-    let mut translations = translations.into_iter();
-    let data: HashMap<_, _> = sources
+    let texts: Vec<_> = sources
         .iter()
-        .zip(&texts)
-        .map(|((field, source), texts)| {
-            let translations: Vec<_> = translations.by_ref().take(texts.len()).collect();
-            (field, source.translated(&translations, body.mode))
-        })
+        .flat_map(|(_, _, texts)| texts.clone())
         .collect();
+    let mut translations = ai::translate(state, config, body.language, &texts)
+        .await?
+        .into_iter();
+    let mut data = HashMap::new();
+    for (field, source, texts) in sources {
+        let translations: Vec<_> = translations.by_ref().take(texts.len()).collect();
+        data.insert(field, source.translated(translations, body.mode).await?);
+    }
     Ok(json!({ "id": entry.id.to_string(), "data": data }).to_string() + "\n")
 }
 
 /// A field's value: plain text is translated whole, HTML a run of text at a time.
 enum Source {
     Text(String),
-    Html(String),
+    Html(Arc<String>),
 }
 
 impl Source {
-    fn texts(&self) -> Vec<String> {
+    async fn texts(&self) -> ApiResult<Vec<String>> {
         match self {
-            Self::Text(text) => vec![text.clone()],
-            Self::Html(html) => ai::html::texts(html),
+            Self::Text(text) => Ok(vec![text.clone()]),
+            Self::Html(html) => {
+                let html = html.clone();
+                whole_document(move || ai::html::texts(&html)).await
+            }
         }
     }
 
     /// The value with `translations` of its [`Source::texts`]; clients pair plain text with its translation
     /// themselves.
-    fn translated(&self, translations: &[String], mode: Mode) -> String {
+    async fn translated(self, translations: Vec<String>, mode: Mode) -> ApiResult<String> {
         match self {
-            Self::Text(_) => translations[0].clone(),
-            Self::Html(html) => ai::html::translated(html, translations, mode == Mode::Bilingual),
+            Self::Text(_) => Ok(translations[0].clone()),
+            Self::Html(html) => {
+                let bilingual = mode == Mode::Bilingual;
+                whole_document(move || ai::html::translated(&html, &translations, bilingual)).await
+            }
         }
     }
 }
 
 async fn source(state: &AppState, entry: &EntryText, field: Field) -> ApiResult<Option<Source>> {
-    Ok(match field {
-        Field::Title => entry.title.clone().map(Source::Text),
-        Field::Description => entry.description.clone().map(Source::Text),
-        Field::Content => html(state, entry, Target::Content).await?.map(Source::Html),
-        Field::ReadabilityContent => html(state, entry, Target::ReadabilityContent)
-            .await?
-            .map(Source::Html),
-    })
+    let target = match field {
+        Field::Title => return Ok(entry.title.clone().map(Source::Text)),
+        Field::Description => return Ok(entry.description.clone().map(Source::Text)),
+        Field::Content => Target::Content,
+        Field::ReadabilityContent => Target::ReadabilityContent,
+    };
+    let html = html(state, entry, target).await?;
+    Ok(html.map(|html| Source::Html(Arc::new(html))))
 }
 
 fn configured(state: &AppState) -> ApiResult<&AiConfig> {
@@ -215,4 +223,14 @@ async fn html(state: &AppState, entry: &EntryText, target: Target) -> ApiResult<
             Ok(Some(fetch::readability::extract(state, url).await?))
         }
     }
+}
+
+/// Reads or writes a whole document off the async workers, which it would hold up.
+async fn whole_document<T: Send + 'static>(
+    work: impl FnOnce() -> T + Send + 'static,
+) -> ApiResult<T> {
+    fetch::blocking(work).await.map_err(|err| {
+        tracing::error!("working on a document failed: {err}");
+        ApiError::internal()
+    })
 }

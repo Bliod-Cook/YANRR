@@ -375,7 +375,7 @@ async fn parsed(url: &str, fetched: Fetched) -> Result<Update, FetchError> {
 }
 
 /// Runs CPU-bound work, such as building a DOM for every entry, off the async workers.
-async fn blocking<T: Send + 'static>(
+pub(crate) async fn blocking<T: Send + 'static>(
     work: impl FnOnce() -> T + Send + 'static,
 ) -> Result<T, String> {
     tokio::task::spawn_blocking(work)

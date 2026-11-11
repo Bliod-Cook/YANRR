@@ -158,15 +158,6 @@ impl TestApp {
             .unwrap()
     }
 
-    pub async fn post_form(&self, path: &str, form: reqwest::multipart::Form) -> Response {
-        self.client
-            .post(format!("{}{path}", self.url))
-            .multipart(form)
-            .send()
-            .await
-            .unwrap()
-    }
-
     pub async fn delete(&self, path: &str, body: Value) -> Response {
         self.client
             .delete(format!("{}{path}", self.url))
@@ -472,9 +463,13 @@ pub fn fake_fcm(fixtures: &Fixtures) -> (PushConfig, NamedTempFile) {
 /// Where [`fake_ai`] takes chat completions.
 pub const AI_PATH: &str = "/v1/chat/completions";
 
-/// Answers like a model: a user message mentioning `fail` fails, one mentioning `hang` is never answered, a JSON
-/// array of strings comes back translated as `T: …` in a Markdown code block, and anything else is summarized as
-/// `Summary: …`.
+/// What [`fake_ai`] explains a failure with, which is no business of the server's clients.
+pub const AI_FAILURE: &str = "quota of key sk-test exceeded";
+
+/// Answers like a model: a user message mentioning `fail` fails with [`AI_FAILURE`], one mentioning `hang` is
+/// never answered, a JSON array of strings comes back translated as `T: …` in a Markdown code block, and anything
+/// else is summarized as `Summary: …`. A translation merges a text mentioning `merge` into the one before it,
+/// and splits one mentioning `split` in two.
 async fn chat(
     State(state): State<FixtureState>,
     uri: Uri,
@@ -488,14 +483,22 @@ async fn chat(
         .to_string();
     record(&state, &uri, &headers, body);
     if content.contains("fail") {
-        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        return (StatusCode::INTERNAL_SERVER_ERROR, AI_FAILURE).into_response();
     }
     if content.contains("hang") {
         return std::future::pending().await;
     }
     let answer = match serde_json::from_str::<Vec<String>>(&content) {
         Ok(texts) => {
-            let translations: Vec<_> = texts.iter().map(|text| format!("T: {text}")).collect();
+            let mut translations: Vec<String> = Vec::new();
+            for text in &texts {
+                let translation = format!("T: {text}");
+                match translations.last_mut() {
+                    Some(last) if text.contains("merge") => *last += &translation,
+                    _ if text.contains("split") => translations.extend([translation, "T:".into()]),
+                    _ => translations.push(translation),
+                }
+            }
             format!("```json\n{}\n```", json!(translations))
         }
         Err(_) => format!("Summary: {content}"),
