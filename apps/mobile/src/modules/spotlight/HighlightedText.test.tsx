@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import type { SpotlightRule } from "@follow/shared/spotlight"
 import { describe, it } from "vitest"
 
-import { getHighlightedTextSegments } from "./highlightedTextSegments"
+import { getCompiledSpotlightRules, getHighlightedTextSegments } from "./highlightedTextSegments"
 import { getHighlightedTextSegmentStyle } from "./highlightedTextStyle"
 
 const createRule = (overrides?: Partial<SpotlightRule>): SpotlightRule => ({
@@ -92,5 +92,13 @@ describe("getHighlightedTextSegmentStyle", () => {
 
   it("keeps the theme text color when the highlight color is not a hex color", () => {
     assert.equal("color" in getHighlightedTextSegmentStyle("red"), false)
+  })
+})
+
+describe("getCompiledSpotlightRules", () => {
+  it("compiles a rule set once and shares it", () => {
+    const rules = [createRule()]
+    assert.equal(getCompiledSpotlightRules(rules), getCompiledSpotlightRules(rules))
+    assert.notEqual(getCompiledSpotlightRules(rules), getCompiledSpotlightRules([...rules]))
   })
 })
