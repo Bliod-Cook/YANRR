@@ -1,40 +1,51 @@
 /// <reference types="node" />
 
+import { readFileSync } from "node:fs"
+import type { SQLInputValue } from "node:sqlite"
 import { DatabaseSync } from "node:sqlite"
-import { fileURLToPath } from "node:url"
 
-import { drizzle } from "drizzle-orm/sqlite-proxy"
-import { migrate } from "drizzle-orm/sqlite-proxy/migrator"
+import type { Connection } from "./connection"
+import { createConnection } from "./connection"
+import type { MigrationConfig } from "./migrator"
+import { migrate, migrationKey } from "./migrator"
 
-import * as schema from "./schemas"
+const SQLITE_BUSY = 5
+
+/** A connection to an SQLite database in memory, or in the file at `path`, not migrated */
+export const openTestDB = (path = ":memory:"): Connection => {
+  // Off as in the apps, which never turn them on
+  const sqlite = new DatabaseSync(path, { enableForeignKeyConstraints: false })
+  return createConnection({
+    execute: async (sql, params) => {
+      const statement = sqlite.prepare(sql)
+      statement.setReturnArrays(true)
+      return statement.all(...(params as SQLInputValue[])) as unknown[] as unknown[][]
+    },
+    isBusy: (error) => (error as { errcode?: number }).errcode === SQLITE_BUSY,
+    close: () => sqlite.close(),
+  })
+}
+
+/** The migrations the apps bundle with `drizzle/migrations.js` */
+const readMigrations = (): MigrationConfig => {
+  const folder = new URL("drizzle/", import.meta.url)
+  const read = (path: string) => readFileSync(new URL(path, folder), "utf8")
+  const journal: MigrationConfig["journal"] = JSON.parse(read("meta/_journal.json"))
+  return {
+    journal,
+    migrations: Object.fromEntries(
+      journal.entries.map(({ idx, tag }) => [migrationKey(idx), read(`${tag}.sql`)]),
+    ),
+  }
+}
 
 /**
- * A migrated in-memory SQLite for tests, standing in for the platform database that `db` is.
- * Mock `db` with it, importing it in the factory: `vi.mock("@follow/database/db", async () =>
- * ({ db: await (await import("@follow/database/test-db")).createTestDB() }))`.
+ * An in-memory SQLite migrated as the apps migrate theirs, standing in for the platform database.
+ * Mock the module with it, importing it in the factory: `vi.mock("@follow/database/db", async () =>
+ * (await import("@follow/database/test-db")).createTestDB())`.
  */
 export const createTestDB = async () => {
-  const sqlite = new DatabaseSync(":memory:")
-  const db = drizzle(
-    async (sql, params, method) => {
-      const statement = sqlite.prepare(sql)
-      if (method === "run") {
-        statement.run(...(params as never[]))
-        return { rows: [] }
-      }
-      statement.setReturnArrays(true)
-      // Arrays, not objects, since setReturnArrays
-      const rows = statement.all(...(params as never[])) as unknown as unknown[][]
-      return { rows: method === "get" ? rows[0] : rows } as { rows: unknown[] }
-    },
-    { schema },
-  )
-  await migrate(
-    db,
-    async (queries) => {
-      for (const query of queries) sqlite.exec(query)
-    },
-    { migrationsFolder: fileURLToPath(new URL("drizzle", import.meta.url)) },
-  )
-  return db
+  const connection = openTestDB()
+  await migrate(connection, readMigrations())
+  return connection
 }

@@ -1,4 +1,4 @@
-class ResourceLock {
+export class ResourceLock {
   private locked = false
   private queue: Array<() => void> = []
 
@@ -24,5 +24,3 @@ class ResourceLock {
     }
   }
 }
-
-export const resourceLock = new ResourceLock()

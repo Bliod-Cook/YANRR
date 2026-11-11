@@ -12,10 +12,9 @@ import { clearAccountInSession, startSessionCheck } from "./account"
 import { syncEngine } from "./sync-engine"
 import type { SyncAction, SyncAPI } from "./types"
 
-vi.mock("@follow/database/db", async () => {
-  const { createTestDB } = await import("@follow/database/test-db")
-  return { db: await createTestDB() }
-})
+vi.mock("@follow/database/db", async () =>
+  (await import("@follow/database/test-db")).createTestDB(),
+)
 
 // Query cache and React state, which this test has none of
 vi.mock("../modules/entry/hooks", () => ({

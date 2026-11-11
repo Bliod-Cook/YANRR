@@ -1,45 +1,37 @@
-import type { ExpoSQLiteDatabase } from "drizzle-orm/expo-sqlite"
-import { drizzle } from "drizzle-orm/expo-sqlite"
+import type { SQLiteBindValue } from "expo-sqlite"
 import * as SQLite from "expo-sqlite"
 
+import { createConnection } from "./connection"
 import { SQLITE_DB_NAME } from "./constant"
 import migrations from "./drizzle/migrations"
-import { migrateExpoSQLite } from "./migrator"
-import * as schema from "./schemas"
+import { migrate } from "./migrator"
 
-export let sqlite = SQLite.openDatabaseSync(SQLITE_DB_NAME)
+export const sqlite = SQLite.openDatabaseSync(SQLITE_DB_NAME)
 
-let db: ExpoSQLiteDatabase<typeof schema> & {
-  $client: SQLite.SQLiteDatabase
-}
+const connection = createConnection({
+  execute: async (sql, params) => {
+    const statement = sqlite.prepareSync(sql)
+    try {
+      return statement.executeForRawResultSync(params as SQLiteBindValue[]).getAllSync()
+    } finally {
+      statement.finalizeSync()
+    }
+  },
+  close: () => sqlite.closeSync(),
+})
 
-export function initializeDB() {
-  db = drizzle(sqlite, {
-    schema,
-    logger: false,
-  })
-}
-export { db }
+export const { db, withTransaction } = connection
 
-export async function migrateDB(): Promise<void> {
-  try {
-    await migrateExpoSQLite(sqlite, migrations)
-  } catch (error) {
-    console.error("Failed to migrate database:", error)
-    await deleteDB()
-    sqlite = SQLite.openDatabaseSync(SQLITE_DB_NAME)
-    initializeDB()
-    await migrateExpoSQLite(sqlite, migrations)
-  }
+// Opened on import
+export async function initializeDB() {}
+
+export async function migrateDB() {
+  await migrate(connection, migrations)
 }
 
 export async function getDBFile() {}
 export async function exportDB() {}
 export async function deleteDB() {
-  try {
-    sqlite.closeSync()
-  } catch {
-    /* empty */
-  }
+  await connection.close()
   SQLite.deleteDatabaseSync(SQLITE_DB_NAME)
 }
