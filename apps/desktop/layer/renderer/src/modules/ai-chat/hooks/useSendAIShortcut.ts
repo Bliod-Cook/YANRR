@@ -147,10 +147,10 @@ export const useSendAIShortcut = () => {
 
   const sendShortcutMessage = useCallback(
     (editorState: EditorState, shortcutId?: string) => {
-      const isTimelineSummaryShortcut = shortcutId === DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID
-      if (!isTimelineSummaryShortcut && !ensureLogin()) {
+      if (!ensureLogin()) {
         return
       }
+      const isTimelineSummaryShortcut = shortcutId === DEFAULT_SUMMARIZE_TIMELINE_SHORTCUT_ID
       const contextBlocks = buildContextBlocks()
 
       staticEditor.setEditorState(editorState)

@@ -66,15 +66,12 @@ interface TokenUsageDetailsProps {
 
 const TokenUsageDetails: React.FC<TokenUsageDetailsProps> = ({ metadata }) => {
   const { t } = useTranslation("ai")
-  const hasBillingMultiplier =
-    metadata.billingMultiplier != null && metadata.billingMultiplier !== 1
-  const hasDuration = metadata.duration != null
 
   return (
     <>
       <ModelInfoSection metadata={metadata} />
       <div className="space-y-2 text-xs">
-        <div className="font-medium text-text">{t("token_usage_pill.credits_usage")}</div>
+        <div className="font-medium text-text">{t("token_usage_pill.token_usage")}</div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
           {metadata.totalTokens != null && (
             <div className="flex justify-between gap-2">
@@ -84,29 +81,15 @@ const TokenUsageDetails: React.FC<TokenUsageDetailsProps> = ({ metadata }) => {
               </span>
             </div>
           )}
-          {metadata.billedTokens != null && (
-            <div className="flex justify-between gap-2">
-              <span className="text-text-secondary">{t("token_usage_pill.billed")}:</span>
-              <span className="font-mono">{formatTokenCountString(metadata.billedTokens)}</span>
-            </div>
-          )}
         </div>
-        {(hasDuration || hasBillingMultiplier) && (
+        {metadata.duration != null && (
           <>
             <hr className="border-fill-secondary" />
             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              {hasDuration && (
-                <div className="flex justify-between gap-2">
-                  <span className="text-text-secondary">{t("token_usage_pill.duration")}:</span>
-                  <span className="font-mono text-text">{formatDuration(metadata.duration!)}</span>
-                </div>
-              )}
-              {hasBillingMultiplier && (
-                <div className="flex justify-between gap-2">
-                  <span className="text-text-secondary">{t("token_usage_pill.multiplier")}:</span>
-                  <span className="font-mono text-text">{metadata.billingMultiplier!}×</span>
-                </div>
-              )}
+              <div className="flex justify-between gap-2">
+                <span className="text-text-secondary">{t("token_usage_pill.duration")}:</span>
+                <span className="font-mono text-text">{formatDuration(metadata.duration)}</span>
+              </div>
             </div>
           </>
         )}
