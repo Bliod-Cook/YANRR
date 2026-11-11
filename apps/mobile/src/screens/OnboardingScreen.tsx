@@ -1,4 +1,3 @@
-import { isNewUserQueryKey } from "@follow/store/user/constants"
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Pressable, View } from "react-native"
@@ -11,7 +10,6 @@ import { useReadableContainerStyle } from "@/src/lib/responsive"
 import { useNavigation } from "../lib/navigation/hooks"
 import type { NavigationControllerView } from "../lib/navigation/types"
 import { markOnboardingFinished } from "../lib/onboarding"
-import { queryClient } from "../lib/query-client"
 import { StepFinished } from "../modules/onboarding/step-finished"
 import { StepPreferences } from "../modules/onboarding/step-preferences"
 import { StepWelcome } from "../modules/onboarding/step-welcome"
@@ -30,14 +28,9 @@ export const OnboardingScreen: NavigationControllerView = () => {
       setCurrentStep(currentStep + 1)
     } else {
       // Complete onboarding
-      void markOnboardingFinished()
-      queryClient
-        .invalidateQueries({
-          queryKey: isNewUserQueryKey,
-        })
-        .then(() => {
-          navigation.back()
-        })
+      void markOnboardingFinished().then(() => {
+        navigation.back()
+      })
     }
   }, [currentStep, navigation, totalSteps])
   return (

@@ -20,7 +20,6 @@ export const MarkAllAsReadDialog: DialogComponent = () => {
     </View>
   )
 }
-MarkAllAsReadDialog.title = t("operation.mark_all_as_read")
 MarkAllAsReadDialog.id = "mark-all-as-read"
 MarkAllAsReadDialog.headerIcon = <CheckCircleCuteReIcon />
 
@@ -32,6 +31,8 @@ export const showMarkAllAsReadDialog = (
   selectedFeed: SelectedTimeline | SelectedFeed,
   view: FeedViewType | undefined,
 ) => {
+  // Set when shown, as the title follows the language of the moment
+  MarkAllAsReadDialog.title = t("operation.mark_all_as_read")
   Dialog.show(MarkAllAsReadDialog, {
     override: {
       onConfirm: (ctx) => {

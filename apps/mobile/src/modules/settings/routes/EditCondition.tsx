@@ -54,11 +54,6 @@ function ConditionForm({ index }: { index: ActionConditionIndex }) {
       }))
       .filter((operator) => operator.types.includes(currentField?.type ?? "text"))
   }, [t, currentField])
-  if (operatorOptions.length === 1 && currentOperator?.value !== operatorOptions[0]!.value) {
-    actionActions.pathCondition(index, {
-      operator: operatorOptions[0]!.value as any,
-    })
-  }
   return (
     <>
       <GroupedInsetListSectionHeader label={t("actions.condition")} />
@@ -146,9 +141,6 @@ function ValueField({
       )
     }
     case "status": {
-      if (value === undefined) {
-        onChange("collected")
-      }
       return (
         <Select
           options={[

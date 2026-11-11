@@ -4,7 +4,7 @@ import {
   moveSpotlightRule,
 } from "@follow/shared/spotlight"
 import { validateSpotlightPattern } from "@follow/utils/spotlight"
-import { useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import type { ViewStyle } from "react-native"
 import { Pressable, View } from "react-native"
@@ -47,15 +47,32 @@ export const EditSpotlightRuleScreen: NavigationControllerView<{
     [rule?.color],
   )
 
+  // The pattern is typed into a draft and saved once editing ends, so a half-typed pattern, such
+  // as an unfinished regex, is never stored and synced
+  const [patternDraft, setPatternDraft] = useState(rule?.pattern ?? "")
+  const patternDraftRef = useRef(patternDraft)
+  const savePatternDraft = useCallback(() => {
+    const { spotlights } = getSpotlightSettings()
+    const current = spotlights.find((item) => item.id === ruleId)
+    const pattern = patternDraftRef.current
+    if (!current || current.pattern === pattern) return
+    if (!validateSpotlightPattern(pattern, current.patternType).valid) return
+    setSpotlightSetting(
+      "spotlights",
+      spotlights.map((item) => (item === current ? { ...item, pattern } : item)),
+    )
+  }, [ruleId])
+
   // "+" saves a new rule before opening this editor. Drop it on close if it still has no pattern,
   // or it stays in the list as a blank rule that highlights nothing
   useEffect(
     () => () => {
+      savePatternDraft()
       const { spotlights } = getSpotlightSettings()
       const nextRules = dropSpotlightRuleWithoutPattern(spotlights, ruleId)
       if (nextRules !== spotlights) setSpotlightSetting("spotlights", nextRules)
     },
-    [ruleId],
+    [ruleId, savePatternDraft],
   )
 
   const updateRule = (updater: (currentRule: (typeof rules)[number]) => (typeof rules)[number]) => {
@@ -83,8 +100,8 @@ export const EditSpotlightRuleScreen: NavigationControllerView<{
   }
 
   const validation = useMemo(
-    () => validateSpotlightPattern(rule?.pattern ?? "", rule?.patternType ?? "keyword"),
-    [rule?.pattern, rule?.patternType],
+    () => validateSpotlightPattern(patternDraft, rule?.patternType ?? "keyword"),
+    [patternDraft, rule?.patternType],
   )
 
   return (
@@ -106,11 +123,13 @@ export const EditSpotlightRuleScreen: NavigationControllerView<{
                 <View className="flex-1">
                   <PlainTextField
                     className="w-full text-right text-label"
-                    value={rule.pattern}
+                    value={patternDraft}
                     selectionColor={accentColor}
                     onChangeText={(pattern) => {
-                      updateRule((currentRule) => ({ ...currentRule, pattern }))
+                      patternDraftRef.current = pattern
+                      setPatternDraft(pattern)
                     }}
+                    onEndEditing={savePatternDraft}
                   />
                 </View>
               </GroupedInsetListCell>
