@@ -10,8 +10,22 @@ const mocks = vi.hoisted(() => ({
   copyToClipboard: vi.fn(),
   dismissPopover: vi.fn(),
   getEntry: vi.fn(),
+  getOS: vi.fn(),
+  inElectron: false,
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
+}))
+
+vi.mock("@follow/shared/constants", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@follow/shared/constants")>()),
+  get IN_ELECTRON() {
+    return mocks.inElectron
+  },
+}))
+
+vi.mock("@follow/utils/utils", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@follow/utils/utils")>()),
+  getOS: mocks.getOS,
 }))
 
 vi.mock("@follow/store/entry/getter", () => ({
@@ -110,6 +124,7 @@ describe("SharePanel", () => {
     root = null
     container = null
     Reflect.deleteProperty(navigator, "share")
+    mocks.inElectron = false
     vi.clearAllMocks()
   })
 
@@ -196,5 +211,14 @@ describe("SharePanel", () => {
     expect(share).toHaveBeenCalledOnce()
     expect(mocks.copyToClipboard).not.toHaveBeenCalled()
     expect(mocks.dismissPopover).not.toHaveBeenCalled()
+  })
+
+  test("offers no system share in Electron outside macOS", async () => {
+    mocks.inElectron = true
+    mocks.getOS.mockReturnValue("Windows")
+    ;({ container, root } = await renderSharePanel())
+
+    expect(container.textContent).not.toContain("share.system_share")
+    expect(container.textContent).toContain("share.copy_link")
   })
 })

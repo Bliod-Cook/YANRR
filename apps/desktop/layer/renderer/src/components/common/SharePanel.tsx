@@ -1,6 +1,6 @@
 import { IN_ELECTRON } from "@follow/shared/constants"
 import { getEntry } from "@follow/store/entry/getter"
-import { cn } from "@follow/utils/utils"
+import { cn, getOS } from "@follow/utils/utils"
 import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
@@ -82,6 +82,9 @@ const getShareContent = (entryId: string): ShareContent | null => {
   return { title: entry.title || undefined, url: entry.url }
 }
 
+// Electron has a system share menu on macOS only; a browser tells whether it can share
+const canShareWithSystem = () => (IN_ELECTRON ? getOS() === "macOS" : "share" in navigator)
+
 export const SharePanel = ({ entryId }: SharePanelProps) => {
   const { t } = useTranslation()
 
@@ -94,13 +97,9 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
       if (IN_ELECTRON) {
         // Use Electron's share menu
         await ipcServices?.menu.showShareMenu(shareContent.url)
-      } else if (navigator.share) {
+      } else {
         // Use Web Share API
         await navigator.share(shareContent)
-      } else {
-        // Fallback to copying link
-        await copyToClipboard(shareContent.url)
-        toast.success(t("share.link_copied"))
       }
       dismissPopover()
     } catch (error) {
@@ -149,7 +148,7 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
   )
 
   const actionOptions: ShareOption[] = [
-    ...(IN_ELECTRON || (typeof navigator !== "undefined" && "share" in navigator)
+    ...(canShareWithSystem()
       ? [
           {
             id: "native-share",
