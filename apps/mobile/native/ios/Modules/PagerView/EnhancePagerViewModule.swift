@@ -33,17 +33,6 @@ public class EnhancePagerViewModule: Module {
         view.pageController?.setCurrentPage(index: index)
       }
 
-      AsyncFunction("getCurrentPage") { view in
-        view.pageController?.getCurrentPageIndex()
-      }
-
-      AsyncFunction("getState") { view -> String? in
-        if let pageController = view.pageController {
-          return pageController.getState().rawValue
-        }
-        return nil
-      }
-
       Events("onPageChange")
       Events("onScroll")
       Events("onScrollBegin")
@@ -174,7 +163,10 @@ private class EnhancePagerView: ExpoView, UIGestureRecognizerDelegate {
         let isBackGesture = (isLTR && velocity.x > 0) || (!isLTR && velocity.x < 0)
 
         if currentIndex == 0 && isBackGesture {
+          // Cancels the pager's pan, which leaves the swipe to the back gesture, and keeps it
+          // working for the swipes that follow
           scrollView.panGestureRecognizer.isEnabled = false
+          scrollView.panGestureRecognizer.isEnabled = true
         }
       }
       return true

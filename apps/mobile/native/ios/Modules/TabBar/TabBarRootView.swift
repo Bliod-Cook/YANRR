@@ -82,7 +82,9 @@ class TabBarRootView: ExpoView {
       return
     }
 
-    if tabViewControllers.count < beforeIndex || tabViewControllers.count < index {
+    guard tabViewControllers.indices.contains(beforeIndex),
+      tabViewControllers.indices.contains(index)
+    else {
       return
     }
     if let fromView = tabViewControllers[beforeIndex].view,
@@ -115,10 +117,10 @@ class TabBarRootView: ExpoView {
         screenVC.tabBarItem.title = currentTitle
       }
       if let icon = tabScreenView.icon {
-        screenVC.tabBarItem.image = .init(UIImage(named: icon)!)
+        screenVC.tabBarItem.image = UIImage(named: icon)
       }
       if let activeIcon = tabScreenView.activeIcon {
-        screenVC.tabBarItem.selectedImage = .init(UIImage(named: activeIcon)!)
+        screenVC.tabBarItem.selectedImage = UIImage(named: activeIcon)
       }
       tabViewControllers.append(screenVC)
       tabBarController.viewControllers = tabViewControllers

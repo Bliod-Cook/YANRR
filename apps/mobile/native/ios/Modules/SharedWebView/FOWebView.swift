@@ -18,9 +18,11 @@ class FOWebView: WKWebView {
     scrollView.backgroundColor = UIColor.clear
     tintColor = Utils.accentColor
 
-    if #available(iOS 16.4, *) {
-      isInspectable = true
-    }
+    #if DEBUG
+      if #available(iOS 16.4, *) {
+        isInspectable = true
+      }
+    #endif
   }
 
   private var state: WebViewState!
@@ -53,71 +55,6 @@ private class FOWKWebViewConfiguration: WKWebViewConfiguration {
     configuration.processPool = FOWKWebViewConfiguration.sharedProcessPool
     configuration.websiteDataStore = .default()
 
-    let hexAccentColor = Utils.accentColor.toHex()
-    let css = """
-        :root { overflow: hidden !important; overflow-behavior: none !important; }
-        body {
-            margin: 0 !important;
-            overflow-y: visible !important;
-            position: absolute !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            height: auto !important;
-            -webkit-overflow-scrolling: touch !important;
-        }
-        #root,
-        article {
-            width: 100% !important;
-            max-width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            box-sizing: border-box !important;
-        }
-        article > p,
-        article > div,
-        article > ul,
-        article > ol,
-        article > pre,
-        article > table,
-        article > blockquote,
-        article > h1,
-        article > h2,
-        article > h3,
-        article > h4,
-        article > h5,
-        article > h6,
-        article > figure {
-            width: 100% !important;
-            max-width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            box-sizing: border-box !important;
-        }
-        article figure {
-            margin-top: 0 !important;
-            margin-bottom: 1rem !important;
-        }
-        article button[data-image-width],
-        article figure img,
-        article > img {
-            margin-left: auto !important;
-            margin-right: auto !important;
-        }
-        ::selection {
-            background-color: \(hexAccentColor) !important;
-        }
-    """
-
-    _ = WKUserScript(
-      source: """
-          var style = document.createElement('style');
-          style.textContent = '\(css)';
-          document.head.appendChild(style);
-      """,
-      injectionTime: .atDocumentStart,
-      forMainFrameOnly: true
-    )
-
     let atStartScripts = WKWebView.loadInjectedJs(forResource: "at_start")
 
     if let jsString = atStartScripts {
@@ -141,35 +78,6 @@ private class FOWKWebViewConfiguration: WKWebViewConfiguration {
       injectionTime: .atDocumentEnd,
       forMainFrameOnly: true
     )
-
-    let schemeHandler = FollowImageURLSchemeHandler()
-    configuration.setURLSchemeHandler(
-      schemeHandler, forURLScheme: FollowImageURLSchemeHandler.rewriteScheme
-    )
-
-    // Only rewrite <img>.src to custom scheme; keep XHR/fetch unchanged to avoid breaking CORS/auth
-    let customImageScript = WKUserScript(
-      source: """
-      (function() {
-          const originalImageSrc = Object.getOwnPropertyDescriptor(Image.prototype, 'src');
-          if (originalImageSrc && originalImageSrc.set) {
-            Object.defineProperty(Image.prototype, 'src', {
-                set: function(url) {
-                    try {
-                      const modifiedUrl = (typeof url === 'string') ? url.replace(/^https?:/, '\(FollowImageURLSchemeHandler.rewriteScheme):') : url;
-                      originalImageSrc.set.call(this, modifiedUrl);
-                    } catch (e) {
-                      originalImageSrc.set.call(this, url);
-                    }
-                }
-            });
-          }
-      })();
-      """,
-      injectionTime: .atDocumentStart,
-      forMainFrameOnly: false
-    )
-    configuration.userContentController.addUserScript(customImageScript)
 
     configuration.userContentController.addUserScript(script2)
   }
@@ -205,59 +113,60 @@ extension FOWebView: WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate 
   func userContentController(
     _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
   ) {
-    debugPrint("message", message.body)
-    if message.name == "message" {
-      let body = message.body
+    // The handler is open to every frame, and an article's iframes are not the app's
+    guard message.frameInfo.isMainFrame, message.name == "message",
+      let jsonString = message.body as? String, let decode = jsonString.data(using: .utf8),
+      let data = try? JSONDecoder().decode(BridgeDataBasePayload.self, from: decode)
+    else { return }
 
-      if let jsonString = body as? String, let decode = jsonString.data(using: .utf8) {
-        let data = try? JSONDecoder().decode(BridgeDataBasePayload.self, from: decode)
-        guard let data = data else { return }
+    switch data.type {
+    case "ready":
+      // Notify manager that the bridge is ready and flush queued scripts
+      DispatchQueue.main.async {
+        WebViewManager.markReadyAndFlush()
+      }
+    case "bridgeReady":
+      guard let data = try? JSONDecoder().decode(BridgeReadyPayload.self, from: decode) else {
+        return
+      }
+      state.bridgeReady(version: data.payload?.version)
+    case "setContentHeight":
+      let data = try? JSONDecoder().decode(
+        SetContentHeightPayload.self, from: decode
+      )
+      guard let data = data else { return }
 
-        switch data.type {
-        case "ready":
-          // Notify manager that the bridge is ready and flush queued scripts
-          DispatchQueue.main.async {
-            WebViewManager.markReadyAndFlush()
-          }
-        case "setContentHeight":
-          let data = try? JSONDecoder().decode(
-            SetContentHeightPayload.self, from: decode
-          )
-          guard let data = data else { return }
+      DispatchQueue.main.async {
+        self.state.contentHeight = data.payload
+      }
 
-          DispatchQueue.main.async {
-            self.state.contentHeight = data.payload
-          }
+    case "measure":
+      measureWebView(self)
 
-        case "measure":
-          measureWebView(self)
+    case "previewImage":
+      let data = try? JSONDecoder().decode(
+        PreviewImagePayload.self, from: decode
+      )
 
-        case "previewImage":
-          let data = try? JSONDecoder().decode(
-            PreviewImagePayload.self, from: decode
-          )
-
-          guard let data = data else { return }
-          DispatchQueue.main.async {
-            let urls = data.payload.imageUrls
-            let index = data.payload.index ?? 0
-            if !urls.isEmpty {
-              self.state.previewImages(urls: urls, index: index)
-            }
-          }
-        case "audio:seekTo":
-            let data = try? JSONDecoder().decode(
-                AudioSeekPayload.self, from: decode
-            )
-            guard let data = data else { return }
-            DispatchQueue.main.async {
-                self.state.seekAudio(time: data.payload.time)
-            }
-
-        default:
-          break
+      guard let data = data else { return }
+      DispatchQueue.main.async {
+        let urls = data.payload.imageUrls
+        let index = data.payload.index ?? 0
+        if !urls.isEmpty {
+          self.state.previewImages(urls: urls, index: index)
         }
       }
+    case "audio:seekTo":
+      let data = try? JSONDecoder().decode(
+        AudioSeekPayload.self, from: decode
+      )
+      guard let data = data else { return }
+      DispatchQueue.main.async {
+        self.state.seekAudio(time: data.payload.time)
+      }
+
+    default:
+      break
     }
   }
 
@@ -292,10 +201,8 @@ extension FOWebView: WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate 
     _ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
     for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures
   ) -> WKWebView? {
-    if let url = navigationAction.request.url,
-       let viewController = Utils.getRootVC()
-    {
-      WebViewManager.presentModalWebView(url: url, from: viewController)
+    if let url = navigationAction.request.url {
+      state.openLink(url: url)
     }
     return nil
   }
@@ -304,14 +211,20 @@ extension FOWebView: WKNavigationDelegate, WKScriptMessageHandler, WKUIDelegate 
     _ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
     decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
   ) {
+    guard let url = navigationAction.request.url else {
+      decisionHandler(.cancel)
+      return
+    }
+    // A link that opens a new window, as the links of articles do
     if navigationAction.targetFrame == nil {
-      if let url = navigationAction.request.url,
-         let viewController = Utils.getRootVC()
-      {
-        WebViewManager.presentModalWebView(url: url, from: viewController)
-        decisionHandler(.cancel)
-        return
-      }
+      state.openLink(url: url)
+      decisionHandler(.cancel)
+      return
+    }
+    // The shared web view stays on the renderer, which an iframe must not navigate away
+    if navigationAction.targetFrame?.isMainFrame == true, !WebViewManager.isRendererPage(url) {
+      decisionHandler(.cancel)
+      return
     }
     decisionHandler(.allow)
   }

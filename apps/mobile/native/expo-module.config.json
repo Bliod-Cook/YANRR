@@ -1,11 +1,10 @@
 {
-  "platforms": ["apple", "android"],
+  "platforms": ["apple"],
   "apple": {
     "modules": [
       "SharedWebViewModule",
       "HelperModule",
       "ToasterModule",
-      "AppleIntelligenceGlowEffectModule",
       "TabBarModule",
       "TabScreenModule",
       "TabBarPortalModule",
@@ -13,15 +12,6 @@
       "EnhancePageViewModule",
       "ItemPressableModule",
       "TabBarBottomAccessoryModule"
-    ]
-  },
-  "android": {
-    "modules": [
-      "expo.modules.follownative.tabbar.TabBarModule",
-      "expo.modules.follownative.tabbar.TabScreenModule",
-      "expo.modules.follownative.tabbar.TabBarPortalModule",
-      "expo.modules.follownative.itempressable.ItemPressableModule",
-      "expo.modules.follownative.focusblocker.FocusBlockerModule"
     ]
   }
 }

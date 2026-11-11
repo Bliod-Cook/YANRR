@@ -12,8 +12,7 @@ Pod::Spec.new do |s|
   s.author         = package['author']
   s.homepage       = package['homepage']
   s.platforms      = {
-    :ios => '15.1',
-    :tvos => '15.1'
+    :ios => '15.1'
   }
   s.swift_version  = '5.4'
   s.source         = { git: '' }
@@ -21,7 +20,6 @@ Pod::Spec.new do |s|
 
   s.dependency 'ExpoModulesCore'
   s.dependency 'SnapKit', '~> 5.7.0'
-  s.dependency 'SDWebImage', '~> 5.0'
   s.dependency "ToastViewSwift", "~> 2.1.3"
   # Swift/Objective-C compatibility
   s.pod_target_xcconfig = {
@@ -33,7 +31,6 @@ Pod::Spec.new do |s|
 
   s.resource_bundles = {
     'js' => ['Modules/SharedWebView/Injected/**/*'],
-    'FollowNative' => ['Media.xcassets'],
   }
 
 end

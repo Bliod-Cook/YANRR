@@ -14,12 +14,6 @@ enum PagerDirection: String {
   case none
 }
 
-enum PagerState: String {
-  case idle
-  case dragging
-  case scrolling
-}
-
 private class PagerViewController: UIViewController {
   private var pageIndex = 0
   private var pageView: UIView?
@@ -68,9 +62,6 @@ class EnhancePagerController: UIPageViewController, UIScrollViewDelegate {
   var onScrollStart: ((Int) -> Void)?
   var onPageWillAppear: ((Int) -> Void)?
 
-  var isTransitioning: Bool = false
-  var isDragging: Bool = false
-
   public var scrollView: UIScrollView?
 
   convenience init(
@@ -114,7 +105,6 @@ class EnhancePagerController: UIPageViewController, UIScrollViewDelegate {
 
   func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
     startOffset = scrollView.contentOffset.x
-    isDragging = true
     onScrollStart?(currentPageIndex)
   }
 
@@ -141,13 +131,11 @@ class EnhancePagerController: UIPageViewController, UIScrollViewDelegate {
     _ scrollView: UIScrollView, willDecelerate decelerate: Bool
   ) {
     if !decelerate {
-      isDragging = false
       onScrollEnd?(currentPageIndex)
     }
   }
 
   public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-    isDragging = false
     onScrollEnd?(currentPageIndex)
   }
 }
@@ -191,20 +179,12 @@ extension EnhancePagerController: UIPageViewControllerDataSource, UIPageViewCont
     transitionCompleted completed: Bool
   ) {
     if completed {
-      isTransitioning = false
       if let currentVC = pageViewController.viewControllers?.first as? PagerViewController,
          let newIndex = pageControllers.firstIndex(of: currentVC)
       {
         currentPageIndex = newIndex
       }
     }
-  }
-
-  func pageViewController(
-    _ pageViewController: UIPageViewController,
-    willTransitionTo pendingViewControllers: [UIViewController]
-  ) {
-    isTransitioning = true
   }
 }
 
@@ -262,15 +242,5 @@ extension EnhancePagerController {
 
   public func getCurrentPageIndex() -> Int {
     return currentPageIndex
-  }
-
-  public func getState() -> PagerState {
-    if isDragging {
-      return .dragging
-    } else if isTransitioning {
-      return .scrolling
-    } else {
-      return .idle
-    }
   }
 }

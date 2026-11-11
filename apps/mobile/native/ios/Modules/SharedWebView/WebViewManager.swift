@@ -4,26 +4,21 @@
 //
 //  Created by Innei on 2025/1/31.
 //
-import Combine
-import ExpoModulesCore
 import SafariServices
-import SwiftUI
 import UIKit
 @preconcurrency import WebKit
 
-// Add protocol for handling link clicks
-protocol WebViewLinkDelegate: AnyObject {
-  func webView(_ webView: WKWebView, shouldOpenURL url: URL)
-}
-
+// Everything here runs on the main thread: the web view needs it, and the state is shared with
+// the lifecycle callbacks there
+@MainActor
 enum WebViewManager {
   // Public observable state
-  static var state = WebViewState()
+  static let state = WebViewState()
 
   // Shared instance and lifecycle
   private(set) static var shared: WKWebView?
   private static weak var currentHost: UIView?
-  private static var observersAdded = false
+  private static var lifecycleObservers: [NSObjectProtocol] = []
   private static var destroyWorkItem: DispatchWorkItem?
 
   // Readiness and pending scripts
@@ -37,42 +32,32 @@ enum WebViewManager {
   // MARK: - Public API
 
   public static func initializeLifecycleObservers() {
-    guard !observersAdded else { return }
-    observersAdded = true
+    guard lifecycleObservers.isEmpty else { return }
 
-    NotificationCenter.default.addObserver(
-      forName: UIApplication.didEnterBackgroundNotification,
-      object: nil,
-      queue: .main
-    ) { _ in
-      didEnterBackground()
-    }
-
-    NotificationCenter.default.addObserver(
-      forName: UIApplication.willEnterForegroundNotification,
-      object: nil,
-      queue: .main
-    ) { _ in
-      willEnterForeground()
-    }
+    lifecycleObservers = [
+      NotificationCenter.default.addObserver(
+        forName: UIApplication.didEnterBackgroundNotification,
+        object: nil,
+        queue: .main
+      ) { _ in
+        MainActor.assumeIsolated { didEnterBackground() }
+      },
+      NotificationCenter.default.addObserver(
+        forName: UIApplication.willEnterForegroundNotification,
+        object: nil,
+        queue: .main
+      ) { _ in
+        MainActor.assumeIsolated { willEnterForeground() }
+      },
+    ]
   }
 
   public static func cleanupLifecycleObservers() {
-    guard observersAdded else { return }
-    observersAdded = false
-
-    // Remove notification observers
-    NotificationCenter.default.removeObserver(
-      self,
-      name: UIApplication.didEnterBackgroundNotification,
-      object: nil
-    )
-
-    NotificationCenter.default.removeObserver(
-      self,
-      name: UIApplication.willEnterForegroundNotification,
-      object: nil
-    )
+    // A block observer goes only with the token it was registered with
+    for observer in lifecycleObservers {
+      NotificationCenter.default.removeObserver(observer)
+    }
+    lifecycleObservers.removeAll()
 
     // Cancel any pending destroy work item
     destroyWorkItem?.cancel()
@@ -110,6 +95,12 @@ enum WebViewManager {
         debugPrint("load remote html: \(url.absoluteString)")
       }
     }
+  }
+
+  /// Whether the main frame may show `url`: the bundled renderer, or the page `load` was given
+  /// (the renderer's dev server)
+  static func isRendererPage(_ url: URL) -> Bool {
+    url.isFileURL || url.absoluteString == lastURL
   }
 
   public static func attach(to host: UIView) {
@@ -159,10 +150,7 @@ enum WebViewManager {
     }
   }
 
-  // Generic state recorders
-  public static func record(key: String, value: Any) {
-    lastState[key] = value
-  }
+  // Generic state recorder
   public static func recordJSON(key: String, payload: String?) {
     guard let payload else {
       lastState[key] = NSNull()
@@ -247,7 +235,9 @@ enum WebViewManager {
     // If not attached to a host, schedule destroy to save memory
     guard currentHost == nil else { return }
     destroyWorkItem?.cancel()
-    let work = DispatchWorkItem { destroyWebView() }
+    let work = DispatchWorkItem {
+      MainActor.assumeIsolated { destroyWebView() }
+    }
     destroyWorkItem = work
     DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: work)
   }
@@ -268,14 +258,7 @@ enum WebViewManager {
     guard let webView = shared else { return }
     isReady = false
     pendingJavaScripts.removeAll()
-
-    // Detach and cleanup on main thread
-    if Thread.isMainThread {
-      cleanup(webView)
-    } else {
-      DispatchQueue.main.sync { cleanup(webView) }
-    }
-
+    cleanup(webView)
     shared = nil
   }
 
@@ -339,10 +322,9 @@ enum WebViewManager {
   // The in-app browser shown last, closed before the app opens a link it is asked to open
   private static weak var presentedBrowser: SafariViewController?
 
-  // Existing method preserved
-  static func presentModalWebView(
-    url: URL, from viewController: UIViewController, onDismiss: (() -> Void)? = nil
-  ) {
+  /// Opens an http(s) link in the in-app browser over the topmost screen, or any other link in the
+  /// app that handles it. `onDismiss` runs once the browser closes, or right away when none opens.
+  static func presentModalWebView(url: URL, onDismiss: @escaping () -> Void) {
     // SFSafariViewController raises an exception, which ends the app, for any URL that is not
     // http(s). Others, such as mailto: and tel:, belong to the apps that handle them; a URL
     // without a scheme, such as a relative link, cannot be opened at all.
@@ -350,17 +332,20 @@ enum WebViewManager {
       if url.scheme != nil {
         UIApplication.shared.open(url)
       }
-      onDismiss?()
+      onDismiss()
+      return
+    }
+    guard let presenter = Utils.topViewController() else {
+      onDismiss()
       return
     }
 
     let safariVC = SafariViewController(url: url)
     safariVC.view.tintColor = Utils.accentColor
     safariVC.preferredControlTintColor = Utils.accentColor
-
-    if let onDismiss = onDismiss { safariVC.setOnDismiss(onDismiss) }
+    safariVC.setOnDismiss(onDismiss)
     presentedBrowser = safariVC
-    viewController.present(safariVC, animated: true)
+    presenter.present(safariVC, animated: true)
   }
 
   /// Closes the in-app browser when it is shown; `completion` gets whether it was. Screens the
@@ -373,23 +358,6 @@ enum WebViewManager {
     browser.dismiss(animated: true) {
       completion(true)
     }
-  }
-}
-
-// SwiftUI wrapper for the shared WKWebView (debug/internals)
-struct SharedWebViewUI: UIViewRepresentable {
-  func makeUIView(context: Context) -> WKWebView {
-    return WebViewManager.getOrCreate()
-  }
-
-  func updateUIView(_ uiView: WKWebView, context: Context) {
-  }
-}
-
-extension WebViewManager {
-  static var swiftUIView: some View {
-    SharedWebViewUI()
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }
 

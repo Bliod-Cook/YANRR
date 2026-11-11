@@ -128,18 +128,6 @@ export const DebugScreen: NavigationControllerView = () => {
           },
         },
         {
-          title: "Glow Effect",
-          onPress: () => {
-            requireNativeModule("AppleIntelligenceGlowEffect").show()
-          },
-        },
-        {
-          title: "Hide Glow Effect",
-          onPress: () => {
-            requireNativeModule("AppleIntelligenceGlowEffect").hide()
-          },
-        },
-        {
           title: "Testing Native Scroll To Top",
           onPress: async () => {
             await requireNativeModule("Helper").scrollToTop(findNodeHandle(ref.current))

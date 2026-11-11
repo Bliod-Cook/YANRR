@@ -38,3 +38,13 @@ struct AudioSeekPayload: Codable, BasePayload {
     var type: String
     var payload: AudioSeekPayloadProps
 }
+
+struct BridgeReadyPayloadProps: Codable {
+  let version: Int
+}
+
+struct BridgeReadyPayload: Codable, BasePayload {
+  var type: String
+  /// Missing from pages older than the version handshake
+  var payload: BridgeReadyPayloadProps?
+}

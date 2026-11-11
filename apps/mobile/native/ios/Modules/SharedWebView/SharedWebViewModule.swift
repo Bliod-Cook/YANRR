@@ -11,24 +11,21 @@ import WebKit
 let onContentHeightChanged = "onContentHeightChanged"
 let onImagePreview = "onImagePreview"
 let onSeekAudio = "onSeekAudio"
+let onOpenLink = "onOpenLink"
+let onBridgeReady = "onBridgeReady"
 
+// Functions run on the JavaScript thread and hand everything to the main thread, which
+// `WebViewManager` is bound to
 public class SharedWebViewModule: Module {
   private var cancellables = Set<AnyCancellable>()
-
-  public static var sharedWebView: WKWebView? {
-    WebViewManager.shared
-  }
 
   public func definition() -> ModuleDefinition {
     Name("FOSharedWebView")
 
     Function("load") { (urlString: String) in
-      WebViewManager.load(urlString)
-    }
-
-    Function("evaluateJavaScript") { (js: String) in
-      // Prefer typed setters or dispatch to record state; avoid parsing free-form JS
-      WebViewManager.evaluateJavaScript(js)
+      DispatchQueue.main.async {
+        WebViewManager.load(urlString)
+      }
     }
 
     // Centralized dispatch to JS layer (native -> JS)
@@ -42,8 +39,10 @@ public class SharedWebViewModule: Module {
       }
       let js =
         "(function(){ if (window.__FO_BRIDGE__ && typeof window.__FO_BRIDGE__.dispatch === 'function') { window.__FO_BRIDGE__.dispatch(\(self.jsonString(type)), \(payloadExpr)); } })()"
-      WebViewManager.recordJSON(key: type, payload: payload)
-      WebViewManager.evaluateJavaScript(js)
+      DispatchQueue.main.async {
+        WebViewManager.recordJSON(key: type, payload: payload)
+        WebViewManager.evaluateJavaScript(js)
+      }
     }
 
     View(WebViewView.self) {
@@ -58,87 +57,97 @@ public class SharedWebViewModule: Module {
     Events(onContentHeightChanged)
     Events(onImagePreview)
     Events(onSeekAudio)
+    Events(onOpenLink)
+    Events(onBridgeReady)
 
     OnCreate {
-      WebViewManager.initializeLifecycleObservers()
+      DispatchQueue.main.async {
+        WebViewManager.initializeLifecycleObservers()
+      }
     }
 
     OnDestroy {
-      WebViewManager.cleanupLifecycleObservers()
+      DispatchQueue.main.async {
+        WebViewManager.cleanupLifecycleObservers()
+      }
     }
+
     OnStartObserving {
-      // Monitor content height changes
-      WebViewManager.state.$contentHeight
-        .receive(on: DispatchQueue.main)
-        .sink { [weak self] height in
-          self?.sendEvent(onContentHeightChanged, ["height": height])
-        }
-        .store(in: &self.cancellables)
-
-      // Monitor image preview events
-      WebViewManager.state.$imagePreviewEvent
-        .receive(on: DispatchQueue.main)
-        .compactMap { $0 }  // Filter out nil values
-        .sink { [weak self] event in
-          self?.sendEvent(onImagePreview, ["imageUrls": event.imageUrls, "index": event.index])
-        }
-        .store(in: &self.cancellables)
-
-      WebViewManager.state.$audioSeekEvent
-        .receive(on: DispatchQueue.main)
-        .compactMap { $0 }
-        .sink { [weak self] event in
-          self?.sendEvent(onSeekAudio, ["time": event.time])
-        }
-        .store(in: &self.cancellables)
+      DispatchQueue.main.async { [weak self] in
+        self?.observe(WebViewManager.state)
+      }
     }
 
     OnStopObserving {
-      self.cancellables.forEach { $0.cancel() }
-      self.cancellables.removeAll()
+      DispatchQueue.main.async { [weak self] in
+        self?.cancellables.forEach { $0.cancel() }
+        self?.cancellables.removeAll()
+      }
     }
 
     // Debug helpers
-    Function("getDebugState") { () -> [String: Any] in
-      WebViewManager.debugState()
+    AsyncFunction("getDebugState") { (promise: Promise) in
+      DispatchQueue.main.async {
+        promise.resolve(WebViewManager.debugState())
+      }
     }
     Function("destroyForDebug") {
-      WebViewManager.destroyForDebug()
+      DispatchQueue.main.async {
+        WebViewManager.destroyForDebug()
+      }
     }
     Function("reloadLastURL") {
-      WebViewManager.reloadLastURL()
+      DispatchQueue.main.async {
+        WebViewManager.reloadLastURL()
+      }
     }
     Function("flushQueue") {
-      WebViewManager.flushForDebug()
-    }
-  }
-
-  private func getLocalHTML(from fileURL: String) -> URL? {
-    if let url = URL(string: fileURL), url.scheme == "file" {
-      let directoryPath = url.deletingLastPathComponent().absoluteString.replacingOccurrences(
-        of: "file://", with: ""
-      )
-      let fileName = url.lastPathComponent
-      let fileExtension = url.pathExtension
-
-      if let fileURL = Bundle.main
-        .url(
-          forResource: String(fileName.dropLast(Int(fileExtension.count) + 1)),
-          withExtension: fileExtension,
-          subdirectory: directoryPath
-        )
-      {
-        return fileURL
-      } else {
-        return nil
+      DispatchQueue.main.async {
+        WebViewManager.flushForDebug()
       }
-    } else {
-      debugPrint("Invalidate url")
-      return nil
     }
   }
 
-  // Removed JS string parsing helpers; state is captured by typed setters or dispatch/setStateJSON
+  private func observe(_ state: WebViewState) {
+    state.$contentHeight
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] height in
+        self?.sendEvent(onContentHeightChanged, ["height": height])
+      }
+      .store(in: &cancellables)
+
+    state.$imagePreviewEvent
+      .receive(on: DispatchQueue.main)
+      .compactMap { $0 }
+      .sink { [weak self] event in
+        self?.sendEvent(onImagePreview, ["imageUrls": event.imageUrls, "index": event.index])
+      }
+      .store(in: &cancellables)
+
+    state.$audioSeekEvent
+      .receive(on: DispatchQueue.main)
+      .compactMap { $0 }
+      .sink { [weak self] event in
+        self?.sendEvent(onSeekAudio, ["time": event.time])
+      }
+      .store(in: &cancellables)
+
+    state.$openLinkEvent
+      .receive(on: DispatchQueue.main)
+      .compactMap { $0 }
+      .sink { [weak self] event in
+        self?.sendEvent(onOpenLink, ["url": event.url])
+      }
+      .store(in: &cancellables)
+
+    state.$bridgeReadyEvent
+      .receive(on: DispatchQueue.main)
+      .compactMap { $0 }
+      .sink { [weak self] event in
+        self?.sendEvent(onBridgeReady, ["version": event.version])
+      }
+      .store(in: &cancellables)
+  }
 
   fileprivate func jsonString(_ value: String) -> String {
     // Encode as JSON string literal
@@ -154,6 +163,4 @@ public class SharedWebViewModule: Module {
     }
     return ""
   }
-
-  // recordDispatchState removed: dynamic state is recorded directly via WebViewManager.recordJSON
 }
