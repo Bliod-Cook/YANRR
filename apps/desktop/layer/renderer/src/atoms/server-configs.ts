@@ -1,15 +1,10 @@
+import type { ServerConfigs as ServerContractConfigs } from "@follow/store/api-contract"
 import { atom } from "jotai"
 
 import { createAtomHooks } from "~/lib/jotai"
 
 /** What the server offers, from `GET /status/configs` */
-export interface ServerConfigs {
-  /** Entry summaries and translation are configured (not AI chat, see `AI_CHAT_ENABLED`) */
-  ai: boolean
-  /** Sign-up is accepted */
-  registration: boolean
-  /** Push notifications are configured */
-  push: boolean
+export interface ServerConfigs extends ServerContractConfigs {
   /** The server never sends it: AI chat does not exist on it */
   AI_CHAT_ENABLED?: boolean
 }

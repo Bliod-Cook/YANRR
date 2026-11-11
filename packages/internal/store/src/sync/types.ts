@@ -1,6 +1,6 @@
 import type { SyncAction as SdkSyncAction } from "@follow-app/client-sdk"
 
-import type { FollowAPI } from "../types"
+import type { FollowAPI } from "../api-contract"
 
 /** The server's `/sync` endpoints: the apps hand `followApi.sync` to the store through `syncApiContext`. */
 export type SyncAPI = FollowAPI["sync"]

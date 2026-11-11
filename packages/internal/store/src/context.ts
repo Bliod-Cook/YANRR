@@ -1,8 +1,8 @@
 import type { AuthClient } from "@follow/shared/auth"
 import type { QueryClient } from "@tanstack/react-query"
 
+import type { FollowAPI } from "./api-contract"
 import type { SyncAPI } from "./sync/types"
-import type { FollowAPI } from "./types"
 
 const NO_VALUE_DEFAULT = Symbol("NO_VALUE_DEFAULT")
 type ContextValue<T> = T | typeof NO_VALUE_DEFAULT

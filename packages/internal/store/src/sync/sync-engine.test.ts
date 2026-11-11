@@ -10,6 +10,7 @@ import { SyncTransactionService } from "@follow/database/services/sync-transacti
 import { UnreadService } from "@follow/database/services/unread"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { FollowAPI } from "../api-contract"
 import { apiContext, syncApiContext } from "../context"
 import { collectionActions, useCollectionStore } from "../modules/collection/store"
 import { entryActions, useEntryStore } from "../modules/entry/store"
@@ -24,7 +25,6 @@ import {
 import type { SubscriptionModel } from "../modules/subscription/types"
 import { unreadActions, unreadSyncService, useUnreadStore } from "../modules/unread/store"
 import { useUserStore } from "../modules/user/store"
-import type { FollowAPI } from "../types"
 import { clearAccountInSession, startSessionCheck } from "./account"
 import { registerSyncModel } from "./model-registry"
 import { syncEngine } from "./sync-engine"

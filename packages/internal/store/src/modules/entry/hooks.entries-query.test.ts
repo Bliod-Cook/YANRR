@@ -11,8 +11,8 @@ import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { FollowAPI } from "../../api-contract"
 import { apiContext, queryClientContext } from "../../context"
-import type { FollowAPI } from "../../types"
 import { getEntriesListQueryKey, getEntriesQueryKey, useEntriesQuery } from "./hooks"
 
 vi.mock("@follow/database/db", async () =>

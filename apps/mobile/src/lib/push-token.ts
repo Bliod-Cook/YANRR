@@ -50,8 +50,7 @@ export const unregisterPushToken = async () => {
     const registered = getRegisteredPushToken()
     if (!registered) return
     await api().messaging.deleteToken(
-      // The SDK's request type still has the channel only, which the server no longer takes
-      { token: registered.token } as never,
+      { token: registered.token },
       { timeout: UNREGISTER_TIMEOUT_MS },
     )
     await kv.delete(PUSH_TOKEN_STORAGE_KEY)

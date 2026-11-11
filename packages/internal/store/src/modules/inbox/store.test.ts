@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from "vitest"
 
+import type { FollowAPI } from "../../api-contract"
 import { apiContext } from "../../context"
-import type { FollowAPI } from "../../types"
 import { inboxSyncService, useInboxStore } from "./store"
 
 const mocks = vi.hoisted(() => ({

@@ -1,3 +1,4 @@
+import { followAPIOf } from "@follow/store/api-contract"
 import { whoami } from "@follow/store/user/getters"
 import { userActions, userSyncService } from "@follow/store/user/store"
 import { trackApiConnection } from "@follow/utils/api-connection"
@@ -27,7 +28,7 @@ export const followClient = new FollowClient({
   },
 })
 
-export const followApi = followClient.api
+export const followApi = followAPIOf(followClient)
 
 // A keychain that cannot be read says nothing about the session, so the request fails to be
 // tried again rather than going out without the cookie

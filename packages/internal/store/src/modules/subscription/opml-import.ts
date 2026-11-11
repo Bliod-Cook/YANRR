@@ -4,13 +4,11 @@ import type {
   SubscriptionImportResponse,
 } from "@follow-app/client-sdk"
 
+import type { SubscriptionImportRequest } from "../../api-contract"
+
 export type OpmlImportResult = ExtractResponseData<SubscriptionImportResponse>
 
-export interface OpmlImportItem {
-  url: string
-  title?: string
-  category?: string
-}
+export type OpmlImportItem = SubscriptionImportRequest["items"][number]
 
 /** Feeds per import request; the server fetches as many new feeds at once */
 const FEEDS_PER_REQUEST = 8
@@ -33,7 +31,7 @@ export const importOpmlInBatches = async (
     const batch = items.slice(start, start + FEEDS_PER_REQUEST)
     const { data } = await client.request<SubscriptionImportResponse>("/subscriptions/import", {
       method: "POST",
-      body: { items: batch },
+      body: { items: batch } satisfies SubscriptionImportRequest,
       timeout: REQUEST_TIMEOUT_MS,
     })
     result.successfulItems.push(...data.successfulItems)

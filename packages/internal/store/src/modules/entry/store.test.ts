@@ -1,8 +1,8 @@
 import { FeedViewType } from "@follow/constants"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { FollowAPI } from "../../api-contract"
 import { apiContext } from "../../context"
-import type { FollowAPI } from "../../types"
 import { useCollectionStore } from "../collection/store"
 import { useFeedStore } from "../feed/store"
 import { debouncedFetchEntryContentByStream, entrySyncServices, useEntryStore } from "./store"

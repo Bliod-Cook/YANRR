@@ -42,10 +42,6 @@ export const registerPushToken = async (userId: string) => {
 export const unregisterPushToken = async () => {
   const token = await ipcServices?.setting.getMessagingToken()
   if (!token) return
-  await api().messaging.deleteToken(
-    // The SDK's request type still has the channel only, which the server no longer takes
-    { token } as never,
-    { timeout: UNREGISTER_TIMEOUT_MS },
-  )
+  await api().messaging.deleteToken({ token }, { timeout: UNREGISTER_TIMEOUT_MS })
   localStorage.removeItem(REGISTRATION_KEY)
 }

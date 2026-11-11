@@ -1,10 +1,10 @@
 import { FeedViewType } from "@follow/constants"
 import { EntryService } from "@follow/database/services/entry"
 import { isBizId } from "@follow/utils"
-import type { EntryListRequest, EntryWithFeed } from "@follow-app/client-sdk"
 import { cloneDeep } from "es-toolkit"
 import { debounce } from "es-toolkit/compat"
 
+import type { EntryListRequest } from "../../api-contract"
 import { api } from "../../context"
 import type { Hydratable } from "../../lib/base"
 import { createImmerSetter, createTransaction, createZustandStore } from "../../lib/helper"
@@ -393,9 +393,6 @@ class EntryActions implements Hydratable {
 }
 
 export const SEARCH_PAGE_SIZE = 20
-
-/** Where a search found its terms in an entry: texts cut into pieces, every other one from the second a term */
-export type EntryHighlight = NonNullable<EntryWithFeed["highlight"]>
 
 /** The timeline a search is narrowed to, as the entries list takes it */
 export type EntrySearchScope = Pick<

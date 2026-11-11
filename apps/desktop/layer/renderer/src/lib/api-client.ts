@@ -1,4 +1,5 @@
 import { env } from "@follow/shared/env.desktop"
+import { followAPIOf } from "@follow/store/api-contract"
 import { whoami } from "@follow/store/user/getters"
 import { fetchSessionUser } from "@follow/store/user/hooks"
 import { trackApiConnection } from "@follow/utils/api-connection"
@@ -16,7 +17,7 @@ export const followClient = new FollowClient({
   fetch: (input, options) => fetch(input, { ...options, cache: "no-store" }),
 })
 
-export const followApi = followClient.api
+export const followApi = followAPIOf(followClient)
 
 // A refused request may mean that the session ended, by itself or from another device. The
 // server is asked, once however many requests it refuses at a time, and its answer signs the

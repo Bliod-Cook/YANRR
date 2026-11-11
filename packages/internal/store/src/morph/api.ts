@@ -2,31 +2,23 @@ import type { FeedSchema, InboxSchema } from "@follow/database/schemas/types"
 import { getDateISOString } from "@follow/utils/utils"
 import type {
   AuthUser,
-  EntryGetByIdResponse,
-  EntryListResponse,
-  EntryWithFeed,
   ExtractResponseData,
   InboxEntryGetResponse,
   InboxListEntry,
-  InboxListEntryResponse,
   InboxSubscriptionResponse,
   ListSubscriptionResponse,
   SubscriptionWithFeed,
 } from "@follow-app/client-sdk"
 
+import type { EntryGetByIdData, EntryWithFeed } from "../api-contract"
 import type { RemoteCollectionModel } from "../modules/collection/types"
 import type { EntryModel } from "../modules/entry/types"
 import type { FeedModel } from "../modules/feed/types"
 import type { SubscriptionModel } from "../modules/subscription/types"
 import type { MeModel } from "../modules/user/store"
 
-// The client SDK does not type these fields of the server's answers yet
-/** The collection of a timeline item */
-type TimelineCollection = { createdAt: Date; view?: RemoteCollectionModel["view"] }
 /** A single entry, with whether the user read it where the server tells */
-type SingleEntry = NonNullable<InboxEntryGetResponse["data"] | EntryGetByIdResponse["data"]> & {
-  read?: boolean
-}
+type SingleEntry = EntryGetByIdData | NonNullable<ExtractResponseData<InboxEntryGetResponse>>
 
 class APIMorph {
   /** The entry the server sent, with the read state of `current` where it sent none */
@@ -58,7 +50,7 @@ class APIMorph {
       language: data.entries.language,
       feedId: data.feeds.id,
       inboxHandle: "feeds" in data ? (data.feeds.type === "inbox" ? data.feeds.id : null) : null,
-      read: data.read ?? current?.read ?? false,
+      read: ("read" in data ? data.read : undefined) ?? current?.read ?? false,
       settings: "settings" in data ? data.settings || null : null,
     }
   }
@@ -120,7 +112,7 @@ class APIMorph {
     return { subscriptions, collections }
   }
 
-  toCollections(data: ExtractResponseData<InboxListEntryResponse | EntryListResponse>): {
+  toCollections(data: InboxListEntry[] | EntryWithFeed[]): {
     collections: RemoteCollectionModel[]
     entryIdsNotInCollections: string[]
   } {
@@ -133,7 +125,8 @@ class APIMorph {
         entryIdsNotInCollections.push((item as EntryWithFeed).entries.id)
         continue
       }
-      const collection: TimelineCollection | undefined = item.collections
+      // Inbox entries cannot be collected
+      const collection: EntryWithFeed["collections"] = item.collections
       if (collection)
         collections.push({
           createdAt: getDateISOString(collection.createdAt),

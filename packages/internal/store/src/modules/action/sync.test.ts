@@ -1,11 +1,11 @@
 import { FollowAPIError } from "@follow-app/client-sdk"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import type { FollowAPI } from "../../api-contract"
 import { apiContext } from "../../context"
 import { getSyncModelHandler } from "../../sync/model-registry"
 import { registerSyncEngine } from "../../sync/sync-status"
 import type { SyncAction } from "../../sync/types"
-import type { FollowAPI } from "../../types"
 import {
   actionActions,
   actionSyncService,

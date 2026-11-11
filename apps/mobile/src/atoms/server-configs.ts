@@ -1,14 +1,6 @@
+import type { ServerConfigs } from "@follow/store/api-contract"
 import { createAtomHooks } from "@follow/utils/jotai"
 import { atom } from "jotai"
-
-/** What the server offers, from `GET /status/configs` */
-export interface ServerConfigs {
-  /** Summaries and translation are configured */
-  ai: boolean
-  /** Sign-up is accepted */
-  registration: boolean
-  push: boolean
-}
 
 export const [, , useServerConfigs, , getServerConfigs, setServerConfigs] = createAtomHooks(
   atom<Nullable<ServerConfigs>>(null),
