@@ -91,6 +91,10 @@ export interface UISettings {
   }
 }
 
+/**
+ * Kept on the device, never synced. The desktop app keeps the tokens, the passwords and the
+ * headers of custom HTTP integrations in its main process, encrypted, and leaves them empty here.
+ */
 export interface IntegrationSettings {
   // eagle
   enableEagle: boolean

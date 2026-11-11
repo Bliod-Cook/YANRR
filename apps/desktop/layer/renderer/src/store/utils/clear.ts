@@ -2,6 +2,7 @@ import { deleteDB } from "@follow/database/db"
 import { clearStorage } from "@follow/utils/ns"
 
 import { reloadAtAppRoot } from "~/lib/reload-at-app-root"
+import { clearIntegrationSecrets } from "~/modules/integration/secrets"
 
 import { clearImageDimensionsDb } from "../image/db"
 
@@ -11,7 +12,7 @@ export const clearLocalPersistStoreData = async () => {
 
 /** Everything of the session on this device, as a sign-out leaves it: data, cache and settings */
 export const clearLocalSessionData = async () => {
-  await clearLocalPersistStoreData()
+  await Promise.all([clearLocalPersistStoreData(), clearIntegrationSecrets()])
   clearStorage()
 }
 
@@ -23,7 +24,7 @@ export const clearLocalSessionData = async () => {
  * provider keys included, and its integrations would save to the other account's services.
  */
 export const clearLocalDataOfAnotherAccount = async () => {
-  await clearLocalPersistStoreData()
+  await Promise.all([clearLocalPersistStoreData(), clearIntegrationSecrets()])
   // Every setting of the account before, as a sign-out clears them
   clearStorage()
   reloadAtAppRoot()

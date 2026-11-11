@@ -12,6 +12,7 @@ import { Input, TextArea } from "@follow/components/ui/input/index.js"
 import { KeyValueEditor } from "@follow/components/ui/key-value-editor/index.js"
 import { ScrollArea } from "@follow/components/ui/scroll-area/index.js"
 import { ResponsiveSelect } from "@follow/components/ui/select/responsive.js"
+import { IN_ELECTRON } from "@follow/shared/constants"
 import type {
   CustomIntegration,
   FetchTemplate,
@@ -79,7 +80,7 @@ type FormData = z.infer<ReturnType<typeof createFormSchema>>
 
 interface CustomIntegrationModalProps {
   integration?: CustomIntegration
-  onSave: (integration: Omit<CustomIntegration, "id"> & { id?: string }) => void
+  onSave: (integration: Omit<CustomIntegration, "id"> & { id?: string }) => Promise<void>
 }
 
 // Constants
@@ -211,7 +212,8 @@ export const CustomIntegrationModalContent = ({
   )
 
   const defaultValues = useMemo((): FormData => {
-    const integrationType = (integration?.type as "http" | "url-scheme") || "http"
+    // On the web only URL schemes, see `CustomIntegrationManager.isAvailable`
+    const integrationType = integration?.type || (IN_ELECTRON ? "http" : "url-scheme")
 
     return {
       name: integration?.name || "",
@@ -239,7 +241,7 @@ export const CustomIntegrationModalContent = ({
   })
 
   const onSubmit = useCallback(
-    (values: FormData) => {
+    async (values: FormData) => {
       try {
         // Clean up data based on type - only include relevant template
         const cleanedValues = {
@@ -253,7 +255,7 @@ export const CustomIntegrationModalContent = ({
             : { urlSchemeTemplate: values.urlSchemeTemplate }),
         }
 
-        onSave(cleanedValues)
+        await onSave(cleanedValues)
         toast.success(
           integration
             ? t("integration.custom_integrations.edit.success")
@@ -451,28 +453,30 @@ export const CustomIntegrationModalContent = ({
                 />
 
                 {/* Integration Type */}
-                <FormField
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="pl-2.5">
-                        {t("integration.custom_integrations.form.type.label")}
-                      </FormLabel>
-                      <FormControl>
-                        <TypeSelector
-                          value={field.value}
-                          onChange={handleTypeChange(field.onChange)}
-                          items={integrationTypeItems}
-                          getTypeIcon={getTypeIcon}
-                        />
-                      </FormControl>
-                      <FormDescription className="pl-2.5">
-                        {t("integration.custom_integrations.form.type.description")}
-                      </FormDescription>
-                      <FormMessage className="pl-2.5" />
-                    </FormItem>
-                  )}
-                />
+                {IN_ELECTRON && (
+                  <FormField
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="pl-2.5">
+                          {t("integration.custom_integrations.form.type.label")}
+                        </FormLabel>
+                        <FormControl>
+                          <TypeSelector
+                            value={field.value}
+                            onChange={handleTypeChange(field.onChange)}
+                            items={integrationTypeItems}
+                            getTypeIcon={getTypeIcon}
+                          />
+                        </FormControl>
+                        <FormDescription className="pl-2.5">
+                          {t("integration.custom_integrations.form.type.description")}
+                        </FormDescription>
+                        <FormMessage className="pl-2.5" />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {/* HTTP Fields */}
                 {selectedType === "http" && (

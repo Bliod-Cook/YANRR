@@ -26,6 +26,7 @@ import { useRouteParams } from "~/hooks/biz/useRouteParams"
 import { ipcServices } from "~/lib/client"
 import { CustomIntegrationManager } from "~/modules/integration/custom-integration-manager"
 import { getEntryContentAsMarkdown } from "~/modules/integration/entry-content-markdown"
+import { readIntegrationSecret, useHasIntegrationSecret } from "~/modules/integration/secrets"
 
 import { useRegisterCommandEffect } from "../hooks/use-register-command"
 import { defineFollowCommand } from "../registry/command"
@@ -125,9 +126,9 @@ const useRegisterReadwiseCommands = () => {
   const { t } = useTranslation()
 
   const enableReadwise = useIntegrationSettingKey("enableReadwise")
-  const readwiseToken = useIntegrationSettingKey("readwiseToken")
+  const hasSecret = useHasIntegrationSecret()
 
-  const isReadwiseAvailable = enableReadwise && !!readwiseToken
+  const isReadwiseAvailable = enableReadwise && hasSecret("readwiseToken")
 
   useRegisterCommandEffect(
     !isReadwiseAvailable
@@ -146,6 +147,7 @@ const useRegisterReadwiseCommands = () => {
               return
             }
             try {
+              const readwiseToken = await readIntegrationSecret("readwiseToken")
               const data = await ofetch("https://readwise.io/api/v3/save/", {
                 method: "POST",
                 headers: {
@@ -182,7 +184,7 @@ const useRegisterReadwiseCommands = () => {
           },
         }),
     {
-      deps: [isReadwiseAvailable, readwiseToken],
+      deps: [isReadwiseAvailable],
     },
   )
 }
@@ -192,9 +194,10 @@ const useRegisterInstapaperCommands = () => {
 
   const enableInstapaper = useIntegrationSettingKey("enableInstapaper")
   const instapaperUsername = useIntegrationSettingKey("instapaperUsername")
-  const instapaperPassword = useIntegrationSettingKey("instapaperPassword")
+  const hasSecret = useHasIntegrationSecret()
 
-  const isInstapaperAvailable = enableInstapaper && !!instapaperPassword && !!instapaperUsername
+  const isInstapaperAvailable =
+    enableInstapaper && hasSecret("instapaperPassword") && !!instapaperUsername
 
   useRegisterCommandEffect(
     !isInstapaperAvailable
@@ -214,6 +217,7 @@ const useRegisterInstapaperCommands = () => {
             }
 
             try {
+              const instapaperPassword = await readIntegrationSecret("instapaperPassword")
               const data = await ofetch("https://www.instapaper.com/api/add", {
                 query: {
                   url: entry.url,
@@ -249,7 +253,7 @@ const useRegisterInstapaperCommands = () => {
           },
         }),
     {
-      deps: [isInstapaperAvailable, instapaperUsername, instapaperPassword],
+      deps: [isInstapaperAvailable, instapaperUsername],
     },
   )
 }
@@ -331,10 +335,10 @@ const useRegisterOutlineCommands = () => {
 
   const enableOutline = useIntegrationSettingKey("enableOutline")
   const outlineEndpoint = useIntegrationSettingKey("outlineEndpoint")
-  const outlineToken = useIntegrationSettingKey("outlineToken")
+  const hasSecret = useHasIntegrationSecret()
   const outlineCollection = useIntegrationSettingKey("outlineCollection")
   const outlineAvailable =
-    enableOutline && !!outlineToken && !!outlineEndpoint && !!outlineCollection
+    enableOutline && hasSecret("outlineToken") && !!outlineEndpoint && !!outlineCollection
 
   useRegisterCommandEffect(
     !IN_ELECTRON || !outlineAvailable
@@ -354,6 +358,7 @@ const useRegisterOutlineCommands = () => {
             }
 
             try {
+              const outlineToken = await readIntegrationSecret("outlineToken")
               const request = async (method: string, params: Record<string, unknown>) => {
                 return await ofetch(`${outlineEndpoint.replace(/\/$/, "")}/${method}`, {
                   method: "POST",
@@ -389,7 +394,7 @@ const useRegisterOutlineCommands = () => {
           },
         }),
     {
-      deps: [outlineAvailable, outlineToken, outlineEndpoint, outlineCollection],
+      deps: [outlineAvailable, outlineEndpoint, outlineCollection],
     },
   )
 }
@@ -399,8 +404,8 @@ const useRegisterReadeckCommands = () => {
 
   const enableReadeck = useIntegrationSettingKey("enableReadeck")
   const readeckEndpoint = useIntegrationSettingKey("readeckEndpoint")
-  const readeckToken = useIntegrationSettingKey("readeckToken")
-  const readeckAvailable = enableReadeck && !!readeckEndpoint && !!readeckToken
+  const hasSecret = useHasIntegrationSecret()
+  const readeckAvailable = enableReadeck && !!readeckEndpoint && hasSecret("readeckToken")
 
   useRegisterCommandEffect(
     !readeckAvailable
@@ -426,6 +431,7 @@ const useRegisterReadeckCommands = () => {
               if (entry.title) {
                 data.set("title", entry.title)
               }
+              const readeckToken = await readIntegrationSecret("readeckToken")
               const response = await ofetch.raw(
                 `${readeckEndpoint.replace(/\/$/, "")}/api/bookmarks`,
                 {
@@ -456,7 +462,7 @@ const useRegisterReadeckCommands = () => {
           },
         }),
     {
-      deps: [readeckAvailable, readeckToken, readeckEndpoint],
+      deps: [readeckAvailable, readeckEndpoint],
     },
   )
 }
@@ -465,9 +471,9 @@ const useRegisterCuboxCommands = () => {
   const { t } = useTranslation()
 
   const enableCubox = useIntegrationSettingKey("enableCubox")
-  const cuboxToken = useIntegrationSettingKey("cuboxToken")
+  const hasSecret = useHasIntegrationSecret()
   const enableCuboxAutoMemo = useIntegrationSettingKey("enableCuboxAutoMemo")
-  const cuboxAvailable = enableCubox && !!cuboxToken
+  const cuboxAvailable = enableCubox && hasSecret("cuboxToken")
 
   useRegisterCommandEffect(
     !cuboxAvailable
@@ -493,7 +499,8 @@ const useRegisterCuboxCommands = () => {
                   ? buildMemoRequestBody(entry, selectedText)
                   : buildUrlRequestBody(entry)
 
-              await ofetch(cuboxToken, {
+              // The "token" is the address of the user's own Cubox API
+              await ofetch(await readIntegrationSecret("cuboxToken"), {
                 method: "POST",
                 body: requestBody,
                 headers: {
@@ -515,7 +522,7 @@ const useRegisterCuboxCommands = () => {
           },
         }),
     {
-      deps: [cuboxAvailable, cuboxToken, enableCuboxAutoMemo],
+      deps: [cuboxAvailable, enableCuboxAutoMemo],
     },
   )
 }
@@ -525,8 +532,8 @@ const useRegisterZoteroCommands = () => {
 
   const enableZotero = useIntegrationSettingKey("enableZotero")
   const zoteroUserID = useIntegrationSettingKey("zoteroUserID")
-  const zoteroToken = useIntegrationSettingKey("zoteroToken")
-  const zoterAvailable = enableZotero && !!zoteroUserID && !!zoteroToken
+  const hasSecret = useHasIntegrationSecret()
+  const zoterAvailable = enableZotero && !!zoteroUserID && hasSecret("zoteroToken")
 
   // GET https://api.zotero.org/items/new?itemType=webpage
   const buildZoteroWebpageRequestBody = (entry: EntryModel) => {
@@ -584,7 +591,7 @@ const useRegisterZoteroCommands = () => {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "Zotero-API-Key": zoteroToken,
+                  "Zotero-API-Key": await readIntegrationSecret("zoteroToken"),
                 },
                 body: requestBody,
               })
@@ -665,7 +672,7 @@ const useRegisterZoteroCommands = () => {
           },
         }),
     {
-      deps: [zoterAvailable, zoteroUserID, zoteroToken],
+      deps: [zoterAvailable, zoteroUserID],
     },
   )
 }
@@ -722,12 +729,16 @@ const useRegisterQBittorrentCommands = () => {
   const enableQBittorrent = useIntegrationSettingKey("enableQBittorrent")
   const qbittorrentHost = useIntegrationSettingKey("qbittorrentHost")
   const qbittorrentUsername = useIntegrationSettingKey("qbittorrentUsername")
-  const qbittorrentPassword = useIntegrationSettingKey("qbittorrentPassword")
+  const hasSecret = useHasIntegrationSecret()
   const qbittorrentAvailable =
-    enableQBittorrent && !!qbittorrentHost && !!qbittorrentUsername && !!qbittorrentPassword
+    enableQBittorrent &&
+    !!qbittorrentHost &&
+    !!qbittorrentUsername &&
+    hasSecret("qbittorrentPassword")
 
   useRegisterCommandEffect(
-    !qbittorrentAvailable
+    // The main process talks to qBittorrent
+    !IN_ELECTRON || !qbittorrentAvailable
       ? []
       : defineFollowCommand({
           id: COMMAND_ID.integration.saveToQBittorrent,
@@ -750,7 +761,7 @@ const useRegisterQBittorrentCommands = () => {
               let errorMessage = await ipcServices?.integration.loginToQBittorrent({
                 host: qbittorrentHost,
                 username: qbittorrentUsername,
-                password: qbittorrentPassword,
+                password: await readIntegrationSecret("qbittorrentPassword"),
               })
 
               if (errorMessage) {
@@ -777,7 +788,7 @@ const useRegisterQBittorrentCommands = () => {
           },
         }),
     {
-      deps: [qbittorrentAvailable, qbittorrentHost, qbittorrentUsername, qbittorrentPassword],
+      deps: [qbittorrentAvailable, qbittorrentHost, qbittorrentUsername],
     },
   )
 }
@@ -815,7 +826,7 @@ const useRegisterCustomIntegrationVisualCommands = () => {
     if (!enableCustomIntegration || !customIntegrations || customIntegrations.length === 0) {
       return []
     }
-    return customIntegrations.map((integration) => {
+    return customIntegrations.filter(CustomIntegrationManager.isAvailable).map((integration) => {
       return defineFollowCommand({
         id: `integration:custom:${integration.id}` as FollowCommandId,
         label: integration.name,

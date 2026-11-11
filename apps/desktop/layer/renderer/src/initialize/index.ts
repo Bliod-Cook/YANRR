@@ -11,6 +11,7 @@ import { enableMapSet } from "immer"
 
 import { QUERY_PERSIST_KEY } from "~/constants"
 import { initI18n } from "~/i18n"
+import { moveIntegrationSecretsToMainProcess } from "~/modules/integration/secrets"
 import { settingSyncQueue } from "~/modules/settings/helper/sync-queue"
 import { ElectronCloseEvent, ElectronShowEvent } from "~/providers/invalidate-query-provider"
 import { clearLocalDataOfAnotherAccount } from "~/store/utils/clear"
@@ -83,7 +84,10 @@ export const initializeApp = async () => {
   // Enable Map/Set in immer
   enableMapSet()
 
-  apm("initializeSettings", initializeSettings)
+  await apm("initializeSettings", initializeSettings)
+  void moveIntegrationSecretsToMainProcess().catch((error) => {
+    appLog("moving the integration secrets failed", error)
+  })
 
   await apm("i18n", initI18n)
   initSyncTriggers()

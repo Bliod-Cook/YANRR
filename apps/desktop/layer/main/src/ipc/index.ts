@@ -9,6 +9,7 @@ import { DockService } from "./services/dock"
 import { IntegrationService } from "./services/integration"
 import { MenuService } from "./services/menu"
 import { ReaderService } from "./services/reader"
+import { SecretService } from "./services/secret"
 import { SettingService } from "./services/setting"
 
 // A service's group also has to be listed in `./channels`, or the preload script keeps its
@@ -21,6 +22,7 @@ const services = registerForAppPageOnly(() =>
     DockService,
     MenuService,
     ReaderService,
+    SecretService,
     SettingService,
     IntegrationService,
   ]),

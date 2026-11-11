@@ -7,6 +7,12 @@ import { toast } from "sonner"
 
 import { setIntegrationSetting, useIntegrationSettingValue } from "~/atoms/settings/integration"
 import { useDialog, useModalStack } from "~/components/ui/modal/stacked/hooks"
+import { CustomIntegrationManager } from "~/modules/integration/custom-integration-manager"
+import {
+  deleteCustomIntegrationSecrets,
+  readCustomIntegrationHeaders,
+  storeCustomIntegrationSecrets,
+} from "~/modules/integration/secrets"
 
 import { createSetting } from "../../helper/builder"
 import { SettingSectionTitle } from "../../section"
@@ -24,6 +30,10 @@ interface CustomIntegrationSectionProps {
 export const CustomIntegrationSection = memo(({ searchQuery }: CustomIntegrationSectionProps) => {
   const settings = useIntegrationSettingValue()
   const { present } = useModalStack()
+  const availableIntegrations = useMemo(
+    () => (settings.customIntegration || []).filter(CustomIntegrationManager.isAvailable),
+    [settings.customIntegration],
+  )
 
   const { t } = useTranslation("settings")
 
@@ -55,36 +65,29 @@ export const CustomIntegrationSection = memo(({ searchQuery }: CustomIntegration
       return true
     }
 
-    // Check existing custom integrations
-    const customIntegrations = settings.customIntegration || []
-    return customIntegrations.some(
+    // Check existing custom integrations; their headers are secrets, left out
+    return availableIntegrations.some(
       (integration) =>
         integration.name.toLowerCase().includes(query) ||
         integration.fetchTemplate?.url?.toLowerCase().includes(query) ||
         integration.fetchTemplate?.method?.toLowerCase().includes(query) ||
-        Object.keys(integration.fetchTemplate?.headers || {}).some(
-          (key) =>
-            key.toLowerCase().includes(query) ||
-            integration.fetchTemplate?.headers?.[key]?.toLowerCase().includes(query) ||
-            false,
-        ) ||
         (integration.fetchTemplate?.body &&
           integration.fetchTemplate.body.toLowerCase().includes(query)) ||
         (integration.type === "url-scheme" &&
           integration.urlSchemeTemplate?.scheme?.toLowerCase().includes(query)),
     )
-  }, [searchQuery, t, settings.customIntegration])
+  }, [searchQuery, t, availableIntegrations])
 
   const handleCreateCustomIntegration = useCallback(() => {
     present({
       title: t("integration.custom_integrations.create.title"),
       content: () => (
         <CustomIntegrationModalContent
-          onSave={(integrationData) => {
-            const newIntegration: CustomIntegration = {
+          onSave={async (integrationData) => {
+            const newIntegration = await storeCustomIntegrationSecrets({
               ...integrationData,
               id: nanoid(),
-            }
+            })
 
             const currentIntegrations = settings.customIntegration || []
             setIntegrationSetting("customIntegration", [...currentIntegrations, newIntegration])
@@ -95,18 +98,31 @@ export const CustomIntegrationSection = memo(({ searchQuery }: CustomIntegration
   }, [present, settings.customIntegration, t])
 
   const handleEditCustomIntegration = useCallback(
-    (integration: CustomIntegration) => {
+    async (integration: CustomIntegration) => {
+      const withHeaders: CustomIntegration = integration.fetchTemplate
+        ? {
+            ...integration,
+            fetchTemplate: {
+              ...integration.fetchTemplate,
+              headers: await readCustomIntegrationHeaders(integration),
+            },
+          }
+        : integration
       present({
         title: t("integration.custom_integrations.edit.title"),
         content: () => (
           <CustomIntegrationModalContent
-            integration={integration}
-            onSave={(integrationData) => {
+            integration={withHeaders}
+            onSave={async (integrationData) => {
+              const updated = await storeCustomIntegrationSecrets({
+                ...integration,
+                ...integrationData,
+              })
               const currentIntegrations = settings.customIntegration || []
-              const updatedIntegrations = currentIntegrations.map((i) =>
-                i.id === integration.id ? { ...i, ...integrationData } : i,
+              setIntegrationSetting(
+                "customIntegration",
+                currentIntegrations.map((i) => (i.id === integration.id ? updated : i)),
               )
-              setIntegrationSetting("customIntegration", updatedIntegrations)
             }}
           />
         ),
@@ -131,6 +147,7 @@ export const CustomIntegrationSection = memo(({ searchQuery }: CustomIntegration
       })
       if (!confirmed) return
 
+      await deleteCustomIntegrationSecrets(integrationId)
       const currentIntegrations = settings.customIntegration || []
       const updatedIntegrations = currentIntegrations.filter((i) => i.id !== integrationId)
       setIntegrationSetting("customIntegration", updatedIntegrations)
@@ -179,7 +196,7 @@ export const CustomIntegrationSection = memo(({ searchQuery }: CustomIntegration
 
         {settings.enableCustomIntegration && (
           <CustomIntegrationsSection
-            integrations={settings.customIntegration || []}
+            integrations={availableIntegrations}
             onCreateIntegration={handleCreateCustomIntegration}
             onEditIntegration={handleEditCustomIntegration}
             onDeleteIntegration={handleDeleteCustomIntegration}

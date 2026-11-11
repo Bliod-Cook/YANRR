@@ -1,3 +1,4 @@
+import { IN_ELECTRON } from "@follow/shared/constants"
 import type {
   CustomIntegration,
   FetchTemplate,
@@ -12,7 +13,8 @@ import { getActionLanguage } from "~/atoms/settings/general"
 import { getIntegrationSettings } from "~/atoms/settings/integration"
 
 import { convertHtmlToIntegrationMarkdown } from "./entry-content-markdown"
-import { getFetchAdapter } from "./fetch-adapter"
+import { sendIntegrationRequest } from "./fetch-adapter"
+import { readCustomIntegrationHeaders } from "./secrets"
 import { URLSchemeHandler } from "./url-scheme-handler"
 
 /**
@@ -46,6 +48,14 @@ const BODY_METHODS: string[] = ["POST", "PUT", "PATCH"]
  * Manager class for handling custom integrations
  */
 export class CustomIntegrationManager {
+  /**
+   * HTTP integrations need the desktop app: a browser has no safe place for their headers, and
+   * CORS rules decide whether their requests may leave the page at all
+   */
+  static isAvailable(integration: CustomIntegration): boolean {
+    return IN_ELECTRON || integration.type === "url-scheme"
+  }
+
   /**
    * Get entry content as markdown
    */
@@ -192,7 +202,7 @@ export class CustomIntegrationManager {
     url: string
     headers: Record<string, string>
     body?: string
-    method: string
+    method: FetchTemplate["method"]
   }> {
     // Process URL with URL encoding for placeholder values
     const processedUrl = this.replacePlaceholders(fetchTemplate.url, context, { urlEncode: true })
@@ -263,12 +273,15 @@ export class CustomIntegrationManager {
         return { success: true }
       } else if (integration.fetchTemplate) {
         const { url, headers, body, method } = await this.processFetchTemplate(
-          integration.fetchTemplate,
+          {
+            ...integration.fetchTemplate,
+            headers: await readCustomIntegrationHeaders(integration),
+          },
           context,
         )
 
-        const response = await getFetchAdapter().fetch(url, {
-          method: method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+        const response = await sendIntegrationRequest(url, {
+          method,
           headers,
           body: body && BODY_METHODS.includes(method) ? body : undefined,
         })

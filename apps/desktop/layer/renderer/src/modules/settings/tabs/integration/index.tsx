@@ -26,20 +26,26 @@ import {
 } from "~/atoms/settings/integration"
 import { ipcServices } from "~/lib/client"
 import { downloadJsonFile, selectJsonFile } from "~/lib/export"
-import { getFetchAdapter } from "~/modules/integration/fetch-adapter"
+import {
+  takeIntegrationSecrets,
+  useHasIntegrationSecret,
+  useIntegrationSecretsPersistent,
+} from "~/modules/integration/secrets"
 
 import { createSetting } from "../../helper/builder"
 import { useSetSettingCanSync } from "../../modal/hooks"
 import { SettingItemGroup, SettingSectionTitle } from "../../section"
 import { CustomIntegrationSection } from "./CustomIntegrationSection"
+import { SecretSettingInput } from "./SecretSettingInput"
 
 const { defineSettingItem, SettingBuilder } = createSetting(
   useIntegrationSettingValue,
   setIntegrationSetting,
 )
-// Their save actions are only registered in the desktop app (Obsidian and Eagle work with local
-// apps and files), so on the web they could be set up but never used
-const desktopOnlyIntegrations = new Set(["obsidian", "outline", "eagle"])
+// Their save actions are only registered in the desktop app (Obsidian, Eagle and qBittorrent work
+// with local apps and files through the main process), so on the web they could be set up but
+// never used
+const desktopOnlyIntegrations = new Set(["obsidian", "outline", "eagle", "qbittorrent"])
 
 const ObsidianVaultPathPicker: FC = () => {
   const vaultPath = useIntegrationSettingValue().obsidianVaultPath
@@ -101,6 +107,8 @@ export const SettingIntegration = () => {
   const setSync = useSetSettingCanSync()
   const [searchQuery, setSearchQuery] = useState("")
   const settings = useIntegrationSettingValue()
+  const hasSecret = useHasIntegrationSecret()
+  const secretsPersistent = useIntegrationSecretsPersistent()
 
   useEffect(() => {
     setSync(false)
@@ -120,17 +128,17 @@ export const SettingIntegration = () => {
           title: t("integration.cubox.title"),
           icon: <SimpleIconsCubox />,
           enabled: settings.enableCubox,
-          configured: Boolean(settings.cuboxToken),
+          configured: hasSecret("cuboxToken"),
           settings: [
             defineSettingItem("enableCubox", {
               label: t("integration.cubox.enable.label"),
               description: t("integration.cubox.enable.description"),
             }),
-            defineSettingItem("cuboxToken", {
-              label: t("integration.cubox.token.label"),
-              vertical: true,
-              type: "password",
-              description: (
+            <SecretSettingInput
+              key="cuboxToken"
+              secretKey="cuboxToken"
+              label={t("integration.cubox.token.label")}
+              description={
                 <>
                   {t("integration.cubox.token.description")}{" "}
                   <a
@@ -142,8 +150,8 @@ export const SettingIntegration = () => {
                     https://cubox.pro/my/settings/extensions
                   </a>
                 </>
-              ),
-            }),
+              }
+            />,
             defineSettingItem("enableCuboxAutoMemo", {
               label: t("integration.cubox.autoMemo.label"),
               description: t("integration.cubox.autoMemo.description"),
@@ -169,7 +177,7 @@ export const SettingIntegration = () => {
           title: t("integration.outline.title"),
           icon: <SimpleIconsOutline />,
           enabled: settings.enableOutline,
-          configured: Boolean(settings.outlineEndpoint && settings.outlineToken),
+          configured: Boolean(settings.outlineEndpoint) && hasSecret("outlineToken"),
           settings: [
             defineSettingItem("enableOutline", {
               label: t("integration.outline.enable.label"),
@@ -180,12 +188,12 @@ export const SettingIntegration = () => {
               vertical: true,
               description: t("integration.outline.endpoint.description"),
             }),
-            defineSettingItem("outlineToken", {
-              label: t("integration.outline.token.label"),
-              vertical: true,
-              type: "password",
-              description: t("integration.outline.token.description"),
-            }),
+            <SecretSettingInput
+              key="outlineToken"
+              secretKey="outlineToken"
+              label={t("integration.outline.token.label")}
+              description={t("integration.outline.token.description")}
+            />,
             defineSettingItem("outlineCollection", {
               label: t("integration.outline.collection.label"),
               vertical: true,
@@ -198,17 +206,17 @@ export const SettingIntegration = () => {
           title: t("integration.readwise.title"),
           icon: <SimpleIconsReadwise />,
           enabled: settings.enableReadwise,
-          configured: Boolean(settings.readwiseToken),
+          configured: hasSecret("readwiseToken"),
           settings: [
             defineSettingItem("enableReadwise", {
               label: t("integration.readwise.enable.label"),
               description: t("integration.readwise.enable.description"),
             }),
-            defineSettingItem("readwiseToken", {
-              label: t("integration.readwise.token.label"),
-              vertical: true,
-              type: "password",
-              description: (
+            <SecretSettingInput
+              key="readwiseToken"
+              secretKey="readwiseToken"
+              label={t("integration.readwise.token.label")}
+              description={
                 <>
                   {t("integration.readwise.token.description")}{" "}
                   <a
@@ -221,8 +229,8 @@ export const SettingIntegration = () => {
                   </a>
                   .
                 </>
-              ),
-            }),
+              }
+            />,
           ],
         },
         {
@@ -230,7 +238,7 @@ export const SettingIntegration = () => {
           title: t("integration.zotero.title"),
           icon: <SimpleIconsZotero />,
           enabled: settings.enableZotero,
-          configured: Boolean(settings.zoteroUserID && settings.zoteroToken),
+          configured: Boolean(settings.zoteroUserID) && hasSecret("zoteroToken"),
           settings: [
             defineSettingItem("enableZotero", {
               label: t("integration.zotero.enable.label"),
@@ -254,9 +262,11 @@ export const SettingIntegration = () => {
               vertical: true,
               type: "password",
             }),
-            defineSettingItem("zoteroToken", {
-              label: t("integration.zotero.token.label"),
-              description: (
+            <SecretSettingInput
+              key="zoteroToken"
+              secretKey="zoteroToken"
+              label={t("integration.zotero.token.label")}
+              description={
                 <>
                   {t("integration.zotero.token.description")}{" "}
                   <a
@@ -268,10 +278,8 @@ export const SettingIntegration = () => {
                     https://www.zotero.org/settings/keys/new
                   </a>
                 </>
-              ),
-              vertical: true,
-              type: "password",
-            }),
+              }
+            />,
           ],
         },
       ],
@@ -287,7 +295,7 @@ export const SettingIntegration = () => {
           title: t("integration.instapaper.title"),
           icon: <SimpleIconsInstapaper />,
           enabled: settings.enableInstapaper,
-          configured: Boolean(settings.instapaperUsername && settings.instapaperPassword),
+          configured: Boolean(settings.instapaperUsername) && hasSecret("instapaperPassword"),
           settings: [
             defineSettingItem("enableInstapaper", {
               label: t("integration.instapaper.enable.label"),
@@ -297,11 +305,11 @@ export const SettingIntegration = () => {
               label: t("integration.instapaper.username.label"),
               vertical: true,
             }),
-            defineSettingItem("instapaperPassword", {
-              label: t("integration.instapaper.password.label"),
-              vertical: true,
-              type: "password",
-            }),
+            <SecretSettingInput
+              key="instapaperPassword"
+              secretKey="instapaperPassword"
+              label={t("integration.instapaper.password.label")}
+            />,
           ],
         },
         {
@@ -309,7 +317,7 @@ export const SettingIntegration = () => {
           title: t("integration.readeck.title"),
           icon: <SimpleIconsReadeck />,
           enabled: settings.enableReadeck,
-          configured: Boolean(settings.readeckEndpoint && settings.readeckToken),
+          configured: Boolean(settings.readeckEndpoint) && hasSecret("readeckToken"),
           settings: [
             defineSettingItem("enableReadeck", {
               label: t("integration.readeck.enable.label"),
@@ -320,12 +328,12 @@ export const SettingIntegration = () => {
               vertical: true,
               description: t("integration.readeck.endpoint.description"),
             }),
-            defineSettingItem("readeckToken", {
-              label: t("integration.readeck.token.label"),
-              vertical: true,
-              type: "password",
-              description: t("integration.readeck.token.description"),
-            }),
+            <SecretSettingInput
+              key="readeckToken"
+              secretKey="readeckToken"
+              label={t("integration.readeck.token.label")}
+              description={t("integration.readeck.token.description")}
+            />,
           ],
         },
       ],
@@ -377,18 +385,18 @@ export const SettingIntegration = () => {
               label: t("integration.qbittorrent.username.label"),
               vertical: true,
             }),
-            defineSettingItem("qbittorrentPassword", {
-              label: t("integration.qbittorrent.password.label"),
-              vertical: true,
-              type: "password",
-            }),
+            <SecretSettingInput
+              key="qbittorrentPassword"
+              secretKey="qbittorrentPassword"
+              label={t("integration.qbittorrent.password.label")}
+            />,
           ],
         },
       ],
     }
 
     return [knowledgeManagement, readingServices, mediaTools, downloadTools]
-  }, [t, settings])
+  }, [t, settings, hasSecret])
 
   const filteredIntegrations = useMemo(() => {
     const allIntegrations = integrationCategories
@@ -431,6 +439,12 @@ export const SettingIntegration = () => {
           className="h-9"
           aria-label={t("integration.search.label")}
         />
+        {!IN_ELECTRON && (
+          <p className="mt-3 text-sm text-text-tertiary">{t("integration.web_note")}</p>
+        )}
+        {!secretsPersistent && (
+          <p className="mt-3 text-sm text-orange">{t("integration.secrets_not_persisted")}</p>
+        )}
       </div>
 
       {/* General Section */}
@@ -441,22 +455,12 @@ export const SettingIntegration = () => {
             defineSettingItem("saveSummaryAsDescription", {
               label: t("integration.save_ai_summary_as_description.label"),
             }),
-            // Only show browser fetch setting in Electron environment
-            ...(IN_ELECTRON
-              ? [
-                  defineSettingItem("useBrowserFetch", {
-                    label: t("integration.use_browser_fetch.label"),
-                    description: t("integration.use_browser_fetch.description"),
-                    onAfterChange: (value) => {
-                      if (value) {
-                        getFetchAdapter().preferClientFetch()
-                      } else {
-                        getFetchAdapter().preferElectronFetch()
-                      }
-                    },
-                  }),
-                ]
-              : []),
+            // Custom HTTP integrations, which this applies to, are desktop-only
+            IN_ELECTRON &&
+              defineSettingItem("useBrowserFetch", {
+                label: t("integration.use_browser_fetch.label"),
+                description: t("integration.use_browser_fetch.description"),
+              }),
           ]}
         />
       </div>
@@ -552,8 +556,9 @@ const BottomTip = () => {
       const jsonData = JSON.stringify(settings, null, 2)
       const filename = `yanrr-integration-settings-${new Date().toISOString().split("T")[0]}.json`
       downloadJsonFile(jsonData, filename)
+      // The desktop app's settings hold no tokens or passwords
       toast.success(t("integration.export.success"), {
-        description: t("integration.export.credentials_warning"),
+        description: IN_ELECTRON ? undefined : t("integration.export.credentials_warning"),
       })
     } catch (error) {
       console.error("Failed to export integration settings:", error)
@@ -575,21 +580,22 @@ const BottomTip = () => {
 
       // Only settings that exist, with a value of their kind: a list where a list belongs, a
       // switch where a switch does, as the integrations break on anything else
-      let importCount = 0
-      Object.entries(settings).forEach(([key, value]) => {
-        if (!(key in currentSettings)) return
-        const current: unknown = currentSettings[key as keyof IntegrationSettings]
-        const isSameKind = Array.isArray(current)
-          ? Array.isArray(value)
-          : typeof value === typeof current
-        if (!isSameKind) return
-        setIntegrationSetting(key as keyof IntegrationSettings, value as never)
-        importCount++
-      })
+      const imported = Object.fromEntries(
+        Object.entries(settings).filter(([key, value]) => {
+          if (!(key in currentSettings)) return false
+          const current: unknown = currentSettings[key as keyof IntegrationSettings]
+          return Array.isArray(current) ? Array.isArray(value) : typeof value === typeof current
+        }),
+      ) as Partial<IntegrationSettings>
 
-      if (importCount === 0) {
+      if (Object.keys(imported).length === 0) {
         throw new Error("No valid settings found in the imported file")
       }
+
+      const rest = await takeIntegrationSecrets(imported)
+      Object.entries(rest).forEach(([key, value]) => {
+        setIntegrationSetting(key as keyof IntegrationSettings, value as never)
+      })
 
       toast.success(t("integration.import.success"))
     } catch (error) {
@@ -610,9 +616,12 @@ const BottomTip = () => {
     <div className="mt-6 space-y-4">
       <Divider />
       <div className="flex flex-col gap-3">
-        <p className="text-text-tertiary">
-          <small>{t("integration.tip")}</small>
-        </p>
+        {/* The web app says so at the top, with what it cannot do */}
+        {IN_ELECTRON && (
+          <p className="text-text-tertiary">
+            <small>{t("integration.tip")}</small>
+          </p>
+        )}
         <div className="flex gap-2">
           <Button
             variant="outline"
