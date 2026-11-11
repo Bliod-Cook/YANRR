@@ -6,15 +6,13 @@ import { HTML } from "~/components/ui/markdown/HTML"
 import { readableContentMaxWidthClassName } from "~/constants/ui"
 import { useRenderStyle } from "~/hooks/biz/useRenderStyle"
 
+import { useEntryContent } from "../../../hooks"
+
 interface ContentBodyProps {
   entryId: string
   className?: string
   compact?: boolean
   noMedia?: boolean
-  translation?: {
-    content?: string
-    title?: string
-  }
 }
 
 export const ContentBody: React.FC<ContentBodyProps> = ({
@@ -22,12 +20,10 @@ export const ContentBody: React.FC<ContentBodyProps> = ({
   className,
   compact = false,
   noMedia = false,
-  translation,
 }) => {
-  const entry = useEntry(entryId, (state) => ({
-    content: state.content,
-    description: state.description,
-  }))
+  const description = useEntry(entryId, (state) => state.description)
+  // Translated where the translation is on
+  const { content: entryContent } = useEntryContent(entryId)
 
   const renderStyle = useRenderStyle({
     baseFontSize: compact ? 14 : 16,
@@ -35,9 +31,7 @@ export const ContentBody: React.FC<ContentBodyProps> = ({
   })
   const spotlightRules = useSpotlightSettingKey("spotlights")
 
-  if (!entry) return null
-
-  const content = translation?.content || entry.content || entry.description
+  const content = entryContent || description
 
   if (!content) return null
 

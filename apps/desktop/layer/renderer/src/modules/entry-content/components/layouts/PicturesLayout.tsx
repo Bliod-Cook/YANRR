@@ -12,7 +12,6 @@ export const PicturesLayout: React.FC<EntryLayoutProps> = ({
   entryId,
   compact = false,
   noMedia = false,
-  translation,
 }) => {
   const entry = useEntry(entryId, (state) => ({ media: state.media, id: state.id }))
   const previewMedia = usePreviewMedia()
@@ -34,13 +33,7 @@ export const PicturesLayout: React.FC<EntryLayoutProps> = ({
       <AuthorHeader entryId={entryId} className={cn("mx-auto", readableContentMaxWidthClassName)} />
 
       {/* Text Content Section */}
-      <ContentBody
-        entryId={entryId}
-        translation={translation}
-        compact={compact}
-        noMedia={true}
-        className="mx-auto"
-      />
+      <ContentBody entryId={entryId} compact={compact} noMedia={true} className="mx-auto" />
     </div>
   )
 }

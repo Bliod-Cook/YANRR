@@ -8,8 +8,4 @@ export interface EntryLayoutProps {
   view: FeedViewType
   compact?: boolean
   noMedia?: boolean
-  translation?: {
-    content?: string
-    title?: string
-  }
 }

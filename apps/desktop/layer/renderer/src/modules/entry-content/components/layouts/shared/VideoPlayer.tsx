@@ -21,6 +21,8 @@ import { useModalStack } from "~/components/ui/modal/stacked/hooks"
 import { useRenderStyle } from "~/hooks/biz/useRenderStyle"
 import { getDefaultLanguage } from "~/lib/language"
 
+import { useEntryContent } from "../../../hooks"
+
 const ViewTag = IN_ELECTRON ? "webview" : "iframe"
 
 interface VideoPlayerProps {
@@ -28,10 +30,6 @@ interface VideoPlayerProps {
   className?: string
   showDuration?: boolean
   preferFullSize?: boolean
-  translation?: {
-    content?: string
-    title?: string
-  }
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -39,7 +37,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   className,
   showDuration = true,
   preferFullSize = false,
-  translation,
 }) => {
   const { t } = useTranslation()
   const entry = useEntry(entryId, (state) => {
@@ -119,12 +116,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           modalStack.present({
             title: "",
             content: (props) => (
-              <PreviewVideoModalContent
-                src={iframeSrc}
-                entryId={entryId}
-                translation={translation}
-                {...props}
-              />
+              <PreviewVideoModalContent src={iframeSrc} entryId={entryId} {...props} />
             ),
             clickOutsideToDismiss: true,
             CustomModalComponent: PlainModal,
@@ -176,14 +168,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 const PreviewVideoModalContent: ModalContentComponent<{
   src: string
   entryId: string
-  translation?: {
-    content?: string
-    title?: string
-  }
-}> = ({ dismiss, src, entryId, translation }) => {
-  const entry = useEntry(entryId, (state) => ({ content: state.content }))
-
-  const content = translation?.content || entry?.content
+}> = ({ dismiss, src, entryId }) => {
+  // Translated where the translation is on
+  const { content } = useEntryContent(entryId)
   const currentAudioPlayerIsPlay = useRef(AudioPlayer.get().status === "playing")
   const spotlightRules = useSpotlightSettingKey("spotlights")
 

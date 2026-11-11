@@ -1,19 +1,18 @@
 import { RootPortal } from "@follow/components/ui/portal/index.js"
 import type { FeedViewType } from "@follow/constants"
-import { memo, useCallback } from "react"
+import { useCallback } from "react"
 
 import { MenuItemText } from "~/atoms/context-menu"
 import { CommandActionButton } from "~/components/ui/button/CommandActionButton"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu/dropdown-menu"
 import { EntryActionDropdownItem, useSortedEntryActions } from "~/hooks/biz/useEntryActions"
 import { useRequireLogin } from "~/hooks/common/useRequireLogin"
-import { useCommand } from "~/modules/command/hooks/use-command"
-import type { FollowCommandId } from "~/modules/command/types"
+
+import { CommandDropdownMenuItem } from "./more-actions"
 
 export const EntryHeaderActions = ({ entryId, view }: { entryId: string; view: FeedViewType }) => {
   const { mainAction: actionConfigs } = useSortedEntryActions({ entryId, view })
@@ -71,34 +70,3 @@ export const EntryHeaderActions = ({ entryId, view }: { entryId: string; view: F
       return null
     })
 }
-
-const CommandDropdownMenuItem = memo(
-  ({
-    commandId,
-    onClick,
-    active,
-    disabled,
-  }: {
-    commandId: FollowCommandId
-    onClick: () => void
-    active?: boolean
-    disabled?: boolean
-  }) => {
-    const command = useCommand(commandId)
-
-    if (!command) return null
-
-    return (
-      <DropdownMenuItem
-        key={command.id}
-        className="pl-3"
-        icon={command.icon}
-        onSelect={disabled ? undefined : onClick}
-        active={active}
-        disabled={disabled}
-      >
-        {command.label.title}
-      </DropdownMenuItem>
-    )
-  },
-)

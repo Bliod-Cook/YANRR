@@ -1,6 +1,4 @@
-import { MemoedDangerousHTMLStyle } from "@follow/components/common/MemoedDangerousHTMLStyle.js"
 import type { FeedViewType } from "@follow/constants"
-import { isOnboardingEntry } from "@follow/store/constants/onboarding"
 import { useEntry } from "@follow/store/entry/hooks"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useIsInbox } from "@follow/store/inbox/hooks"
@@ -8,6 +6,7 @@ import { cn } from "@follow/utils"
 import { useAtomValue } from "jotai"
 import { useEffect, useMemo, useRef, useState } from "react"
 
+import { useEntryIsInReadability } from "~/atoms/readability"
 import { AIChatPanelStyle, useAIChatPanelStyle, useAIPanelVisibility } from "~/atoms/settings/ai"
 import { customCSSPreviewAtom, useUISettingKey } from "~/atoms/settings/ui"
 import { ErrorBoundary } from "~/components/common/ErrorBoundary"
@@ -18,18 +17,17 @@ import { readableContentMaxWidthClassName } from "~/constants/ui"
 import { useRenderStyle } from "~/hooks/biz/useRenderStyle"
 import { useOptionalChatHasMessages } from "~/modules/ai-chat/store/hooks"
 import { EntryContentHTMLRenderer } from "~/modules/renderer/html"
-import { EntryContentMarkdownRenderer } from "~/modules/renderer/markdown"
 import { WrappedElementProvider } from "~/providers/wrapped-element-provider"
 
 import { useEntryContent, useEntryMediaInfo } from "../../hooks"
 import { AISummary } from "../AISummary"
 import { ContainerToc } from "../entry-content/accessories/ContainerToc"
+import { EntryNoContent } from "../entry-content/EntryNoContent"
 import { EntryRenderError } from "../entry-content/EntryRenderError"
 import { ReadabilityNotice } from "../entry-content/ReadabilityNotice"
 import { EntryAttachments } from "../EntryAttachments"
 import { EntryTitle } from "../EntryTitle"
-import { getArticleRendererContent } from "./content-selection"
-import { MediaTranscript, TranscriptToggle, useTranscription } from "./shared"
+import { MediaTranscript, TranscriptToggle, useSubtitles } from "./shared"
 import { ArticleAudioPlayer } from "./shared/AudioPlayer"
 import type { EntryLayoutProps } from "./types"
 
@@ -38,19 +36,20 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
   view,
   compact = false,
   noMedia = false,
-  translation,
 }) => {
   const entry = useEntry(entryId, (state) => ({
     feedId: state.feedId,
     inboxId: state.inboxHandle,
+    url: state.url,
   }))
-  const { data: transcriptionData } = useTranscription(entryId)
+  const { data: subtitles } = useSubtitles(entryId)
 
   const feed = useFeedById(entry?.feedId)
   const isInbox = useIsInbox(entry?.inboxId)
   const [showTranscript, setShowTranscript] = useState(false)
 
   const { content } = useEntryContent(entryId)
+  const isInReadability = useEntryIsInReadability(entryId)
   const savedCustomCSS = useUISettingKey("customCSS")
   const customCSSPreview = useAtomValue(customCSSPreviewAtom)
   const customCSS = customCSSPreview ?? savedCustomCSS
@@ -75,7 +74,7 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
       <TranscriptToggle
         showTranscript={showTranscript}
         onToggle={setShowTranscript}
-        hasTranscript={!!transcriptionData}
+        hasTranscript={!!subtitles}
       />
 
       <WrappedElementProvider boundingDetection>
@@ -86,23 +85,24 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
             {showTranscript ? (
               <MediaTranscript
                 className="prose !max-w-full dark:prose-invert"
-                srt={transcriptionData}
+                srt={subtitles}
                 entryId={entryId}
                 type="transcription"
               />
-            ) : (
+            ) : content || isInReadability ? (
               <ShadowDOM injectHostStyles={!isInbox}>
-                {!!customCSS && <MemoedDangerousHTMLStyle>{customCSS}</MemoedDangerousHTMLStyle>}
+                {!!customCSS && <style>{customCSS}</style>}
 
-                <Renderer
+                <ArticleRenderer
                   entryId={entryId}
                   view={view}
                   feedId={feed?.id || ""}
                   noMedia={noMedia}
                   content={content}
-                  translation={translation}
                 />
               </ShadowDOM>
+            ) : (
+              <EntryNoContent id={entryId} url={entry.url} view={view} />
             )}
           </ErrorBoundary>
         </div>
@@ -113,21 +113,15 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
   )
 }
 
-const Renderer: React.FC<{
+/** The content of an article */
+export const ArticleRenderer: React.FC<{
   entryId: string
   view: FeedViewType
   feedId: string
   noMedia?: boolean
   content?: Nullable<string>
-  translation?: {
-    content?: string
-    title?: string
-  }
-}> = ({ entryId, view, feedId, noMedia = false, content = "", translation }) => {
+}> = ({ entryId, view, feedId, noMedia = false, content = "" }) => {
   const mediaInfo = useEntryMediaInfo(entryId)
-  const isMarkdownEntry = useMemo(() => {
-    return isOnboardingEntry(entryId)
-  }, [entryId])
   const readerRenderInlineStyle = useUISettingKey("readerRenderInlineStyle")
   const stableRenderStyle = useRenderStyle()
   const isInPeekModal = useInPeekModal()
@@ -144,11 +138,8 @@ const Renderer: React.FC<{
     }
   }, [content, tocRef])
 
-  const ContentRenderer = useMemo(() => {
-    return isMarkdownEntry ? EntryContentMarkdownRenderer : EntryContentHTMLRenderer
-  }, [isMarkdownEntry])
   return (
-    <ContentRenderer
+    <EntryContentHTMLRenderer
       view={view}
       feedId={feedId}
       entryId={entryId}
@@ -160,7 +151,7 @@ const Renderer: React.FC<{
       style={stableRenderStyle}
       renderInlineStyle={readerRenderInlineStyle}
     >
-      {getArticleRendererContent({ content, translationContent: translation?.content })}
-    </ContentRenderer>
+      {content}
+    </EntryContentHTMLRenderer>
   )
 }

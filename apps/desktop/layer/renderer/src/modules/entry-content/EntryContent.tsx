@@ -4,23 +4,16 @@ import { ScrollArea } from "@follow/components/ui/scroll-area/index.js"
 import { FeedViewType } from "@follow/constants"
 import { useTitle } from "@follow/hooks"
 import { useEntry } from "@follow/store/entry/hooks"
-import { useFeedById } from "@follow/store/feed/hooks"
-import type { FeedModel } from "@follow/store/feed/types"
-import { useIsInbox } from "@follow/store/inbox/hooks"
-import { useEntryTranslation } from "@follow/store/translation/hooks"
 import { thenable } from "@follow/utils"
 import { stopPropagation } from "@follow/utils/dom"
 import { EventBus } from "@follow/utils/event-bus"
 import { cn } from "@follow/utils/utils"
-import type { JSAnimation } from "motion/react"
 import { useAnimationControls } from "motion/react"
 import * as React from "react"
 import { memo, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useShowAITranslation } from "~/atoms/ai-translation"
 import { useEntryIsInReadability } from "~/atoms/readability"
-import { useActionLanguage } from "~/atoms/settings/general"
 import { AppErrorBoundary } from "~/components/common/AppErrorBoundary"
 import { Focusable } from "~/components/common/Focusable"
 import { m } from "~/components/common/Motion"
@@ -29,22 +22,18 @@ import { GlassButton } from "~/components/ui/button/GlassButton"
 import { HotkeyScope } from "~/constants"
 import { useEntryView } from "~/hooks/biz/useEntryView"
 import { useFeedSafeUrl } from "~/hooks/common/useFeedSafeUrl"
-import { useBlockActions } from "~/modules/ai-chat/store/hooks"
-import { BlockSliceAction } from "~/modules/ai-chat/store/slices/block.slice"
 import { COMMAND_ID } from "~/modules/command/commands/id"
 
 import { setEntryContentScrollToTop } from "./atoms"
 import { ApplyEntryActions } from "./components/ApplyEntryActions"
 import { EntryCommandShortcutRegister } from "./components/entry-content/EntryCommandShortcutRegister"
 import { EntryContentFallback } from "./components/entry-content/EntryContentFallback"
-import { EntryContentLoading } from "./components/entry-content/EntryContentLoading"
-import { EntryNoContent } from "./components/entry-content/EntryNoContent"
+import { EntryContentPlaceholder } from "./components/entry-content/EntryContentPlaceholder"
 import { EntryScrollingAndNavigationHandler } from "./components/entry-content/EntryScrollingAndNavigationHandler.js"
 import { EntryTitleMetaHandler } from "./components/entry-content/EntryTitleMetaHandler"
 import type { EntryContentProps } from "./components/entry-content/types"
 import { EntryPrintHeader } from "./components/EntryPrintHeader"
 import { getEntryContentLayout } from "./components/layouts"
-import type { EntryLayoutProps } from "./components/layouts/types"
 import { SourceContentPanel } from "./components/SourceContentView"
 import { useEntryContent } from "./hooks"
 
@@ -60,29 +49,15 @@ const EntryContentImpl: Component<EntryContentProps> = ({
   compact,
 }) => {
   const { t } = useTranslation()
-  const entry = useEntry(entryId, (state) => {
-    const { feedId, inboxHandle } = state
-    const { title, url } = state
+  // Undefined only while the entry is not in the store yet
+  const title = useEntry(entryId, (state) => state.title)
 
-    return { feedId, inboxId: inboxHandle, title, url }
-  })
+  if (title === undefined) throw thenable
 
-  if (!entry) throw thenable
-
-  useTitle(entry.title)
-  const feed = useFeedById(entry.feedId)
-
-  const isInbox = useIsInbox(entry.inboxId)
+  useTitle(title)
   const isInReadabilityMode = useEntryIsInReadability(entryId)
 
   const { error, content, isPending } = useEntryContent(entryId)
-  const enableTranslation = useShowAITranslation()
-  const actionLanguage = useActionLanguage()
-  const entryTranslation = useEntryTranslation({
-    entryId,
-    language: actionLanguage,
-    enabled: enableTranslation,
-  })
 
   const view = useEntryView(entryId)
   const [scrollerRef, setScrollerRef] = useState<HTMLDivElement | null>(null)
@@ -90,25 +65,12 @@ const EntryContentImpl: Component<EntryContentProps> = ({
 
   const [panelPortalElement, setPanelPortalElement] = useState<HTMLDivElement | null>(null)
 
-  const scrollAnimationRef = useRef<JSAnimation<any> | null>(null)
-
   const isInHasTimelineView = ![
     FeedViewType.Pictures,
     FeedViewType.SocialMedia,
     FeedViewType.Videos,
   ].includes(view)
 
-  const { addOrUpdateBlock, removeBlock } = useBlockActions()
-  useEffect(() => {
-    addOrUpdateBlock({
-      id: BlockSliceAction.SPECIAL_TYPES.mainEntry,
-      type: "mainEntry",
-      value: entryId,
-    })
-    return () => {
-      removeBlock(BlockSliceAction.SPECIAL_TYPES.mainEntry)
-    }
-  }, [addOrUpdateBlock, entryId, removeBlock])
   const animationController = useAnimationControls()
 
   const focusableRef = useRef<HTMLDivElement>(null)
@@ -143,16 +105,6 @@ const EntryContentImpl: Component<EntryContentProps> = ({
   }, [scrollerRef])
 
   const scrollerRefObject = React.useMemo(() => ({ current: scrollerRef }), [scrollerRef])
-  const layoutTranslation = React.useMemo(
-    () =>
-      entryTranslation
-        ? {
-            content: entryTranslation.content ?? undefined,
-            title: entryTranslation.title ?? undefined,
-          }
-        : undefined,
-    [entryTranslation],
-  )
   return (
     <div className={cn(className, "flex flex-col @container")}>
       <EntryTitleMetaHandler entryId={entryId} />
@@ -166,11 +118,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
         className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden @container print:size-auto print:overflow-visible"
       >
         <RootPortal to={panelPortalElement}>
-          <EntryScrollingAndNavigationHandler
-            entryId={entryId}
-            scrollAnimationRef={scrollAnimationRef}
-            scrollerRef={scrollerRefObject}
-          />
+          <EntryScrollingAndNavigationHandler entryId={entryId} scrollerRef={scrollerRefObject} />
         </RootPortal>
 
         <EntryScrollArea scrollerRef={setScrollerRef}>
@@ -216,42 +164,25 @@ const EntryContentImpl: Component<EntryContentProps> = ({
               onContextMenu={stopPropagation}
               className={"relative w-full min-w-0 pb-10 pt-12 print:pt-0"}
             >
-              <ApplyEntryActions entryId={entryId} key={entryId} />
+              <ApplyEntryActions entryId={entryId} view={view} key={entryId} />
               <EntryPrintHeader entryId={entryId} />
 
-              {!content && !isInReadabilityMode ? (
-                <div className="center mt-16 min-w-0">
-                  {isPending ? (
-                    <EntryContentLoading
-                      icon={!isInbox ? (feed as FeedModel)?.siteUrl : undefined}
-                    />
-                  ) : error ? (
-                    <div className="center mt-36 flex flex-col items-center gap-3">
-                      <i className="i-mgc-warning-cute-re text-4xl text-red" />
-                      <span className="text-balance text-center text-sm">
-                        {t("entry_content.network_error")}
-                      </span>
-                      <pre className="mt-6 w-full overflow-auto whitespace-pre-wrap break-all">
-                        {error.message}
-                      </pre>
-                    </div>
-                  ) : (
-                    <EntryNoContent id={entryId} url={entry.url ?? ""} />
-                  )}
-                </div>
+              {!content && !isInReadabilityMode && (isPending || error) ? (
+                <EntryContentPlaceholder entryId={entryId} error={error} />
               ) : (
                 <AdaptiveContentRenderer
+                  // The state of a layout, such as an open transcript, belongs to one entry
+                  key={entryId}
                   entryId={entryId}
                   view={view}
                   compact={compact}
                   noMedia={noMedia}
-                  translation={layoutTranslation}
                 />
               )}
             </article>
           </m.div>
         </EntryScrollArea>
-        <SourceContentPanel src={safeUrl ?? "#"} />
+        <SourceContentPanel src={safeUrl} />
       </Focusable>
     </div>
   )
@@ -296,17 +227,8 @@ const AdaptiveContentRenderer: React.FC<{
   view: FeedViewType
   compact?: boolean
   noMedia?: boolean
-  translation?: EntryLayoutProps["translation"]
-}> = ({ entryId, view, compact = false, noMedia = false, translation }) => {
+}> = ({ entryId, view, compact = false, noMedia = false }) => {
   const LayoutComponent = getEntryContentLayout(view)
 
-  return (
-    <LayoutComponent
-      entryId={entryId}
-      view={view}
-      compact={compact}
-      noMedia={noMedia}
-      translation={translation}
-    />
-  )
+  return <LayoutComponent entryId={entryId} view={view} compact={compact} noMedia={noMedia} />
 }

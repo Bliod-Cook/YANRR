@@ -7,7 +7,6 @@ import { useSmoothScroll } from "@follow/hooks"
 import { nextFrame } from "@follow/utils/dom"
 import { EventBus } from "@follow/utils/event-bus"
 import { clsx, combineCleanupFunctions } from "@follow/utils/utils"
-import type { JSAnimation } from "motion/react"
 import { AnimatePresence, m } from "motion/react"
 import * as React from "react"
 import { useEffect, useRef, useState } from "react"
@@ -21,11 +20,9 @@ import { useCommandBinding } from "~/modules/command/hooks/use-command-binding"
 export const EntryScrollingAndNavigationHandler = ({
   entryId,
   scrollerRef,
-  scrollAnimationRef,
 }: {
   entryId: string
   scrollerRef: React.RefObject<HTMLDivElement | null>
-  scrollAnimationRef: React.RefObject<JSAnimation<any> | null>
 }) => {
   const { t } = useTranslation()
   const isAlreadyScrolledBottomRef = useRef(false)
@@ -79,13 +76,11 @@ export const EntryScrollingAndNavigationHandler = ({
 
   const { highlightBoundary } = useFocusActions()
   const smoothScrollTo = useSmoothScroll()
+  // The entry content scrolls the next entry to the top
   const navigateToNext = useEventCallback(() => {
     EventBus.dispatch(COMMAND_ID.timeline.switchToNext)
     setShowKeepScrollingPanel(false)
     isAlreadyScrolledBottomRef.current = false
-    if (scrollerRef.current) {
-      smoothScrollTo(0, scrollerRef.current)
-    }
   })
   useEffect(() => {
     const checkScrollBottom = ($scroller: HTMLDivElement) => {
@@ -104,12 +99,7 @@ export const EntryScrollingAndNavigationHandler = ({
       }
     }
 
-    const cleanupScrollAnimation = () => {
-      scrollAnimationRef.current?.stop()
-      scrollAnimationRef.current = null
-    }
     return combineCleanupFunctions(
-      cleanupScrollAnimation,
       EventBus.subscribe(COMMAND_ID.entryRender.scrollUp, () => {
         const $scroller = scrollerRef.current
         if (!$scroller) return
@@ -120,7 +110,6 @@ export const EntryScrollingAndNavigationHandler = ({
         const viewportHeight = $scroller.clientHeight
         const delta = Math.min(Math.max(120, viewportHeight * 0.25), 250)
 
-        cleanupScrollAnimation()
         const targetScroll = Math.max(0, currentScroll - delta)
         smoothScrollTo(targetScroll, $scroller)
         // Scrolling up leaves the bottom, it never moves to the next entry
@@ -137,7 +126,6 @@ export const EntryScrollingAndNavigationHandler = ({
         const viewportHeight = $scroller.clientHeight
         const delta = Math.min(Math.max(120, viewportHeight * 0.25), 250)
 
-        cleanupScrollAnimation()
         const targetScroll = Math.min(
           $scroller.scrollHeight - $scroller.clientHeight,
           currentScroll + delta,
@@ -160,14 +148,7 @@ export const EntryScrollingAndNavigationHandler = ({
         },
       ),
     )
-  }, [
-    highlightBoundary,
-    navigateToNext,
-    resetScrolledBottom,
-    scrollAnimationRef,
-    scrollerRef,
-    smoothScrollTo,
-  ])
+  }, [highlightBoundary, navigateToNext, resetScrolledBottom, scrollerRef, smoothScrollTo])
 
   return (
     <AnimatePresence>

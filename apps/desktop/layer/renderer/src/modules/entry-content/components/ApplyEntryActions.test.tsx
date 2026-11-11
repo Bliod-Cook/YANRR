@@ -1,3 +1,4 @@
+import { FeedViewType } from "@follow/constants"
 import { entrySyncServices, useEntryStore } from "@follow/store/entry/store"
 import type { EntryModel } from "@follow/store/entry/types"
 import { Provider } from "jotai"
@@ -61,14 +62,14 @@ const ReadabilityProbe = ({ entryId }: { entryId: string }) => {
 // Same arrangement as EntryContentImpl: it reads the readability state itself, renders
 // ApplyEntryActions (keyed by entry) at the top of the article followed by the content layout,
 // and the source content panel after the scroll area. All of them mount in the same commit.
-const EntryContentLike = ({ entryId }: { entryId: string }) => {
+const EntryContentLike = ({ entryId, view }: { entryId: string; view: FeedViewType }) => {
   const isInReadability = useEntryIsInReadability(entryId)
 
   return (
     <>
       <output data-probe="content">{JSON.stringify({ isInReadability })}</output>
       <article>
-        <ApplyEntryActions entryId={entryId} key={entryId} />
+        <ApplyEntryActions entryId={entryId} view={view} key={entryId} />
         <ReadabilityProbe entryId={entryId} />
       </article>
       <SourceContentPanel src="about:blank" />
@@ -83,7 +84,7 @@ describe("ApplyEntryActions", () => {
   let root: Root | null = null
   let host: HTMLElement | null = null
 
-  const render = async (entryId: string) => {
+  const render = async (entryId: string, view = FeedViewType.Articles) => {
     if (!host) {
       host = document.createElement("div")
       document.body.append(host)
@@ -92,7 +93,7 @@ describe("ApplyEntryActions", () => {
     await act(async () => {
       root?.render(
         <Provider store={jotaiStore}>
-          <EntryContentLike entryId={entryId} />
+          <EntryContentLike entryId={entryId} view={view} />
         </Provider>,
       )
     })
@@ -112,6 +113,7 @@ describe("ApplyEntryActions", () => {
       data: {
         "readability-1": createEntry("readability-1", { readability: true }),
         "readability-2": createEntry("readability-2", { readability: true }),
+        "readability-3": createEntry("readability-3", { readability: true }),
         "source-1": createEntry("source-1", { sourceContent: true }),
       },
     })
@@ -151,6 +153,13 @@ describe("ApplyEntryActions", () => {
       isInReadability: true,
       status: ReadabilityStatus.SUCCESS,
     })
+  })
+
+  // The picture layout never shows the readable page
+  test("leaves the page of a picture entry alone", async () => {
+    await render("readability-3", FeedViewType.Pictures)
+
+    expect(entrySyncServices.fetchEntryReadabilityContent).not.toHaveBeenCalled()
   })
 
   test("opens the source content panel when the entry content mounts", async () => {

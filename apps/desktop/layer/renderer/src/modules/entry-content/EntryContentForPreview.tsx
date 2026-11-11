@@ -1,49 +1,33 @@
-import type { FeedViewType } from "@follow/constants"
 import { useEntry } from "@follow/store/entry/hooks"
-import { useFeedById } from "@follow/store/feed/hooks"
-import type { FeedModel } from "@follow/store/feed/types"
 import { useIsInbox } from "@follow/store/inbox/hooks"
 import { thenable } from "@follow/utils"
 import { stopPropagation } from "@follow/utils/dom"
 import { clsx } from "@follow/utils/utils"
-import * as React from "react"
 import { memo } from "react"
-import { useTranslation } from "react-i18next"
 
 import { useEntryIsInReadability } from "~/atoms/readability"
-import { useUISettingKey } from "~/atoms/settings/ui"
 import { ErrorBoundary } from "~/components/common/ErrorBoundary"
 import { ShadowDOM } from "~/components/common/ShadowDOM"
 import { useEntryView } from "~/hooks/biz/useEntryView"
-import { useRenderStyle } from "~/hooks/biz/useRenderStyle"
-import { EntryContentHTMLRenderer } from "~/modules/renderer/html"
 import { WrappedElementProvider } from "~/providers/wrapped-element-provider"
 
 import { EntryContentFallback } from "./components/entry-content/EntryContentFallback"
-import { EntryContentLoading } from "./components/entry-content/EntryContentLoading"
+import { EntryContentPlaceholder } from "./components/entry-content/EntryContentPlaceholder"
 import { EntryNoContent } from "./components/entry-content/EntryNoContent"
 import { EntryRenderError } from "./components/entry-content/EntryRenderError"
 import type { EntryContentProps } from "./components/entry-content/types"
 import { EntryAttachments } from "./components/EntryAttachments"
 import { EntryTitle } from "./components/EntryTitle"
-import { useEntryContent, useEntryMediaInfo } from "./hooks"
+import { ArticleRenderer } from "./components/layouts/ArticleLayout"
+import { useEntryContent } from "./hooks"
 
-const EntryContentImpl: Component<EntryContentProps> = ({
-  entryId,
-  noMedia,
-
-  compact,
-}) => {
-  const { t } = useTranslation()
+const EntryContentImpl: Component<EntryContentProps> = ({ entryId, noMedia, compact }) => {
   const entry = useEntry(entryId, (state) => {
-    const { feedId, inboxHandle } = state
-    const { title, url } = state
+    const { feedId, inboxHandle, url } = state
 
-    return { feedId, inboxId: inboxHandle, title, url }
+    return { feedId, inboxId: inboxHandle, url }
   })
   if (!entry) throw thenable
-
-  const feed = useFeedById(entry?.feedId)
 
   const isInbox = useIsInbox(entry?.inboxId)
   const isInReadabilityMode = useEntryIsInReadability(entryId)
@@ -60,40 +44,28 @@ const EntryContentImpl: Component<EntryContentProps> = ({
       >
         <EntryTitle entryId={entryId} compact={compact} />
 
-        <WrappedElementProvider boundingDetection>
-          <div className="mx-auto my-8 max-w-full cursor-auto">
-            <ErrorBoundary fallback={EntryRenderError}>
-              <ShadowDOM injectHostStyles={!isInbox}>
-                <Renderer
-                  entryId={entryId}
-                  view={view}
-                  feedId={feed?.id || ""}
-                  noMedia={noMedia}
-                  content={content}
-                />
-              </ShadowDOM>
-            </ErrorBoundary>
-          </div>
-        </WrappedElementProvider>
-
-        {!content && !isInReadabilityMode && (
-          <div className="center mt-16 min-w-0">
-            {isPending ? (
-              <EntryContentLoading icon={!isInbox ? (feed as FeedModel)?.siteUrl : undefined} />
-            ) : error ? (
-              <div className="center mt-36 flex flex-col items-center gap-3">
-                <i className="i-mgc-warning-cute-re text-4xl text-red" />
-                <span className="text-balance text-center text-sm">
-                  {t("entry_content.network_error")}
-                </span>
-                <pre className="mt-6 w-full overflow-auto whitespace-pre-wrap break-all">
-                  {error.message}
-                </pre>
-              </div>
-            ) : (
-              <EntryNoContent id={entryId} url={entry.url ?? ""} />
-            )}
-          </div>
+        {!content && !isInReadabilityMode && (isPending || error) ? (
+          <EntryContentPlaceholder entryId={entryId} error={error} />
+        ) : (
+          <WrappedElementProvider boundingDetection>
+            <div className="mx-auto my-8 max-w-full cursor-auto">
+              <ErrorBoundary fallback={EntryRenderError}>
+                {content || isInReadabilityMode ? (
+                  <ShadowDOM injectHostStyles={!isInbox}>
+                    <ArticleRenderer
+                      entryId={entryId}
+                      view={view}
+                      feedId={entry.feedId || ""}
+                      noMedia={noMedia}
+                      content={content}
+                    />
+                  </ShadowDOM>
+                ) : (
+                  <EntryNoContent id={entryId} url={entry.url} view={view} />
+                )}
+              </ErrorBoundary>
+            </div>
+          </WrappedElementProvider>
         )}
 
         <EntryAttachments entryId={entryId} />
@@ -106,35 +78,5 @@ export const EntryContentForPreview: Component<EntryContentProps> = memo((props)
     <EntryContentFallback entryId={props.entryId}>
       <EntryContentImpl {...props} />
     </EntryContentFallback>
-  )
-})
-
-const Renderer: React.FC<{
-  entryId: string
-  view: FeedViewType
-  feedId: string
-  noMedia?: boolean
-  content?: Nullable<string>
-}> = React.memo(({ entryId, view, feedId, noMedia = false, content = "" }) => {
-  const mediaInfo = useEntryMediaInfo(entryId)
-
-  const readerRenderInlineStyle = useUISettingKey("readerRenderInlineStyle")
-
-  const stableRenderStyle = useRenderStyle()
-
-  return (
-    <EntryContentHTMLRenderer
-      view={view}
-      feedId={feedId}
-      entryId={entryId}
-      mediaInfo={mediaInfo}
-      noMedia={noMedia}
-      as="article"
-      className="prose !max-w-full hyphens-auto dark:prose-invert prose-h1:text-[1.6em] prose-h1:font-bold"
-      style={stableRenderStyle}
-      renderInlineStyle={readerRenderInlineStyle}
-    >
-      {content}
-    </EntryContentHTMLRenderer>
   )
 })

@@ -1,14 +1,12 @@
+import type { FeedViewType } from "@follow/constants"
 import { useEntry } from "@follow/store/entry/hooks"
 import { useEffect } from "react"
 
 import { enableShowSourceContent } from "~/atoms/source-content"
-import { enableEntryReadability } from "~/hooks/biz/useEntryActions"
+import { enableEntryReadability, isArticleLayoutView } from "~/hooks/biz/useEntryActions"
 
-/**
- * Handle Entry Actions
- * @returns
- */
-export const ApplyEntryActions = ({ entryId }: { entryId: string }) => {
+/** Applies the rule actions of the entry that open its source page or its readable content */
+export const ApplyEntryActions = ({ entryId, view }: { entryId: string; view: FeedViewType }) => {
   const entry = useEntry(entryId, (s) => {
     if (!s.settings) return null
     return {
@@ -21,7 +19,9 @@ export const ApplyEntryActions = ({ entryId }: { entryId: string }) => {
   return (
     <>
       {entry?.sourceContent && <ViewSourceContentAutoToggleEffect id={entryId} />}
-      {entry?.readability && <ReadabilityAutoToggleEffect id={entryId} url={entry?.url ?? ""} />}
+      {entry?.readability && isArticleLayoutView(view) && (
+        <ReadabilityAutoToggleEffect id={entryId} url={entry?.url ?? ""} />
+      )}
     </>
   )
 }

@@ -21,7 +21,9 @@ import { EntryContentForPreview } from "./EntryContentForPreview"
 vi.mock("~/lib/auth", () => ({}))
 // happy-dom cannot host the shadow tree react-shadow creates
 vi.mock("~/components/common/ShadowDOM", () => ({
-  ShadowDOM: ({ children }: { children: React.ReactNode }) => children,
+  ShadowDOM: Object.assign(({ children }: { children: React.ReactNode }) => children, {
+    useIsShadowDOM: () => false,
+  }),
 }))
 
 const episode = {

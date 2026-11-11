@@ -13,7 +13,6 @@ export const SocialMediaLayout: React.FC<EntryLayoutProps> = ({
   entryId,
   compact = false,
   noMedia = false,
-  translation,
 }) => {
   const entry = useEntry(entryId, (state) => ({ feedId: state.feedId, media: state.media }))
   const feed = useFeedById(entry?.feedId)
@@ -28,7 +27,6 @@ export const SocialMediaLayout: React.FC<EntryLayoutProps> = ({
       {/* Main content - direct ContentBody usage without show more logic */}
       <ContentBody
         entryId={entryId}
-        translation={translation}
         compact={compact}
         className="text-base leading-relaxed"
         noMedia={true}
