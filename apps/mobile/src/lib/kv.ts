@@ -10,7 +10,7 @@ class KV {
   }
 
   set(key: string, value: string) {
-    Storage.setItem(key, value)
+    return Storage.setItem(key, value)
   }
 
   get(key: string) {
