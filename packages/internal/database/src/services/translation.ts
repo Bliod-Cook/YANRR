@@ -1,29 +1,18 @@
-import { eq, inArray } from "drizzle-orm"
+import { lt } from "drizzle-orm"
 
 import { db } from "../db"
 import { translationsTable } from "../schemas"
 import type { TranslationSchema } from "../schemas/types"
 import type { Resetable } from "./internal/base"
 
-class TranslationServiceStatic implements Resetable {
-  getTranslationAll() {
-    return db.query.translationsTable.findMany()
-  }
+const TRANSLATION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000
 
+class TranslationServiceStatic implements Resetable {
+  /** The translations of the last week; older ones are deleted */
   async getTranslationToHydrate() {
-    const translations = await db.query.translationsTable.findMany()
-    // Remove translations created before the last 7 days
-    const translationsToClean = translations.filter(
-      (translation) =>
-        new Date(translation.createdAt) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    )
-    await db.delete(translationsTable).where(
-      inArray(
-        translationsTable.entryId,
-        translationsToClean.map((t) => t.entryId),
-      ),
-    )
-    return translations
+    const expiredBefore = new Date(Date.now() - TRANSLATION_LIFETIME_MS).toISOString()
+    await db.delete(translationsTable).where(lt(translationsTable.createdAt, expiredBefore))
+    return db.query.translationsTable.findMany()
   }
 
   async reset() {
@@ -47,13 +36,9 @@ class TranslationServiceStatic implements Resetable {
         createdAt: new Date().toISOString(),
       })
       .onConflictDoUpdate({
-        target: [translationsTable.entryId, translationsTable.language],
+        target: [translationsTable.entryId, translationsTable.language, translationsTable.mode],
         set: updateExceptEmpty,
       })
-  }
-
-  async deleteTranslation(entryId: string) {
-    await db.delete(translationsTable).where(eq(translationsTable.entryId, entryId))
   }
 }
 

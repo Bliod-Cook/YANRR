@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm"
+import { notInArray } from "drizzle-orm"
 
 import { db } from "../db"
-import { summariesTable } from "../schemas"
+import { entriesTable, summariesTable } from "../schemas"
 import type { SummarySchema } from "../schemas/types"
 import type { Resetable } from "./internal/base"
 
@@ -30,21 +30,14 @@ class SummaryServiceStatic implements Resetable {
       })
   }
 
-  async getSummary(entryId: string) {
-    const summary = await db.query.summariesTable.findFirst({
-      where: eq(summariesTable.entryId, entryId),
-    })
-
-    return summary
-  }
-
-  async getAllSummaries() {
-    const summaries = await db.query.summariesTable.findMany()
-    return summaries
-  }
-
-  async deleteSummary(entryId: string) {
-    await db.delete(summariesTable).where(eq(summariesTable.entryId, entryId))
+  /** The summaries of the stored entries; those of entries no longer stored are deleted */
+  async getSummariesToHydrate() {
+    await db
+      .delete(summariesTable)
+      .where(
+        notInArray(summariesTable.entryId, db.select({ id: entriesTable.id }).from(entriesTable)),
+      )
+    return db.query.summariesTable.findMany()
   }
 }
 

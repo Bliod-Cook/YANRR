@@ -1,5 +1,6 @@
 import type { FeedViewType } from "@follow/constants"
 import type { SupportedActionLanguage } from "@follow/shared/language"
+import type { GeneralSettings } from "@follow/shared/settings/interface"
 import type { EntrySettings } from "@follow-app/client-sdk"
 import { sql } from "drizzle-orm"
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
@@ -16,9 +17,6 @@ export const feedsTable = sqliteTable("feeds", {
   siteUrl: text("site_url"),
   ownerUserId: text("owner_user_id"),
   errorMessage: text("error_message"),
-  subscriptionCount: integer("subscription_count"),
-  updatesPerWeek: integer("updates_per_week"),
-  latestEntryPublishedAt: text("latest_entry_published_at"),
   tipUserIds: text("tip_users", { mode: "json" }).$type<string[]>(),
   updatedAt: integer("published_at", { mode: "timestamp_ms" }),
 })
@@ -109,7 +107,7 @@ export const summariesTable = sqliteTable(
     summary: text("summary").notNull(),
     readabilitySummary: text("readability_summary"),
     createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
-    language: text("language").$type<SupportedActionLanguage>(),
+    language: text("language").$type<SupportedActionLanguage>().notNull(),
   },
   (t) => [uniqueIndex("unq").on(t.entryId, t.language)],
 )
@@ -119,6 +117,7 @@ export const translationsTable = sqliteTable(
   (t) => ({
     entryId: t.text("entry_id").notNull(),
     language: t.text("language").$type<SupportedActionLanguage>().notNull(),
+    mode: t.text("mode").$type<GeneralSettings["translationMode"]>().notNull(),
     title: t.text("title"),
     description: t.text("description"),
     content: t.text("content"),
@@ -128,7 +127,7 @@ export const translationsTable = sqliteTable(
       .notNull()
       .$defaultFn(() => new Date().toISOString()),
   }),
-  (t) => [uniqueIndex("translation-unique-index").on(t.entryId, t.language)],
+  (t) => [uniqueIndex("translation-unique-index").on(t.entryId, t.language, t.mode)],
 )
 
 export const imagesTable = sqliteTable("images", (t) => ({
