@@ -1,7 +1,6 @@
 import { Button } from "@follow/components/ui/button/index.js"
 import { useHasEntry, usePrefetchEntryDetail } from "@follow/store/entry/hooks"
 import { FollowAPIError } from "@follow-app/client-sdk"
-import { FetchError } from "ofetch"
 import { memo, Suspense } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -11,9 +10,8 @@ import { useLoginModal } from "~/hooks/common/useLoginModal"
 import { EntryContentLoading } from "./EntryContentLoading"
 
 // Signed out readers get a 401, which no retry can fix
-const isUnauthorized = (error: unknown) =>
-  (error instanceof FollowAPIError && error.status === 401) ||
-  (error instanceof FetchError && error.statusCode === 401)
+export const isUnauthorized = (error: unknown) =>
+  error instanceof FollowAPIError && error.status === 401
 
 interface EntryContentFallbackProps {
   entryId: string
