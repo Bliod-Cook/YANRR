@@ -63,8 +63,9 @@ const onShouldStartLoadWithRequest = ({ url }: WebViewNavigation) => {
   return false
 }
 
-// Article iframes get the same messaging interface as the page, which is the only local file
-const isFromPage = (e: WebViewMessageEvent) => e.nativeEvent.url.startsWith("file:")
+// WebMessageListener reports a local file's origin as "null"; the legacy bridge sends its URL.
+const isFromPage = (e: WebViewMessageEvent) =>
+  e.nativeEvent.url === "null" || e.nativeEvent.url.startsWith("file:")
 
 export const NativeWebView: React.ComponentType<
   ViewProps & {
