@@ -1,18 +1,15 @@
 import { Button } from "@follow/components/ui/button/index.js"
 import { Input } from "@follow/components/ui/input/index.js"
-import { ResponsiveSelect } from "@follow/components/ui/select/responsive.js"
-import { ACTION_LANGUAGE_MAP } from "@follow/shared/language"
 import type { ActionAction } from "@follow/store/action/constant"
 import { availableActionMap } from "@follow/store/action/constant"
 import { useActionRule } from "@follow/store/action/hooks"
 import { actionActions } from "@follow/store/action/store"
 import { cn } from "@follow/utils/utils"
-import type { ActionId, SupportedLanguages } from "@follow-app/client-sdk"
+import type { ActionId } from "@follow-app/client-sdk"
 import type { FC } from "react"
 import { Fragment, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { defaultResources } from "~/@types/default-resource"
 import { useServerCapability } from "~/atoms/server-configs"
 import {
   DropdownMenu,
@@ -116,10 +113,6 @@ export const ThenSection = ({ index }: { index: number }) => {
                         {/* Spacer */}
                         <div className="flex-1" />
 
-                        {action.value === "translation" && (
-                          <TranslationLanguageSelect index={index} disabled={disabled} />
-                        )}
-
                         {/* Settings button */}
                         {action.settingsPath && (
                           <Button
@@ -208,41 +201,6 @@ const AddActionMenu = ({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
-}
-
-// The rule's own target language; `true` translates into the AI output language of the settings
-const DEFAULT_TRANSLATION_LANGUAGE = "default"
-
-const TranslationLanguageSelect = ({ index, disabled }: ActionConfigProps) => {
-  const { t } = useTranslation("settings")
-  const translation = useActionRule(index, (a) => a.result.translation)
-
-  return (
-    <ResponsiveSelect
-      size="sm"
-      triggerClassName="w-48"
-      disabled={disabled}
-      value={typeof translation === "string" ? translation : DEFAULT_TRANSLATION_LANGUAGE}
-      onValueChange={(value) => {
-        actionActions.patchRule(index, {
-          result: {
-            translation:
-              value === DEFAULT_TRANSLATION_LANGUAGE ? true : (value as SupportedLanguages),
-          },
-        })
-      }}
-      items={[
-        {
-          label: t("actions.action_card.translation_language.default"),
-          value: DEFAULT_TRANSLATION_LANGUAGE,
-        },
-        ...Object.values(ACTION_LANGUAGE_MAP).map((item) => ({
-          label: defaultResources[item.value].lang.name,
-          value: item.value,
-        })),
-      ]}
-    />
   )
 }
 

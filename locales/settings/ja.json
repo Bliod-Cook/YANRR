@@ -76,7 +76,6 @@
   "actions.action_card.then_do": "次に行う…",
   "actions.action_card.to": "へ",
   "actions.action_card.translate_into": "翻訳する",
-  "actions.action_card.translation_language.default": "デフォルト（AI 出力言語）",
   "actions.action_card.value": "値",
   "actions.action_card.value_placeholder": "値を入力",
   "actions.action_card.webhooks": "Webhooks",

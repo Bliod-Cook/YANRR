@@ -76,7 +76,6 @@
   "actions.action_card.then_do": "Then Do…",
   "actions.action_card.to": "To",
   "actions.action_card.translate_into": "Translate",
-  "actions.action_card.translation_language.default": "Default (AI Output Language)",
   "actions.action_card.value": "Value",
   "actions.action_card.value_placeholder": "Enter value",
   "actions.action_card.webhooks": "Webhooks",

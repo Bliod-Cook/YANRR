@@ -76,7 +76,6 @@
   "actions.action_card.then_do": "执行动作",
   "actions.action_card.to": "到",
   "actions.action_card.translate_into": "翻译成",
-  "actions.action_card.translation_language.default": "默认（AI 输出语言）",
   "actions.action_card.value": "值",
   "actions.action_card.value_placeholder": "输入值",
   "actions.action_card.webhooks": "Webhook",

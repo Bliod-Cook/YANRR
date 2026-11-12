@@ -136,4 +136,21 @@ describe("ActionSetting", () => {
     await rules(true)
     await vi.waitFor(() => expect(hasSummaryAction()).toBe(true))
   })
+
+  test("leaves the language of a translation to the general settings", async () => {
+    getRules.mockResolvedValue({
+      code: 0,
+      data: {
+        rules: [{ name: "Only", condition: [], result: { translation: true } }],
+        updatedAt: LOADED_AT,
+      },
+    })
+    setServerConfigs({ ai: true, push: false, registration: false })
+
+    await render()
+
+    // Every action's delete button carries this one label
+    await vi.waitFor(() => expect(button("actions.action_card.summary.delete")).toBeDefined())
+    expect(host!.querySelector('[role="combobox"]')).toBeNull()
+  })
 })
