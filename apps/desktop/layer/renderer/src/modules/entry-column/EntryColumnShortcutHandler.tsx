@@ -28,6 +28,9 @@ export const EntryColumnShortcutHandler: FC<{
   const dataRef = useRefValue(data!)
 
   const when = useGlobalFocusableScopeSelector(FocusablePresets.isTimeline)
+  const notInFloatingLayer = useGlobalFocusableScopeSelector(
+    FocusablePresets.isNotFloatingLayerScope,
+  )
 
   const currentEntryIdRef = useRefValue(useRouteEntryId())
   const navigate = useNavigateEntry()
@@ -42,9 +45,10 @@ export const EntryColumnShortcutHandler: FC<{
     when,
   })
 
+  // No other column uses this key, and with the focus on the timeline its button is one click away
   useCommandBinding({
     commandId: COMMAND_ID.timeline.refetch,
-    when,
+    when: notInFloatingLayer,
   })
 
   useCommandHotkey({
