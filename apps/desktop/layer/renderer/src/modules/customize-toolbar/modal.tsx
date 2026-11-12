@@ -1,4 +1,4 @@
-import type { DragEndEvent, DragOverEvent } from "@dnd-kit/core"
+import type { DragEndEvent } from "@dnd-kit/core"
 import {
   closestCenter,
   DndContext,
@@ -24,7 +24,7 @@ import { DroppableContainer, SortableActionButton } from "./dnd"
 import { useActionOrder } from "./hooks"
 import { moveActionToContainer, reorderActionInContainer } from "./order"
 
-const CustomizeToolbar = () => {
+export const CustomizeToolbar = () => {
   const { t } = useTranslation("settings")
   const actionOrder = useActionOrder()
 
@@ -35,19 +35,8 @@ const CustomizeToolbar = () => {
     }),
   )
 
-  // Only moves between the two containers happen while dragging, so the action shows up in the
-  // container it is dragged into. Reordering within a container is previewed by the sortable
-  // strategy and saved on drop: saving it on every dragover re-renders the lists, which fires
-  // dragover again and can loop until React throws "Maximum update depth exceeded" (#4494).
-  const handleDragOver = useCallback(
-    ({ active, over }: DragOverEvent) => {
-      if (!over) return
-      const nextOrder = moveActionToContainer(actionOrder, active.id, over.id)
-      if (nextOrder) setUISetting("toolbarOrder", nextOrder)
-    },
-    [actionOrder],
-  )
-
+  // Keep both grids stable until drop: moving an action during dragover changes the collision
+  // target and can bounce it between containers until React exceeds its update limit.
   const handleDragEnd = useCallback(
     ({ active, over }: DragEndEvent) => {
       if (!over) return
@@ -77,12 +66,7 @@ const CustomizeToolbar = () => {
         </p>
       </div>
       {/* Refer to https://github.com/clauderic/dnd-kit/blob/master/stories/2%20-%20Presets/Sortable/MultipleContainers.tsx */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="space-y-4">
           {/* Main toolbar */}
 
