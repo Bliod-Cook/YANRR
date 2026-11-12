@@ -2,7 +2,7 @@ import type { FeedViewType } from "@follow/constants"
 import { useViewWithSubscription } from "@follow/store/subscription/hooks"
 import { EventBus } from "@follow/utils/event-bus"
 import * as Haptics from "expo-haptics"
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef } from "react"
 import type { StyleProp, ViewStyle } from "react-native"
 import { StyleSheet, View } from "react-native"
 import type {
@@ -12,6 +12,8 @@ import type {
 } from "react-native-pager-view"
 import PagerView from "react-native-pager-view"
 import Animated, { runOnJS, useEvent, useHandler } from "react-native-reanimated"
+
+import { useTabScreenIsFocused } from "@/src/lib/navigation/bottom-tab/hooks"
 
 import { selectTimeline, useSelectedFeed, useTimelineSelectorDragProgress } from "./atoms"
 import { PagerListVisibleContext, PagerListWillVisibleContext } from "./PagerListContext"
@@ -41,15 +43,18 @@ export function PagerList({
   const dragProgress = useTimelineSelectorDragProgress()
 
   const pagerRef = useRef<PagerView>(null)
+  const layoutReadyRef = useRef(false)
+  const isFocused = useTabScreenIsFocused()
 
   const rid = useId()
   useEffect(() => {
+    if (!isFocused) return
     return EventBus.subscribe("SELECT_TIMELINE", (data) => {
-      if (data.target !== rid) {
+      if (data.target !== rid && layoutReadyRef.current) {
         pagerRef.current?.setPage(activeViews.indexOf(data.view.viewId))
       }
     })
-  }, [activeViews, pagerRef, rid])
+  }, [activeViews, isFocused, rid])
 
   const onPageSelectedJS = useCallback(
     (view: FeedViewType) => {
@@ -57,16 +62,6 @@ export function PagerList({
     },
     [rid],
   )
-
-  // Android mounts a new pager with Home on every tab switch, which can open on another page
-  // than `initialPage` and report only that selection: start the selector, which outlives the
-  // pager, from the page it should open on, and send the pager there
-  const [initialPage] = useState(activeViewIndex)
-  useEffect(() => {
-    if (initialPage < 0) return
-    dragProgress.set(initialPage)
-    pagerRef.current?.setPageWithoutAnimation(initialPage)
-  }, [dragProgress, initialPage])
 
   const handlePageScroll = usePagerHandlers(
     {
@@ -94,6 +89,13 @@ export function PagerList({
       ref={pagerRef}
       style={[styles.PagerView, style]}
       initialPage={activeViewIndex}
+      onLayout={({ nativeEvent: { layout } }) => {
+        layoutReadyRef.current = layout.width > 0 && layout.height > 0
+        if (!layoutReadyRef.current || activeViewIndex < 0) return
+        // Hidden tabs have no size; Compose cannot animate them. Sync once the page has a layout.
+        dragProgress.set(activeViewIndex)
+        pagerRef.current?.setPageWithoutAnimation(activeViewIndex)
+      }}
       layoutDirection="ltr"
       offscreenPageLimit={1}
       overdrag
