@@ -23,6 +23,9 @@ export const EntryCommandShortcutRegister = ({
 
   const when = useGlobalFocusableScopeSelector(FocusablePresets.isEntryRender)
   const baseCondition = !hasModal && when
+  const notInFloatingLayer = useGlobalFocusableScopeSelector(
+    FocusablePresets.isNotFloatingLayerScope,
+  )
 
   useCommandBinding({
     when: baseCondition && !!entry?.url,
@@ -55,7 +58,7 @@ export const EntryCommandShortcutRegister = ({
   })
 
   useCommandBinding({
-    when: baseCondition,
+    when: !hasModal && notInFloatingLayer,
     commandId: COMMAND_ID.entry.share,
     args: [{ entryId }],
   })
