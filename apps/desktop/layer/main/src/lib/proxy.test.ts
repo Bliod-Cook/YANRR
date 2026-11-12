@@ -6,13 +6,16 @@ import { logger } from "../logger"
 import { getProxyConfig, setProxyConfig, updateProxy } from "./proxy"
 import { store } from "./store"
 
-vi.mock("electron", () => ({
-  session: {
-    defaultSession: {
-      setProxy: vi.fn(),
+vi.mock("electron", () => {
+  const webviewSession = { setProxy: vi.fn() }
+  return {
+    session: {
+      defaultSession: { setProxy: vi.fn() },
+      fromPartition: (partition: string) =>
+        partition === "persist:webview" ? webviewSession : null,
     },
-  },
-}))
+  }
+})
 
 vi.mock("./store", () => ({
   store: {
@@ -78,20 +81,27 @@ describe("proxy", () => {
   })
 
   describe("updateProxy", () => {
+    // The app's page and the pages of the web in its webviews
+    const sessions = () => [session.defaultSession, session.fromPartition("persist:webview")]
+
     it("should set system proxy mode if no proxy config is set", () => {
       ;(store.get as Mock).mockReturnValue("")
       updateProxy()
-      expect(session.defaultSession.setProxy).toHaveBeenCalledWith({ mode: "system" })
+      for (const ses of sessions()) {
+        expect(ses.setProxy).toHaveBeenCalledWith({ mode: "system" })
+      }
     })
 
     it("should set proxy rules if proxy config is set", () => {
       ;(store.get as Mock).mockReturnValue("http://localhost:8080")
       updateProxy()
       expect(logger.log).toHaveBeenCalledWith("Loading proxy: http://localhost:8080,direct://")
-      expect(session.defaultSession.setProxy).toHaveBeenCalledWith({
-        proxyRules: "http://localhost:8080,direct://",
-        proxyBypassRules: "<local>",
-      })
+      for (const ses of sessions()) {
+        expect(ses.setProxy).toHaveBeenCalledWith({
+          proxyRules: "http://localhost:8080,direct://",
+          proxyBypassRules: "<local>",
+        })
+      }
     })
   })
 })

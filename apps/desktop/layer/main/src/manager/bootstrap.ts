@@ -2,12 +2,14 @@ import { electronApp, optimizer } from "@electron-toolkit/utils"
 import { APP_ID } from "@follow/shared/constants"
 import { createBuildSafeHeaders } from "@follow/utils/headers"
 import { getApiUrl } from "@follow/utils/server-url"
-import { app, BrowserWindow, net, protocol, session } from "electron"
+import { app, BrowserWindow, protocol, session } from "electron"
 
 import { WindowManager } from "~/manager/window"
 
 import { isMacOS } from "../env"
+import { RENDERER_DIR } from "../helper"
 import { proxyApiRequest } from "../lib/api-proxy"
+import { answerFileRequest } from "../lib/app-files"
 import { APP_API_URL } from "../lib/app-url"
 import { applyCacheSizeLimit } from "../lib/cache"
 import { isDeepLink, openDeepLink, setDeepLinkHandler } from "../lib/deep-link"
@@ -15,7 +17,7 @@ import { getPageOrigin } from "../lib/page-origin"
 import { isPermissionGranted } from "../lib/permissions"
 import { handleUrlRouting } from "../lib/router"
 import { getServerUrl } from "../lib/server-url"
-import { logger } from "../logger"
+import { getSessions, getWebviewSession } from "../lib/sessions"
 import { AppManager } from "./app"
 
 /**
@@ -74,16 +76,11 @@ export class BootstrapManager {
     })
 
     app.whenReady().then(() => {
-      protocol.handle("app", (request) => {
-        if (request.url.startsWith(`${APP_API_URL}/`)) return answerApiRequest(request)
-        try {
-          const urlObj = new URL(request.url)
-          return net.fetch(`file://${urlObj.pathname}`)
-        } catch {
-          logger.error("app protocol error", request.url)
-          return new Response("Not found", { status: 404 })
-        }
-      })
+      protocol.handle("app", (request) =>
+        request.url.startsWith(`${APP_API_URL}/`)
+          ? answerApiRequest(request)
+          : answerFileRequest(request, RENDERER_DIR),
+      )
 
       app.on("browser-window-created", (_, window) => {
         optimizer.watchWindowShortcuts(window)
@@ -95,24 +92,28 @@ export class BootstrapManager {
       const buildSafeHeaders = createBuildSafeHeaders(server ?? "", [
         server ? getApiUrl(server) : "",
       ])
-      session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-        details.requestHeaders = buildSafeHeaders({
-          url: details.url,
-          headers: details.requestHeaders,
+      for (const ses of getSessions()) {
+        ses.webRequest.onBeforeSendHeaders((details, callback) => {
+          details.requestHeaders = buildSafeHeaders({
+            url: details.url,
+            headers: details.requestHeaders,
+          })
+
+          callback({ cancel: false, requestHeaders: details.requestHeaders })
         })
 
-        callback({ cancel: false, requestHeaders: details.requestHeaders })
-      })
-
-      // Electron grants every permission a page asks for unless told otherwise
-      session.defaultSession.setPermissionRequestHandler(
-        (_webContents, permission, callback, details) => {
+        // Electron grants every permission a page asks for unless told otherwise
+        ses.setPermissionRequestHandler((_webContents, permission, callback, details) => {
           callback(isPermissionGranted(permission, details.requestingUrl))
-        },
-      )
-      session.defaultSession.setPermissionCheckHandler((_webContents, permission, origin) =>
-        isPermissionGranted(permission, origin),
-      )
+        })
+        ses.setPermissionCheckHandler((_webContents, permission, origin) =>
+          isPermissionGranted(permission, origin),
+        )
+      }
+      // The app's page sets the address of a webview, e.g. from a feed's links, and loading it
+      // isn't a navigation the webview's checks see. A file there could be of a network share,
+      // which Windows would sign in to.
+      getWebviewSession().protocol.handle("file", () => Response.error())
 
       WindowManager.getMainWindowOrCreate()
 
@@ -143,7 +144,7 @@ export class BootstrapManager {
       const window = WindowManager.getMainWindow()
       if (window && !window.isDestroyed()) WindowManager.saveMainWindowState(window)
 
-      void session.defaultSession.cookies.flushStore().finally(() => {
+      void Promise.allSettled(getSessions().map((ses) => ses.cookies.flushStore())).finally(() => {
         cookiesWritten = true
         // Closing would only hide the main window, see `bindMainWindowCloseHandlers`
         for (const window of BrowserWindow.getAllWindows()) window.destroy()

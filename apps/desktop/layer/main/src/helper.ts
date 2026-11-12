@@ -1,4 +1,4 @@
-import { fileURLToPath, pathToFileURL } from "node:url"
+import { fileURLToPath } from "node:url"
 
 import { MODE, ModeEnum } from "@follow/shared/constants"
 import path from "pathe"
@@ -25,6 +25,5 @@ export const getTrayIconPath = () => {
   return getIconPath()
 }
 
-export const filePathToAppUrl = (filePath: string) => {
-  return `app://yanrr${pathToFileURL(filePath).pathname}`
-}
+/** The built renderer, which the app protocol serves at the root of the app's origin */
+export const RENDERER_DIR = path.join(__dirname, "../renderer")

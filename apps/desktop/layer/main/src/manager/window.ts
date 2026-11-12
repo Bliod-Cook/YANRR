@@ -9,11 +9,13 @@ import type { Event } from "electron/main"
 import path from "pathe"
 
 import { isMacOS, isWindows } from "~/env"
-import { filePathToAppUrl, getIconPath } from "~/helper"
+import { getIconPath } from "~/helper"
+import { APP_ORIGIN } from "~/lib/app-url"
 import { setRendererReady } from "~/lib/deep-link"
 import { openExternalSafely } from "~/lib/open-external"
 import { getDevServerUrl, isAppPage } from "~/lib/page-origin"
 import { getServerUrl } from "~/lib/server-url"
+import { WEBVIEW_PARTITION } from "~/lib/sessions"
 import { store } from "~/lib/store"
 import { getTrayConfig } from "~/lib/tray"
 import { refreshBound } from "~/lib/utils"
@@ -107,9 +109,17 @@ class WindowManagerStatic {
       return { action: "deny" }
     })
 
-    const handleExternalProtocol = (e: Event, url: string) => {
+    // A page served by the app protocol is the app's, and a file may be of a network share
+    const isLocalProtocol = (protocol: string) => protocol === "app" || protocol === "file"
+
+    const handleWebviewNavigation = (e: Event, url: string) => {
       const protocol = parseProtocol(url)
       if (!protocol) {
+        e.preventDefault()
+        return
+      }
+      if (isLocalProtocol(protocol)) {
+        logger.warn("Blocked webview navigation to a local page", { url })
         e.preventDefault()
         return
       }
@@ -133,7 +143,7 @@ class WindowManagerStatic {
       // E.g. a reload
       if (isAppPage(url)) return
 
-      if (protocol === "app" || protocol === "file") {
+      if (isLocalProtocol(protocol)) {
         logger.warn("Blocked navigation to a local page", { url })
         e.preventDefault()
         return
@@ -147,8 +157,8 @@ class WindowManagerStatic {
 
     window.webContents.on("will-navigate", handleMainFrameNavigation)
 
-    // A webview shows pages of the web: none of the app's scripts in them, and none of the
-    // powers the attributes of the element could ask for
+    // A webview shows pages of the web: none of the app's scripts in them, none of the powers
+    // the attributes of the element could ask for, and none of the app page's storage
     window.webContents.on("will-attach-webview", (_, webPreferences) => {
       delete webPreferences.preload
       webPreferences.nodeIntegration = false
@@ -156,11 +166,11 @@ class WindowManagerStatic {
       webPreferences.contextIsolation = true
       webPreferences.webSecurity = true
       webPreferences.sandbox = true
+      webPreferences.partition = WEBVIEW_PARTITION
     })
 
-    // Handle webview external links
     window.webContents.on("did-attach-webview", (_, webContents) => {
-      webContents.on("will-navigate", handleExternalProtocol)
+      webContents.on("will-navigate", handleWebviewNavigation)
     })
 
     if (isWindows) {
@@ -364,8 +374,7 @@ class WindowManagerStatic {
       window.loadURL(devServerUrl + (options?.extraPath || ""))
       logger.log(devServerUrl + (options?.extraPath || ""))
     } else {
-      const rendererEntry = filePathToAppUrl(path.resolve(__dirname, "../renderer/index.html"))
-      const appLoadEntry = `${rendererEntry}${options?.extraPath || ""}`
+      const appLoadEntry = `${APP_ORIGIN}/index.html${options?.extraPath || ""}`
 
       window.loadURL(appLoadEntry)
       logger.log("load URL", appLoadEntry)

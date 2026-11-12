@@ -23,10 +23,7 @@ vi.mock("electron", () => ({
   screen: {},
 }))
 vi.mock("~/env", () => ({ isMacOS: true, isWindows: false }))
-vi.mock("~/helper", () => ({
-  filePathToAppUrl: (filePath: string) => `app://yanrr${filePath}`,
-  getIconPath: vi.fn(),
-}))
+vi.mock("~/helper", () => ({ getIconPath: vi.fn() }))
 vi.mock("~/lib/deep-link", () => ({ setRendererReady: vi.fn() }))
 vi.mock("~/lib/open-external", () => ({ openExternalSafely: mocks.openExternalSafely }))
 vi.mock("~/lib/store", () => ({ store: { get: vi.fn(), set: vi.fn() } }))
@@ -85,11 +82,19 @@ describe("main window visibility", () => {
   })
 })
 
+const bindEvents = (window: FakeWindow) => {
+  const bind = Reflect.get(WindowManager, "bindEvents") as (window: BrowserWindow) => void
+  bind.call(WindowManager, window as unknown as BrowserWindow)
+}
+
 describe("webviews of the main window", () => {
-  it("get no script of the app's and none of the powers their attributes ask for", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("get no script of the app's, none of the powers their attributes ask for and a session of their own", () => {
     const window = new FakeWindow()
-    const bindEvents = Reflect.get(WindowManager, "bindEvents") as (window: BrowserWindow) => void
-    bindEvents.call(WindowManager, window as unknown as BrowserWindow)
+    bindEvents(window)
     const webPreferences = {
       preload: "/tmp/planted.js",
       nodeIntegration: true,
@@ -97,6 +102,7 @@ describe("webviews of the main window", () => {
       contextIsolation: false,
       webSecurity: false,
       sandbox: false,
+      partition: "",
       zoomFactor: 1,
     }
 
@@ -108,16 +114,45 @@ describe("webviews of the main window", () => {
       contextIsolation: true,
       webSecurity: true,
       sandbox: true,
+      partition: "persist:webview",
       zoomFactor: 1,
     })
+  })
+
+  const navigateWebview = (url: string) => {
+    const window = new FakeWindow()
+    bindEvents(window)
+    const webview = new EventEmitter()
+    window.webContents.emit("did-attach-webview", {}, webview)
+
+    const event = { preventDefault: vi.fn() }
+    webview.emit("will-navigate", event, url)
+    return event
+  }
+
+  it("keep pages of the web where they are", () => {
+    const event = navigateWebview("https://example.com/article")
+
+    expect(event.preventDefault).not.toHaveBeenCalled()
+    expect(mocks.openExternalSafely).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["the app's page", "app://yanrr/index.html"],
+    ["a local file", "file:///C:/Users/me/notes.html"],
+    ["a file of a share", "file://attacker.example/share/page.html"],
+  ])("may not show %s", (_, url) => {
+    const event = navigateWebview(url)
+
+    expect(event.preventDefault).toHaveBeenCalled()
+    expect(mocks.openExternalSafely).not.toHaveBeenCalled()
   })
 })
 
 describe("main window navigation", () => {
   const navigate = (url: string) => {
     const window = new FakeWindow()
-    const bindEvents = Reflect.get(WindowManager, "bindEvents") as (window: BrowserWindow) => void
-    bindEvents.call(WindowManager, window as unknown as BrowserWindow)
+    bindEvents(window)
 
     const event = { preventDefault: vi.fn() }
     window.webContents.emit("will-navigate", event, url)
@@ -129,7 +164,7 @@ describe("main window navigation", () => {
   })
 
   it("keeps the app's own pages, e.g. on a reload", () => {
-    const event = navigate("app://yanrr/Applications/Yanrr.app/renderer/index.html#/timeline")
+    const event = navigate("app://yanrr/index.html#/timeline")
 
     expect(event.preventDefault).not.toHaveBeenCalled()
     expect(mocks.openExternalSafely).not.toHaveBeenCalled()

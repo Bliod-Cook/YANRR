@@ -15,7 +15,6 @@ protocol.registerSchemesAsPrivileged([
     scheme: "app",
     privileges: {
       standard: true,
-      bypassCSP: true,
       supportFetchAPI: true,
       secure: true,
       // While developing, the pages come from the dev server, another origin than that of the

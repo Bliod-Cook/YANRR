@@ -1,7 +1,7 @@
-import { session } from "electron"
 import { ProxyAgent, setGlobalDispatcher } from "undici"
 
 import { logger } from "../logger"
+import { getSessions } from "./sessions"
 import { store } from "./store"
 
 // Sets up the proxy configuration for the app.
@@ -60,12 +60,15 @@ const BYPASS_RULES = ["<local>"].join(";")
 
 export const updateProxy = () => {
   const proxyUri = getProxyConfig()
+  const sessions = getSessions()
   if (!proxyUri) {
-    session.defaultSession.setProxy({
-      // Note that the system mode is different from setting no proxy configuration.
-      // In the latter case, Electron falls back to the system settings only if no command-line options influence the proxy configuration.
-      mode: "system",
-    })
+    for (const ses of sessions) {
+      ses.setProxy({
+        // Note that the system mode is different from setting no proxy configuration.
+        // In the latter case, Electron falls back to the system settings only if no command-line options influence the proxy configuration.
+        mode: "system",
+      })
+    }
     return
   }
   const proxyRules = [
@@ -75,10 +78,12 @@ export const updateProxy = () => {
   ].join(",")
 
   logger.log(`Loading proxy: ${proxyRules}`)
-  session.defaultSession.setProxy({
-    proxyRules,
-    proxyBypassRules: BYPASS_RULES,
-  })
+  for (const ses of sessions) {
+    ses.setProxy({
+      proxyRules,
+      proxyBypassRules: BYPASS_RULES,
+    })
+  }
 
   // https://github.com/nodejs/undici/issues/2224
   // Error occurred in handler for 'setProxyConfig': InvalidArgumentError: Invalid URL protocol: the URL must start with `http:` or `https:`.

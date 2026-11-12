@@ -2,7 +2,7 @@ import fsp from "node:fs/promises"
 
 import { callWindowExpose } from "@follow/shared/bridge"
 import type { BrowserWindow } from "electron"
-import { app, clipboard, dialog, session, shell } from "electron"
+import { app, clipboard, dialog, shell } from "electron"
 import { getIpcContext, IpcMethod, IpcService } from "electron-ipc-decorator"
 import path from "pathe"
 
@@ -12,6 +12,7 @@ import { getCacheDir } from "~/lib/cache"
 import { setRendererReady } from "~/lib/deep-link"
 import { getDownloadFileName } from "~/lib/download-file-name"
 import { i18n } from "~/lib/i18n"
+import { getSessions } from "~/lib/sessions"
 import { store, StoreKey } from "~/lib/store"
 import { getTrayConfig, registerAppTray } from "~/lib/tray"
 import { logger, revealLogFile } from "~/logger"
@@ -195,9 +196,13 @@ export class AppService extends IpcService {
   async clearCache(): Promise<void> {
     // Through Chromium, which owns the cache files while the app runs, instead of deleting them
     // under it or, on Windows, running a batch file in a console window
-    await session.defaultSession.clearCache().catch((error) => {
-      logger.error("Failed to clear cache", error)
-    })
+    await Promise.all(
+      getSessions().map((ses) =>
+        ses.clearCache().catch((error) => {
+          logger.error("Failed to clear cache", error)
+        }),
+      ),
+    )
   }
 
   /** In megabytes, 0 for none. Applies from the next launch, see `applyCacheSizeLimit`. */
@@ -215,10 +220,11 @@ export class AppService extends IpcService {
     return revealLogFile()
   }
 
-  /** In bytes */
+  /** In bytes, the app page's cache and that of its webviews */
   @IpcMethod()
-  getCacheSize(): Promise<number> {
-    return session.defaultSession.getCacheSize()
+  async getCacheSize(): Promise<number> {
+    const sizes = await Promise.all(getSessions().map((ses) => ses.getCacheSize()))
+    return sizes.reduce((total, size) => total + size, 0)
   }
 
   @IpcMethod()

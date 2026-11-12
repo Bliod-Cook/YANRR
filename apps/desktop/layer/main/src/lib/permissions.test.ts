@@ -4,7 +4,7 @@ import { isPermissionGranted } from "./permissions"
 
 vi.mock("@electron-toolkit/utils", () => ({ is: { dev: false } }))
 
-const APP_PAGE = "app://yanrr/C:/app/renderer/index.html"
+const APP_PAGE = "app://yanrr/index.html"
 
 describe("isPermissionGranted", () => {
   it.each(["clipboard-sanitized-write", "clipboard-read", "openExternal", "fullscreen"])(

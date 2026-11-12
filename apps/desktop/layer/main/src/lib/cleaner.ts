@@ -5,6 +5,7 @@ import { getIconPath } from "~/helper"
 import { WindowManager } from "~/manager/window"
 
 import { t } from "./i18n"
+import { getSessions } from "./sessions"
 
 export const clearAllDataAndConfirm = async () => {
   const win = WindowManager.getMainWindow()
@@ -28,7 +29,6 @@ export const clearAllDataAndConfirm = async () => {
 const clearAllData = async () => {
   const win = WindowManager.getMainWindow()
   if (!win) return
-  const ses = win.webContents.session
   const caller = callWindowExpose(win)
 
   try {
@@ -36,18 +36,21 @@ const clearAllData = async () => {
     // account's push notifications
     await caller.endSession()
 
-    await ses.clearCache()
+    // The app page's data and what sites left in its webviews
+    for (const ses of getSessions()) {
+      await ses.clearCache()
 
-    await ses.clearStorageData({
-      storages: [
-        "filesystem",
-        "indexdb",
-        "localstorage",
-        "shadercache",
-        "serviceworkers",
-        "cookies",
-      ],
-    })
+      await ses.clearStorageData({
+        storages: [
+          "filesystem",
+          "indexdb",
+          "localstorage",
+          "shadercache",
+          "serviceworkers",
+          "cookies",
+        ],
+      })
+    }
 
     caller.toast.success(t("dialog.clearAllDataSuccess"))
 
