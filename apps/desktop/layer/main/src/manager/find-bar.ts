@@ -18,7 +18,7 @@ import {
 } from "./find-bar-page"
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
-const preloadScript = path.join(__dirname, "../preload/index.mjs")
+const preloadScript = path.join(__dirname, "../preload/index.cjs")
 
 // Where the bar sits in the window, like the page's own panels: 32 px from the right edge and
 // 48 px from the top
@@ -93,7 +93,7 @@ class FindBar {
   private readonly view = new WebContentsView({
     webPreferences: {
       preload: preloadScript,
-      sandbox: false,
+      sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
       spellcheck: false,

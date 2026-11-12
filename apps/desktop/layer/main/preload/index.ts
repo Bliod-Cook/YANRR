@@ -1,5 +1,3 @@
-import os from "node:os"
-
 import { SERVER_URL_ARG } from "@follow/shared/desktop-launch"
 import { contextBridge, ipcRenderer } from "electron"
 
@@ -11,7 +9,8 @@ import { APP_API_URL } from "../src/lib/app-url"
  * Windows 11 buildNumber starts from 22000.
  */
 const isWindows11 = () => {
-  const [majorVersion, , buildNumber] = os.release().split(".")
+  // A sandboxed preload script has no `os`
+  const [majorVersion, , buildNumber] = process.getSystemVersion().split(".")
   return Number.parseInt(majorVersion!) === 10 && Number.parseInt(buildNumber!) >= 22000
 }
 

@@ -58,7 +58,7 @@ class WindowManagerStatic {
       },
     },
     windowPreferences: {
-      preloadScript: path.join(__dirname, "../preload/index.mjs"),
+      preloadScript: path.join(__dirname, "../preload/index.cjs"),
     },
   } as const
 
@@ -349,8 +349,7 @@ class WindowManagerStatic {
       // script, which hands it the few things of Electron it needs
       webPreferences: {
         preload: this.config.windowPreferences.preloadScript,
-        // The preload script is an ES module, which a sandboxed one cannot be
-        sandbox: false,
+        sandbox: true,
         webviewTag: true,
         nodeIntegration: false,
         contextIsolation: true,

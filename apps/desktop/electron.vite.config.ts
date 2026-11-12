@@ -30,6 +30,8 @@ export default defineConfig({
       outDir: "dist/preload",
       lib: {
         entry: "./layer/main/preload/index.ts",
+        // A sandboxed preload script cannot be an ES module
+        formats: ["cjs"],
       },
     },
     resolve: {
