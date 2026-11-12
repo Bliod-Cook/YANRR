@@ -142,6 +142,16 @@ describe("EntryContent", () => {
     vi.restoreAllMocks()
   })
 
+  test("keys the parts of an article apart", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    await render([createEntry("article", { content: "<p>Body</p>" })], "articles")
+
+    const sameKey = errors.mock.calls.filter(([message]) => String(message).includes("same key"))
+    errors.mockRestore()
+    expect(sameKey).toEqual([])
+  })
+
   test("shows the title of an entry with neither content nor link, and says it has no content", async () => {
     const container = await render([createEntry("notice", { url: null })], "notifications")
 

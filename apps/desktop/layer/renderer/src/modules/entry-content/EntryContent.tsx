@@ -164,7 +164,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
               onContextMenu={stopPropagation}
               className={"relative w-full min-w-0 pb-10 pt-12 print:pt-0"}
             >
-              <ApplyEntryActions entryId={entryId} view={view} key={entryId} />
+              <ApplyEntryActions entryId={entryId} view={view} key={`actions-${entryId}`} />
               <EntryPrintHeader entryId={entryId} />
 
               {!content && !isInReadabilityMode && (isPending || error) ? (
