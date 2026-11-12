@@ -30,12 +30,17 @@ use better_auth::integrations::axum::AxumIntegration;
 use self::error::{ApiError, ExceptionCode};
 use crate::{AppState, auth::Auth};
 
+/// The route that streams a line per translated entry as the model answers. It stays out of [`router`] so that
+/// the caller can leave it uncompressed: an encoder holds lines back until its buffer fills.
+pub fn translation_router() -> Router<AppState> {
+    Router::new().route("/api/ai/translation/batch", post(ai::translate_batch))
+}
+
 pub fn router(auth: Arc<Auth>) -> Router<AppState> {
     Router::new()
         .route("/status/configs", get(status::configs))
         .route("/actions", get(actions::get).put(actions::put))
         .route("/ai/summary", get(ai::summary))
-        .route("/ai/translation/batch", post(ai::translate_batch))
         .route(
             "/categories",
             patch(categories::update).delete(categories::delete),

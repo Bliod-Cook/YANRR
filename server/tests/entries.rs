@@ -171,6 +171,29 @@ async fn entry_detail_and_content_stream() {
     assert_eq!(line["content"], content);
     let line = lines.iter().find(|line| line["id"] == mail_id).unwrap();
     assert_eq!(line["content"], "<p>Mail</p>");
+
+    // The body is complete, so it is compressed for clients that accept it.
+    // The test client would decode it and drop the header, so this one keeps the raw answer.
+    let raw = reqwest::Client::builder()
+        .no_gzip()
+        .cookie_store(true)
+        .build()
+        .unwrap();
+    let credentials = json!({ "email": "alice@example.com", "password": common::PASSWORD });
+    raw.post(format!("{}/api/better-auth/sign-in/email", app.url))
+        .header(reqwest::header::ORIGIN, &app.url)
+        .json(&credentials)
+        .send()
+        .await
+        .unwrap();
+    let compressed = raw
+        .post(format!("{}/api/entries/stream", app.url))
+        .header(reqwest::header::ACCEPT_ENCODING, "gzip")
+        .json(&json!({ "ids": [first_id] }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(compressed.headers()["content-encoding"], "gzip");
 }
 
 #[tokio::test]

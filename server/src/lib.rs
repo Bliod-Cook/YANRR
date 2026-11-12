@@ -25,10 +25,7 @@ use axum::{Router, extract::FromRef};
 use log::LevelFilter;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
-use tower_http::compression::{
-    CompressionLayer, Predicate,
-    predicate::{DefaultPredicate, NotForContentType},
-};
+use tower_http::compression::CompressionLayer;
 
 use crate::{auth::Auth, config::Config, migration::Migrator};
 
@@ -82,9 +79,8 @@ pub fn router(state: AppState) -> Router {
     if let Some(dir) = &state.config.server.web_dir {
         app = app.fallback_service(web::service(dir));
     }
-    // Leaves out images, event streams and tiny bodies, and NDJSON, whose lines the encoder would hold back.
-    let compress =
-        DefaultPredicate::new().and(NotForContentType::const_new("application/x-ndjson"));
-    app.with_state(state)
-        .layer(CompressionLayer::new().compress_when(compress))
+    // Leaves out images, event streams and tiny bodies by default; the translation stream is added after the layer.
+    app.layer(CompressionLayer::new())
+        .merge(api::translation_router())
+        .with_state(state)
 }
