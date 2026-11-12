@@ -42,11 +42,6 @@ updates:
           - "minor"
           - "patch"
 
-  - package-ecosystem: docker
-    directory: /server
-    schedule:
-      interval: weekly
-
   - package-ecosystem: github-actions
     directory: /
     schedule:
