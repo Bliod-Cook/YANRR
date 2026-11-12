@@ -250,6 +250,8 @@ pub enum Reply {
     Hang,
     /// An empty answer with this status and these headers.
     Headers(u16, &'static [(&'static str, &'static str)]),
+    /// A body of raw bytes with this `Content-Type`.
+    Bytes(Vec<u8>, &'static str),
 }
 
 #[derive(Clone)]
@@ -357,6 +359,9 @@ async fn replied(
     match reply.unwrap_or(Reply::Status(404)) {
         Reply::Body(body) => body.into_response(),
         Reply::Status(status) => StatusCode::from_u16(status).unwrap().into_response(),
+        Reply::Bytes(body, content_type) => {
+            ([(header::CONTENT_TYPE, content_type)], body).into_response()
+        }
         Reply::Hang => std::future::pending().await,
         Reply::MovedTo(path) => {
             (StatusCode::MOVED_PERMANENTLY, [(header::LOCATION, path)]).into_response()

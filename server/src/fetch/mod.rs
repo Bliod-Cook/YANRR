@@ -118,6 +118,7 @@ pub async fn discover(state: &AppState, keyword: &str) -> Result<Vec<feed::Model
         validators,
         url: page,
         permanent,
+        ..
     } = fetched;
     let base = page.clone();
     // A feed itself, or else a page linking to feeds.
@@ -360,6 +361,7 @@ async fn parsed(url: &str, fetched: Fetched) -> Result<Update, FetchError> {
         validators,
         url: source,
         permanent,
+        ..
     } = fetched;
     let base = source.clone();
     let feed = blocking(move || parse::parse(&body, &base))

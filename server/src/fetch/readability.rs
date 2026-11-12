@@ -12,6 +12,9 @@ const PRESCAN: usize = 1024;
 /// A charset declared in a `<meta>`, as `charset="…"` or as the parameter of a `Content-Type`.
 static CHARSET: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"(?i-u)<meta[^>]*charset\s*=\s*["']?([a-z0-9_:.\-]+)"#).unwrap());
+/// The `charset` parameter of a `Content-Type` header.
+static HEADER_CHARSET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i-u)charset\s*=\s*"?([a-z0-9_:.\-]+)"#).unwrap());
 
 /// The readable part of the page at `url`, as HTML.
 pub async fn extract(state: &AppState, url: &str) -> Result<String, FetchError> {
@@ -20,11 +23,15 @@ pub async fn extract(state: &AppState, url: &str) -> Result<String, FetchError> 
         .map_err(FetchError::Fetch)?
         .ok_or(FetchError::Fetch("HTTP 304".into()))?;
     // Links in the page are relative to where redirects led.
-    let url = page.url;
+    let (url, content_type) = (page.url, page.content_type);
     // `Readability` is not `Send`, so it lives and dies on a blocking thread.
     let extracted = blocking(move || {
-        let mut readability = Readability::new(decode(&page.body), Some(&url), None)
-            .map_err(|err| err.to_string())?;
+        let mut readability = Readability::new(
+            decode(&page.body, content_type.as_deref()),
+            Some(&url),
+            None,
+        )
+        .map_err(|err| err.to_string())?;
         let article = readability.parse().map_err(|err| err.to_string())?;
         Ok::<_, String>(article.content.to_string())
     })
@@ -34,13 +41,17 @@ pub async fn extract(state: &AppState, url: &str) -> Result<String, FetchError> 
         .map_err(FetchError::Fetch)
 }
 
-/// The page as text in the charset it declares near its start, as browsers read it, else in UTF-8; a byte order
-/// mark wins over both.
-fn decode(page: &[u8]) -> String {
+/// The page as text in the charset of its `Content-Type`, else the one it declares near its start, as browsers
+/// read it, else in UTF-8; a byte order mark wins over all.
+fn decode(page: &[u8], content_type: Option<&str>) -> String {
     let start = &page[..page.len().min(PRESCAN)];
-    let declared = CHARSET
-        .captures(start)
+    let from_header = content_type
+        .and_then(|value| HEADER_CHARSET.captures(value.as_bytes()))
         .and_then(|found| Encoding::for_label(&found[1]));
+    let declared = from_header.or_else(|| {
+        let found = CHARSET.captures(start)?;
+        Encoding::for_label(&found[1])
+    });
     let (text, _, _) = declared.unwrap_or(UTF_8).decode(page);
     text.into_owned()
 }
@@ -55,8 +66,12 @@ mod tests {
         let gbk = b"<html><head><meta charset=\"gbk\"></head><body>\xc4\xe3\xba\xc3</body></html>";
         let declared = b"<meta http-equiv=\"Content-Type\" content=\"text/html; charset=Shift_JIS\">\x82\xb1\x82\xf1";
 
-        assert!(decode(gbk).contains("<body>你好</body>"));
-        assert!(decode(declared).ends_with("こん"));
-        assert_eq!(decode("<p>Grüße</p>".as_bytes()), "<p>Grüße</p>");
+        assert!(decode(gbk, None).contains("<body>你好</body>"));
+        assert!(decode(declared, None).ends_with("こん"));
+        assert_eq!(decode("<p>Grüße</p>".as_bytes(), None), "<p>Grüße</p>");
+        // The header wins over the `<meta>`.
+        let header = Some("text/html; charset=\"Shift_JIS\"");
+        assert!(decode(declared, header).ends_with("こん"));
+        assert!(decode(gbk, header).contains("<body>ﾄ"));
     }
 }

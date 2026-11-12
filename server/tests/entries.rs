@@ -217,6 +217,34 @@ async fn readability_extracts_article() {
 }
 
 #[tokio::test]
+async fn readability_reads_the_charset_of_the_content_type() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    let sentence = "阅读器在所有设备之间同步每一个订阅，这句话足够长，看起来像文章的正文。";
+    let paragraph = format!("<p>{}</p>", sentence.repeat(4));
+    let page = format!(
+        "<html><head><title>文章</title></head><body><article><h1>文章</h1>{}</article></body></html>",
+        paragraph.repeat(3)
+    );
+    let (gbk, _, _) = encoding_rs::GBK.encode(&page);
+    let reply = Reply::Bytes(gbk.into_owned(), "text/html; charset=gbk");
+    fixtures.set("/gbk", reply);
+    let item = json!([{ "id": "gbk", "url": fixtures.url("/gbk"), "content_text": "summary" }]);
+    fixtures.set("/feed.json", Reply::Body(json_feed(item)));
+    app.sign_up("alice@example.com").await;
+    subscribe(&app, &fixtures.url("/feed.json"), json!({})).await;
+    let id = timeline(&app, json!({})).await[0]["entries"]["id"].clone();
+    let id = id.as_str().unwrap();
+
+    let readable = json(app.get(&format!("/api/entries/readability?id={id}")).await).await;
+
+    let content = readable["data"]["content"].as_str().unwrap();
+    assert!(
+        content.contains("阅读器在所有设备之间同步每一个订阅"),
+        "{content}"
+    );
+}
+
+#[tokio::test]
 async fn timeline_mixes_in_inbox_entries() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
     app.sign_up("alice@example.com").await;

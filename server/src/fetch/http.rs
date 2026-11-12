@@ -29,6 +29,8 @@ pub struct Fetched {
     pub url: String,
     /// Whether there were redirects and each was permanent, so that `url` replaces the address asked for.
     pub permanent: bool,
+    /// The `Content-Type` header of the answer.
+    pub content_type: Option<String>,
 }
 
 /// Why a GET failed.
@@ -140,6 +142,7 @@ async fn follow(
             etag: value(header::ETAG),
             last_modified: value(header::LAST_MODIFIED),
         };
+        let content_type = value(header::CONTENT_TYPE);
         let mut body = Vec::new();
         while let Some(chunk) = response.chunk().await.map_err(describe)? {
             if body.len() + chunk.len() > limits.max_body {
@@ -153,6 +156,7 @@ async fn follow(
             validators,
             url: url.into(),
             permanent: permanent.unwrap_or(false),
+            content_type,
         }));
     }
     Err("Too many redirects".into())
