@@ -10,6 +10,8 @@ import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest"
 
+import { setServerConfigs } from "~/atoms/server-configs"
+import { initializeDefaultGeneralSettings, setGeneralSetting } from "~/atoms/settings/general"
 import { jotaiStore } from "~/lib/jotai"
 
 import { ArticleLayout } from "./ArticleLayout"
@@ -66,6 +68,35 @@ describe("ArticleLayout", () => {
     host?.remove()
     root = null
     host = null
+    setServerConfigs(null)
+    initializeDefaultGeneralSettings()
+  })
+
+  test("shows the AI summary when the server supports summaries without AI chat", async () => {
+    setServerConfigs({ ai: true, push: false, registration: false })
+    setGeneralSetting("summary", true)
+    setGeneralSetting("actionLanguage", "en")
+    useEntryStore.setState({ data: { [episode.id]: episode } })
+    const client = new QueryClient()
+    client.setQueryData(["summary", episode.id, "content", "en"], "An overview of the episode.")
+    host = document.createElement("div")
+    document.body.append(host)
+    root = createRoot(host)
+
+    await act(async () => {
+      root?.render(
+        <QueryClientProvider client={client}>
+          <Provider store={jotaiStore}>
+            <ArticleLayout entryId={episode.id} view={FeedViewType.Articles} />
+          </Provider>
+        </QueryClientProvider>,
+      )
+    })
+
+    await act(async () => {
+      await vi.dynamicImportSettled()
+    })
+    expect(host?.textContent).toContain("An overview of the episode.")
   })
 
   test("renders the timestamps of an audio entry as seek points", async () => {

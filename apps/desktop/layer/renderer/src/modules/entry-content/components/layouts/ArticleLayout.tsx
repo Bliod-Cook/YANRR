@@ -7,13 +7,13 @@ import { useAtomValue } from "jotai"
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react"
 
 import { useEntryIsInReadability } from "~/atoms/readability"
+import { useServerCapability } from "~/atoms/server-configs"
 import { customCSSPreviewAtom, useUISettingKey } from "~/atoms/settings/ui"
 import { ErrorBoundary } from "~/components/common/ErrorBoundary"
 import { ShadowDOM } from "~/components/common/ShadowDOM"
 import type { TocRef } from "~/components/ui/markdown/components/Toc"
 import { useInPeekModal } from "~/components/ui/modal/inspire/InPeekModal"
 import { readableContentMaxWidthClassName } from "~/constants/ui"
-import { useFeature } from "~/hooks/biz/useFeature"
 import { useRenderStyle } from "~/hooks/biz/useRenderStyle"
 import { EntryContentHTMLRenderer } from "~/modules/renderer/html"
 import { WrappedElementProvider } from "~/providers/wrapped-element-provider"
@@ -56,7 +56,7 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
   const customCSSPreview = useAtomValue(customCSSPreviewAtom)
   const customCSS = customCSSPreview ?? savedCustomCSS
 
-  const aiEnabled = useFeature("ai")
+  const aiEnabled = useServerCapability("ai")
 
   if (!entry) return null
 
