@@ -1,12 +1,8 @@
-import type { EnhanceSet } from "@follow/utils"
 import { stopPropagation } from "@follow/utils/dom"
-import { cn, getOS } from "@follow/utils/utils"
+import { cn } from "@follow/utils/utils"
 import * as React from "react"
-import { useCallback, useState } from "react"
-import type { Options } from "react-hotkeys-hook"
-import { useHotkeys } from "react-hotkeys-hook"
+import { useState } from "react"
 
-import { useFocusable, useGlobalFocusableScopeSelector } from "../../common/Focusable"
 import { KbdCombined } from "../kbd/Kbd"
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from "../tooltip"
 
@@ -18,8 +14,8 @@ export interface ActionButtonProps {
   active?: boolean
   disabled?: boolean
   clickableDisabled?: boolean
+  /** Shown in the tooltip only: the feature that owns the key binds it */
   shortcut?: string
-  disableTriggerShortcut?: boolean
   enableHoverableContent?: boolean
   size?: "xs" | "sm" | "base" | "lg"
   id?: string
@@ -27,16 +23,6 @@ export interface ActionButtonProps {
    * Use motion effects to prompt and guide users to pay attention or click this button
    */
   highlightMotion?: boolean
-  /**
-   * @description only trigger shortcut when focus with in `<Focusable />`
-   * @default false
-   */
-  shortcutOnlyFocusWithIn?: boolean
-  /**
-   * @description only trigger shortcut when in the scope, if not provided, the shortcut will be triggered in any scope
-   * @default undefined
-   */
-  shortcutScope?: string | ((scope: EnhanceSet<string>) => boolean)
 }
 
 const actionButtonStyleVariant = {
@@ -62,44 +48,24 @@ export const ActionButton = ({
   shortcut,
   disabled,
   clickableDisabled,
-  disableTriggerShortcut,
   enableHoverableContent,
   size = "base",
-  shortcutOnlyFocusWithIn,
   onClick,
-  shortcutScope,
   ...rest
 }: ComponentType<ActionButtonProps> &
   React.HTMLAttributes<HTMLButtonElement> & {
     ref?: React.Ref<HTMLButtonElement | null>
   }) => {
-  const finalShortcut =
-    getOS() === "Windows" ? shortcut?.replace("meta", "ctrl").replace("Meta", "Ctrl") : shortcut
-  const buttonRef = React.useRef<HTMLButtonElement>(null)
-  React.useImperativeHandle(ref, () => buttonRef.current!)
-
   const [shouldHighlightMotion, setShouldHighlightMotion] = useState(highlightMotion)
   React.useEffect(() => {
     setShouldHighlightMotion(highlightMotion)
   }, [highlightMotion])
 
-  const inScope = useGlobalFocusableScopeSelector(
-    useCallback(
-      (scope) =>
-        shortcutScope
-          ? typeof shortcutScope === "function"
-            ? shortcutScope(scope)
-            : scope.has(shortcutScope)
-          : true,
-      [shortcutScope],
-    ),
-  )
-
   const [loading, setLoading] = useState(false)
 
   const Trigger = (
     <button
-      ref={buttonRef}
+      ref={ref}
       // @see https://github.com/radix-ui/primitives/issues/2248#issuecomment-2147056904
       onFocusCapture={stopPropagation}
       className={cn(
@@ -163,71 +129,28 @@ export const ActionButton = ({
     </button>
   )
 
+  if (!tooltip) return Trigger
+
   return (
-    <>
-      {finalShortcut && !disableTriggerShortcut && inScope && (
-        <HotKeyTrigger
-          shortcut={finalShortcut}
-          fn={() => buttonRef.current?.click()}
-          shortcutOnlyFocusWithIn={shortcutOnlyFocusWithIn}
-        />
-      )}
-      {tooltip ? (
-        <Tooltip disableHoverableContent={!enableHoverableContent}>
-          <TooltipTrigger aria-label={typeof tooltip === "string" ? tooltip : undefined} asChild>
-            {Trigger}
-          </TooltipTrigger>
-          <TooltipPortal>
-            <TooltipContent className="max-w-[300px] flex-col gap-1" side={tooltipSide ?? "bottom"}>
-              <div className="flex items-center gap-1">
-                {tooltip}
-                {!!finalShortcut && (
-                  <div className="ml-1">
-                    <KbdCombined className="text-text">{finalShortcut}</KbdCombined>
-                  </div>
-                )}
+    <Tooltip disableHoverableContent={!enableHoverableContent}>
+      <TooltipTrigger aria-label={typeof tooltip === "string" ? tooltip : undefined} asChild>
+        {Trigger}
+      </TooltipTrigger>
+      <TooltipPortal>
+        <TooltipContent className="max-w-[300px] flex-col gap-1" side={tooltipSide ?? "bottom"}>
+          <div className="flex items-center gap-1">
+            {tooltip}
+            {!!shortcut && (
+              <div className="ml-1">
+                <KbdCombined className="text-text">{shortcut}</KbdCombined>
               </div>
-              {tooltipDescription ? (
-                <div className="text-body text-text-secondary">{tooltipDescription}</div>
-              ) : null}
-            </TooltipContent>
-          </TooltipPortal>
-        </Tooltip>
-      ) : (
-        Trigger
-      )}
-    </>
+            )}
+          </div>
+          {tooltipDescription ? (
+            <div className="text-body text-text-secondary">{tooltipDescription}</div>
+          ) : null}
+        </TooltipContent>
+      </TooltipPortal>
+    </Tooltip>
   )
-}
-
-const HotKeyTrigger = ({
-  shortcut,
-  fn,
-  options,
-  shortcutOnlyFocusWithIn,
-}: {
-  shortcut: string
-  fn: () => void
-  options?: Options
-  shortcutOnlyFocusWithIn?: boolean
-}) => {
-  const isFocusWithIn = useFocusable()
-  const enabledInOptions = options?.enabled || true
-
-  useHotkeys(replaceShortcut(shortcut), fn, {
-    preventDefault: true,
-    enabled: shortcutOnlyFocusWithIn
-      ? isFocusWithIn
-        ? enabledInOptions
-        : false
-      : enabledInOptions,
-    ...options,
-  })
-  return null
-}
-
-const os = getOS()
-
-const replaceShortcut = (shortcut: string) => {
-  return shortcut.replace("$mod", os === "macOS" ? "Meta" : "Ctrl")
 }

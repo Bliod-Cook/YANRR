@@ -31,8 +31,6 @@ export const EntryHeaderActions = ({ entryId, view }: { entryId: string; view: F
         <CommandActionButton
           active={config.active}
           key={config.id}
-          // Handle shortcut globally
-          disableTriggerShortcut
           commandId={config.id}
           onClick={clickHandler}
           shortcut={config.shortcut!}

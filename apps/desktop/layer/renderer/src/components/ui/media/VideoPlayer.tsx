@@ -313,19 +313,26 @@ const FullScreenControl = () => {
     }
   }, [])
 
+  const toggleFullScreen = () => {
+    if (!ref.current) return
+
+    if (isFullScreen) {
+      document.exitFullscreen()
+    } else {
+      ref.current.requestFullscreen()
+    }
+  }
+  // Bound to the player element like its other keys, so only the focused player reacts
+  const hotkeysRef = useHotkeys("f", toggleFullScreen, { preventDefault: true })
+  useEffect(() => {
+    hotkeysRef(ref.current)
+  }, [hotkeysRef, ref])
+
   return (
     <ActionIcon
       label={isFullScreen ? t("player.exit_full_screen") : t("player.full_screen")}
       shortcut="f"
-      onClick={() => {
-        if (!ref.current) return
-
-        if (isFullScreen) {
-          document.exitFullscreen()
-        } else {
-          ref.current.requestFullscreen()
-        }
-      }}
+      onClick={toggleFullScreen}
     >
       {isFullScreen ? (
         <i className="i-mgc-fullscreen-exit-cute-re" />
@@ -364,6 +371,11 @@ const DownloadVideo = () => {
       setIsDownloading(false)
     }
   })
+  const wrapperRef = useContextSelector(VideoPlayerContext, (v) => v.wrapperRef)
+  const hotkeysRef = useHotkeys("d", download, { preventDefault: true })
+  useEffect(() => {
+    hotkeysRef(wrapperRef.current)
+  }, [hotkeysRef, wrapperRef])
 
   return (
     <ActionIcon shortcut="d" label={t("player.download")} onClick={download}>
@@ -470,7 +482,6 @@ const ActionIcon = ({
 }) => {
   return (
     <ActionButton
-      shortcutOnlyFocusWithIn
       tooltipSide="top"
       className={clsx("z-[2] hover:bg-transparent", className)}
       onClick={onClick}

@@ -1,8 +1,6 @@
 import { EventBus } from "@follow/utils/event-bus"
 import { useTranslation } from "react-i18next"
 
-import { setGeneralSetting } from "~/atoms/settings/general"
-
 import { useRegisterCommandEffect } from "../hooks/use-register-command"
 import type { Command, CommandCategory } from "../types"
 import { COMMAND_ID } from "./id"
@@ -12,6 +10,7 @@ declare module "@follow/utils/event-bus" {
     "timeline:switch-to-next": never
     "timeline:switch-to-previous": never
     "timeline:refetch": never
+    "timeline:unread-only": boolean
     "timeline:enter": never
   }
 }
@@ -61,8 +60,9 @@ export const useRegisterTimelineCommand = () => {
         description: t("command.timeline.toggle_unread_only.description"),
       },
       category,
+      // The timeline scrolls back to the top before it applies the setting
       run: (unreadOnly: boolean) => {
-        setGeneralSetting("unreadOnly", unreadOnly)
+        EventBus.dispatch(COMMAND_ID.timeline.unreadOnly, unreadOnly)
       },
     },
   ])

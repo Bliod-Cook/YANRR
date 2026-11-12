@@ -1,10 +1,12 @@
 import { useDroppable } from "@dnd-kit/core"
+import { useGlobalFocusableScopeSelector } from "@follow/components/common/Focusable/hooks.js"
 import { ActionButton } from "@follow/components/ui/button/index.js"
 import { FeedViewType, getView } from "@follow/constants"
 import { useUnreadByView } from "@follow/store/unread/hooks"
 import { cn } from "@follow/utils/utils"
 import type { FC } from "react"
 import { startTransition, useCallback } from "react"
+import { useHotkeys } from "react-hotkeys-hook"
 import { useTranslation } from "react-i18next"
 
 import { MenuItemText, useShowContextMenu } from "~/atoms/context-menu"
@@ -46,6 +48,14 @@ export function SubscriptionTabButton({
   const setActive = useCallback(() => {
     navigateToTimeline(timelineId)
   }, [navigateToTimeline, timelineId])
+
+  const notInFloatingLayer = useGlobalFocusableScopeSelector(
+    FocusablePresets.isNotFloatingLayerScope,
+  )
+  useHotkeys(shortcut, () => startTransition(setActive), {
+    enabled: notInFloatingLayer,
+    preventDefault: true,
+  })
 
   const view = parseView(timelineId)
 
@@ -158,7 +168,6 @@ const ViewAllSwitchButton: FC<{
     <ActionButton
       data-testid={getTimelineTabTestId(item.name)}
       aria-pressed={isActive}
-      shortcutScope={FocusablePresets.isNotFloatingLayerScope}
       key={item.name}
       tooltip={t(item.name, { ns: "common" })}
       shortcut={shortcut}
@@ -221,7 +230,6 @@ const ViewSwitchButton: FC<{
     <ActionButton
       data-testid={getTimelineTabTestId(item.name)}
       aria-pressed={isActive}
-      shortcutScope={FocusablePresets.isNotFloatingLayerScope}
       ref={setNodeRef}
       key={item.name}
       tooltip={t(item.name, { ns: "common" })}

@@ -1,3 +1,4 @@
+import { useGlobalFocusableScopeSelector } from "@follow/components/common/Focusable/hooks.js"
 import { ActionButton, MotionButtonBase } from "@follow/components/ui/button/index.js"
 import { DividerVertical } from "@follow/components/ui/divider/index.js"
 import { RotatingRefreshIcon } from "@follow/components/ui/loading/index.jsx"
@@ -8,15 +9,17 @@ import { getFeedById } from "@follow/store/feed/getter"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { useIsLoggedIn } from "@follow/store/user/hooks"
 import { stopPropagation } from "@follow/utils/dom"
+import { EventBus } from "@follow/utils/event-bus"
 import { clsx, cn, isBizId } from "@follow/utils/utils"
 import { useAtom, useAtomValue } from "jotai"
 import type { FC } from "react"
-import { lazy, Suspense, useCallback } from "react"
+import { lazy, Suspense, useCallback, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { useNavigate } from "react-router"
 
 import { setGeneralSetting, useGeneralSettingKey } from "~/atoms/settings/general"
 import { useSubscriptionColumnShow } from "~/atoms/sidebar"
+import { FocusablePresets } from "~/components/common/Focusable"
 import { ROUTE_ENTRY_PENDING } from "~/constants"
 import { useFeature } from "~/hooks/biz/useFeature"
 import { useFollow } from "~/hooks/biz/useFollow"
@@ -25,7 +28,7 @@ import { getRouteParams, useRouteParams } from "~/hooks/biz/useRouteParams"
 import { useLoginModal } from "~/hooks/common"
 import { COMMAND_ID } from "~/modules/command/commands/id"
 import { useRunCommandFn } from "~/modules/command/hooks/use-command"
-import { useCommandShortcut } from "~/modules/command/hooks/use-command-binding"
+import { useCommandBinding, useCommandShortcut } from "~/modules/command/hooks/use-command-binding"
 import { EntryHeader } from "~/modules/entry-content/components/entry-header"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { useRefreshFeedMutation } from "~/queries/feed"
@@ -104,6 +107,23 @@ export const EntryListHeader: FC<{
   const feedColumnShow = useSubscriptionColumnShow()
   const toggleUnreadOnlyShortcut = useCommandShortcut(COMMAND_ID.timeline.unreadOnly)
   const runCmdFn = useRunCommandFn()
+  const notInFloatingLayer = useGlobalFocusableScopeSelector(
+    FocusablePresets.isNotFloatingLayerScope,
+  )
+  // Bound while its button shows, wherever the focus is outside modals and menus
+  useCommandBinding({
+    commandId: COMMAND_ID.timeline.unreadOnly,
+    args: [!unreadOnly],
+    when: notInFloatingLayer && !isPreview && !isCollection,
+  })
+  useEffect(
+    () =>
+      EventBus.subscribe(COMMAND_ID.timeline.unreadOnly, (nextUnreadOnly) => {
+        onBeforeRefresh?.()
+        setGeneralSetting("unreadOnly", nextUnreadOnly)
+      }),
+    [onBeforeRefresh],
+  )
 
   const { isScrolledBeyondThreshold } = useEntryRootState()
   const isScrolledBeyondThresholdValue = useAtomValue(isScrolledBeyondThreshold)
@@ -245,10 +265,7 @@ export const EntryListHeader: FC<{
                       : t("entry_list_header.show_all")
                   }
                   shortcut={toggleUnreadOnlyShortcut}
-                  onClick={() => {
-                    onBeforeRefresh?.()
-                    runCmdFn(COMMAND_ID.timeline.unreadOnly, [!unreadOnly])()
-                  }}
+                  onClick={() => runCmdFn(COMMAND_ID.timeline.unreadOnly, [!unreadOnly])()}
                 >
                   {unreadOnly ? (
                     <i className="i-mgc-round-cute-fi" />

@@ -46,7 +46,6 @@ export const ProfileButton: FC<ProfileButtonProps> = memo((props) => {
           data-testid="guest-settings-button"
           tooltip={t("user_button.preferences")}
           shortcut="$mod+,"
-          disableTriggerShortcut
           onClick={() => {
             settingModalPresent()
           }}
