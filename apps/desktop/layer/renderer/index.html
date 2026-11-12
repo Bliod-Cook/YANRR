@@ -64,11 +64,12 @@
       The page shows HTML from feeds. Whatever gets past the sanitizer must not run: from here
       on, only scripts of the app's own origin do. A policy does not apply to what precedes it,
       so the inline scripts above, and those the build puts there, must stay above. SQLite and
-      the syntax highlighter are WebAssembly.
+      the syntax highlighter are WebAssembly. Workers may come from blobs: only a script that
+      already runs can make one, and the development overlay does.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'self'"
+      content="script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; object-src 'none'; base-uri 'self'"
     />
   </head>
   <body>
