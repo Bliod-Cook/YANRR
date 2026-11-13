@@ -2,7 +2,7 @@ import type { FeedViewType } from "@follow/constants"
 import { useViewWithSubscription } from "@follow/store/subscription/hooks"
 import { EventBus } from "@follow/utils/event-bus"
 import * as Haptics from "expo-haptics"
-import { useCallback, useEffect, useId, useMemo, useRef } from "react"
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef } from "react"
 import type { StyleProp, ViewStyle } from "react-native"
 import { StyleSheet, View } from "react-native"
 import type {
@@ -11,7 +11,7 @@ import type {
   PageScrollStateChangedNativeEventData,
 } from "react-native-pager-view"
 import PagerView from "react-native-pager-view"
-import Animated, { runOnJS, useEvent, useHandler } from "react-native-reanimated"
+import Animated, { runOnJS, useEvent, useHandler, useSharedValue } from "react-native-reanimated"
 
 import { useTabScreenIsFocused } from "@/src/lib/navigation/bottom-tab/hooks"
 
@@ -45,20 +45,48 @@ export function PagerList({
   const pagerRef = useRef<PagerView>(null)
   const layoutReadyRef = useRef(false)
   const isFocused = useTabScreenIsFocused()
+  const isFocusedRef = useRef(isFocused)
+  const activeViewIndexRef = useRef(activeViewIndex)
+  const focused = useSharedValue(isFocused)
+  const swiping = useSharedValue(false)
+  const scrollPage = useSharedValue(activeViewIndex)
+
+  useLayoutEffect(() => {
+    activeViewIndexRef.current = activeViewIndex
+  }, [activeViewIndex])
+
+  useLayoutEffect(() => {
+    isFocusedRef.current = isFocused
+    focused.set(isFocused)
+    if (!isFocused) {
+      swiping.set(false)
+      return
+    }
+    const index = activeViewIndexRef.current
+    if (layoutReadyRef.current && index >= 0) {
+      dragProgress.set(index)
+      pagerRef.current?.setPageWithoutAnimation(index)
+    }
+  }, [dragProgress, focused, isFocused, swiping])
 
   const rid = useId()
   useEffect(() => {
     if (!isFocused) return
     return EventBus.subscribe("SELECT_TIMELINE", (data) => {
       if (data.target !== rid && layoutReadyRef.current) {
-        pagerRef.current?.setPage(activeViews.indexOf(data.view.viewId))
+        const index = activeViews.indexOf(data.view.viewId)
+        if (index < 0) return
+        swiping.set(false)
+        pagerRef.current?.setPage(index)
       }
     })
-  }, [activeViews, isFocused, rid])
+  }, [activeViews, isFocused, rid, swiping])
 
   const onPageSelectedJS = useCallback(
     (view: FeedViewType) => {
-      selectTimeline({ type: "view", viewId: view }, rid)
+      if (isFocusedRef.current) {
+        selectTimeline({ type: "view", viewId: view }, rid)
+      }
     },
     [rid],
   )
@@ -67,20 +95,41 @@ export function PagerList({
     {
       onPageScroll(e: PagerViewOnPageScrollEventData) {
         "worklet"
+        if (!focused.get()) return
         const { position, offset } = e
         dragProgress.set(offset + position)
+        scrollPage.set(Math.round(offset + position))
       },
       onPageSelected(e: PagerViewOnPageSelectedEventData) {
         "worklet"
-        // A selection can come without scroll events, and the selector only reads the progress
-        dragProgress.set(e.position)
-        const view = activeViews[e.position]
-        if (view !== undefined) {
-          runOnJS(onPageSelectedJS)(view)
+        if (!focused.get()) return
+        if (swiping.get()) {
+          swiping.set(false)
+          dragProgress.set(e.position)
+          const view = activeViews[e.position]
+          if (view !== undefined) runOnJS(onPageSelectedJS)(view)
+        } else if (e.position === activeViewIndex) {
+          dragProgress.set(e.position)
+        }
+      },
+      onPageScrollStateChanged(e: PageScrollStateChangedNativeEventData) {
+        "worklet"
+        if (!focused.get()) return
+        if (e.pageScrollState === "dragging") {
+          scrollPage.set(activeViewIndex)
+          swiping.set(true)
+        } else if (e.pageScrollState === "idle" && swiping.get()) {
+          swiping.set(false)
+          const position = scrollPage.get()
+          const view = activeViews[position]
+          if (view !== undefined) {
+            dragProgress.set(position)
+            runOnJS(onPageSelectedJS)(view)
+          }
         }
       },
     },
-    [activeViews, dragProgress, onPageSelectedJS],
+    [activeViewIndex, activeViews, dragProgress, focused, onPageSelectedJS, scrollPage, swiping],
   )
 
   return (
@@ -91,7 +140,7 @@ export function PagerList({
       initialPage={activeViewIndex}
       onLayout={({ nativeEvent: { layout } }) => {
         layoutReadyRef.current = layout.width > 0 && layout.height > 0
-        if (!layoutReadyRef.current || activeViewIndex < 0) return
+        if (!isFocusedRef.current || !layoutReadyRef.current || activeViewIndex < 0) return
         // Hidden tabs have no size; Compose cannot animate them. Sync once the page has a layout.
         dragProgress.set(activeViewIndex)
         pagerRef.current?.setPageWithoutAnimation(activeViewIndex)

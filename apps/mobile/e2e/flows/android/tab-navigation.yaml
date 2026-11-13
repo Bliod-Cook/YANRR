@@ -19,6 +19,26 @@ name: Android tab registration and session persistence
           id: tab-IndexTabScreen
       - assertVisible:
           id: timeline-entry-first
+- tapOn:
+    id: timeline-view-videos
+- tapOn:
+    id: tab-SubscriptionsTabScreen
+- assertVisible:
+    id: timeline-view-videos
+- extendedWaitUntil:
+    notVisible: Yanrr E2E
+    timeout: 10000
+- tapOn:
+    id: timeline-view-articles
+- extendedWaitUntil:
+    visible: Yanrr E2E
+    timeout: 10000
+- tapOn:
+    id: tab-IndexTabScreen
+- extendedWaitUntil:
+    visible:
+      id: timeline-entry-first
+    timeout: 10000
 - launchApp
 - extendedWaitUntil:
     visible:

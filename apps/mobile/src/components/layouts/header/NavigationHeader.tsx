@@ -81,12 +81,25 @@ const useHideableBottom = (
   const [hideableBottomRef, setHideableBottomRef] = useState<View | undefined>()
 
   useEffect(() => {
+    if (typeof hideableBottomHeight === "number") {
+      const largeHeight = hideableBottomHeight + originalDefaultHeaderHeight
+      largeDefaultHeaderHeight.value = largeHeight
+      largeHeaderHeight.value = largeHeight
+      return
+    }
     hideableBottomRef?.measure((x, y, width, height) => {
+      if (!height) return
       const largeHeight = height + originalDefaultHeaderHeight
       largeDefaultHeaderHeight.value = largeHeight
       largeHeaderHeight.value = largeHeight
     })
-  }, [hideableBottomRef, largeDefaultHeaderHeight, largeHeaderHeight, originalDefaultHeaderHeight])
+  }, [
+    hideableBottomHeight,
+    hideableBottomRef,
+    largeDefaultHeaderHeight,
+    largeHeaderHeight,
+    originalDefaultHeaderHeight,
+  ])
 
   const { reAnimatedScrollY } = use(ScreenItemContext)!
   useAnimatedReaction(
