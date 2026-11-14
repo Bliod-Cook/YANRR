@@ -51,7 +51,7 @@
 # Server (needs server/config.toml, see config.example.toml)
 cd server && cargo run
 
-# Client deps; pnpm switches itself to the version pinned in package.json
+# Client deps; uses the locally installed pnpm version
 pnpm install
 
 # Desktop – browser renderer (recommended)
