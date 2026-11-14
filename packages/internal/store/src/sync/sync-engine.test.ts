@@ -388,6 +388,26 @@ describe("syncEngine", () => {
     ])
   })
 
+  it("zeroes the counter of an unfollow applied again after its counters failed to store", async () => {
+    await seedCursor(40)
+    await follow(feedSubscription("feed-1"))
+    await seedUnread({ "feed-1": 10 })
+    vi.spyOn(SyncMetaService, "set").mockRejectedValueOnce(new Error("disk I/O error"))
+    deltaMock.mockResolvedValue(
+      deltaResponse([
+        createAction({ id: 41, model: "subscription", modelId: "feed-1", action: "D" }),
+      ]),
+    )
+
+    await syncEngine.pull("interval")
+    await restart()
+    await syncEngine.pull("interval")
+
+    expect(await storedCursor()).toBe("41")
+    expect(await storedUnread()).toEqual({ "feed-1": 0 })
+    expect(useUnreadStore.getState().data["feed-1"]).toBe(0)
+  })
+
   it("keeps an unfollow and its undo against older rows that the delta still returns", async () => {
     await seedCursor(10)
     deltaMock.mockResolvedValueOnce(deltaResponse([], { lastSyncId: 10 }))

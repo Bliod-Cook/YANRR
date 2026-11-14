@@ -693,6 +693,21 @@ class SyncEngine {
     }
 
     const current = getSubscriptionById(action.modelId)
+
+    if (action.action === "D") {
+      // The row first: once the subscription is gone from memory, applying this again finds
+      // nothing to delete.
+      if (current) {
+        await SubscriptionService.delete([getSubscriptionDBId(current)])
+        subscriptionActions.removeManyInSession([getSubscriptionStoreId(current)])
+        addView(summary.invalidateViews, current.view)
+      }
+      // Also when it is gone already: a pull that removed it may have failed to store the
+      // counters with the cursor, and applies this again. A later follow recounts.
+      page.unread[action.modelId] = 0
+      return
+    }
+
     if (!current) return
 
     if (action.action === "U") {
@@ -711,18 +726,6 @@ class SyncEngine {
           addView(summary.invalidateViews, next.view)
         }
       }
-      return
-    }
-
-    if (action.action === "D") {
-      // The row first: once the subscription is gone from memory, applying this again finds
-      // nothing to delete.
-      await SubscriptionService.delete([getSubscriptionDBId(current)])
-      subscriptionActions.removeManyInSession([getSubscriptionStoreId(current)])
-      if (current.feedId) {
-        page.unread[current.feedId] = 0
-      }
-      addView(summary.invalidateViews, current.view)
     }
   }
 
