@@ -1,9 +1,17 @@
+import { EventBus } from "@follow/utils/event-bus"
 import * as Notifications from "expo-notifications"
 import { t } from "i18next"
 import { Platform } from "react-native"
 
 import { getUISettings } from "../atoms/settings/ui"
 import { toast } from "./toast"
+
+declare module "@follow/utils/event-bus" {
+  interface CustomEvent {
+    /** The user granted the notification permission when the app asked for it */
+    NOTIFICATION_PERMISSION_GRANTED: never
+  }
+}
 
 function ensureNotificationChannel() {
   if (Platform.OS !== "android") return
@@ -31,6 +39,8 @@ export async function requestNotificationPermission() {
     toast.error(t("permission.notification_denied"))
     return false
   }
+  // Push notifications register the device once they may be shown
+  EventBus.dispatch("NOTIFICATION_PERMISSION_GRANTED")
   return true
 }
 

@@ -1,6 +1,7 @@
 import { useHasNotificationActions } from "@follow/store/action/hooks"
 import { ROUTE_FEED_IN_INBOX } from "@follow/store/constants/app"
 import { useWhoami } from "@follow/store/user/hooks"
+import { EventBus } from "@follow/utils/event-bus"
 import { getApp, getApps } from "@react-native-firebase/app"
 import type { RemoteMessage } from "@react-native-firebase/messaging"
 import {
@@ -62,12 +63,19 @@ export function useUpdateMessagingToken() {
     if (!userId || !hasNotificationActions || !hasFirebase()) return
 
     const messaging = getMessaging(getApp())
-    const unsubscribe = onTokenRefresh(messaging, (token) => {
+    const unsubscribeTokenRefresh = onTokenRefresh(messaging, (token) => {
       mutate({ userId, token })
+    })
+    // Without the permission at start, registering waits for the user to grant it
+    const unsubscribeGranted = EventBus.subscribe("NOTIFICATION_PERMISSION_GRANTED", () => {
+      mutate({ userId })
     })
 
     mutate({ userId })
-    return unsubscribe
+    return () => {
+      unsubscribeTokenRefresh()
+      unsubscribeGranted()
+    }
   }, [hasNotificationActions, mutate, whoami?.id])
 }
 

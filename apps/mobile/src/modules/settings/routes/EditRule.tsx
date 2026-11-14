@@ -33,6 +33,7 @@ import { views } from "@/src/constants/views"
 import { useNavigation } from "@/src/lib/navigation/hooks"
 import type { Navigation } from "@/src/lib/navigation/Navigation"
 import type { NavigationControllerView } from "@/src/lib/navigation/types"
+import { requestNotificationPermission } from "@/src/lib/permission"
 import { accentColor, useColors } from "@/src/theme/colors"
 
 import { EditConditionScreen } from "./EditCondition"
@@ -353,6 +354,10 @@ const ActionSection: React.FC<{
                           [action.value]: true,
                         },
                       })
+                    }
+                    // The user asks for notifications here, the moment the app may ask for them
+                    if (action.value === "newEntryNotification") {
+                      void requestNotificationPermission()
                     }
                   }}
                 >
