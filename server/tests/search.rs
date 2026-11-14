@@ -1,9 +1,9 @@
 mod common;
 
-use std::{collections::BTreeSet, sync::Arc};
+use std::{collections::BTreeSet, sync::Arc, time::Duration};
 
 use common::{Fixtures, Reply, TestApp, create_inbox, deliver, json, json_feed, subscribe};
-use sea_orm::{ConnectionTrait, DbBackend, Statement};
+use sea_orm::{ConnectionTrait, DbBackend, Statement, TransactionTrait};
 use serde_json::{Value, json};
 use tempfile::TempDir;
 use yanrr::{AppState, api::entries::Scope, fetch, search};
@@ -97,6 +97,66 @@ async fn deleted_entries_are_queued_to_leave_the_index() {
     assert_eq!(queued(&app).await, 2);
     search::index_pending(&app.state).await.unwrap();
     assert_eq!(queued(&app).await, 0);
+}
+
+/// Whether a session of the test's database waits for an advisory lock.
+async fn waits_for_advisory_lock(app: &TestApp) -> bool {
+    let sql = "SELECT EXISTS (
+            SELECT 1 FROM pg_locks
+            WHERE locktype = 'advisory' AND NOT granted
+              AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
+        ) AS waits";
+    let statement = Statement::from_string(DbBackend::Postgres, sql);
+    let row = app
+        .state
+        .db
+        .query_one_raw(statement)
+        .await
+        .unwrap()
+        .unwrap();
+    row.try_get("", "waits").unwrap()
+}
+
+#[tokio::test]
+async fn an_entry_moved_while_being_indexed_is_indexed_again() {
+    let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
+    app.sign_up("alice@example.com").await;
+    fixtures.set("/new", feed(vec![item("new", "Go", "")]));
+    let target = fetch::add_feed(&app.state, &fixtures.url("/new"))
+        .await
+        .unwrap();
+    fixtures.set("/old", feed(vec![item("old", "Rust", "")]));
+    let old = subscribe(&app, &fixtures.url("/old"), json!({})).await;
+    // Taking entries off the queue waits for the lock the test holds.
+    let hold = "CREATE FUNCTION hold() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+            PERFORM pg_advisory_xact_lock_shared(1);
+            RETURN NULL;
+        END
+        $$;
+        CREATE TRIGGER hold BEFORE DELETE ON search_queue
+            FOR EACH STATEMENT EXECUTE FUNCTION hold()";
+    app.state.db.execute_unprepared(hold).await.unwrap();
+    let lock = app.state.db.begin().await.unwrap();
+    lock.execute_unprepared("SELECT pg_advisory_xact_lock(1)")
+        .await
+        .unwrap();
+    let state = app.state.clone();
+    let indexer = tokio::spawn(async move { search::index_pending(&state).await.unwrap() });
+    while !waits_for_advisory_lock(&app).await {
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+
+    fixtures.set("/old", Reply::MovedTo("/new"));
+    fetch::refresh_feed(&app.state, old.parse().unwrap())
+        .await
+        .unwrap();
+    lock.commit().await.unwrap();
+    indexer.await.unwrap();
+    search::index_pending(&app.state).await.unwrap();
+
+    let scope = json!({ "feedId": target.id.to_string(), "keyword": "rust" });
+    assert_eq!(titles(&search(&app, scope).await), BTreeSet::from(["Rust"]));
 }
 
 /// Feeds of [`readers`].

@@ -14,7 +14,10 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use rayon::prelude::*;
-use sea_orm::{ConnectionTrait, DatabaseConnection, DbBackend, DbErr, FromQueryResult, Statement};
+use sea_orm::{
+    ConnectionTrait, DatabaseConnection, DbBackend, DbErr, FromQueryResult, Statement,
+    TransactionTrait,
+};
 use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, indexer::IndexWriterOptions};
 use tokio::sync::Notify;
 
@@ -173,7 +176,7 @@ pub async fn find(
 }
 
 /// The texts of the entries `ids`, those still there.
-async fn texts(db: &DatabaseConnection, ids: &[i64]) -> Result<Vec<Row>, DbErr> {
+async fn texts(db: &impl ConnectionTrait, ids: &[i64]) -> Result<Vec<Row>, DbErr> {
     let statement = Statement::from_sql_and_values(
         DbBackend::Postgres,
         rows("id = ANY($1)"),
@@ -250,16 +253,22 @@ pub(crate) async fn enqueue(db: &impl ConnectionTrait, ids: &[i64]) -> Result<()
     Ok(())
 }
 
-/// Indexes the queued entries, newest first. An entry leaves the queue only once it is searchable, so that one
-/// indexed again after a failure is merely replaced.
+/// Indexes the queued entries, newest first. A batch leaves the queue in the transaction that indexes it, so that
+/// it stays queued after a failure, to be merely replaced when indexed again.
+///
+/// Queuing an entry of the batch again, as moving it to another feed or deleting it does, waits for that transaction
+/// and then queues it for the next batch rather than finding it still queued; the writer is held up until then.
 pub async fn index_pending(state: &AppState) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let claim =
-        format!("SELECT entry_id FROM search_queue ORDER BY entry_id DESC LIMIT {QUEUE_BATCH}");
+    let claim = format!(
+        "DELETE FROM search_queue WHERE entry_id IN (
+            SELECT entry_id FROM search_queue ORDER BY entry_id DESC LIMIT {QUEUE_BATCH}
+        )
+        RETURNING entry_id"
+    );
     loop {
-        let statement = Statement::from_string(DbBackend::Postgres, &claim);
-        let ids = state
-            .db
-            .query_all_raw(statement)
+        let txn = state.db.begin().await?;
+        let ids = txn
+            .query_all_raw(Statement::from_string(DbBackend::Postgres, &claim))
             .await?
             .iter()
             .map(|row| row.try_get::<i64>("", "entry_id"))
@@ -267,18 +276,10 @@ pub async fn index_pending(state: &AppState) -> Result<(), Box<dyn Error + Send 
         if ids.is_empty() {
             return Ok(());
         }
-        let rows = texts(&state.db, &ids).await?;
-        let (search, indexed) = (state.search.clone(), ids.clone());
-        tokio::task::spawn_blocking(move || search.index(&indexed, rows)).await??;
-        let sql = "DELETE FROM search_queue WHERE entry_id = ANY($1)";
-        state
-            .db
-            .execute_raw(Statement::from_sql_and_values(
-                DbBackend::Postgres,
-                sql,
-                [ids.into()],
-            ))
-            .await?;
+        let rows = texts(&txn, &ids).await?;
+        let search = state.search.clone();
+        tokio::task::spawn_blocking(move || search.index(&ids, rows)).await??;
+        txn.commit().await?;
     }
 }
 

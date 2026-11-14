@@ -58,6 +58,10 @@ impl MigratorTrait for Migrator {
             ),
             sql!("m20261112_000102_search_deletions", "search_deletions.sql"),
             sql!("m20261112_000103_ai_cache_keys", "ai_cache_keys.sql"),
+            sql!(
+                "m20261114_000001_search_moved_entries",
+                "search_moved_entries.sql"
+            ),
         ]
     }
 }
