@@ -42,6 +42,11 @@ const mainProcess = () => ipcServices!.secret
 const hasHeaders = (integration: CustomIntegration) =>
   Object.keys(integration.fetchTemplate?.headers ?? {}).length > 0
 
+/** Whether `settings` hold a token, a password or custom headers, as the web app's always may */
+export const holdsIntegrationSecrets = (settings: Partial<IntegrationSettings>) =>
+  INTEGRATION_SECRET_KEYS.some((key) => !!settings[key]) ||
+  !!settings.customIntegration?.some(hasHeaders)
+
 export const readIntegrationSecret = async (key: IntegrationSecretKey): Promise<string> =>
   IN_ELECTRON ? ((await mainProcess().get(secretId(key))) ?? "") : getIntegrationSettings()[key]
 
@@ -52,6 +57,8 @@ export const writeIntegrationSecret = async (key: IntegrationSecretKey, value: s
   }
   queryClient.setQueryData([...SECRETS_QUERY_KEY, key], value)
   await (value ? mainProcess().set(secretId(key), value) : mainProcess().delete(secretId(key)))
+  // Kept in the settings where the system has no key store; it would come back on the next launch
+  if (getIntegrationSettings()[key]) setIntegrationSetting(key, "")
   await queryClient.invalidateQueries({ queryKey: SECRETS_QUERY_KEY, exact: true })
 }
 
@@ -145,13 +152,16 @@ export const takeIntegrationSecrets = async (
 
 /**
  * Start-up: moves the secrets that versions before kept in the page's storage, or that a failed
- * move left there, to the main process
+ * move left there, to the main process. Where the system has no key store, the main process
+ * keeps them only until the app quits, so they stay in the page's storage as well, to be taken
+ * again on the next launch.
  */
 export const moveIntegrationSecretsToMainProcess = async () => {
   if (!IN_ELECTRON) return
 
   const settings = getIntegrationSettings()
   const rest = await takeIntegrationSecrets(settings)
+  if (!(await mainProcess().isPersistent())) return
   for (const [key, value] of Object.entries(rest)) {
     const settingKey = key as keyof IntegrationSettings
     if (value !== settings[settingKey]) setIntegrationSetting(settingKey, value as never)

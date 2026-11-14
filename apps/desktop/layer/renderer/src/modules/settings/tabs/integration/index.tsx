@@ -27,6 +27,7 @@ import {
 import { ipcServices } from "~/lib/client"
 import { downloadJsonFile, selectJsonFile } from "~/lib/export"
 import {
+  holdsIntegrationSecrets,
   takeIntegrationSecrets,
   useHasIntegrationSecret,
   useIntegrationSecretsPersistent,
@@ -556,9 +557,11 @@ const BottomTip = () => {
       const jsonData = JSON.stringify(settings, null, 2)
       const filename = `yanrr-integration-settings-${new Date().toISOString().split("T")[0]}.json`
       downloadJsonFile(jsonData, filename)
-      // The desktop app's settings hold no tokens or passwords
+      // The web app's settings hold the credentials, the desktop app's only without a key store
       toast.success(t("integration.export.success"), {
-        description: IN_ELECTRON ? undefined : t("integration.export.credentials_warning"),
+        description: holdsIntegrationSecrets(settings)
+          ? t("integration.export.credentials_warning")
+          : undefined,
       })
     } catch (error) {
       console.error("Failed to export integration settings:", error)

@@ -28,6 +28,9 @@ const mainProcess = vi.hoisted(() => {
         case "secret.keys": {
           return [...secrets.keys()]
         }
+        case "secret.isPersistent": {
+          return true
+        }
         default: {
           throw new Error(`Unexpected ${channel}`)
         }
