@@ -14,12 +14,14 @@ export const FooterMarkItem = ({
 }) => {
   const filter = { insertedBefore }
 
+  // Keyed by the bound: once newer entries are listed, the button that marked those before as
+  // read is new and marks them too
   if (view === FeedViewType.SocialMedia) {
-    return <SocialMediaFooterMarkItem filter={filter} />
+    return <SocialMediaFooterMarkItem key={insertedBefore} filter={filter} />
   } else if (getView(view)?.gridMode || view === FeedViewType.All) {
-    return <GridFooterMarkItem filter={filter} />
+    return <GridFooterMarkItem key={insertedBefore} filter={filter} />
   }
-  return <CommonFooterMarkItem filter={filter} />
+  return <CommonFooterMarkItem key={insertedBefore} filter={filter} />
 }
 
 interface FooterMarkItemProps {
