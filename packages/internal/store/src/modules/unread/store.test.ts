@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { FollowAPI } from "../../api-contract"
 import { apiContext } from "../../context"
 import { clearAccountInSession, startSessionCheck } from "../../sync/account"
+import { setServerClockOffset } from "../../sync/server-clock"
 import type { SyncEngineHandle } from "../../sync/sync-status"
 import { registerSyncEngine, setSyncEngineActive } from "../../sync/sync-status"
 import { transactionQueue } from "../../sync/transaction-queue"
@@ -392,6 +393,31 @@ describe("unreadSyncService", () => {
 
     beforeEach(() => {
       vi.setSystemTime(clickedAt)
+    })
+
+    afterEach(() => {
+      setServerClockOffset(0)
+    })
+
+    it("bounds them by the server's clock, which the device's may lag behind", async () => {
+      await follow("feed1")
+      // The server's clock is five minutes ahead, and the entry arrived a minute before the gesture
+      setServerClockOffset(5 * 60_000)
+      await seedEntries({
+        ...createEntry("entry1", "feed1"),
+        insertedAt: new Date(clickedAt + 4 * 60_000),
+      })
+      await seedUnread({ feed1: 1 })
+      markAllAsReadMock.mockResolvedValue({ code: 0, data: { read: { feed1: 1 } } })
+
+      await unreadSyncService.markFeedAsRead("feed1")
+      await flushQueue()
+
+      expect(useEntryStore.getState().data.entry1?.read).toBe(true)
+      expect(markAllAsReadMock).toHaveBeenCalledWith({
+        feedIdList: ["feed1"],
+        insertedBefore: clickedAt + 5 * 60_000,
+      })
     })
 
     it("only covers the entries that had arrived when it was asked for", async () => {

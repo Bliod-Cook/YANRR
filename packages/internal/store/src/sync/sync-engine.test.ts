@@ -27,6 +27,7 @@ import { unreadActions, unreadSyncService, useUnreadStore } from "../modules/unr
 import { useUserStore } from "../modules/user/store"
 import { clearAccountInSession, startSessionCheck } from "./account"
 import { registerSyncModel } from "./model-registry"
+import { serverNow, setServerClockOffset } from "./server-clock"
 import { syncEngine } from "./sync-engine"
 import { isSyncEngineActive } from "./sync-status"
 import { transactionQueue } from "./transaction-queue"
@@ -162,7 +163,7 @@ const restart = async () => {
 
 const deltaResponse = (
   actions: SyncAction[],
-  options: { hasMore?: boolean; reset?: boolean; lastSyncId?: number } = {},
+  options: { hasMore?: boolean; reset?: boolean; lastSyncId?: number; serverTime?: number } = {},
 ) => ({
   code: 0 as const,
   data: {
@@ -170,6 +171,7 @@ const deltaResponse = (
     lastSyncId: options.lastSyncId ?? actions.at(-1)?.id ?? 0,
     hasMore: options.hasMore ?? false,
     reset: options.reset ?? false,
+    serverTime: options.serverTime,
   },
 })
 
@@ -350,6 +352,25 @@ describe("syncEngine", () => {
     await syncEngine.pull("interval")
 
     expect(markSyncedSpy).toHaveBeenCalledWith(61)
+  })
+
+  it("takes the server's clock from the delta and keeps it for the next launch", async () => {
+    await seedCursor(10)
+    const ahead = 5 * 60_000
+    deltaMock.mockResolvedValueOnce(
+      deltaResponse([], { lastSyncId: 10, serverTime: Date.now() + ahead }),
+    )
+
+    await syncEngine.pull("interval")
+    expect(Math.abs(serverNow() - Date.now() - ahead)).toBeLessThan(1000)
+
+    // Launched again while offline
+    setServerClockOffset(0)
+    await restart()
+    deltaMock.mockRejectedValueOnce(new TypeError("Failed to fetch"))
+    await syncEngine.pull("interval")
+    expect(Math.abs(serverNow() - Date.now() - ahead)).toBeLessThan(1000)
+    setServerClockOffset(0)
   })
 
   it("applies subscription updates and deletes from the delta", async () => {

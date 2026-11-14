@@ -31,6 +31,7 @@ import { useUserStore } from "../modules/user/store"
 import { apiMorph } from "../morph/api"
 import { getSyncModelHandler, getSyncModelHandlers } from "./model-registry"
 import { entryReadOverlayKey } from "./overlay-keys"
+import { setServerClockOffset } from "./server-clock"
 import { registerSyncEngine, setSyncEngineActive, setSyncEngineBootstrapping } from "./sync-status"
 import { isNavigatorOnline, transactionQueue } from "./transaction-queue"
 import type {
@@ -60,6 +61,8 @@ const UNREAD_CALIBRATED_AT_KEY = "unreadCalibratedAt"
 /** The sync id the last unread snapshot reflects; counters logged up to it are not applied again. */
 const UNREAD_SNAPSHOT_SYNC_ID_KEY = "unreadSnapshotSyncId"
 const SUBSCRIPTIONS_CALIBRATED_AT_KEY = "subscriptionsCalibratedAt"
+/** How far the server's clock was ahead of the device's at the last pull, for launches offline */
+const SERVER_CLOCK_OFFSET_KEY = "serverClockOffset"
 /** Set once a registered model was loaded in full, so later launches rely on the change log. */
 const modelBootstrappedKey = (model: string) => `bootstrapped:${model}`
 const PULL_INTERVAL_MS = 60_000
@@ -191,18 +194,25 @@ class SyncEngine {
   private async loadCursor() {
     if (this.loaded) return
     try {
-      const [stored, unreadCalibratedAt, unreadSnapshotSyncId, subscriptionsCalibratedAt] =
-        await Promise.all([
-          SyncMetaService.get(LAST_SYNC_ID_KEY),
-          SyncMetaService.get(UNREAD_CALIBRATED_AT_KEY),
-          SyncMetaService.get(UNREAD_SNAPSHOT_SYNC_ID_KEY),
-          SyncMetaService.get(SUBSCRIPTIONS_CALIBRATED_AT_KEY),
-        ])
+      const [
+        stored,
+        unreadCalibratedAt,
+        unreadSnapshotSyncId,
+        subscriptionsCalibratedAt,
+        serverClockOffset,
+      ] = await Promise.all([
+        SyncMetaService.get(LAST_SYNC_ID_KEY),
+        SyncMetaService.get(UNREAD_CALIBRATED_AT_KEY),
+        SyncMetaService.get(UNREAD_SNAPSHOT_SYNC_ID_KEY),
+        SyncMetaService.get(SUBSCRIPTIONS_CALIBRATED_AT_KEY),
+        SyncMetaService.get(SERVER_CLOCK_OFFSET_KEY),
+      ])
       const parsed = stored === null ? Number.NaN : Number(stored)
       this.lastSyncId = Number.isFinite(parsed) ? parsed : null
       this.unreadCalibratedAt = Number(unreadCalibratedAt) || 0
       this.unreadSnapshotSyncId = Number(unreadSnapshotSyncId) || 0
       this.subscriptionsCalibratedAt = Number(subscriptionsCalibratedAt) || 0
+      setServerClockOffset(Number(serverClockOffset) || 0)
       setSyncEngineActive(this.lastSyncId !== null)
     } catch (error) {
       console.error("[sync-engine] failed to load the sync cursor", error)
@@ -425,6 +435,8 @@ class SyncEngine {
 
     for (let page = 0; page < MAX_PAGES_PER_PULL; page++) {
       const { data } = await syncApi().delta({ lastSyncId: cursor })
+      // Besides what the SDK names
+      await this.storeServerClock("serverTime" in data ? data.serverTime : undefined)
       if (data.reset) {
         await this.bootstrap()
         return
@@ -455,6 +467,16 @@ class SyncEngine {
     // After the delta, so a snapshot taken now is never overwritten by an older action.
     await this.bootstrapRegisteredModels()
     await this.finishPull(summary, reason)
+  }
+
+  /** The server's clock, which the delta answers with */
+  private async storeServerClock(serverTime: unknown) {
+    if (typeof serverTime !== "number") return
+    const offset = serverTime - Date.now()
+    setServerClockOffset(offset)
+    await SyncMetaService.set(SERVER_CLOCK_OFFSET_KEY, String(offset)).catch((error) => {
+      console.error("[sync-engine] failed to persist the server clock", error)
+    })
   }
 
   /** Counts a failure of the action; `true` once it failed too often in a row */

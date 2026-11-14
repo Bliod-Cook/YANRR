@@ -14,6 +14,7 @@ import { api } from "../../context"
 import type { Hydratable } from "../../lib/base"
 import { createTransaction, createZustandStore } from "../../lib/helper"
 import { entryReadOverlayKey } from "../../sync/overlay-keys"
+import { serverNow } from "../../sync/server-clock"
 import {
   ensureSyncedThroughEngine,
   recordUnreadSnapshotThroughEngine,
@@ -279,8 +280,8 @@ class UnreadSyncService {
     if (!ids || ids.length === 0) return
 
     // The request can wait in the queue for long, offline. What arrives meanwhile was never
-    // shown, so the server leaves out what it took in after the gesture.
-    const range = time ?? { insertedBefore: Date.now() }
+    // shown, so the server leaves out what it took in after the gesture, by its own clock.
+    const range = time ?? { insertedBefore: serverNow() }
     const entryIds = entryActions.collectEntryIdsToMarkInSession({ ids, read: true, time: range })
     // A range of the caller's covers the entries it holds; without one, every unread counted now
     const unreadCountById = time
