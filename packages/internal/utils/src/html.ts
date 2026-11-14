@@ -360,16 +360,23 @@ function prependMissingCoverImage(tree: Root, coverImageUrl: string, baseUrl?: s
 // A bare URL ends at whitespace or at CJK punctuation, fullwidth forms included
 const bareUrlPattern = /https?:\/\/[^\s"<>\u3001-\u303F\uFF00-\uFFEF]+/g
 
-// As in GFM autolinks, trailing punctuation and an unmatched ")" are left as text
+// As in GFM autolinks, trailing punctuation and an unmatched ")" are left as text. A loop, as
+// the text of a feed may trail a URL with any number of them.
 const trimUrlEnd = (url: string): string => {
-  const last = url.at(-1)
-  if (
-    (last && ".,:;!?'*_~".includes(last)) ||
-    (last === ")" && url.split(")").length > url.split("(").length)
-  ) {
-    return trimUrlEnd(url.slice(0, -1))
+  let unmatched = url.split(")").length - url.split("(").length
+  let end = url.length
+  while (end > 0) {
+    const last = url[end - 1]!
+    if (".,:;!?'*_~".includes(last)) {
+      end--
+    } else if (last === ")" && unmatched > 0) {
+      end--
+      unmatched--
+    } else {
+      break
+    }
   }
-  return url
+  return url.slice(0, end)
 }
 
 function rehypeUrlToAnchor(tree: CompatibleVisitParentsTree) {

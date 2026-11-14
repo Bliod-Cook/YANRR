@@ -123,6 +123,12 @@ describe("bare URLs in text", () => {
     ])
   })
 
+  it("leaves out however much punctuation trails a URL", () => {
+    expect(links(`<p>https://example.com/a${".".repeat(20_000)}</p>`)).toEqual([
+      "https://example.com/a",
+    ])
+  })
+
   it("keeps a parenthesis that belongs to the URL", () => {
     expect(links("<p>https://en.wikipedia.org/wiki/Mercury_(planet)</p>")).toEqual([
       "https://en.wikipedia.org/wiki/Mercury_(planet)",
