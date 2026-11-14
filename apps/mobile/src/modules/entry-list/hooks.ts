@@ -11,6 +11,8 @@ import { useAiEnabled } from "@/src/atoms/server-configs"
 import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 
 import type { TimelineEntries } from "../screen/timeline-entries"
+import type { LayoutVersion } from "./layout-version"
+import { nextLayoutVersion } from "./layout-version"
 import { collectEntriesScrolledPast } from "./scrolled-past"
 import { getTranslationPrefetchIds } from "./translation-prefetch"
 
@@ -35,8 +37,12 @@ export function useEntryListViewability({
   const isRefreshing = isFetching && !isFetchingNextPage
   const disabled = active === false || isRefreshing || !!suspendMarkRead
   // The list moves under the reader while it changes, as when entries arrive at its head, so
-  // what it reports visible right after a change does not count
-  const paused = useScrollMarkReadGracePeriod(isRefreshing, undefined, entriesIds)
+  // what it reports visible right after such a change does not count. A page appended at its
+  // end moves nothing on screen.
+  const [layout, setLayout] = useState<LayoutVersion>({ entryIds: entriesIds, version: 0 })
+  const nextLayout = nextLayoutVersion(layout, entriesIds)
+  if (nextLayout !== layout) setLayout(nextLayout)
+  const paused = useScrollMarkReadGracePeriod(isRefreshing, undefined, nextLayout.version)
 
   const [visibleIds, setVisibleIds] = useState<string[]>([])
   const seenRef = useRef<ReadonlySet<string>>(new Set())
