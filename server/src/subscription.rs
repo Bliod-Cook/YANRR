@@ -241,8 +241,9 @@ pub async fn unsubscribe(
 /// Moves the subscriptions of `old`, which just migrated, to `target`, along with the entries of `old` that `target`
 /// lacks.
 ///
-/// Moved users keep what they blocked, and get `target`'s entries unread as a new subscription does, except those
-/// whose guid they already read on `old`. Users who already followed `target` only lose the old subscription.
+/// Moved users keep what they blocked and what they left unread, and get `target`'s latest entries unread as a new
+/// subscription does, except those whose guid they already read on `old`. Users who already followed `target` only
+/// lose the old subscription.
 pub async fn migrate(
     txn: &DatabaseTransaction,
     old: i64,
@@ -290,6 +291,16 @@ pub async fn migrate(
     );
     txn.execute_raw(statement(&unread_sql, Some(&users)))
         .await?;
+    // What they left unread on `old` stays so, however old: the marks on `old` itself go with its subscriptions.
+    let kept_sql = "INSERT INTO unreads (user_id, entry_id, feed_id)
+        SELECT r.user_id, e.id, e.feed_id
+        FROM unreads r
+        JOIN entries old_entry ON old_entry.id = r.entry_id AND old_entry.feed_id = $1
+        JOIN entries e ON e.feed_id = $2 AND e.guid = old_entry.guid
+        WHERE r.user_id = ANY($3)
+          AND e.id NOT IN (SELECT entry_id FROM blocked_entries WHERE user_id = r.user_id)
+        ON CONFLICT DO NOTHING";
+    txn.execute_raw(statement(kept_sql, Some(&users))).await?;
     // Unread marks of the entries that move follow them; those of the ones left behind go with the subscriptions.
     let entries_sql = "WITH moved AS (
             UPDATE entries e SET feed_id = $2

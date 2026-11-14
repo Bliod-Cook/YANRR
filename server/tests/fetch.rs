@@ -374,16 +374,17 @@ async fn permanent_redirect_to_another_feed_migrates_subscriptions_and_entries()
 }
 
 #[tokio::test]
-async fn migrated_followers_get_the_latest_unread_and_keep_their_blocks() {
+async fn migrated_followers_keep_their_unread_and_blocks_and_get_the_latest_unread() {
     let (app, fixtures) = (TestApp::spawn().await, Fixtures::spawn().await);
     let blocked =
         json!({ "id": "blocked", "title": "Blocked", "date_published": "2026-10-04T00:00:00Z" });
-    fixtures.set("/old", Reply::Body(json_feed(json!([blocked]))));
     // Post 0 is the newest, one minute apart, and all are older than the blocked post.
     let post = |i: usize| {
         let date = format!("2026-10-03T{:02}:{:02}:00Z", 10 - i / 60, 59 - i % 60);
         json!({ "id": format!("post-{i}"), "date_published": date })
     };
+    // Post 100, which Alice leaves unread, is just older than the latest 100 of the new feed.
+    fixtures.set("/old", Reply::Body(json_feed(json!([blocked, post(100)]))));
     let mut posts: Vec<_> = (0..150).map(post).collect();
     posts.push(blocked);
     fixtures.set("/new", Reply::Body(json_feed(json!(posts))));
@@ -398,8 +399,9 @@ async fn migrated_followers_get_the_latest_unread_and_keep_their_blocks() {
         .unwrap();
     // Alice's rules blocked the old feed's post when it arrived.
     let block = format!(
-        "INSERT INTO blocked_entries SELECT '{alice}', id FROM entries WHERE feed_id = {feed_id};
-        DELETE FROM unreads"
+        "INSERT INTO blocked_entries SELECT '{alice}', id FROM entries
+            WHERE feed_id = {feed_id} AND guid = 'blocked';
+        DELETE FROM unreads WHERE entry_id IN (SELECT entry_id FROM blocked_entries)"
     );
     app.state.db.execute_unprepared(&block).await.unwrap();
 
@@ -417,7 +419,7 @@ async fn migrated_followers_get_the_latest_unread_and_keep_their_blocks() {
         .iter()
         .map(|row| row.try_get("", "guid").unwrap())
         .collect();
-    let latest: Vec<_> = (0..100).map(|i| format!("post-{i}")).collect();
+    let latest: Vec<_> = (0..=100).map(|i| format!("post-{i}")).collect();
     assert_eq!(unread, latest);
     let target_blocked = entries(&app, target.id)
         .await
