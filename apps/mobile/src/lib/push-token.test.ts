@@ -64,6 +64,16 @@ describe("unregisterPushToken", () => {
     expect(kvStore.has(PUSH_TOKEN_STORAGE_KEY)).toBe(false)
   })
 
+  it("forgets a token stored bare, as versions before kept it", async () => {
+    kvStore.set(PUSH_TOKEN_STORAGE_KEY, "legacy-token")
+    deleteToken.mockResolvedValue({ code: 0 })
+
+    await unregisterPushToken()
+
+    expect(deleteToken).toHaveBeenCalledWith({ token: "legacy-token" }, { timeout: 5000 })
+    expect(kvStore.has(PUSH_TOKEN_STORAGE_KEY)).toBe(false)
+  })
+
   it("removes nothing when this device never registered a token", async () => {
     await unregisterPushToken()
 

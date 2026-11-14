@@ -3,14 +3,18 @@ import { Platform } from "react-native"
 
 import { kv } from "./kv"
 
-/** Where the device keeps the push token it registered: `{ userId, token }` as JSON */
+/**
+ * Where the device keeps the push token it registered: `{ userId, token }` as JSON, or the bare
+ * token as versions before kept it
+ */
 export const PUSH_TOKEN_STORAGE_KEY = "firebase_messaging_token"
 
 /** How long a sign-out waits for the server to forget the device, so one offline is not held up */
 const UNREGISTER_TIMEOUT_MS = 5000
 
 interface RegisteredPushToken {
-  userId: string
+  /** Null for a token stored bare, which does not say for whom */
+  userId: string | null
   token: string
 }
 
@@ -20,8 +24,7 @@ const getRegisteredPushToken = (): RegisteredPushToken | null => {
   try {
     return JSON.parse(stored) as RegisteredPushToken
   } catch {
-    // Older versions kept the bare token
-    return null
+    return { userId: null, token: stored }
   }
 }
 
