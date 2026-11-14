@@ -2,6 +2,7 @@ mod common;
 
 use std::time::Duration;
 
+use chrono::Utc;
 use common::TestApp;
 use sea_orm::{ConnectionTrait, TransactionTrait};
 use serde_json::{Value, json};
@@ -63,6 +64,8 @@ async fn delta_pages_through_own_actions() {
     let first = &get(&app, "/api/sync/delta?lastSyncId=0&limit=2").await["data"];
     assert_eq!(first["hasMore"], true);
     assert_eq!(first["reset"], false);
+    let skew = first["serverTime"].as_i64().unwrap() - Utc::now().timestamp_millis();
+    assert!(skew.abs() < 5_000, "{skew} ms");
     assert_eq!(first["lastSyncId"], ids[1]);
     let general = &first["actions"][0];
     assert_eq!(general["id"], ids[0]);

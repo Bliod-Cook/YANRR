@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use chrono::Utc;
 use sea_orm::{
     AccessMode, ActiveValue::Set, ColumnTrait, ConnectionTrait, DatabaseConnection,
     DatabaseTransaction, DbBackend, DbErr, EntityTrait, IsolationLevel, QueryFilter, QueryOrder,
@@ -34,6 +35,9 @@ pub struct Delta {
     last_sync_id: i64,
     has_more: bool,
     reset: bool,
+    /// Milliseconds since the epoch on the server's clock, which stamps when entries were stored; the client
+    /// measures its own against it so that marking everything read up to now covers what it was shown.
+    server_time: i64,
 }
 
 #[derive(Serialize)]
@@ -113,6 +117,7 @@ pub async fn delta(
         .await?;
     let (horizon, head) = bounds(&txn).await?;
     txn.commit().await?;
+    let server_time = Utc::now().timestamp_millis();
     // Below the horizon rows may be gone; above the head the ids restarted, e.g. after a database reset.
     if cursor < horizon || cursor > head {
         return Ok(Delta {
@@ -120,6 +125,7 @@ pub async fn delta(
             last_sync_id: head,
             has_more: false,
             reset: true,
+            server_time,
         });
     }
     let has_more = rows.len() as u64 > limit;
@@ -145,6 +151,7 @@ pub async fn delta(
         last_sync_id,
         has_more,
         reset: false,
+        server_time,
     })
 }
 
