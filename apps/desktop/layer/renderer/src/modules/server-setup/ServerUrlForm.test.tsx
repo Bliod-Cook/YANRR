@@ -5,12 +5,17 @@ import { createRoot } from "react-dom/client"
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest"
 
 const ipc = vi.hoisted(() => ({
+  calls: [] as string[],
+  checkServerUrl: vi.fn(),
   setServerUrl: vi.fn(),
   relaunch: vi.fn(),
 }))
 
 vi.mock("~/lib/client", () => ({
-  ipcServices: { auth: { setServerUrl: ipc.setServerUrl }, app: { relaunch: ipc.relaunch } },
+  ipcServices: {
+    auth: { checkServerUrl: ipc.checkServerUrl, setServerUrl: ipc.setServerUrl },
+    app: { relaunch: ipc.relaunch },
+  },
 }))
 
 vi.mock("react-i18next", () => ({
@@ -37,6 +42,7 @@ describe("ServerUrlForm", () => {
     host?.remove()
     root = null
     host = null
+    ipc.calls.length = 0
     vi.clearAllMocks()
   })
 
@@ -58,18 +64,33 @@ describe("ServerUrlForm", () => {
     })
   }
 
-  test("relaunches after the server is set and the old data is cleared", async () => {
-    ipc.setServerUrl.mockResolvedValue(null)
-    const beforeRelaunch = vi.fn().mockResolvedValue(undefined)
+  test("keeps the new server once the old data is cleared, then relaunches", async () => {
+    ipc.checkServerUrl.mockImplementation(async () => {
+      ipc.calls.push("check")
+      return { server: "https://rss.example.com" }
+    })
+    ipc.setServerUrl.mockImplementation(async () => void ipc.calls.push("set"))
+    ipc.relaunch.mockImplementation(() => void ipc.calls.push("relaunch"))
+
+    await submit(async () => void ipc.calls.push("clear"))
+
+    expect(ipc.calls).toEqual(["check", "clear", "set", "relaunch"])
+    expect(ipc.setServerUrl).toHaveBeenCalledWith("https://rss.example.com")
+  })
+
+  test("reports a server that does not answer, without clearing anything", async () => {
+    ipc.checkServerUrl.mockResolvedValue({ error: "unreachable" })
+    const beforeRelaunch = vi.fn()
 
     await submit(beforeRelaunch)
 
-    expect(beforeRelaunch).toHaveBeenCalledOnce()
-    expect(ipc.relaunch).toHaveBeenCalledOnce()
+    expect(host!.textContent).toContain("server.unreachable")
+    expect(beforeRelaunch).not.toHaveBeenCalled()
+    expect(ipc.setServerUrl).not.toHaveBeenCalled()
   })
 
   test("stops connecting and reports it when the main process fails", async () => {
-    ipc.setServerUrl.mockRejectedValue(new Error("ipc down"))
+    ipc.checkServerUrl.mockRejectedValue(new Error("ipc down"))
 
     await submit()
 
@@ -78,12 +99,13 @@ describe("ServerUrlForm", () => {
     expect(ipc.relaunch).not.toHaveBeenCalled()
   })
 
-  test("reports a failed cleanup and stays instead of relaunching with the old data", async () => {
-    ipc.setServerUrl.mockResolvedValue(null)
+  test("stays on the server before when the cleanup fails", async () => {
+    ipc.checkServerUrl.mockResolvedValue({ server: "https://rss.example.com" })
 
     await submit(() => Promise.reject(new Error("db locked")))
 
     expect(host!.textContent).toContain("server.failed")
+    expect(ipc.setServerUrl).not.toHaveBeenCalled()
     expect(ipc.relaunch).not.toHaveBeenCalled()
   })
 })

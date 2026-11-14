@@ -10,8 +10,9 @@ type ServerUrlError = "invalid" | "unreachable" | "failed"
 
 /**
  * Sets the server the desktop app talks to, then relaunches the app, which takes the server's
- * address at startup. `beforeRelaunch` clears what is left from the server before; the app stays
- * open when that fails, as relaunching would carry the old server's data over.
+ * address at startup. `beforeRelaunch` clears what is left from the server before. The new
+ * address is kept only once that succeeded: when it fails, the app stays open on the server
+ * before, as relaunching would carry its data over to the new one.
  */
 export const ServerUrlForm = ({ beforeRelaunch }: { beforeRelaunch?: () => Promise<void> }) => {
   const { t } = useTranslation("app")
@@ -23,13 +24,15 @@ export const ServerUrlForm = ({ beforeRelaunch }: { beforeRelaunch?: () => Promi
     event.preventDefault()
     setIsConnecting(true)
     try {
-      const result = await ipcServices?.auth.setServerUrl(url)
-      if (result) {
-        setError(result)
+      const checked = await ipcServices?.auth.checkServerUrl(url)
+      if (!checked) return
+      if ("error" in checked) {
+        setError(checked.error)
         setIsConnecting(false)
         return
       }
       await beforeRelaunch?.()
+      await ipcServices?.auth.setServerUrl(checked.server)
     } catch (error) {
       console.error("Failed to switch the server", error)
       setError("failed")

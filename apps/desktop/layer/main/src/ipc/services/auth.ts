@@ -46,20 +46,26 @@ export class AuthService extends IpcService {
     await removeSessionCookies(getWebURL())
   }
 
+  /** The address the user typed, normalized, once a server answers there like a Yanrr server */
+  @IpcMethod()
+  async checkServerUrl(
+    input: string,
+  ): Promise<{ server: string } | { error: "invalid" | "unreachable" }> {
+    const server = normalizeServerUrl(input)
+    if (!server) return { error: "invalid" }
+    if (!(await answersAsServer(server))) return { error: "unreachable" }
+    return { server }
+  }
+
   /**
-   * Switches to the server at the address the user typed, once it answers like one. The session
-   * with the server before ends here; the renderer clears its own data and relaunches the app,
-   * which captures the address at startup.
+   * Switches to a server `checkServerUrl` answered for, after the renderer cleared the data of the
+   * one before. The session with that one ends here; the app relaunches next, as it captures the
+   * address at startup.
    */
   @IpcMethod()
-  async setServerUrl(input: string): Promise<"invalid" | "unreachable" | null> {
-    const server = normalizeServerUrl(input)
-    if (!server) return "invalid"
-    if (!(await answersAsServer(server))) return "unreachable"
-
+  async setServerUrl(server: string): Promise<void> {
     const serverBefore = getServerUrl()
     if (serverBefore) await removeSessionCookies(serverBefore)
     store.set("serverUrl", server)
-    return null
   }
 }
