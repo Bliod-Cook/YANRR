@@ -17,6 +17,13 @@ with Git Bash; the scripts are plain bash.
 cargo test --test api
 ```
 
+- On Windows, a full Perl for building the vendored OpenSSL. Git Bash's own Perl lacks modules, and `openssl-sys` fails
+  with `Can't locate Locale/Maketext/Simple.pm`. Point the build at another Perl, e.g. Strawberry Perl from scoop:
+
+```bash
+export OPENSSL_SRC_PERL="$(cygpath -m "$HOME/scoop/apps/perl/current/perl/bin/perl.exe")"
+```
+
 ## Run (agent path)
 
 ```bash
@@ -71,3 +78,5 @@ Each integration test starts its own embedded PostgreSQL, so the suite takes a f
 - **`{"code":"INVALID_ORIGIN","message":"Invalid origin"}` (403) on sign-in**: the request's `Origin` differs from the
   server's `public_url`, e.g. `localhost` against `127.0.0.1`. Send `Origin: http://127.0.0.1:$PORT`.
 - **`{"code":5,"message":"AI is not configured"}`**: the server started without `YANRR_AI__*`; export them and restart.
+- **`pg_ctl: could not open log file ... Permission denied`** when starting again after a failed build: the PostgreSQL of
+  that start is still running. Run `stop.sh` first.
