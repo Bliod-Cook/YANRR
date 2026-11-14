@@ -7,7 +7,6 @@ import { LRUCache } from "@follow/utils/lru-cache"
 import { getSiteIconUrl } from "@follow/utils/server-url"
 import { cn } from "@follow/utils/utils"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
-import { m } from "motion/react"
 import type { ReactNode } from "react"
 import { useEffect, useMemo } from "react"
 
@@ -94,11 +93,6 @@ type IconTarget = {
 }
 
 export type FeedIconEntry = { authorAvatar?: string | null; firstPhotoUrl?: string | null }
-const fadeInVariant = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-}
-
 // Icons shown before skip the fade-in; bounded, as feeds come and go
 const shownIcons = new LRUCache<string, true>(500)
 export function FeedIcon({
@@ -189,11 +183,14 @@ export function FeedIcon({
 
       imageElement = (
         <PlatformIcon url={iconProps.platformUrl} style={sizeStyle} className={className}>
-          <m.img
-            className={marginClassName}
+          <img
+            className={cn(
+              marginClassName,
+              !disableFadeIn &&
+                !isIconLoaded &&
+                "duration-150 animate-in fade-in-0 motion-reduce:animate-none",
+            )}
             style={sizeStyle}
-            initial={disableFadeIn || isIconLoaded ? false : fadeInVariant.initial}
-            animate={fadeInVariant.animate}
           />
         </PlatformIcon>
       )
