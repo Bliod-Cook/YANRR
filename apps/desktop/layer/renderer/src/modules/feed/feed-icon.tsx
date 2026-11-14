@@ -192,7 +192,8 @@ export function FeedIcon({
           <m.img
             className={marginClassName}
             style={sizeStyle}
-            {...(disableFadeIn || isIconLoaded ? {} : fadeInVariant)}
+            initial={disableFadeIn || isIconLoaded ? false : fadeInVariant.initial}
+            animate={fadeInVariant.animate}
           />
         </PlatformIcon>
       )
