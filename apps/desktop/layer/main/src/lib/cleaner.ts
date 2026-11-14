@@ -2,6 +2,7 @@ import { callWindowExpose } from "@follow/shared/bridge"
 import { dialog } from "electron"
 
 import { getIconPath } from "~/helper"
+import { clearSecrets } from "~/ipc/services/secret"
 import { WindowManager } from "~/manager/window"
 
 import { t } from "./i18n"
@@ -35,6 +36,9 @@ const clearAllData = async () => {
     // The session ends the way a sign-out ends it, so the device also stops getting the
     // account's push notifications
     await caller.endSession()
+
+    // The tokens and passwords of the integrations, which the main process keeps apart
+    clearSecrets()
 
     // The app page's data and what sites left in its webviews
     for (const ses of getSessions()) {

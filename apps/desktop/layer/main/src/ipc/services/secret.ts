@@ -19,6 +19,9 @@ let store: SecretStore | undefined
 const getStore = () =>
   (store ??= new SecretStore(path.join(app.getPath("userData"), "secrets.json"), encryption))
 
+/** Removes every secret, as signing out or clearing all data does */
+export const clearSecrets = () => getStore().clear()
+
 /** Tokens and passwords of the page's integrations, which its own storage would keep in plain text */
 export class SecretService extends IpcService {
   static override readonly groupName = "secret"
@@ -45,7 +48,7 @@ export class SecretService extends IpcService {
 
   @IpcMethod()
   clear(): void {
-    getStore().clear()
+    clearSecrets()
   }
 
   /** Whether the secrets outlive this launch: false where the system has no key store */
