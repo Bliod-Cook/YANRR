@@ -13,7 +13,7 @@ use sea_orm::{
 };
 use serde_json::{Value, json};
 use yanrr::{
-    entity::{blocked_entry, entry, feed, subscription, unread},
+    entity::{blocked_entry, entry, feed, subscription, sync_action, unread},
     fetch::{
         self, FetchError,
         scheduler::{self, Scheduler},
@@ -45,6 +45,20 @@ async fn entries(app: &TestApp, feed_id: i64) -> Vec<entry::Model> {
         .all(&app.state.db)
         .await
         .unwrap()
+}
+
+/// The action and model id of each change logged for `user_id`, oldest first.
+async fn logged(app: &TestApp, user_id: &str) -> Vec<(String, Option<String>)> {
+    let logged = sync_action::Entity::find()
+        .filter(sync_action::Column::UserId.eq(user_id))
+        .order_by_asc(sync_action::Column::Id)
+        .all(&app.state.db)
+        .await
+        .unwrap();
+    logged
+        .into_iter()
+        .map(|row| (row.action, row.model_id))
+        .collect()
 }
 
 async fn reload(app: &TestApp, feed_id: i64) -> feed::Model {
@@ -331,10 +345,12 @@ async fn permanent_redirect_to_another_feed_migrates_subscriptions_and_entries()
         .await
         .unwrap();
     app.insert_user("bob").await;
+    // Bob already follows the target too, and left the old post unread.
     let follow = format!(
         "INSERT INTO subscriptions (user_id, feed_id, view, created_at) VALUES
-         ('bob', {}, 0, now()), ('bob', {}, 0, now())",
-        feed.id, target.id
+         ('bob', {}, 0, now()), ('bob', {}, 0, now());
+        INSERT INTO unreads (user_id, entry_id, feed_id) VALUES ('bob', {old}, {})",
+        feed.id, target.id, feed.id
     );
     app.state.db.execute_unprepared(&follow).await.unwrap();
 
@@ -355,18 +371,16 @@ async fn permanent_redirect_to_another_feed_migrates_subscriptions_and_entries()
     let mut unread = unread_entries(&app, &alice).await;
     unread.sort();
     assert_eq!(unread, [old, new_post.id]);
-    let actions = app.actions().await;
-    let moved: Vec<_> = actions[actions.len() - 2..]
-        .iter()
-        .map(|action| (action["action"].clone(), action["modelId"].clone()))
-        .collect();
-    assert_eq!(
-        moved,
-        [
-            (json!("D"), json!(feed.id.to_string())),
-            (json!("I"), json!(target.id.to_string()))
-        ]
-    );
+    assert_eq!(unread_entries(&app, "bob").await, [old]);
+    // Bob's target changed too, so his client is told to refresh it.
+    let moved = [
+        ("D".to_string(), Some(feed.id.to_string())),
+        ("I".to_string(), Some(target.id.to_string())),
+    ];
+    for user in [alice.as_str(), "bob"] {
+        let logged = logged(&app, user).await;
+        assert!(logged.ends_with(&moved), "{user}: {logged:?}");
+    }
 
     app.sign_up("carol@example.com").await;
     let followed = json(app.post("/api/subscriptions", body).await).await;

@@ -242,8 +242,8 @@ pub async fn unsubscribe(
 /// lacks.
 ///
 /// Moved users keep what they blocked and what they left unread, and get `target`'s latest entries unread as a new
-/// subscription does, except those whose guid they already read on `old`. Users who already followed `target` only
-/// lose the old subscription.
+/// subscription does, except those whose guid they already read on `old`. Users who already followed `target` lose
+/// the old subscription, and have `target`'s logged again when entries move into it.
 pub async fn migrate(
     txn: &DatabaseTransaction,
     old: i64,
@@ -323,13 +323,28 @@ pub async fn migrate(
         .exec_with_returning(txn)
         .await?;
     let mut actions: Vec<_> = removed
-        .into_iter()
-        .map(|subscription| deleted(subscription.user_id, old))
+        .iter()
+        .map(|subscription| deleted(subscription.user_id.clone(), old))
         .collect();
     actions.extend(
         moved
             .into_iter()
             .map(|subscription| inserted(subscription, target)),
     );
+    if !moved_entries.is_empty() {
+        // Those who already followed `target` see entries, and maybe unread marks, join it; logging their subscription
+        // again has their client refresh it, as subscribing again does.
+        let followed = subscription::Entity::find()
+            .filter(subscription::Column::FeedId.eq(target.id))
+            .filter(subscription::Column::UserId.is_in(removed.into_iter().map(|row| row.user_id)))
+            .filter(subscription::Column::UserId.is_not_in(users))
+            .all(txn)
+            .await?;
+        actions.extend(
+            followed
+                .into_iter()
+                .map(|subscription| inserted(subscription, target)),
+        );
+    }
     Ok(actions)
 }
