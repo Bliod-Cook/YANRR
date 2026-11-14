@@ -274,11 +274,12 @@ export const formatTimeToSeconds = (time?: string | number) => {
  * ```ts
  * timeStringToSeconds("1:30") // 90
  * timeStringToSeconds("1:30:00") // 5400
+ * timeStringToSeconds("123:45") // 7425, minutes past an hour as long podcasts count them
  * timeStringToSeconds("Part 2: The end") // null
  * ```
  */
 export function timeStringToSeconds(time: string): number | null {
-  if (!/^\d{1,2}:[0-5]\d(?::[0-5]\d)?$/.test(time)) return null
+  if (!/^\d+:[0-5]\d(?::[0-5]\d)?$/.test(time)) return null
 
   return time.split(":").reduce((seconds, part) => seconds * 60 + Number(part), 0)
 }

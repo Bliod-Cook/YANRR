@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 
-import { doesTextContainHTML, isBizId, omitShallow } from "./utils"
+import { doesTextContainHTML, isBizId, omitShallow, timeStringToSeconds } from "./utils"
 
 describe("utils", () => {
   test("isBizId", () => {
@@ -40,5 +40,12 @@ describe("utils", () => {
     expect(doesTextContainHTML("<p> </p>")).toBe(false)
     expect(doesTextContainHTML("Test <p> </p>")).toBe(false)
     expect(doesTextContainHTML("Test <br/>")).toBe(false)
+  })
+
+  test("timeStringToSeconds counts minutes past an hour", () => {
+    expect(timeStringToSeconds("123:45")).toBe(7425)
+    expect(timeStringToSeconds("2:03:45")).toBe(7425)
+    expect(timeStringToSeconds("1:60")).toBeNull()
+    expect(timeStringToSeconds("Part 2: The end")).toBeNull()
   })
 })
