@@ -40,6 +40,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ entryId, className }) 
       {embedSrc ? (
         <ViewTag
           src={embedSrc}
+          // A cross-origin iframe may only autoplay with sound or go full screen when allowed;
+          // webviews ignore it
+          allow="autoplay; fullscreen"
           referrerPolicy="strict-origin-when-cross-origin"
           className="size-full rounded-md bg-black"
         />

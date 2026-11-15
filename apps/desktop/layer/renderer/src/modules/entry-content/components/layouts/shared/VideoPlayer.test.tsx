@@ -67,7 +67,7 @@ describe("VideoPlayer", () => {
     return host
   }
 
-  test("embeds the video without the duration overlay", async () => {
+  test("embeds a player that may autoplay and go full screen, without a duration overlay", async () => {
     const host = await render({
       ...baseEntry,
       id: "embed",
@@ -76,7 +76,7 @@ describe("VideoPlayer", () => {
       attachments: [{ url: "https://example.com/video", duration_in_seconds: 293 }],
     } as EntryModel)
 
-    expect(host.querySelector("iframe")).not.toBeNull()
+    expect(host.querySelector("iframe")?.getAttribute("allow")).toBe("autoplay; fullscreen")
     expect(host.textContent).not.toContain("04:53")
   })
 })
