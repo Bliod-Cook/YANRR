@@ -33,7 +33,7 @@ export const MediaLayout: React.FC<EntryLayoutProps> = (props) => {
 
   if (shouldShowVideo) {
     // Use VideosLayout for video content
-    return <VideosLayout {...props} noMedia={false} />
+    return <VideosLayout {...props} />
   }
 
   if (shouldShowImages) {

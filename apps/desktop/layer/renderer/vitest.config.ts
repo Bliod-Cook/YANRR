@@ -18,6 +18,8 @@ export default defineProject({
     globals: true,
     setupFiles: [resolve(__dirname, "./setup-file.ts")],
     environment: "happy-dom",
+    // Embedded players are third-party pages; tests must not fetch them
+    environmentOptions: { happyDOM: { settings: { disableIframePageLoading: true } } },
     alias: {
       "@pkg": pkgPath,
       "@locales": resolve(__dirname, "../../../../locales"),
