@@ -116,4 +116,18 @@ describe("SocialMediaLayout", () => {
     ])
     expect(index).toBe(1)
   })
+
+  test("resolves a relative link in the post against the post's page", async () => {
+    const host = await render({
+      ...post,
+      id: "post-2",
+      guid: "post-2",
+      content: '<p><a href="tags/rss">#rss</a></p>',
+      media: null,
+    })
+
+    expect(host.querySelector("a")?.getAttribute("href")).toBe(
+      "https://social.example.com/@alice/tags/rss",
+    )
+  })
 })

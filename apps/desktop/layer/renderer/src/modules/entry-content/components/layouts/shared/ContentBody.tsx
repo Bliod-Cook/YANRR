@@ -5,6 +5,7 @@ import { useSpotlightSettingKey } from "~/atoms/settings/spotlight"
 import { HTML } from "~/components/ui/markdown/HTML"
 import { readableContentMaxWidthClassName } from "~/constants/ui"
 import { useRenderStyle } from "~/hooks/biz/useRenderStyle"
+import { EntryContentUrlProvider } from "~/modules/renderer/content-url"
 
 import { useEntryContent } from "../../../hooks"
 
@@ -36,21 +37,23 @@ export const ContentBody: React.FC<ContentBodyProps> = ({
   if (!content) return null
 
   return (
-    <HTML
-      as="div"
-      className={cn(
-        "prose dark:prose-invert",
-        "prose-blockquote:mt-0",
-        "cursor-auto select-text",
-        readableContentMaxWidthClassName,
-        compact ? "text-sm leading-relaxed" : "text-base leading-relaxed",
-        className,
-      )}
-      noMedia={noMedia}
-      spotlightRules={spotlightRules}
-      style={renderStyle}
-    >
-      {content}
-    </HTML>
+    <EntryContentUrlProvider entryId={entryId}>
+      <HTML
+        as="div"
+        className={cn(
+          "prose dark:prose-invert",
+          "prose-blockquote:mt-0",
+          "cursor-auto select-text",
+          readableContentMaxWidthClassName,
+          compact ? "text-sm leading-relaxed" : "text-base leading-relaxed",
+          className,
+        )}
+        noMedia={noMedia}
+        spotlightRules={spotlightRules}
+        style={renderStyle}
+      >
+        {content}
+      </HTML>
+    </EntryContentUrlProvider>
   )
 }

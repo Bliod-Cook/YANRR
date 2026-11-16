@@ -21,6 +21,7 @@ import type { FeedIconEntry } from "~/modules/feed/feed-icon"
 import { FeedIcon } from "~/modules/feed/feed-icon"
 import { FeedTitle } from "~/modules/feed/feed-title"
 import { useSocialAuthorTitle } from "~/modules/feed/social-author-title"
+import { EntryContentUrlProvider } from "~/modules/renderer/content-url"
 
 import { socialMediaContentWidthAtom } from "../atoms/social-media-content-width"
 import { StarIcon } from "../star-icon"
@@ -139,17 +140,19 @@ export const SocialMediaItem: EntryListItemFC = ({ entryId, translation }) => {
           </div>
           <div className={cn("relative mt-1 text-base", isInCollection && "pr-5")}>
             <EntryContentWrapper entryId={entryId}>
-              <HTML
-                as="div"
-                className={cn(
-                  "prose align-middle dark:prose-invert",
-                  "cursor-auto select-text text-sm leading-relaxed prose-blockquote:mt-0",
-                )}
-                noMedia
-                style={renderStyle}
-              >
-                {translation?.content || content}
-              </HTML>
+              <EntryContentUrlProvider entryId={entryId}>
+                <HTML
+                  as="div"
+                  className={cn(
+                    "prose align-middle dark:prose-invert",
+                    "cursor-auto select-text text-sm leading-relaxed prose-blockquote:mt-0",
+                  )}
+                  noMedia
+                  style={renderStyle}
+                >
+                  {translation?.content || content}
+                </HTML>
+              </EntryContentUrlProvider>
             </EntryContentWrapper>
             {isInCollection && <StarIcon className="absolute right-0 top-0" />}
           </div>

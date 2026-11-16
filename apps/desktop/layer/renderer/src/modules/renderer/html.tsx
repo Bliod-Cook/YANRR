@@ -1,7 +1,5 @@
 import { FeedViewType } from "@follow/constants"
 import { useEntry } from "@follow/store/entry/hooks"
-import { getFeedById } from "@follow/store/feed/getter"
-import { resolveContentUrl } from "@follow/utils/content-url"
 import { timeStringToSeconds } from "@follow/utils/utils"
 import { useMemo } from "react"
 import type { JSX } from "react/jsx-runtime"
@@ -16,6 +14,7 @@ import { HTML } from "~/components/ui/markdown/HTML"
 import type { MarkdownImage, MarkdownRenderActions } from "~/components/ui/markdown/types"
 
 import { TimeStamp } from "./components/TimeStamp"
+import { useEntryContentUrlTransform } from "./content-url"
 import { EntryInfoContext } from "./context"
 import type { EntryContentRendererProps } from "./types"
 
@@ -48,17 +47,16 @@ export function EntryContentHTMLRenderer<AS extends keyof JSX.IntrinsicElements 
     [media],
   )
   const coverImageUrl = media?.[0]?.type === "photo" ? media[0].url : undefined
+  const transformUrl = useEntryContentUrlTransform(entryId)
   const actions: MarkdownRenderActions = useMemo(() => {
     return {
       isAudio() {
         return view === FeedViewType.Audios
       },
-      transformUrl(url) {
-        return url && resolveContentUrl(url, entry?.url || getFeedById(feedId)?.siteUrl)
-      },
+      transformUrl,
       ensureAndRenderTimeStamp,
     }
-  }, [entry?.url, feedId, view])
+  }, [transformUrl, view])
   return (
     <MarkdownImageRecordContext.Provider value={images}>
       <MarkdownRenderActionContext value={actions}>
