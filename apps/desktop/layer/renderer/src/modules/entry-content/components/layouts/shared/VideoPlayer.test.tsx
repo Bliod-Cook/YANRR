@@ -79,4 +79,24 @@ describe("VideoPlayer", () => {
     expect(host.querySelector("iframe")?.getAttribute("allow")).toBe("autoplay; fullscreen")
     expect(host.textContent).not.toContain("04:53")
   })
+
+  test("plays a native video with controls, even when a photo comes first", async () => {
+    const host = await render({
+      ...baseEntry,
+      id: "native",
+      guid: "native",
+      url: "https://example.com/native",
+      media: [
+        { url: "https://example.com/cover.jpg", type: "photo" },
+        {
+          url: "https://example.com/video.mp4",
+          type: "video",
+          preview_image_url: "https://example.com/poster.jpg",
+        },
+      ],
+    } as EntryModel)
+
+    expect(host.querySelector("video")?.getAttribute("src")).toBe("https://example.com/video.mp4")
+    expect(host.querySelector('[role="slider"]')).not.toBeNull()
+  })
 })

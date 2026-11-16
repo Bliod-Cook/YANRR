@@ -4,7 +4,7 @@ import { transformVideoUrl } from "@follow/utils/url-for-video"
 import { cn } from "@follow/utils/utils"
 import { useMemo } from "react"
 
-import { Media } from "~/components/ui/media/Media"
+import { VideoPlayer as NativeVideoPlayer } from "~/components/ui/media/VideoPlayer"
 import { getDefaultLanguage } from "~/lib/language"
 
 const ViewTag = IN_ELECTRON ? "webview" : "iframe"
@@ -18,7 +18,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ entryId, className }) 
   const entry = useEntry(entryId, (state) => ({
     url: state.url,
     attachments: state.attachments,
-    firstMedia: state.media?.[0],
+    video: state.media?.find((media) => media.type === "video"),
   }))
 
   const lang = getDefaultLanguage()
@@ -36,7 +36,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ entryId, className }) 
   if (!entry) return null
 
   return (
-    <div className={cn("aspect-video w-full", className)}>
+    <div className={cn("aspect-video w-full rounded-md bg-black", className)}>
       {embedSrc ? (
         <ViewTag
           src={embedSrc}
@@ -44,18 +44,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ entryId, className }) 
           // webviews ignore it
           allow="autoplay; fullscreen"
           referrerPolicy="strict-origin-when-cross-origin"
-          className="size-full rounded-md bg-black"
+          className="size-full rounded-md"
         />
-      ) : entry.firstMedia ? (
-        <Media
-          key={entry.firstMedia.url}
-          src={entry.firstMedia.url}
-          type={entry.firstMedia.type}
-          previewImageUrl={entry.firstMedia.preview_image_url}
-          className="size-full rounded-md object-cover"
-          videoClassName="object-contain"
-          loading="lazy"
-          showFallback={true}
+      ) : entry.video ? (
+        <NativeVideoPlayer
+          src={entry.video.url}
+          poster={entry.video.preview_image_url}
+          className="size-full rounded-md object-contain"
         />
       ) : null}
     </div>
