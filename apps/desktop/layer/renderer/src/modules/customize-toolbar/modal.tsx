@@ -13,20 +13,33 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable"
 import { Button } from "@follow/components/ui/button/index.js"
-import { useCallback, useRef } from "react"
+import { useCallback, useMemo, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import { setUISetting } from "~/atoms/settings/ui"
 import { useModalStack } from "~/components/ui/modal/stacked/hooks"
+import { useCommands } from "~/modules/command/hooks/use-command"
 
 import { DEFAULT_ACTION_ORDER } from "./constant"
-import { DroppableContainer, SortableActionButton } from "./dnd"
+import { ActionDragOverlay, DroppableContainer, SortableActionButton } from "./dnd"
 import { useActionOrder } from "./hooks"
 import { moveActionToContainer, reorderActionInContainer } from "./order"
 
-export const CustomizeToolbar = () => {
+const CustomizeToolbar = () => {
   const { t } = useTranslation("settings")
   const actionOrder = useActionOrder()
+  const commands = useCommands()
+
+  // Sort only the shown actions: one without a command renders nothing and would leave a gap
+  // where the preview moves the others. The drop still edits the full order, where a move keeps
+  // the same shown neighbors.
+  const shownOrder = useMemo(
+    () => ({
+      main: actionOrder.main.filter((id) => id in commands),
+      more: actionOrder.more.filter((id) => id in commands),
+    }),
+    [actionOrder, commands],
+  )
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -72,11 +85,8 @@ export const CustomizeToolbar = () => {
 
           {/* The actions wrap into a grid, so use the rect strategy to preview the new position */}
           <DroppableContainer>
-            <SortableContext
-              items={actionOrder.main.map((item) => item)}
-              strategy={rectSortingStrategy}
-            >
-              {actionOrder.main.map((id) => (
+            <SortableContext items={shownOrder.main} strategy={rectSortingStrategy}>
+              {shownOrder.main.map((id) => (
                 <SortableActionButton key={id} id={id} />
               ))}
             </SortableContext>
@@ -93,16 +103,14 @@ export const CustomizeToolbar = () => {
           </div>
 
           <DroppableContainer>
-            <SortableContext
-              items={actionOrder.more.map((item) => item)}
-              strategy={rectSortingStrategy}
-            >
-              {actionOrder.more.map((id) => (
+            <SortableContext items={shownOrder.more} strategy={rectSortingStrategy}>
+              {shownOrder.more.map((id) => (
                 <SortableActionButton key={id} id={id} />
               ))}
             </SortableContext>
           </DroppableContainer>
         </div>
+        <ActionDragOverlay />
       </DndContext>
 
       <div className="flex justify-end">
