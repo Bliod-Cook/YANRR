@@ -4,6 +4,7 @@ import { useMemo } from "react"
 
 import { usePreviewMedia } from "~/components/ui/media/hooks"
 import { Media } from "~/components/ui/media/Media"
+import { toPreviewMedia } from "~/components/ui/media/PreviewMediaContent"
 import { jotaiStore } from "~/lib/jotai"
 
 import { socialMediaContentWidthAtom } from "../atoms/social-media-content-width"
@@ -83,15 +84,7 @@ export const MediaGallery = ({
               loading="lazy"
               onClick={(e) => {
                 e.stopPropagation()
-                previewMedia(
-                  mediaList.map((m) => ({
-                    url: m.url,
-                    type: m.type,
-                    blurhash: m.blurhash,
-                    fallbackUrl: m.preview_image_url,
-                  })),
-                  i,
-                )
+                previewMedia(toPreviewMedia(mediaList), i)
               }}
             />
           )
@@ -127,15 +120,7 @@ export const MediaGallery = ({
               loading="lazy"
               onClick={(e) => {
                 e.stopPropagation()
-                previewMedia(
-                  media.map((m) => ({
-                    url: m.url,
-                    type: m.type,
-                    blurhash: m.blurhash,
-                    fallbackUrl: m.preview_image_url,
-                  })),
-                  i,
-                )
+                previewMedia(toPreviewMedia(media), i)
               }}
             />
           )

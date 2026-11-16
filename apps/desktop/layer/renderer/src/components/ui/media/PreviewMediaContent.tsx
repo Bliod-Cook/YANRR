@@ -260,6 +260,10 @@ const HeaderActions: FC<{
 export interface PreviewMediaProps extends EntryMedia {
   fallbackUrl?: string
 }
+
+// A photo that fails to load falls back to its smaller preview
+export const toPreviewMedia = (media: EntryMedia[]): PreviewMediaProps[] =>
+  media.map((m) => ({ ...m, fallbackUrl: m.preview_image_url }))
 export const PreviewMediaContent: FC<{
   media: PreviewMediaProps[]
   initialIndex?: number
