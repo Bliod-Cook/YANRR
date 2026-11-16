@@ -49,7 +49,6 @@ export function PagerList({
   const activeViewIndexRef = useRef(activeViewIndex)
   const focused = useSharedValue(isFocused)
   const swiping = useSharedValue(false)
-  const scrollPage = useSharedValue(activeViewIndex)
 
   useLayoutEffect(() => {
     activeViewIndexRef.current = activeViewIndex
@@ -98,7 +97,6 @@ export function PagerList({
         if (!focused.get()) return
         const { position, offset } = e
         dragProgress.set(offset + position)
-        scrollPage.set(Math.round(offset + position))
       },
       onPageSelected(e: PagerViewOnPageSelectedEventData) {
         "worklet"
@@ -116,20 +114,12 @@ export function PagerList({
         "worklet"
         if (!focused.get()) return
         if (e.pageScrollState === "dragging") {
-          scrollPage.set(activeViewIndex)
+          // Idle can arrive before the settled page, so only selection ends the swipe.
           swiping.set(true)
-        } else if (e.pageScrollState === "idle" && swiping.get()) {
-          swiping.set(false)
-          const position = scrollPage.get()
-          const view = activeViews[position]
-          if (view !== undefined) {
-            dragProgress.set(position)
-            runOnJS(onPageSelectedJS)(view)
-          }
         }
       },
     },
-    [activeViewIndex, activeViews, dragProgress, focused, onPageSelectedJS, scrollPage, swiping],
+    [activeViewIndex, activeViews, dragProgress, focused, onPageSelectedJS, swiping],
   )
 
   return (
@@ -142,6 +132,7 @@ export function PagerList({
         layoutReadyRef.current = layout.width > 0 && layout.height > 0
         if (!isFocusedRef.current || !layoutReadyRef.current || activeViewIndex < 0) return
         // Hidden tabs have no size; Compose cannot animate them. Sync once the page has a layout.
+        swiping.set(false)
         dragProgress.set(activeViewIndex)
         pagerRef.current?.setPageWithoutAnimation(activeViewIndex)
       }}

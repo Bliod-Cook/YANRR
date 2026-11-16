@@ -207,3 +207,64 @@ test("only the focused pager can change the selected view or selector progress",
     await act(() => root.unmount())
   }
 })
+
+test("waits for the selected page when idle arrives before a swipe settles", async () => {
+  vi.stubGlobal("React", React)
+  vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true)
+  const root = createRoot(document.createElement("div"))
+  const render = () => root.render(<PagerList renderItem={() => null} />)
+  const event = (
+    eventName: string,
+    data: { position?: number; offset?: number; pageScrollState?: string },
+  ) => mocks.onPagerEvent?.({ eventName, ...data })
+  const layout = () =>
+    mocks.onLayout?.({
+      nativeEvent: { layout: { x: 0, y: 0, width: 400, height: 800 } },
+    } as LayoutChangeEvent)
+
+  try {
+    mocks.focused = true
+    await act(render)
+    await act(layout)
+
+    for (const page of [0, 1]) {
+      await act(() => event("onPageScrollStateChanged", { pageScrollState: "dragging" }))
+      await act(() => event("onPageScroll", { position: page, offset: 0.3 }))
+      await act(() => event("onPageScrollStateChanged", { pageScrollState: "idle" }))
+      expect(mocks.selectTimeline).not.toHaveBeenCalled()
+      await act(() => event("onPageScroll", { position: page, offset: 0.8 }))
+      await act(() => event("onPageSelected", { position: page + 1 }))
+      expect(mocks.selectTimeline).toHaveBeenCalledExactlyOnceWith(
+        { type: "view", viewId: page + 1 },
+        expect.any(String),
+      )
+      mocks.selected.viewId = (page + 1) as FeedViewType
+      await act(render)
+      mocks.selectTimeline.mockClear()
+    }
+
+    // A cancelled swipe has no page-selected event; a button press takes over the pager.
+    await act(() => event("onPageScrollStateChanged", { pageScrollState: "dragging" }))
+    await act(() => event("onPageScroll", { position: 2, offset: 0.2 }))
+    await act(() => event("onPageScrollStateChanged", { pageScrollState: "idle" }))
+    await act(() => event("onPageScroll", { position: 2, offset: 0 }))
+    expect(mocks.selectTimeline).not.toHaveBeenCalled()
+    mocks.selected.viewId = 3
+    await act(() =>
+      EventBus.dispatch("SELECT_TIMELINE", { view: { type: "view", viewId: 3 }, target: "other" }),
+    )
+    await act(render)
+    expect(mocks.setPage).toHaveBeenLastCalledWith(3)
+    await act(() => event("onPageSelected", { position: 3 }))
+    expect(mocks.selectTimeline).not.toHaveBeenCalled()
+
+    // A layout sync must also clear a cancelled swipe before moving the pager.
+    await act(() => event("onPageScrollStateChanged", { pageScrollState: "dragging" }))
+    await act(() => event("onPageScrollStateChanged", { pageScrollState: "idle" }))
+    await act(layout)
+    await act(() => event("onPageSelected", { position: 2 }))
+    expect(mocks.selectTimeline).not.toHaveBeenCalled()
+  } finally {
+    await act(() => root.unmount())
+  }
+})
