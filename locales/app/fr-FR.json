@@ -99,7 +99,6 @@
   "discover.url_label": "URL ou route RSSHub",
   "discover.view_docs": "Voir la documentation",
   "editor.css_highlight_unsupported": "Votre navigateur ne prend pas en charge la coloration syntaxique CSS.",
-  "entry_actions.copied_notify": "{{which}} copié dans le presse-papiers.",
   "entry_actions.copy_link": "Copier le lien",
   "entry_actions.copy_title": "Copier le titre",
   "entry_actions.custom_integration.disabled": "L'intégration {{name}} est désactivée",
@@ -418,7 +417,6 @@
   "words.inbox": "Boîte de réception",
   "words.items": "Éléments",
   "words.language": "Langue",
-  "words.link": "Lien",
   "words.loading": "Chargement...",
   "words.login": "Connexion",
   "words.newTab": "Nouvel onglet",
@@ -428,7 +426,6 @@
   "words.searching": "Recherche en cours...",
   "words.show_more": "Afficher plus",
   "words.starred": "Favoris",
-  "words.title": "Titre",
   "words.undo": "Annuler",
   "words.which.all": "tout",
   "words.zero_items": "Zéro élément"

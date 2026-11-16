@@ -26,7 +26,7 @@ import { SharePanel } from "~/components/common/SharePanel"
 import { toggleEntryReadability } from "~/hooks/biz/useEntryActions"
 import { navigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { getRouteParams } from "~/hooks/biz/useRouteParams"
-import { copyToClipboard } from "~/lib/clipboard"
+import { copyToClipboardWithFeedback } from "~/lib/clipboard"
 import { exportPageAsPdf } from "~/lib/export"
 import { getEffectiveRouteEntrySortOrder } from "~/modules/entry-column/hooks/entry-sort-order"
 import { getIsPreviewFeed } from "~/modules/entry-column/hooks/useIsPreviewFeed"
@@ -183,10 +183,7 @@ export const useRegisterEntryCommands = () => {
             return
           }
           if (!entry.url) return
-          copyToClipboard(entry.url)
-          toast(t("entry_actions.copied_notify", { which: t("words.link") }), {
-            duration: 1000,
-          })
+          void copyToClipboardWithFeedback(entry.url)
         },
       },
       {
@@ -219,10 +216,7 @@ export const useRegisterEntryCommands = () => {
             return
           }
           if (!entry.title) return
-          copyToClipboard(entry.title)
-          toast(t("entry_actions.copied_notify", { which: t("words.title") }), {
-            duration: 1000,
-          })
+          void copyToClipboardWithFeedback(entry.title)
         },
       },
       {

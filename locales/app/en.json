@@ -101,7 +101,6 @@
   "discover.url_label": "URL or RSSHub Route",
   "discover.view_docs": "View Docs",
   "editor.css_highlight_unsupported": "Your browser does not support CSS syntax highlighting.",
-  "entry_actions.copied_notify": "{{which}} copied to clipboard.",
   "entry_actions.copy_link": "Copy Link",
   "entry_actions.copy_title": "Copy Title",
   "entry_actions.custom_integration.disabled": "{{name}} is disabled",
@@ -429,7 +428,6 @@
   "words.inbox": "Inbox",
   "words.items": "Items",
   "words.language": "Language",
-  "words.link": "Link",
   "words.loading": "Loading...",
   "words.login": "Login",
   "words.newTab": "New Tab",
@@ -439,7 +437,6 @@
   "words.searching": "Searching...",
   "words.show_more": "Show more",
   "words.starred": "Starred",
-  "words.title": "Title",
   "words.undo": "Undo",
   "words.which.all": "all",
   "words.zero_items": "Zero items"

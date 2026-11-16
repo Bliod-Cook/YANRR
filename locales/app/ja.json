@@ -101,7 +101,6 @@
   "discover.url_label": "URL または RSSHub ルート",
   "discover.view_docs": "ドキュメントを見る",
   "editor.css_highlight_unsupported": "お使いのブラウザは CSS のシンタックスハイライトに対応していません。",
-  "entry_actions.copied_notify": "{{which}} をクリップボードにコピーしました。",
   "entry_actions.copy_link": "リンクをコピー",
   "entry_actions.copy_title": "タイトルをコピー",
   "entry_actions.custom_integration.disabled": "{{name}} は無効になっています",
@@ -429,7 +428,6 @@
   "words.inbox": "受信トレイ",
   "words.items": "アイテム",
   "words.language": "言語",
-  "words.link": "リンク",
   "words.loading": "読み込み中...",
   "words.login": "ログイン",
   "words.newTab": "新しいタブ",
@@ -439,7 +437,6 @@
   "words.searching": "検索中...",
   "words.show_more": "さらに表示",
   "words.starred": "スター付き",
-  "words.title": "タイトル",
   "words.undo": "もとに戻す",
   "words.which.all": "すべて",
   "words.zero_items": "アイテムがありません"

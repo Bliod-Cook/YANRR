@@ -101,7 +101,6 @@
   "discover.url_label": "URL 或 RSSHub 路由",
   "discover.view_docs": "查看文档",
   "editor.css_highlight_unsupported": "你的浏览器不支持 CSS 语法高亮。",
-  "entry_actions.copied_notify": "{{which}}已复制到剪贴板。",
   "entry_actions.copy_link": "复制链接",
   "entry_actions.copy_title": "复制标题",
   "entry_actions.custom_integration.disabled": "{{name}} 已禁用",
@@ -429,7 +428,6 @@
   "words.inbox": "收件箱",
   "words.items": "内容",
   "words.language": "语言",
-  "words.link": "链接",
   "words.loading": "加载中...",
   "words.login": "登录",
   "words.newTab": "新标签页",
@@ -439,7 +437,6 @@
   "words.searching": "搜索中...",
   "words.show_more": "显示更多",
   "words.starred": "收藏",
-  "words.title": "标题",
   "words.undo": "撤销",
   "words.which.all": "全部",
   "words.zero_items": "没有内容"

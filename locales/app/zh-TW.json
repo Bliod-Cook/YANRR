@@ -99,7 +99,6 @@
   "discover.url_label": "URL 或 RSSHub 路由",
   "discover.view_docs": "查看文件",
   "editor.css_highlight_unsupported": "您的瀏覽器不支援 CSS 語法突顯。",
-  "entry_actions.copied_notify": "{{which}}已複製到剪貼簿",
   "entry_actions.copy_link": "複製連結",
   "entry_actions.copy_title": "複製標題",
   "entry_actions.custom_integration.disabled": "{{name}} 已停用",
@@ -418,7 +417,6 @@
   "words.inbox": "收件匣",
   "words.items": "內容",
   "words.language": "語言",
-  "words.link": "連結",
   "words.loading": "載入中...",
   "words.login": "登入",
   "words.newTab": "新分頁",
@@ -428,7 +426,6 @@
   "words.searching": "搜尋中...",
   "words.show_more": "顯示更多",
   "words.starred": "收藏",
-  "words.title": "標題",
   "words.undo": "復原",
   "words.which.all": "全部",
   "words.zero_items": "沒有內容"
