@@ -7,7 +7,7 @@ import type { EntryMedia } from "@follow-app/client-sdk"
 import useEmblaCarousel from "embla-carousel-react"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import { useAnimationControls } from "motion/react"
-import type { FC } from "react"
+import type { CSSProperties, FC } from "react"
 import * as React from "react"
 import { Fragment, use, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Trans, useTranslation } from "react-i18next"
@@ -523,6 +523,15 @@ const FallbackableImage: FC<
   )
 }
 
+// Percentage of the screen's width and height an image opens at most, whatever its own size
+const IMAGE_SCREEN_SHARE = 85
+
+// Scales an image of that width-to-height ratio, up or down, to fit the screen share
+const fitToScreen = (ratio: number): CSSProperties => ({
+  width: `${IMAGE_SCREEN_SHARE}vw`,
+  maxWidth: `${IMAGE_SCREEN_SHARE * ratio}vh`,
+})
+
 const DOMImageViewer: FC<{
   height?: number
   width?: number
@@ -565,6 +574,10 @@ const DOMImageViewer: FC<{
   }, [src])
 
   const { dismiss } = useCurrentModal()
+  const imageRef = useRef<HTMLImageElement>(null)
+  // Letting go of a pan off the image still clicks the stage, which must not close the preview
+  const pressStartedOnImageRef = useRef(false)
+  const [ratio, setRatio] = useState<number>()
 
   return (
     <div className="relative size-full">
@@ -603,8 +616,13 @@ const DOMImageViewer: FC<{
       >
         <TransformComponent
           wrapperProps={{
+            onPointerDown: (e) => {
+              pressStartedOnImageRef.current = e.target === imageRef.current
+            },
+            // Any click beside the image closes the preview
             onClick: (e) => {
               if (
+                pressStartedOnImageRef.current ||
                 (e as React.MouseEvent).detail >= 2 ||
                 isModalDragging ||
                 performance.now() - lastDragEndAt < 150
@@ -612,43 +630,37 @@ const DOMImageViewer: FC<{
                 stopPropagation(e)
                 return
               }
-              const target = e.target as HTMLElement
-              // If click is not on the image container, treat it as overlay click and dismiss
-              if (!target.closest("[data-image-container]")) {
-                dismiss()
-                return
-              }
-              stopPropagation(e)
+              dismiss()
             },
           }}
           wrapperClass="!w-full !h-full !absolute !inset-0 cursor-default"
           contentClass="!w-full !h-full flex items-center justify-center"
         >
-          <div
-            className="relative inline-block h-full cursor-grab overflow-hidden"
-            onClick={stopPropagation}
+          {/* Sized by its width alone, so the image box is exactly what is visible. The library
+          turns off pointer events on images, which would hide the image from clicks and leave its
+          context menu without copying and saving */}
+          <img
+            ref={imageRef}
+            height={height}
+            width={width}
+            src={src || undefined}
+            alt={alt}
+            className={cn(
+              "!pointer-events-auto cursor-grab",
+              highResLoaded ? "opacity-100" : "opacity-0",
+            )}
+            style={ratio ? fitToScreen(ratio) : undefined}
+            draggable={false}
+            loading={loading}
+            decoding="async"
             tabIndex={-1}
-            data-image-container
-          >
-            {/* The library turns off pointer events on images, which would leave the context
-            menu without copying and saving the image */}
-            <img
-              height={height}
-              width={width}
-              src={src || undefined}
-              alt={alt}
-              className={cn(
-                "!pointer-events-auto mx-auto h-full object-contain",
-                highResLoaded ? "opacity-100" : "opacity-0",
-              )}
-              draggable={false}
-              loading={loading}
-              decoding="async"
-              onLoad={onLoad}
-              onClick={stopPropagation}
-              onError={onError}
-            />
-          </div>
+            onLoad={(e) => {
+              const { naturalWidth, naturalHeight } = e.currentTarget
+              setRatio(naturalWidth / naturalHeight)
+              onLoad?.()
+            }}
+            onError={onError}
+          />
         </TransformComponent>
       </TransformWrapper>
     </div>
