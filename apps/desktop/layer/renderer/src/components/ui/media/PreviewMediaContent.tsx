@@ -630,13 +630,15 @@ const DOMImageViewer: FC<{
             tabIndex={-1}
             data-image-container
           >
+            {/* The library turns off pointer events on images, which would leave the context
+            menu without copying and saving the image */}
             <img
               height={height}
               width={width}
               src={src || undefined}
               alt={alt}
               className={cn(
-                "mx-auto h-full object-contain",
+                "!pointer-events-auto mx-auto h-full object-contain",
                 highResLoaded ? "opacity-100" : "opacity-0",
               )}
               draggable={false}
