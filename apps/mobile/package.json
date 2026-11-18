@@ -37,7 +37,7 @@
     "@follow/utils": "workspace:*",
     "@gorhom/portal": "1.0.14",
     "@hookform/resolvers": "5.9.1",
-    "@react-native-firebase/app": "26.4.0",
+    "@react-native-firebase/app": "27.1.0",
     "@react-native-firebase/messaging": "26.4.0",
     "@react-native-menu/menu": "2.0.0",
     "@rntp/player": "5.9.2",
