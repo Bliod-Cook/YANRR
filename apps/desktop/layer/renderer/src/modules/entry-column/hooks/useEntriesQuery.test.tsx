@@ -575,6 +575,19 @@ describe("useEntriesQuery paging and refetching", () => {
     expect(entriesQuery?.entriesIds).toHaveLength(5)
   })
 
+  test("fetches the first arrivals in an empty oldest-first list", async () => {
+    setup()
+    vi.spyOn(entrySyncServices, "fetchEntries")
+      .mockResolvedValueOnce(page([]))
+      .mockResolvedValueOnce(page(["e0"]))
+    await render({ ...articles, unreadOnly: true, sortOrder: "asc" })
+
+    await act(async () => refreshEntriesHead({ views: [FeedViewType.Articles] }))
+
+    await vi.waitFor(() => expect(entriesQuery?.entriesIds).toEqual(["e0"]))
+    expect(entriesQuery?.data?.pages).toHaveLength(1)
+  })
+
   test("asks an oldest-first list read to its end for entries that arrived since", async () => {
     setup()
     const unreadOldestFirst = { ...articles, limit: 2, unreadOnly: true, sortOrder: "asc" as const }

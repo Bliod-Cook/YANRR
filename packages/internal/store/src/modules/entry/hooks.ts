@@ -173,15 +173,15 @@ const refreshEntriesTail = async (query: Query, params: EntriesQueryParams) => {
   // The empty page a full last page was followed by goes, the new entries take its place
   const current = trimTrailingEmptyPages(loaded)!
 
-  const pageParam = pageParamAfter(current.pages.at(-1)?.data?.at(-1), false)
-  if (!pageParam) return
+  const lastEntry = current.pages.at(-1)?.data?.at(-1)
+  const pageParam = pageParamAfter(lastEntry, false)
+  if (lastEntry && !pageParam) return
   const page = await fetchEntriesPage(params, pageParam)
   if (!page.data?.length) return
   queryClient().setQueryData<EntriesQueryData>(query.queryKey, (data) => {
-    const trimmed = trimTrailingEmptyPages(data)
-    return (
-      trimmed && { pages: [...trimmed.pages, page], pageParams: [...trimmed.pageParams, pageParam] }
-    )
+    if (data !== loaded) return data
+    if (!pageParam) return { pages: [page], pageParams: [undefined] }
+    return { pages: [...current.pages, page], pageParams: [...current.pageParams, pageParam] }
   })
 }
 
