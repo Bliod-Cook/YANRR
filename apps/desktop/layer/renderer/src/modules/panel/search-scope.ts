@@ -1,7 +1,7 @@
 import { FeedViewType } from "@follow/constants"
 import type { EntrySearchScope } from "@follow/store/entry/store"
 import { getEntriesParams } from "@follow/store/entry/utils"
-import { getCategoryFeedIds } from "@follow/store/subscription/getter"
+import { getRouteFolderFeedIds } from "@follow/store/subscription/getter"
 
 import { ROUTE_FEED_PENDING } from "~/constants"
 import type { BizRouteParams } from "~/hooks/biz/useRouteParams"
@@ -23,7 +23,7 @@ export const routeSearchScope = ({
 
 /** What the server takes for the timeline of `scope`, asked for as the timeline asks for it */
 export const searchScopeParams = ({ view, feedId, inboxId }: SearchScope): EntrySearchScope => {
-  const folder = getCategoryFeedIds(feedId, view)
+  const folder = getRouteFolderFeedIds(feedId, view)
   const params = getEntriesParams({ feedId: folder.join(",") || feedId, inboxId, view })
   return {
     view: params.view,

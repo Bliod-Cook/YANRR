@@ -53,6 +53,13 @@ describe("a search narrowed to the timeline on screen", () => {
     })
   })
 
+  it("only expands a category named all on its folder route", () => {
+    useSubscriptionStore.setState({ data: { rust: subscription("rust", "all") } })
+    const view = FeedViewType.Articles
+    expect(paramsOf({ view, feedId: "all" })).toEqual({ view })
+    expect(paramsOf({ view, feedId: "folder-all" })).toEqual({ view, feedId: "rust" })
+  })
+
   it("is a plain search on the All view with nothing picked", () => {
     expect(routeSearchScope({ view: FeedViewType.All })).toBeNull()
     expect(routeSearchScope({ view: FeedViewType.All, feedId: "all" })).toBeNull()

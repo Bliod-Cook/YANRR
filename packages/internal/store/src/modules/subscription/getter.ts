@@ -6,7 +6,7 @@ import { getEntry } from "../entry/getter"
 import { getFeedById } from "../feed/getter"
 import { getInboxList } from "../inbox/getters"
 import { getUnreadById } from "../unread/getters"
-import { folderFeedsByFeedIdSelector } from "./selectors"
+import { categoryFeedIdsSelector, folderFeedsByFeedIdSelector } from "./selectors"
 import { useSubscriptionStore } from "./store"
 import { getDefaultCategory } from "./utils"
 
@@ -66,8 +66,11 @@ export const getSubscriptionByCategory = ({
   return ids
 }
 
-export const getCategoryFeedIds = (feedIdOrCategory: string | undefined, view: FeedViewType) =>
-  folderFeedsByFeedIdSelector({ feedIdOrCategory, view })(useSubscriptionStore.getState())
+export const getCategoryFeedIds = (category: string | undefined, view: FeedViewType) =>
+  categoryFeedIdsSelector(category, view)(useSubscriptionStore.getState())
+
+export const getRouteFolderFeedIds = (feedId: string | undefined, view: FeedViewType) =>
+  folderFeedsByFeedIdSelector(feedId, view)(useSubscriptionStore.getState())
 
 // Utility functions for creating getters
 type StateType = ReturnType<typeof useSubscriptionStore.getState>

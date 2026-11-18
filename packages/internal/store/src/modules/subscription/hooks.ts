@@ -255,12 +255,7 @@ export const useFolderFeedsByFeedId = ({
   view: FeedViewType
 }) => {
   return useSubscriptionStore(
-    useCallback(
-      (state) => {
-        return folderFeedsByFeedIdSelector({ feedIdOrCategory: feedId, view })(state)
-      },
-      [feedId, view],
-    ),
+    useMemo(() => folderFeedsByFeedIdSelector(feedId, view), [feedId, view]),
   )
 }
 

@@ -1,5 +1,5 @@
 import type { FeedViewType } from "@follow/constants"
-import { getCategoryFeedIds } from "@follow/store/subscription/getter"
+import { getRouteFolderFeedIds } from "@follow/store/subscription/getter"
 import { unreadSyncService } from "@follow/store/unread/store"
 
 export type MarkAllFilter =
@@ -22,7 +22,7 @@ export const markAllByRoute = async (
   time?: MarkAllFilter,
 ) => {
   const { feedId, view, inboxId, isAllFeeds } = data
-  const folderIds = getCategoryFeedIds(feedId, view)
+  const folderIds = getRouteFolderFeedIds(feedId, view)
 
   if (!feedId) return
 
