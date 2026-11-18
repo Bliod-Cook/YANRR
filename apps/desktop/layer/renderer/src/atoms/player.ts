@@ -83,6 +83,7 @@ export const AudioPlayer = {
       this.audio.src = v.src
       this.audio.currentTime = v.currentTime ?? curV.currentTime ?? 0
     }
+    this.audio.muted = curV.isMute ?? false
     this.audio.volume = curV.volume ?? 0.8
     this.audio.playbackRate = curV.playbackRate ?? 1
 
