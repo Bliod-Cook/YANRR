@@ -42,7 +42,7 @@ const useRemoteEntries = (): RemoteEntriesReturn => {
     feedId,
     view,
   })
-  const effectiveUnreadOnly = unreadOnly === true && !isPreview
+  const effectiveUnreadOnly = unreadOnly && !isPreview && !isCollection
   const effectiveSortOrder = getEffectiveRouteEntrySortOrder({
     sortOrder: savedSortOrder,
     unreadOnly: effectiveUnreadOnly,
@@ -113,7 +113,7 @@ const useLocalEntries = (enabled: boolean): UseEntriesReturn => {
   const isPreview = useIsPreviewFeed()
   const unreadOnly = useGeneralSettingKey("unreadOnly")
   const savedSortOrder = useGeneralSettingKey("timelineSortOrder")
-  const effectiveUnreadOnly = unreadOnly && !isPreview
+  const effectiveUnreadOnly = unreadOnly && !isPreview && !isCollection
   const effectiveSortOrder = getEffectiveRouteEntrySortOrder({
     sortOrder: savedSortOrder,
     unreadOnly: effectiveUnreadOnly,

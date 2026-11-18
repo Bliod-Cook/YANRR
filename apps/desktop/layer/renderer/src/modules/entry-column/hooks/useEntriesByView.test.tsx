@@ -13,6 +13,7 @@ import type { Root } from "react-dom/client"
 import { createRoot } from "react-dom/client"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { setGeneralSetting } from "~/atoms/settings/general"
 import { jotaiStore } from "~/lib/jotai"
 
 import { useEntriesByView } from "./useEntriesByView"
@@ -53,6 +54,7 @@ const firstPage = Array.from({ length: 20 }, (_, index) => ({
 /** Answers the first page of entries and fails any other while `fail` is set */
 const server = {
   fail: false,
+  lastEntriesRequest: {} as { read?: boolean; isCollection?: boolean },
   handle: async (request: IncomingMessage, response: ServerResponse) => {
     // The test window has another origin than the server
     response.setHeader("access-control-allow-origin", request.headers.origin ?? "*")
@@ -69,6 +71,7 @@ const server = {
       response.end(JSON.stringify({ code: 1005, message: "Internal error" }))
       return
     }
+    server.lastEntriesRequest = JSON.parse(body)
     response.end(JSON.stringify({ code: 0, data: firstPage }))
   },
 }
@@ -108,14 +111,15 @@ describe("useEntriesByView", () => {
     const { port } = http.address() as AddressInfo
     const { api } = new FollowClient({ baseURL: `http://127.0.0.1:${port}`, fetch })
     apiContext.provide(api as unknown as Parameters<typeof apiContext.provide>[0])
+  })
+
+  beforeEach(() => {
+    setGeneralSetting("unreadOnly", false)
     setRoute({
       params: { timelineId: "articles", feedId },
       searchParams: new URLSearchParams(),
       location: { pathname: "", search: "", hash: "", state: null, key: "" },
     })
-  })
-
-  beforeEach(() => {
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClientContext.provide(client)
     server.fail = false
@@ -127,6 +131,18 @@ describe("useEntriesByView", () => {
   })
 
   afterAll(() => new Promise((resolve) => http.close(resolve)))
+
+  it("fetches read and unread stars even when the timeline shows only unread entries", async () => {
+    setGeneralSetting("unreadOnly", true)
+    setRoute({
+      params: { timelineId: "articles", feedId: "collections" },
+      searchParams: new URLSearchParams(),
+      location: { pathname: "", search: "", hash: "", state: null, key: "" },
+    })
+    await show()
+    expect(server.lastEntriesRequest.isCollection).toBe(true)
+    expect(server.lastEntriesRequest.read).toBeUndefined()
+  })
 
   it("keeps the server's list when its next page fails", async () => {
     await show()
