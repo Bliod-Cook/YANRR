@@ -234,7 +234,7 @@ function FeedCategoryImpl({
                   folderName,
                 }),
                 content: () => (
-                  <CategoryUnsubscribeDialogContent category={folderName!} view={categoryView} />
+                  <CategoryUnsubscribeDialogContent category={folderName!} feedIds={ids} />
                 ),
               })
             },

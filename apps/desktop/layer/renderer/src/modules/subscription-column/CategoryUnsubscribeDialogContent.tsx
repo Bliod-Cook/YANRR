@@ -1,9 +1,6 @@
 import { Button } from "@follow/components/ui/button/index.js"
-import type { FeedViewType } from "@follow/constants"
-import { getCategoryFeedIds } from "@follow/store/subscription/getter"
 import { subscriptionSyncService } from "@follow/store/subscription/store"
 import { useMutation } from "@tanstack/react-query"
-import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
@@ -13,13 +10,12 @@ import { useCurrentModal } from "../../components/ui/modal/stacked/hooks"
 
 export function CategoryUnsubscribeDialogContent({
   category,
-  view,
+  feedIds,
 }: {
   category: string
-  view: FeedViewType
+  feedIds: string[]
 }) {
   const { t } = useTranslation()
-  const feedIds = useMemo(() => getCategoryFeedIds(category, view), [category, view])
   const count = feedIds.length
 
   const unsubscribeMutation = useMutation({
