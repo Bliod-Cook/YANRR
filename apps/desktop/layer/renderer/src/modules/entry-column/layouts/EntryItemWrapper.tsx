@@ -3,6 +3,7 @@ import { useMobile } from "@follow/components/hooks/useMobile.js"
 import { getMousePosition } from "@follow/components/hooks/useMouse.js"
 import { ActionButton } from "@follow/components/ui/button/action-button.js"
 import { FeedViewType } from "@follow/constants"
+import { IN_ELECTRON } from "@follow/shared/constants"
 import { useEntry } from "@follow/store/entry/hooks"
 import { unreadSyncService } from "@follow/store/unread/store"
 import { cn } from "@follow/utils/utils"
@@ -24,7 +25,7 @@ import {
   useSortedEntryActions,
 } from "~/hooks/biz/useEntryActions"
 import { useEntryContextMenu } from "~/hooks/biz/useEntryContextMenu"
-import { getNavigateEntryPath, useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
+import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import { getRouteParams, useRouteParams, useRouteParamsSelector } from "~/hooks/biz/useRouteParams"
 import { useShowEntryDetailsColumn } from "~/hooks/biz/useShowEntryDetailsColumn"
 import { useFeedSafeUrl } from "~/hooks/common/useFeedSafeUrl"
@@ -99,13 +100,6 @@ export const EntryItemWrapper: FC<
   }, [isDropdownMenuOpen])
 
   const navigate = useNavigateEntry()
-  const navigationPath = useMemo(() => {
-    if (!entry?.id) return "#"
-    return getNavigateEntryPath({
-      entryId: entry?.id,
-    })
-  }, [entry?.id])
-
   const populatedFullHref = useFeedSafeUrl(entryId)
 
   const handleDoubleClick = useCallback(
@@ -123,6 +117,12 @@ export const EntryItemWrapper: FC<
 
   const handleClick = useCallback(
     (e: TouchEvent<HTMLElement> | MouseEvent<HTMLElement>) => {
+      if (
+        !IN_ELECTRON &&
+        e.currentTarget instanceof HTMLAnchorElement &&
+        (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+      )
+        return
       e.preventDefault()
       e.stopPropagation()
 
@@ -182,7 +182,7 @@ export const EntryItemWrapper: FC<
       style={style}
     >
       <Link
-        to={navigationPath}
+        to={entry?.id || "#"}
         className={cn(
           "relative block cursor-button overflow-visible duration-200 hover:bg-theme-item-hover",
           !isWide ? "rounded-none @[650px]:rounded-md" : "rounded-md",
