@@ -152,6 +152,25 @@ describe("entrySyncServices.fetchEntries", () => {
     expect(useCollectionStore.getState().collections["entry-1"]).toBeDefined()
   })
 
+  it("reconciles a complete collection page only within the requested view and read filter", async () => {
+    const article = {
+      entryId: "article",
+      feedId: "a",
+      view: FeedViewType.Articles,
+      createdAt: null,
+    }
+    const video = { entryId: "video", feedId: "b", view: FeedViewType.Videos, createdAt: null }
+    useCollectionStore.setState({ collections: { article, video } })
+    listEntriesMock.mockResolvedValue({ data: [] })
+    const scope = { feedId: "collections", view: FeedViewType.Articles }
+
+    await entrySyncServices.fetchEntries({ ...scope, read: false })
+    expect(useCollectionStore.getState().collections).toEqual({ article, video })
+
+    await entrySyncServices.fetchEntries(scope)
+    expect(useCollectionStore.getState().collections).toEqual({ video })
+  })
+
   it("keeps the view an entry was starred in when another timeline lists it", async () => {
     const starred = { entryId: "entry-2", feedId: "feed-1", view: FeedViewType.Articles }
     useCollectionStore.setState({ collections: { "entry-2": { ...starred, createdAt: null } } })

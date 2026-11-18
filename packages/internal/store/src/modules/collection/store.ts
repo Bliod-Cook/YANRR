@@ -1,5 +1,6 @@
 import { FeedViewType } from "@follow/constants"
 import type { CollectionSchema } from "@follow/database/schemas/types"
+import type { CollectionWriteOptions } from "@follow/database/services/collection"
 import { CollectionService } from "@follow/database/services/collection"
 import type { WithLastSyncId } from "@follow-app/client-sdk"
 
@@ -150,13 +151,15 @@ class CollectionActions implements Hydratable {
     collectionActions.upsertManyInSession(collections)
   }
 
-  upsertManyInSession(collections: CollectionSchema[], options?: { reset?: boolean }) {
+  upsertManyInSession(collections: CollectionSchema[], options?: CollectionWriteOptions) {
     const state = get()
     const nextCollections: CollectionState["collections"] = options?.reset
-      ? {}
-      : {
-          ...state.collections,
-        }
+      ? Object.fromEntries(
+          Object.entries(state.collections).filter(
+            ([, star]) => options.view !== undefined && star.view !== options.view,
+          ),
+        )
+      : { ...state.collections }
     collections.forEach((collection) => {
       if (!collection.entryId) return
       nextCollections[collection.entryId] = collection
@@ -167,7 +170,7 @@ class CollectionActions implements Hydratable {
     })
   }
 
-  async upsertMany(collections: CollectionSchema[], options?: { reset?: boolean }) {
+  async upsertMany(collections: CollectionSchema[], options?: CollectionWriteOptions) {
     const tx = createTransaction()
     tx.store(() => {
       this.upsertManyInSession(collections, options)
@@ -185,12 +188,11 @@ class CollectionActions implements Hydratable {
   async reconcileFromRemote({
     collections,
     entryIdsNotInCollections,
-    reset,
+    ...options
   }: {
     collections: RemoteCollectionModel[]
     entryIdsNotInCollections: string[]
-    reset?: boolean
-  }) {
+  } & CollectionWriteOptions) {
     const { pendingStars, pendingUnstars } = getPendingCollectionChanges()
     const pendingStarIds = new Set(pendingStars.map((collection) => collection.entryId))
     const stored = get().collections
@@ -201,9 +203,9 @@ class CollectionActions implements Hydratable {
         if (view === undefined || pendingUnstars.has(collection.entryId)) return []
         return [{ ...collection, view }]
       }),
-      { reset },
+      options,
     )
-    if (reset && pendingStars.length > 0) {
+    if (options.reset && pendingStars.length > 0) {
       this.upsertManyInSession(pendingStars)
     }
     await this.delete(entryIdsNotInCollections.filter((entryId) => !pendingStarIds.has(entryId)))
