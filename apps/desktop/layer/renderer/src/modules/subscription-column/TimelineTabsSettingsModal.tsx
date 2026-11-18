@@ -1,4 +1,4 @@
-import type { DragOverEvent, UniqueIdentifier } from "@dnd-kit/core"
+import type { DragEndEvent, UniqueIdentifier } from "@dnd-kit/core"
 import {
   closestCenter,
   DndContext,
@@ -152,8 +152,8 @@ const TimelineTabsSettings = () => {
     }),
   )
 
-  const handleDragOver = useCallback(
-    (event: DragOverEvent) => {
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
       const { active, over } = event
       if (!over) return
       const activeId = String(active.id)
@@ -218,12 +218,7 @@ const TimelineTabsSettings = () => {
         </p>
         <p className="text-xs text-text-tertiary">{t("sidebar.timeline_tabs.instructions")}</p>
       </div>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragOver}
-      >
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <div className="space-y-4">
           <div>
             <h3 className="mb-2 text-subheadline font-medium text-text">
