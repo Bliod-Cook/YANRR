@@ -3,7 +3,10 @@ import { createServer } from "node:http"
 import type { AddressInfo } from "node:net"
 
 import { setRoute } from "@follow/components/atoms/route.js"
+import { FeedViewType } from "@follow/constants"
+import { collectionActions, useCollectionStore } from "@follow/store/collection/store"
 import { apiContext, queryClientContext } from "@follow/store/context"
+import { entryActions, useEntryStore } from "@follow/store/entry/store"
 import { FollowClient } from "@follow-app/client-sdk"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { Provider } from "jotai"
@@ -114,6 +117,8 @@ describe("useEntriesByView", () => {
   })
 
   beforeEach(() => {
+    useCollectionStore.setState(useCollectionStore.getInitialState())
+    useEntryStore.setState(useEntryStore.getInitialState())
     setGeneralSetting("unreadOnly", false)
     setRoute({
       params: { timelineId: "articles", feedId },
@@ -142,6 +147,36 @@ describe("useEntriesByView", () => {
     await show()
     expect(server.lastEntriesRequest.isCollection).toBe(true)
     expect(server.lastEntriesRequest.read).toBeUndefined()
+  })
+
+  it("shows cached stars across views, newest star first, when All is offline", async () => {
+    server.fail = true
+    setGeneralSetting("unreadOnly", true)
+    setRoute({
+      params: { timelineId: "all", feedId: "collections" },
+      searchParams: new URLSearchParams(),
+      location: { pathname: "", search: "", hash: "", state: null, key: "" },
+    })
+    const stars = [
+      { entryId: "article", feedId, view: FeedViewType.Articles, createdAt: hour(1) },
+      { entryId: "video", feedId: "video-feed", view: FeedViewType.Videos, createdAt: hour(2) },
+    ]
+    collectionActions.upsertManyInSession(stars)
+    entryActions.upsertManyInSession(
+      stars.map(({ entryId, feedId }) => ({
+        id: entryId,
+        guid: entryId,
+        feedId,
+        read: true,
+        insertedAt: new Date(hour(0)),
+        publishedAt: new Date(hour(0)),
+      })),
+    )
+
+    await show()
+    expect(result?.error).toBeInstanceOf(Error)
+    expect(result?.type).toBe("local")
+    expect(result?.entriesIds).toEqual(["video", "article"])
   })
 
   it("keeps the server's list when its next page fails", async () => {

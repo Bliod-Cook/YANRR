@@ -1,4 +1,4 @@
-import type { FeedViewType } from "@follow/constants"
+import { FeedViewType } from "@follow/constants"
 import { useCallback } from "react"
 
 import { useCollectionStore } from "./store"
@@ -34,7 +34,7 @@ export const useCollectionEntryList = (view: FeedViewType, enabled = true) => {
       (state) => {
         if (!enabled) return NO_ENTRY_IDS
         return Object.values(state.collections)
-          .filter((collection) => collection.view === view)
+          .filter((collection) => view === FeedViewType.All || collection.view === view)
           .sort((a, b) => (new Date(a.createdAt ?? 0) > new Date(b.createdAt ?? 0) ? -1 : 1))
           .map((i) => i.entryId)
       },
