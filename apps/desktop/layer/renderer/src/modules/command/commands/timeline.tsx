@@ -2,7 +2,7 @@ import { EventBus } from "@follow/utils/event-bus"
 import { useTranslation } from "react-i18next"
 
 import { useRegisterCommandEffect } from "../hooks/use-register-command"
-import type { Command, CommandCategory } from "../types"
+import type { Command, CommandCategory, SimpleCommand } from "../types"
 import { COMMAND_ID } from "./id"
 
 declare module "@follow/utils/event-bus" {
@@ -10,6 +10,7 @@ declare module "@follow/utils/event-bus" {
     "timeline:switch-to-next": never
     "timeline:switch-to-previous": never
     "timeline:refetch": never
+    "timeline:refresh-feed": never
     "timeline:unread-only": boolean
     "timeline:enter": never
   }
@@ -54,6 +55,17 @@ export const useRegisterTimelineCommand = () => {
       },
     },
     {
+      id: COMMAND_ID.timeline.refreshFeed,
+      label: {
+        title: t("command.timeline.refresh_feed.title"),
+        description: t("command.timeline.refresh_feed.description"),
+      },
+      category,
+      run: () => {
+        EventBus.dispatch(COMMAND_ID.timeline.refreshFeed)
+      },
+    },
+    {
       id: COMMAND_ID.timeline.unreadOnly,
       label: {
         title: t("command.timeline.toggle_unread_only.title"),
@@ -92,4 +104,5 @@ export type TimelineCommand =
   | SwitchToNextTimelineCommand
   | SwitchToPreviousTimelineCommand
   | RefetchTimelineCommand
+  | SimpleCommand<typeof COMMAND_ID.timeline.refreshFeed>
   | UnreadOnlyTimelineCommand

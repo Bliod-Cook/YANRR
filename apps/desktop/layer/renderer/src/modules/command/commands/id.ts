@@ -50,6 +50,7 @@ export const COMMAND_ID = {
     switchToNext: "timeline:switch-to-next",
     switchToPrevious: "timeline:switch-to-previous",
     refetch: "timeline:refetch",
+    refreshFeed: "timeline:refresh-feed",
     unreadOnly: "timeline:unread-only",
   },
   entryRender: {

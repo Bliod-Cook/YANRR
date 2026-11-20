@@ -26,6 +26,7 @@ export const defaultCommandShortcuts = {
 
   // Timeline commands
   [COMMAND_ID.timeline.refetch]: "R",
+  [COMMAND_ID.timeline.refreshFeed]: transformShortcut("$mod+R"),
   [COMMAND_ID.timeline.unreadOnly]: "U",
   [COMMAND_ID.timeline.switchToPrevious]: "K, ArrowUp",
   [COMMAND_ID.timeline.switchToNext]: "J, ArrowDown",
@@ -90,6 +91,7 @@ export const allowCustomizeCommands = new Set([
   COMMAND_ID.subscription.toggleFolderCollapse,
 
   COMMAND_ID.timeline.refetch,
+  COMMAND_ID.timeline.refreshFeed,
   COMMAND_ID.timeline.unreadOnly,
 
   COMMAND_ID.entry.copyLink,

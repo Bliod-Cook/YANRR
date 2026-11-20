@@ -46,6 +46,8 @@
   "command.subscription.toggle_folder_collapse.title": "切換資料夾收合",
   "command.timeline.refetch.description": "重新整理目前時間軸。",
   "command.timeline.refetch.title": "重新整理",
+  "command.timeline.refresh_feed.description": "從訂閱來源擷取目前的 Feed，再重新載入項目清單。",
+  "command.timeline.refresh_feed.title": "重新整理訂閱來源",
   "command.timeline.switch_to_next.description": "切換到下一個時間軸項目。",
   "command.timeline.switch_to_next.title": "切換到下一個時間軸",
   "command.timeline.switch_to_previous.description": "切換到上一個時間軸項目。",

@@ -48,6 +48,8 @@
   "command.subscription.toggle_folder_collapse.title": "切换文件夹折叠",
   "command.timeline.refetch.description": "刷新当前时间线。",
   "command.timeline.refetch.title": "刷新",
+  "command.timeline.refresh_feed.description": "从订阅源抓取当前 Feed，再重读条目列表。",
+  "command.timeline.refresh_feed.title": "刷新订阅源",
   "command.timeline.switch_to_next.description": "切换到下一个时间线项目。",
   "command.timeline.switch_to_next.title": "切换到下一个时间线",
   "command.timeline.switch_to_previous.description": "切换到上一个时间线项目。",

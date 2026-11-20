@@ -54,7 +54,7 @@ export const EntryListHeader: FC<{
   isRefreshing: boolean
   onBeforeRefresh?: () => void
 }> = ({ refetch, isRefreshing, onBeforeRefresh }) => {
-  const routerParams = useRouteParams()
+  const { feedId, entryId, view, inboxId, isCollection } = useRouteParams()
   const { t } = useTranslation()
 
   const unreadOnly = useGeneralSettingKey("unreadOnly")
@@ -62,7 +62,6 @@ export const EntryListHeader: FC<{
   const [aiTimelineEnabled, setAiTimelineEnabled] = useAtom(aiTimelineEnabledAtom)
   const aiEnabled = useFeature("ai")
 
-  const { feedId, entryId, view, inboxId, isCollection } = routerParams
   const isPreview = useIsPreviewFeed()
   const isTimelineSource = isTimelineEntrySortScope({
     feedId,
@@ -103,13 +102,29 @@ export const EntryListHeader: FC<{
   const isOnline = useIsOnline()
 
   const feed = useFeedById(feedId)
+  const isFeed = isBizId(feedId) && feed?.type === "feed"
+  const canRefreshFeed = isFeed && isOnline && !isPreview && !!headerTitle
 
   const feedColumnShow = useSubscriptionColumnShow()
+  const refreshFeedShortcut = useCommandShortcut(COMMAND_ID.timeline.refreshFeed)
   const toggleUnreadOnlyShortcut = useCommandShortcut(COMMAND_ID.timeline.unreadOnly)
   const runCmdFn = useRunCommandFn()
   const notInFloatingLayer = useGlobalFocusableScopeSelector(
     FocusablePresets.isNotFloatingLayerScope,
   )
+  const handleRefreshFeed = useCallback(() => {
+    if (!canRefreshFeed || isPending) return
+    refreshFeed(undefined, { onSuccess: () => refetch() })
+  }, [canRefreshFeed, isPending, refreshFeed, refetch])
+  useCommandBinding({
+    commandId: COMMAND_ID.timeline.refreshFeed,
+    when: notInFloatingLayer && canRefreshFeed,
+  })
+  useEffect(
+    () => EventBus.subscribe(COMMAND_ID.timeline.refreshFeed, handleRefreshFeed),
+    [handleRefreshFeed],
+  )
+
   // Bound while its button shows, wherever the focus is outside modals and menus
   useCommandBinding({
     commandId: COMMAND_ID.timeline.unreadOnly,
@@ -220,11 +235,11 @@ export const EntryListHeader: FC<{
             </AppendTaildingDivider>
 
             {isOnline &&
-              (isBizId(routerParams.feedId!) && feed?.type === "feed" ? (
+              (isFeed ? (
                 <ActionButton
                   tooltip={t("entry_list_header.refresh")}
-                  // The list is loaded again once the server has fetched the feed
-                  onClick={() => refreshFeed(undefined, { onSuccess: () => refetch() })}
+                  shortcut={refreshFeedShortcut}
+                  onClick={handleRefreshFeed}
                 >
                   <RotatingRefreshIcon isRefreshing={isPending || isRefreshing} />
                 </ActionButton>

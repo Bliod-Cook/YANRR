@@ -3,6 +3,7 @@ import { GlobalFocusableProvider } from "@follow/components/common/Focusable/Glo
 import { FeedViewType } from "@follow/constants"
 import { feedActions } from "@follow/store/feed/store"
 import { subscriptionActions } from "@follow/store/subscription/store"
+import { getOS } from "@follow/utils/utils"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { atom, Provider } from "jotai"
 import * as React from "react"
@@ -11,17 +12,19 @@ import { createRoot } from "react-dom/client"
 import { afterAll, beforeAll, expect, test, vi } from "vitest"
 
 import { getGeneralSettings, setGeneralSetting } from "~/atoms/settings/general"
+import { Focusable } from "~/components/common/Focusable"
+import { HotkeyScope } from "~/constants"
 import { jotaiStore } from "~/lib/jotai"
 import { useRegisterTimelineCommand } from "~/modules/command/commands/timeline"
 
+import { EntryColumnShortcutHandler } from "../EntryColumnShortcutHandler"
 import { EntryRootStateContext } from "../store/EntryColumnContext"
 import { EntryListHeader } from "./EntryListHeader"
 
 /** The API, which answers a feed refresh once the test releases it */
 const server = await vi.hoisted(async () => {
   const { createServer } = await import("node:http")
-  const state = { refreshes: 0, release: () => {} }
-  const answered = new Promise<void>((resolve) => (state.release = resolve))
+  const state = { refreshes: 0, answered: Promise.resolve() }
   const http = createServer(async (request, response) => {
     // The test window has another origin than the server, and sends its credentials
     response.setHeader("access-control-allow-origin", request.headers.origin ?? "")
@@ -36,7 +39,7 @@ const server = await vi.hoisted(async () => {
     }
     if (request.url?.startsWith("/feeds/refresh")) {
       state.refreshes++
-      await answered
+      await state.answered
     }
     response.setHeader("content-type", "application/json")
     response.end(JSON.stringify({ code: 0, data: null }))
@@ -59,7 +62,12 @@ beforeAll(() => {
 })
 afterAll(() => server.close())
 
-test("refreshes a followed feed on the server, then loads its entries again", async () => {
+const TimelineCommands = () => {
+  useRegisterTimelineCommand()
+  return null
+}
+
+test.each(["click", "shortcut"])("refreshes a feed via %s before refetching", async (trigger) => {
   feedActions.upsertManyInSession([
     {
       id: feedId,
@@ -76,6 +84,9 @@ test("refreshes a followed feed on the server, then loads its entries again", as
     location: { pathname: "", search: "", hash: "", state: null, key: "" },
   })
   const refetch = vi.fn()
+  const answer = Promise.withResolvers<void>()
+  server.state.refreshes = 0
+  server.state.answered = answer.promise
 
   const host = document.createElement("div")
   const root = createRoot(host)
@@ -84,8 +95,12 @@ test("refreshes a followed feed on the server, then loads its entries again", as
       <QueryClientProvider client={new QueryClient()}>
         <Provider store={jotaiStore}>
           <GlobalFocusableProvider>
+            <TimelineCommands />
             <EntryRootStateContext value={{ isScrolledBeyondThreshold: atom(false) }}>
               <EntryListHeader refetch={refetch} isRefreshing={false} />
+              <Focusable scope={HotkeyScope.Timeline}>
+                <EntryColumnShortcutHandler refetch={refetch} data={[]} handleScrollTo={vi.fn()} />
+              </Focusable>
             </EntryRootStateContext>
           </GlobalFocusableProvider>
         </Provider>
@@ -93,21 +108,34 @@ test("refreshes a followed feed on the server, then loads its entries again", as
     )
   })
 
-  const refresh = host.querySelector<HTMLButtonElement>('[aria-label="entry_list_header.refresh"]')
-  await act(async () => refresh?.click())
-  await vi.waitFor(() => expect(server.state.refreshes).toBe(1))
-  // The server is still fetching the feed, so the list would come back without its new entries
-  expect(refetch).not.toHaveBeenCalled()
+  const isMac = getOS() === "macOS"
+  const shortcut = new KeyboardEvent("keydown", {
+    key: "r",
+    code: "KeyR",
+    ctrlKey: !isMac,
+    metaKey: isMac,
+    bubbles: true,
+    cancelable: true,
+  })
+  try {
+    await act(async () => {
+      if (trigger === "click") {
+        host.querySelector<HTMLButtonElement>('[aria-label="entry_list_header.refresh"]')!.click()
+      } else {
+        document.body.dispatchEvent(shortcut)
+      }
+    })
+    await vi.waitFor(() => expect(server.state.refreshes).toBe(1))
+    if (trigger === "shortcut") expect(shortcut.defaultPrevented).toBe(true)
+    expect(refetch).not.toHaveBeenCalled()
 
-  server.state.release()
-  await act(() => vi.waitFor(() => expect(refetch).toHaveBeenCalledTimes(1)))
-  await act(async () => root.unmount())
+    answer.resolve()
+    await act(() => vi.waitFor(() => expect(refetch).toHaveBeenCalledTimes(1)))
+  } finally {
+    answer.resolve()
+    await act(async () => root.unmount())
+  }
 })
-
-const TimelineCommands = () => {
-  useRegisterTimelineCommand()
-  return null
-}
 
 test("toggles unread only once on its shortcut, which the command system binds", async () => {
   setRoute({
