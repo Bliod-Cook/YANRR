@@ -15,5 +15,5 @@ export const [, , useServerConfigs, , getServerConfigs, setServerConfigs] = crea
 )
 
 /** Off until the server says it is on, so no feature shows that the server cannot serve */
-export const useServerCapability = (capability: "ai" | "registration" | "push") =>
+export const useServerCapability = (capability: "ai" | "registration" | "push" | "mcp") =>
   useServerConfigs()?.[capability] === true

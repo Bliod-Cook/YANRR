@@ -1,5 +1,6 @@
 import { FeedViewType } from "@follow/constants"
 import { useEntry, usePrefetchEntryDetail } from "@follow/store/entry/hooks"
+import { useRecordEntryOpened } from "@follow/store/entry/reading-history"
 import { entrySyncServices } from "@follow/store/entry/store"
 import { useFeedById } from "@follow/store/feed/hooks"
 import { usePrefetchEntryTranslation } from "@follow/store/translation/hooks"
@@ -14,7 +15,7 @@ import { View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { useColor } from "react-native-uikit-colors"
 
-import { useAiEnabled } from "@/src/atoms/server-configs"
+import { useAiEnabled, useServerConfigs } from "@/src/atoms/server-configs"
 import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { BottomTabBarHeightContext } from "@/src/components/layouts/tabbar/contexts/BottomTabBarHeightContext"
 import { SafeNavigationScrollView } from "@/src/components/layouts/views/SafeNavigationScrollView"
@@ -57,6 +58,8 @@ export const EntryDetailScreen: NavigationControllerView<{
   const externalUrl = useEntryExternalUrl(entryId)
   const isLoggedIn = useIsLoggedIn()
   useAutoMarkAsRead(entryId, !!entry && isLoggedIn)
+  const mcpEnabled = useServerConfigs()?.mcp === true
+  useRecordEntryOpened(entryId, !!entry && isLoggedIn && mcpEnabled)
   const insets = useSafeAreaInsets()
   const floatingPlayerBarInset = useFloatingPlayerBarInset()
   const ctxValue = useMemo(

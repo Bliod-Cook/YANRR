@@ -18,19 +18,20 @@ async fn status_configs_tells_signed_out_clients_what_is_offered() {
         config.ai = Some(ai);
         config.push = Some(push);
         config.auth.registration = false;
+        config.mcp.enabled = true;
     })
     .await;
 
     let res = plain.get("/api/status/configs").await;
 
     assert_eq!(res.status(), 200);
-    let offered = json!({ "ai": false, "registration": true, "push": false });
+    let offered = json!({ "ai": false, "registration": true, "push": false, "mcp": false });
     assert_eq!(
         res.json::<Value>().await.unwrap(),
         json!({ "code": 0, "data": offered })
     );
     let res = configured.get("/api/status/configs").await;
-    let offered = json!({ "ai": true, "registration": false, "push": true });
+    let offered = json!({ "ai": true, "registration": false, "push": true, "mcp": true });
     assert_eq!(res.json::<Value>().await.unwrap()["data"], offered);
 }
 

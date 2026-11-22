@@ -27,6 +27,8 @@ pub struct Config {
     pub push: Option<PushConfig>,
     /// AI summaries and translations are offered only when configured.
     pub ai: Option<AiConfig>,
+    #[serde(default)]
+    pub mcp: McpConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -121,6 +123,13 @@ pub struct AiConfig {
     /// Sent as a bearer token; servers such as Ollama need none.
     pub api_key: Option<String>,
     pub model: String,
+}
+
+/// The MCP server at `/api/mcp`, which agents reach with tokens their users issue.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct McpConfig {
+    #[serde(default)]
+    pub enabled: bool,
 }
 
 fn fcm_url() -> String {

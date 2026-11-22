@@ -62,6 +62,7 @@ impl MigratorTrait for Migrator {
                 "m20261114_000001_search_moved_entries",
                 "search_moved_entries.sql"
             ),
+            sql!("m20261122_000001_mcp", "mcp.sql"),
         ]
     }
 }

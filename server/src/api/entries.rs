@@ -33,7 +33,7 @@ use crate::{
 const PAGE_SIZE: u64 = 20;
 const MAX_PAGE_SIZE: u64 = 100;
 /// How long a search may take before the client is told to try again.
-const SEARCH_TIME: Duration = Duration::from_secs(1);
+pub(super) const SEARCH_TIME: Duration = Duration::from_secs(1);
 
 /// The user's view of entries: `e` is the entry, `s` the user's subscription to its feed, `c` the user's
 /// collection of it, `u` its unread mark and `b` its block by the user's rules; `$1` is the user id.
@@ -64,7 +64,7 @@ fn entry_columns(columns: impl Iterator<Item = impl IdenStatic>, content: bool) 
 }
 
 /// The columns of an entry, with its content only if `content`, and its [`Marks`] on [`TIMELINE`].
-fn marked_columns(content: bool) -> String {
+pub(super) fn marked_columns(content: bool) -> String {
     format!("{}, {MARKS}", entry_columns(entry::Column::iter(), content))
 }
 
@@ -255,7 +255,7 @@ impl search::Scope for Scope {
 }
 
 /// The column `name` of the rows `sql` selects.
-async fn column<T: TryGetable>(
+pub(super) async fn column<T: TryGetable>(
     db: &impl ConnectionTrait,
     sql: String,
     params: Params,
@@ -328,11 +328,11 @@ struct Item {
 /// What the user did with an entry: read it, follows its feed or collected it.
 #[derive(FromQueryResult)]
 pub(super) struct Marks {
-    read: bool,
+    pub(super) read: bool,
     view: Option<i16>,
-    collected_at: Option<DateTime<Utc>>,
+    pub(super) collected_at: Option<DateTime<Utc>>,
     collected_view: Option<i16>,
-    subscription_title: Option<String>,
+    pub(super) subscription_title: Option<String>,
     category: Option<String>,
 }
 
@@ -356,7 +356,7 @@ impl Marks {
 }
 
 /// An entry and its marks from a row selecting [`marked_columns`].
-fn marked(row: &QueryResult) -> Result<(entry::Model, Marks), DbErr> {
+pub(super) fn marked(row: &QueryResult) -> Result<(entry::Model, Marks), DbErr> {
     let entry = entry::Model::from_query_result(row, "")?;
     Ok((entry, Marks::from_query_result(row, "")?))
 }
@@ -377,7 +377,7 @@ pub(super) async fn find_marked(
         .transpose()
 }
 
-async fn feeds(
+pub(super) async fn feeds(
     db: &DatabaseConnection,
     ids: impl IntoIterator<Item = i64>,
 ) -> Result<HashMap<i64, feed::Model>, DbErr> {
@@ -389,7 +389,7 @@ async fn feeds(
 }
 
 /// The entry as the user's rules show it, rewritten, and what they do to it.
-fn personalize(
+pub(super) fn personalize(
     rules: &Rules,
     feed: &feed::Model,
     mut entry: entry::Model,

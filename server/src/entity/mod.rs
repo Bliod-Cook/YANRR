@@ -6,6 +6,7 @@ pub mod entry;
 pub mod feed;
 pub mod inbox;
 pub mod inbox_entry;
+pub mod mcp_token;
 pub mod messaging_token;
 pub mod setting;
 pub mod subscription;

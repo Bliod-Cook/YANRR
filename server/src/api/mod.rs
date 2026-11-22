@@ -8,6 +8,7 @@ mod error;
 mod feeds;
 mod icons;
 mod inboxes;
+mod mcp;
 mod messaging;
 mod opml;
 mod reads;
@@ -28,6 +29,7 @@ use axum::{
 use better_auth::integrations::axum::AxumIntegration;
 
 use self::error::{ApiError, ExceptionCode};
+pub use self::mcp::router as mcp_router;
 use crate::{AppState, auth::Auth};
 
 /// The route that streams a line per translated entry as the model answers. It stays out of [`router`] so that
@@ -85,6 +87,12 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
         )
         .route("/messaging/test", get(messaging::test))
         .route(
+            "/mcp/tokens",
+            get(mcp::tokens::list)
+                .post(mcp::tokens::create)
+                .delete(mcp::tokens::delete),
+        )
+        .route(
             "/reads",
             get(reads::counts)
                 .post(reads::mark_read)
@@ -92,6 +100,7 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
         )
         .route("/reads/all", post(reads::mark_all_read))
         .route("/reads/total-count", get(reads::total))
+        .route("/reading-history", post(mcp::history::opened))
         .route("/settings", get(settings::get))
         .route("/settings/{tab}", patch(settings::update))
         .route(

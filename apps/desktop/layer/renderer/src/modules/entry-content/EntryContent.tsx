@@ -4,6 +4,8 @@ import { ScrollArea } from "@follow/components/ui/scroll-area/index.js"
 import { FeedViewType } from "@follow/constants"
 import { useTitle } from "@follow/hooks"
 import { useEntry } from "@follow/store/entry/hooks"
+import { useRecordEntryOpened } from "@follow/store/entry/reading-history"
+import { useIsLoggedIn } from "@follow/store/user/hooks"
 import { thenable } from "@follow/utils"
 import { stopPropagation } from "@follow/utils/dom"
 import { EventBus } from "@follow/utils/event-bus"
@@ -14,6 +16,7 @@ import { memo, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useEntryIsInReadability } from "~/atoms/readability"
+import { useServerCapability } from "~/atoms/server-configs"
 import { AppErrorBoundary } from "~/components/common/AppErrorBoundary"
 import { Focusable } from "~/components/common/Focusable"
 import { m } from "~/components/common/Motion"
@@ -55,6 +58,9 @@ const EntryContentImpl: Component<EntryContentProps> = ({
   if (title === undefined) throw thenable
 
   useTitle(title)
+  const mcpEnabled = useServerCapability("mcp")
+  const isLoggedIn = useIsLoggedIn()
+  useRecordEntryOpened(entryId, mcpEnabled && isLoggedIn)
   const isInReadabilityMode = useEntryIsInReadability(entryId)
 
   const { error, content, isPending } = useEntryContent(entryId)

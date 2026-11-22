@@ -33,6 +33,10 @@ dir = "data/search"
 # without it). Mail to <handle>@<any domain> goes to the inbox with that handle.
 # email_secret = ""
 
+[mcp]
+# Serves an MCP server at /api/mcp. Each user issues bearer tokens with chosen scopes under Settings → Integration.
+enabled = false
+
 # Push notifications (optional), sent through Firebase Cloud Messaging.
 # [push]
 # Service account key of the Firebase project the clients are built with

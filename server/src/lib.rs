@@ -76,6 +76,9 @@ pub async fn init(config: Config) -> Result<AppState, Box<dyn Error + Send + Syn
 
 pub fn router(state: AppState) -> Router {
     let mut app = Router::new().nest("/api", api::router(state.auth.clone()));
+    if state.config.mcp.enabled {
+        app = app.merge(api::mcp_router(&state));
+    }
     if let Some(dir) = &state.config.server.web_dir {
         app = app.fallback_service(web::service(dir));
     }

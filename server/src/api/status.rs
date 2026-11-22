@@ -11,5 +11,6 @@ pub async fn configs(State(state): State<AppState>) -> Json<Value> {
         "ai": state.config.ai.is_some(),
         "registration": state.config.auth.registration,
         "push": state.push.is_some(),
+        "mcp": state.config.mcp.enabled,
     }))
 }

@@ -37,6 +37,7 @@ import { createSetting } from "../../helper/builder"
 import { useSetSettingCanSync } from "../../modal/hooks"
 import { SettingItemGroup, SettingSectionTitle } from "../../section"
 import { CustomIntegrationSection } from "./CustomIntegrationSection"
+import { McpSection } from "./McpSection"
 import { SecretSettingInput } from "./SecretSettingInput"
 
 const { defineSettingItem, SettingBuilder } = createSetting(
@@ -542,6 +543,8 @@ export const SettingIntegration = () => {
 
       {/* Custom Integration Section */}
       <CustomIntegrationSection searchQuery={searchQuery} />
+
+      <McpSection />
 
       <BottomTip />
     </div>

@@ -60,6 +60,20 @@ export interface ServerConfigs {
   registration: boolean
   /** Push notifications are configured */
   push: boolean
+  /** The MCP server at `/api/mcp` is enabled; servers before it leave this out */
+  mcp?: boolean
+}
+
+/** What an MCP token lets an agent read */
+export type McpScope = "feeds:read" | "entries:read" | "history:read"
+
+/** An MCP token, as its owner sees it after it was issued */
+export interface McpToken {
+  id: string
+  name: string
+  scopes: McpScope[]
+  createdAt: string
+  lastUsedAt: string | null
 }
 
 /** `DELETE /messaging`: removes this push token only */
@@ -76,39 +90,64 @@ export interface SubscriptionImportRequest {
 type FetchOptions = Parameters<ModuleAPIs["entries"]["list"]>[1]
 type Route<Input, Response> = (args: Input, options?: FetchOptions) => Promise<Response>
 type Override<T, U> = Omit<T, keyof U> & U
+type Done = { code: 0 }
 
-/** The routes of `FollowClient.api`, typed by this server's contract */
-export type FollowAPI = Override<
-  ModuleAPIs,
-  {
-    entries: Override<
-      ModuleAPIs["entries"],
-      {
-        get: Route<EntryGetQuery, StructuredSuccessResponse<EntryGetByIdData | null>>
-        list: Route<EntryListRequest, StructuredSuccessResponse<EntryWithFeed[]>>
-        inbox: Override<
-          ModuleAPIs["entries"]["inbox"],
-          { list: Route<InboxListEntryRequest, StructuredSuccessResponse<InboxListEntry[]>> }
-        >
-      }
-    >
-    messaging: Override<
-      ModuleAPIs["messaging"],
-      { deleteToken: Route<DeleteMessagingTokenRequest, DeleteMessagingTokenResponse> }
-    >
-    status: Override<
-      ModuleAPIs["status"],
-      {
-        getConfigs: (
-          args?: never,
-          options?: FetchOptions,
-        ) => Promise<StructuredSuccessResponse<ServerConfigs>>
-      }
-    >
-  }
->
+/** Routes of this server that the client SDK does not have */
+const ownRoutesOf = (client: FollowClient) => ({
+  // `mcp` is taken by the SDK: Folo's connections to MCP servers
+  mcpTokens: {
+    list: () => client.request<StructuredSuccessResponse<McpToken[]>>("/mcp/tokens"),
+    /** Answers the token itself, which is shown this once */
+    create: (body: { name: string; scopes: McpScope[] }) =>
+      client.request<StructuredSuccessResponse<McpToken & { token: string }>>("/mcp/tokens", {
+        method: "POST",
+        body,
+      }),
+    delete: (body: { id: string }) =>
+      client.request<Done>("/mcp/tokens", { method: "DELETE", body }),
+  },
+  readingHistory: {
+    /** The user opened the entry, which agents then list among their recent reads */
+    opened: (body: { entryId: string }) =>
+      client.request<Done>("/reading-history", { method: "POST", body }),
+  },
+})
+
+type OwnRoutes = ReturnType<typeof ownRoutesOf>
+
+/** The routes of `FollowClient.api`, typed by this server's contract, and those the SDK lacks */
+export type FollowAPI = OwnRoutes &
+  Override<
+    ModuleAPIs,
+    {
+      entries: Override<
+        ModuleAPIs["entries"],
+        {
+          get: Route<EntryGetQuery, StructuredSuccessResponse<EntryGetByIdData | null>>
+          list: Route<EntryListRequest, StructuredSuccessResponse<EntryWithFeed[]>>
+          inbox: Override<
+            ModuleAPIs["entries"]["inbox"],
+            { list: Route<InboxListEntryRequest, StructuredSuccessResponse<InboxListEntry[]>> }
+          >
+        }
+      >
+      messaging: Override<
+        ModuleAPIs["messaging"],
+        { deleteToken: Route<DeleteMessagingTokenRequest, DeleteMessagingTokenResponse> }
+      >
+      status: Override<
+        ModuleAPIs["status"],
+        {
+          getConfigs: (
+            args?: never,
+            options?: FetchOptions,
+          ) => Promise<StructuredSuccessResponse<ServerConfigs>>
+        }
+      >
+    }
+  >
 
 /** The client's routes, with the types of this server's contract */
-export const followAPIOf = (client: FollowClient) =>
-  // The routes are the same; only the SDK's types describe Folo's answers
-  client.api as unknown as FollowAPI
+export const followAPIOf = (client: FollowClient): FollowAPI =>
+  // The SDK's routes are the same; only its types describe Folo's answers
+  Object.assign(client.api as unknown as Omit<FollowAPI, keyof OwnRoutes>, ownRoutesOf(client))
