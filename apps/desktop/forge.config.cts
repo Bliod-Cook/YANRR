@@ -8,15 +8,32 @@ import { MakerDMG } from "@electron-forge/maker-dmg"
 import { MakerSquirrel } from "@electron-forge/maker-squirrel"
 import { FusesPlugin } from "@electron-forge/plugin-fuses"
 import type { ForgeConfig } from "@electron-forge/shared-types"
-import MakerAppImage from "@pengx17/electron-forge-maker-appimage"
+import MakerAppImage from "electron-forge-maker-appimage"
 import setLanguages from "electron-packager-languages"
 import path, { resolve } from "pathe"
 import { rimraf, rimrafSync } from "rimraf"
 
-const ResolvedMakerAppImage: typeof MakerAppImage = (MakerAppImage as any).default || MakerAppImage
 const mode = process.argv.find((arg) => arg.startsWith("--mode"))?.split("=")[1]
 
 const isStaging = mode === "staging"
+
+class YanrrAppImageMaker extends MakerAppImage {
+  override getBuildOptions(options: Parameters<MakerAppImage["getBuildOptions"]>[0]) {
+    // The release workflow publishes Forge artifacts.
+    return { ...super.getBuildOptions(options), publish: "never" as const }
+  }
+
+  protected override getTarget(targetArch: string, config: MakerAppImage["config"]) {
+    const target = super.getTarget(targetArch, config)
+    return {
+      ...target,
+      config: {
+        ...target.config,
+        linux: { icon: isStaging ? "resources/icon-staging.png" : "resources/icon.png" },
+      },
+    }
+  }
+}
 
 const artifactRegex = /.*\.(?:exe|dmg|AppImage|deb)$/
 const platformNamesMap = {
@@ -168,15 +185,9 @@ const config: ForgeConfig = {
       },
       ["darwin"],
     ),
-    new ResolvedMakerAppImage({
-      config: {
-        icons: [
-          {
-            file: isStaging ? "resources/icon-staging.png" : "resources/icon.png",
-            size: 256,
-          },
-        ],
-      },
+    new YanrrAppImageMaker({
+      category: "Utility",
+      mimeTypes: ["x-scheme-handler/yanrr"],
     }),
     new MakerDeb(
       {

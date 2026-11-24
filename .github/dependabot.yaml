@@ -22,7 +22,6 @@ updates:
       patched:
         patterns:
           - "@follow-app/client-sdk"
-          - "@pengx17/electron-forge-maker-appimage"
           - re-resizable
           - react-native-ios-utilities
           - react-native-sheet-transitions

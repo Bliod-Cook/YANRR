@@ -98,7 +98,6 @@ const twConfig = {
       },
     }),
     require("tailwindcss-animate"),
-    require("@tailwindcss/container-queries"),
     require("@tailwindcss/typography"),
     require("tailwindcss-motion"),
     require("tailwindcss-safe-area"),
