@@ -42,7 +42,7 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "cross-env": "10.1.0",
-    "eslint": "10.11.0",
+    "eslint": "10.15.0",
     "eslint-config-hyoban": "7.0.3",
     "eslint-plugin-react-native": "5.0.0",
     "fast-glob": "3.3.3",
@@ -56,10 +56,10 @@
     "simple-git-hooks": "2.14.0",
     "svg-parser": "2.1.0",
     "tsx": "4.23.15",
-    "turbo": "2.11.2",
+    "turbo": "2.11.13",
     "typescript": "catalog:",
-    "vite": "7.3.6",
-    "vitest": "5.0.1"
+    "vite": "7.3.8",
+    "vitest": "5.1.1"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm exec lint-staged"

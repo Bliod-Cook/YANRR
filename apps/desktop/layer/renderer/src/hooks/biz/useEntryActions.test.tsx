@@ -163,14 +163,17 @@ describe("useEntryActions", () => {
     expect(renders).toHaveLength(rendersBefore)
   })
 
-  it("builds the actions once for the same entry", async () => {
+  it("reuses the same actions after the commands are registered", async () => {
     host = document.createElement("div")
     document.body.append(host)
     root = createRoot(host)
     await render()
+    const actions = renders.at(-1)
+    expect(actions).toContainEqual(expect.objectContaining({ id: COMMAND_ID.entry.star }))
+
     await render()
 
-    expect(renders.at(-1)).toBe(renders[0])
+    expect(renders.at(-1)).toBe(actions)
   })
 
   it("offers the translation toggle only on a server with AI", async () => {

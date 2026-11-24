@@ -18,7 +18,7 @@
     "@iconify/tools": "5.0.14",
     "@iconify/utils": "3.1.7",
     "@tailwindcss/typography": "0.5.20",
-    "es-toolkit": "1.52.0",
+    "es-toolkit": "1.53.2",
     "tailwindcss-animate": "1.0.7",
     "tailwindcss-motion": "1.1.1",
     "tailwindcss-multi": "0.4.6",
@@ -26,9 +26,9 @@
     "tailwindcss-uikit-colors": "catalog:"
   },
   "devDependencies": {
-    "postcss": "8.5.28",
+    "postcss": "8.5.33",
     "postcss-js": "5.1.0",
-    "tailwindcss": "4.3.3",
+    "tailwindcss": "4.3.5",
     "workspace-root": "3.3.1"
   }
 }

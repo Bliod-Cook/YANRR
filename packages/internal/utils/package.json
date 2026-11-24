@@ -30,13 +30,13 @@
     "@types/unist": "3.0.3",
     "clsx": "2.1.1",
     "dayjs": "1.11.23",
-    "es-toolkit": "1.52.0",
+    "es-toolkit": "1.53.2",
     "franc-min": "6.2.0",
     "hast-util-sanitize": "5.0.2",
     "hast-util-to-jsx-runtime": "2.3.6",
     "hast-util-to-text": "4.0.5",
-    "jotai": "3.0.0",
-    "motion": "13.4.0",
+    "jotai": "3.0.2",
+    "motion": "13.5.1",
     "nanoid": "6.0.1",
     "path-to-regexp": "8.4.2",
     "rehype-infer-description-meta": "2.0.0",
@@ -50,7 +50,7 @@
     "uniqolor": "1.1.1",
     "unist-util-visit": "5.1.0",
     "unist-util-visit-parents": "6.0.2",
-    "zustand": "5.0.15"
+    "zustand": "5.1.0"
   },
   "devDependencies": {
     "@follow/configs": "workspace:*",

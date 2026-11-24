@@ -26,16 +26,16 @@
     "electron-squirrel-startup": "1.0.1",
     "electron-store": "11.0.2",
     "font-list": "2.1.0",
-    "i18next": "26.4.2",
+    "i18next": "26.7.2",
     "pathe": "2.0.3",
-    "undici": "7.29.1",
+    "undici": "7.30.2",
     "vscode-languagedetection": "npm:@vscode/vscode-languagedetection@1.0.23"
   },
   "devDependencies": {
     "@follow/models": "workspace:*",
     "@follow/types": "workspace:*",
     "@types/node": "26.6.2",
-    "electron": "44.4.3",
+    "electron": "44.11.5",
     "electron-devtools-installer": "4.0.0",
     "js-yaml": "5.4.2",
     "typescript": "catalog:"
