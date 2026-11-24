@@ -67,6 +67,42 @@ const TimelineCommands = () => {
   return null
 }
 
+/** The header with the timeline's own shortcuts, which bind R to a refetch */
+const renderHeader = async (refetch: () => void) => {
+  const host = document.createElement("div")
+  const root = createRoot(host)
+  await act(async () => {
+    root.render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Provider store={jotaiStore}>
+          <GlobalFocusableProvider>
+            <TimelineCommands />
+            <EntryRootStateContext value={{ isScrolledBeyondThreshold: atom(false) }}>
+              <EntryListHeader refetch={refetch} isRefreshing={false} />
+              <Focusable scope={HotkeyScope.Timeline}>
+                <EntryColumnShortcutHandler refetch={refetch} data={[]} handleScrollTo={vi.fn()} />
+              </Focusable>
+            </EntryRootStateContext>
+          </GlobalFocusableProvider>
+        </Provider>
+      </QueryClientProvider>,
+    )
+  })
+  return { host, root }
+}
+
+const refreshShortcut = () => {
+  const isMac = getOS() === "macOS"
+  return new KeyboardEvent("keydown", {
+    key: "r",
+    code: "KeyR",
+    ctrlKey: !isMac,
+    metaKey: isMac,
+    bubbles: true,
+    cancelable: true,
+  })
+}
+
 test.each(["click", "shortcut"])("refreshes a feed via %s before refetching", async (trigger) => {
   feedActions.upsertManyInSession([
     {
@@ -88,35 +124,8 @@ test.each(["click", "shortcut"])("refreshes a feed via %s before refetching", as
   server.state.refreshes = 0
   server.state.answered = answer.promise
 
-  const host = document.createElement("div")
-  const root = createRoot(host)
-  await act(async () => {
-    root.render(
-      <QueryClientProvider client={new QueryClient()}>
-        <Provider store={jotaiStore}>
-          <GlobalFocusableProvider>
-            <TimelineCommands />
-            <EntryRootStateContext value={{ isScrolledBeyondThreshold: atom(false) }}>
-              <EntryListHeader refetch={refetch} isRefreshing={false} />
-              <Focusable scope={HotkeyScope.Timeline}>
-                <EntryColumnShortcutHandler refetch={refetch} data={[]} handleScrollTo={vi.fn()} />
-              </Focusable>
-            </EntryRootStateContext>
-          </GlobalFocusableProvider>
-        </Provider>
-      </QueryClientProvider>,
-    )
-  })
-
-  const isMac = getOS() === "macOS"
-  const shortcut = new KeyboardEvent("keydown", {
-    key: "r",
-    code: "KeyR",
-    ctrlKey: !isMac,
-    metaKey: isMac,
-    bubbles: true,
-    cancelable: true,
-  })
+  const { host, root } = await renderHeader(refetch)
+  const shortcut = refreshShortcut()
   try {
     await act(async () => {
       if (trigger === "click") {
@@ -133,6 +142,29 @@ test.each(["click", "shortcut"])("refreshes a feed via %s before refetching", as
     await act(() => vi.waitFor(() => expect(refetch).toHaveBeenCalledTimes(1)))
   } finally {
     answer.resolve()
+    await act(async () => root.unmount())
+  }
+})
+
+test("refetches a timeline other than a feed on the refresh shortcut, as its button does", async () => {
+  setRoute({
+    params: { timelineId: "articles", feedId: "folder-Tech" },
+    searchParams: new URLSearchParams(),
+    location: { pathname: "", search: "", hash: "", state: null, key: "" },
+  })
+  server.state.refreshes = 0
+  const refetch = vi.fn()
+
+  const { root } = await renderHeader(refetch)
+  const shortcut = refreshShortcut()
+  try {
+    await act(async () => {
+      document.body.dispatchEvent(shortcut)
+    })
+    expect(shortcut.defaultPrevented).toBe(true)
+    expect(refetch).toHaveBeenCalledOnce()
+    expect(server.state.refreshes).toBe(0)
+  } finally {
     await act(async () => root.unmount())
   }
 })

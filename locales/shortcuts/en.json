@@ -48,7 +48,7 @@
   "command.subscription.toggle_folder_collapse.title": "Toggle Folder Collapse",
   "command.timeline.refetch.description": "Refetch the current timeline.",
   "command.timeline.refetch.title": "Refetch",
-  "command.timeline.refresh_feed.description": "Fetch the current feed from its source and reload its entries.",
+  "command.timeline.refresh_feed.description": "Fetch the current feed from its source and reload its entries, or refetch any other timeline.",
   "command.timeline.refresh_feed.title": "Refresh Feed",
   "command.timeline.switch_to_next.description": "Switch to the next timeline item.",
   "command.timeline.switch_to_next.title": "Switch to Next Timeline",

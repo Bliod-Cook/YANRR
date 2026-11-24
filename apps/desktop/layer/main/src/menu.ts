@@ -125,7 +125,7 @@ export const registerAppMenu = () => {
       role: "viewMenu",
       label: t("menu.view"),
       submenu: [
-        // The renderer uses CmdOrCtrl+R to refresh a feed.
+        // The renderer binds CmdOrCtrl+R to the refresh button of its timeline.
         { role: "reload", label: t("menu.reload"), accelerator: "F5" },
         { role: "forceReload", label: t("menu.forceReload") },
         { role: "toggleDevTools", label: t("menu.toggleDevTools") },

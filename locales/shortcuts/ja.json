@@ -48,7 +48,7 @@
   "command.subscription.toggle_folder_collapse.title": "フォルダーの折りたたみを切り替え",
   "command.timeline.refetch.description": "現在のタイムラインを再取得",
   "command.timeline.refetch.title": "再取得",
-  "command.timeline.refresh_feed.description": "配信元から現在のフィードを取得し、記事一覧を再読み込みします。",
+  "command.timeline.refresh_feed.description": "配信元から現在のフィードを取得し、記事一覧を再読み込みします。その他のタイムラインは再取得します。",
   "command.timeline.refresh_feed.title": "フィードを更新",
   "command.timeline.switch_to_next.description": "次のタイムラインアイテムに切り替え",
   "command.timeline.switch_to_next.title": "次のタイムラインに切り替え",

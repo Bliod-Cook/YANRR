@@ -103,26 +103,33 @@ export const EntryListHeader: FC<{
 
   const feed = useFeedById(feedId)
   const isFeed = isBizId(feedId) && feed?.type === "feed"
-  const canRefreshFeed = isFeed && isOnline && !isPreview && !!headerTitle
+  // Where the refresh button can be pressed
+  const canRefresh = isOnline && !isPreview && !!headerTitle
 
   const feedColumnShow = useSubscriptionColumnShow()
-  const refreshFeedShortcut = useCommandShortcut(COMMAND_ID.timeline.refreshFeed)
+  const refreshShortcut = useCommandShortcut(COMMAND_ID.timeline.refreshFeed)
   const toggleUnreadOnlyShortcut = useCommandShortcut(COMMAND_ID.timeline.unreadOnly)
   const runCmdFn = useRunCommandFn()
   const notInFloatingLayer = useGlobalFocusableScopeSelector(
     FocusablePresets.isNotFloatingLayerScope,
   )
-  const handleRefreshFeed = useCallback(() => {
-    if (!canRefreshFeed || isPending) return
+  // A feed is fetched from its source first, any other timeline is only loaded again
+  const handleRefresh = useCallback(() => {
+    if (!canRefresh) return
+    if (!isFeed) {
+      refetch()
+      return
+    }
+    if (isPending) return
     refreshFeed(undefined, { onSuccess: () => refetch() })
-  }, [canRefreshFeed, isPending, refreshFeed, refetch])
+  }, [canRefresh, isFeed, isPending, refreshFeed, refetch])
   useCommandBinding({
     commandId: COMMAND_ID.timeline.refreshFeed,
-    when: notInFloatingLayer && canRefreshFeed,
+    when: notInFloatingLayer && canRefresh,
   })
   useEffect(
-    () => EventBus.subscribe(COMMAND_ID.timeline.refreshFeed, handleRefreshFeed),
-    [handleRefreshFeed],
+    () => EventBus.subscribe(COMMAND_ID.timeline.refreshFeed, handleRefresh),
+    [handleRefresh],
   )
 
   // Bound while its button shows, wherever the focus is outside modals and menus
@@ -187,11 +194,11 @@ export const EntryListHeader: FC<{
   return (
     <div
       className={cn(
-        "flex w-full flex-col pl-7 pr-2.5 pt-2 @[700px]:pr-3 @[1024px]:pr-4",
+        "@[700px]:pr-3 @[1024px]:pr-4 flex w-full flex-col pl-7 pr-2.5 pt-2",
         !feedColumnShow && "macos:mt-4 macos:pt-margin-macos-traffic-light-y",
         view === FeedViewType.SocialMedia && "pr-5",
         isPreview
-          ? "h-top-header-in-preview-with-border-b px-2.5 @[700px]:px-3 @[1024px]:px-4"
+          ? "@[700px]:px-3 @[1024px]:px-4 h-top-header-in-preview-with-border-b px-2.5"
           : "h-top-header-with-border-b",
         view === FeedViewType.All &&
           "border-b border-transparent data-[scrolled-beyond-threshold=true]:border-b-border",
@@ -234,25 +241,15 @@ export const EntryListHeader: FC<{
               {view === FeedViewType.Pictures && <SwitchToMasonryButton />}
             </AppendTaildingDivider>
 
-            {isOnline &&
-              (isFeed ? (
-                <ActionButton
-                  tooltip={t("entry_list_header.refresh")}
-                  shortcut={refreshFeedShortcut}
-                  onClick={handleRefreshFeed}
-                >
-                  <RotatingRefreshIcon isRefreshing={isPending || isRefreshing} />
-                </ActionButton>
-              ) : (
-                <ActionButton
-                  tooltip={t("entry_list_header.refetch")}
-                  onClick={() => {
-                    refetch()
-                  }}
-                >
-                  <RotatingRefreshIcon isRefreshing={isRefreshing} />
-                </ActionButton>
-              ))}
+            {isOnline && (
+              <ActionButton
+                tooltip={t(isFeed ? "entry_list_header.refresh" : "entry_list_header.refetch")}
+                shortcut={refreshShortcut}
+                onClick={handleRefresh}
+              >
+                <RotatingRefreshIcon isRefreshing={(isFeed && isPending) || isRefreshing} />
+              </ActionButton>
+            )}
             {showSortOrderButton && (
               <ActionButton
                 tooltip={

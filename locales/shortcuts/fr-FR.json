@@ -46,7 +46,7 @@
   "command.subscription.toggle_folder_collapse.title": "Basculer le dossier",
   "command.timeline.refetch.description": "Rafraîchir la chronologie actuelle.",
   "command.timeline.refetch.title": "Rafraîchir",
-  "command.timeline.refresh_feed.description": "Actualiser le flux depuis sa source, puis recharger ses articles.",
+  "command.timeline.refresh_feed.description": "Actualiser le flux depuis sa source, puis recharger ses articles, ou rafraîchir toute autre chronologie.",
   "command.timeline.refresh_feed.title": "Actualiser le flux",
   "command.timeline.switch_to_next.description": "Passer à l'élément suivant de la chronologie.",
   "command.timeline.switch_to_next.title": "Passer à la chronologie suivante",
