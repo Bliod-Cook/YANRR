@@ -186,7 +186,7 @@ const config: ForgeConfig = {
       ["darwin"],
     ),
     new YanrrAppImageMaker({
-      category: "Utility",
+      category: "Network;News",
       mimeTypes: ["x-scheme-handler/yanrr"],
     }),
     new MakerDeb(
