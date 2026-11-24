@@ -96,9 +96,22 @@ const square = async (size: number, variant: Variant = "production") => {
 }
 
 /** The glyph alone in `color`, its longer side taking `scale` of the canvas */
-const glyphOnly = async (size: number, color: string, scale: number) => {
+const glyphOnly = async (
+  size: number,
+  color: string,
+  scale: number,
+  { preservePosition = false } = {},
+) => {
   const box = Math.round(size * scale)
-  const trimmed = await png(sharp(await rasterize(glyphSvg(color), 1024)).trim())
+  const svg = glyphSvg(color)
+  const { data: trimmed, info: bounds } = await sharp(await rasterize(svg, 1024))
+    .trim()
+    .png()
+    .toBuffer({ resolveWithObject: true })
+  if (preservePosition) {
+    const inner = Math.round((box * 1024) / Math.max(bounds.width, bounds.height))
+    return centered(await rasterize(svg, inner), size)
+  }
   return centered(
     await png(sharp(trimmed).resize(box, box, { fit: "contain", background: TRANSPARENT })),
     size,
@@ -148,7 +161,8 @@ const outputs: Record<string, () => Promise<Buffer>> = {
   [mobile("assets/icon-dev.png")]: () => square(2048, "development"),
   [mobile("assets/icon-staging.png")]: () => square(2048, "staging"),
   // Android shows the middle 61% of an adaptive icon at most; its background color is set in app.config.base.ts
-  [mobile("assets/adaptive-icon.png")]: () => glyphOnly(1024, "#FFFFFF", 0.4),
+  [mobile("assets/adaptive-icon.png")]: () =>
+    glyphOnly(1024, "#FFFFFF", 0.4, { preservePosition: true }),
   [mobile("assets/splash-icon.png")]: () => rounded(1024, { scale: 0.67 }),
 }
 
