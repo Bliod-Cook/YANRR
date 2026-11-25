@@ -31,17 +31,41 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
 
+  # Optional; see "Image proxy" in docs/self-hosting.md
+  image-proxy:
+    image: ghcr.io/bliod-cook/yanrr-image-proxy:latest
+    profiles: [image-proxy]
+    restart: unless-stopped
+    environment:
+      YANRR_IMAGE_PROXY__KEY: ${YANRR_IMAGE_PROXY__KEY:-}
+    ports:
+      - "127.0.0.1:3001:3001"
+
   caddy:
     image: caddy:2
     profiles: [caddy]
     restart: unless-stopped
-    command: caddy reverse-proxy --from ${YANRR_SERVER__PUBLIC_URL} --to yanrr:3000
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"
     volumes:
       - caddy:/data
+
+configs:
+  caddyfile:
+    content: |
+      ${YANRR_SERVER__PUBLIC_URL} {
+        handle_path /image-proxy/* {
+          reverse_proxy image-proxy:3001
+        }
+        handle {
+          reverse_proxy yanrr:3000
+        }
+      }
 
 volumes:
   postgres:

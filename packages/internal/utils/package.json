@@ -26,6 +26,7 @@
   "dependencies": {
     "@follow/shared": "workspace:*",
     "@follow/types": "workspace:*",
+    "@noble/hashes": "2.4.0",
     "@types/hast": "3.0.5",
     "@types/unist": "3.0.3",
     "clsx": "2.1.1",

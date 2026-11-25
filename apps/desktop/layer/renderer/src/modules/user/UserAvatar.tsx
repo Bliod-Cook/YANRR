@@ -3,6 +3,8 @@ import { useWhoami } from "@follow/store/user/hooks"
 import { getColorScheme, stringToHue } from "@follow/utils/color"
 import { cn } from "@follow/utils/utils"
 
+import { useImageSrc } from "~/hooks/biz/useImageSrc"
+
 export const UserAvatar = ({
   ref,
   className,
@@ -17,6 +19,7 @@ export const UserAvatar = ({
 } & React.HTMLAttributes<HTMLDivElement> & { ref?: React.Ref<HTMLDivElement | null> }) => {
   const whoami = useWhoami()
   const randomColor = stringToHue(whoami?.name || "")
+  const image = useImageSrc(whoami?.image || undefined)
   return (
     <div
       style={style}
@@ -35,7 +38,8 @@ export const UserAvatar = ({
       >
         <AvatarImage
           className="duration-200 animate-in fade-in-0"
-          src={whoami?.image || undefined}
+          src={image.src}
+          onLoadingStatusChange={(status) => status === "error" && image.fallBack()}
         />
         <AvatarFallback
           style={{ backgroundColor: getColorScheme(randomColor, true).light.accent }}

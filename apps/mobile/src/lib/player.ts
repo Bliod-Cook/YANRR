@@ -10,6 +10,7 @@ import { atom, useAtomValueRawSync, useSetAtom } from "jotai"
 import { useCallback, useEffect } from "react"
 
 import { PlayerRegistered } from "../initialize/player"
+import { toImageSrc } from "./image-proxy"
 import { toast } from "./toast"
 
 export type SimpleMediaState = "playing" | "paused" | "loading"
@@ -84,7 +85,7 @@ class Player {
           url,
           title: title ?? t("player.unknown_title"),
           artist: artist ?? t("player.unknown_artist"),
-          artworkUrl: artwork ?? undefined,
+          artworkUrl: artwork ? toImageSrc(artwork) : undefined,
         })
       }
     }

@@ -1,0 +1,22 @@
+# The image proxy on a machine of its own; see "Image proxy" in docs/self-hosting.md. Next to this file, a .env sets
+# YANRR_IMAGE_PROXY__URL and YANRR_IMAGE_PROXY__KEY to the same values as YANRR's.
+services:
+  image-proxy:
+    image: ghcr.io/bliod-cook/yanrr-image-proxy:latest
+    restart: unless-stopped
+    environment:
+      YANRR_IMAGE_PROXY__KEY: ${YANRR_IMAGE_PROXY__KEY}
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    command: caddy reverse-proxy --from ${YANRR_IMAGE_PROXY__URL} --to image-proxy:3001
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy:/data
+
+volumes:
+  caddy:

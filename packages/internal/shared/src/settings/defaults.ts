@@ -35,6 +35,9 @@ export const defaultGeneralSettings: GeneralSettings = {
 
   // @mobile
   openLinksInExternalApp: false,
+
+  imageProxyMode: "off",
+  imageProxyFallback: false,
 }
 
 export const defaultUISettings: UISettings = {

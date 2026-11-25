@@ -7,6 +7,7 @@ pub mod entries;
 mod error;
 mod feeds;
 mod icons;
+mod image_proxy;
 mod inboxes;
 mod mcp;
 mod messaging;
@@ -66,6 +67,7 @@ pub fn router(auth: Arc<Auth>) -> Router<AppState> {
         .route("/feeds", get(feeds::get))
         .route("/feeds/refresh", get(feeds::refresh))
         .route("/icons/{host}", get(icons::get))
+        .route("/image-proxy", get(image_proxy::get))
         .route(
             "/inboxes",
             get(inboxes::get)

@@ -1,28 +1,10 @@
-/** Image hosts that refuse hotlinking, and the Referer they accept. */
-export const imageRefererMatches = [
-  {
-    url: /^https:\/\/\w+\.sinaimg\.cn/,
-    referer: "https://weibo.com",
-  },
-  {
-    url: /^https:\/\/i\.pximg\.net/,
-    referer: "https://www.pixiv.net",
-  },
-  {
-    url: /^https:\/\/cdnfile\.sspai\.com/,
-    referer: "https://sspai.com",
-  },
-  {
-    url: /^https:\/\/(?:\w|-)+\.cdninstagram\.com/,
-    referer: "https://www.instagram.com",
-  },
-  {
-    url: /^https:\/\/sp1\.piokok\.com/,
-    referer: "https://www.piokok.com",
-    force: true,
-  },
-  {
-    url: /^https?:\/\/[\w-]+\.xhscdn\.com/,
-    referer: "https://www.xiaohongshu.com",
-  },
-]
+import imageRequest from "./image-request.json"
+
+/** Image hosts that refuse hotlinking, and the Referer they accept. The image proxy reads the same file. */
+export const imageRefererMatches = imageRequest.referers.map(({ url, referer }) => ({
+  url: new RegExp(url),
+  referer,
+}))
+
+/** A browser's User-Agent, which some image hosts want */
+export const imageUserAgent = imageRequest.userAgent

@@ -5,10 +5,12 @@ import { useEntryTranslation } from "@follow/store/translation/hooks"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { PixelRatio } from "react-native"
 
+import { useImageProxy } from "@/src/atoms/image-proxy"
 import { useActionLanguage, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import { useSpotlightSettingKey } from "@/src/atoms/settings/spotlight"
 import { useUISettingKey } from "@/src/atoms/settings/ui"
 import { useScreenIsAppeared } from "@/src/lib/navigation/bottom-tab/hooks"
+import { serverEnv } from "@/src/lib/server-env"
 
 import { prepareEntryRenderWebView } from "./index"
 import type { WebViewEntry } from "./webview-manager"
@@ -135,6 +137,19 @@ export function useWebViewEntry({
   useEffect(() => {
     WebViewManager.setSpotlights(spotlightRules)
   }, [spotlightRules])
+
+  const imageProxyMode = useGeneralSettingKey("imageProxyMode")
+  const imageProxyFallback = useGeneralSettingKey("imageProxyFallback")
+  const imageProxy = useImageProxy()
+  // Before the entry, so that its images load from the right place at once
+  useEffect(() => {
+    WebViewManager.setImageProxy({
+      mode: imageProxyMode,
+      proxy: imageProxy,
+      serverUrl: serverEnv.API_URL,
+      fallback: imageProxyFallback,
+    })
+  }, [imageProxyMode, imageProxy, imageProxyFallback])
 
   // A screen pushed over this one shows its own entry in the WebView, which iOS shares between
   // screens, so the entry goes again once this screen shows again

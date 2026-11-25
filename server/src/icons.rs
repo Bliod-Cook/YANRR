@@ -9,6 +9,7 @@ use reqwest::{Client, StatusCode, Url};
 use crate::{
     config::{IconProvider, IconsConfig},
     fetch::http::{self, Fetched, Limits, Validators},
+    image_type,
 };
 
 /// Twice the largest size clients draw site icons at.
@@ -28,30 +29,9 @@ pub struct Icon {
 }
 
 impl Icon {
-    /// `None` for anything else, SVG included, which runs its scripts when opened from the server's origin.
+    /// `None` for anything but a raster image.
     fn sniff(body: Vec<u8>) -> Option<Self> {
-        let content_type = match body.as_slice() {
-            [0x89, b'P', b'N', b'G', ..] => "image/png",
-            [0, 0, 1, 0, ..] => "image/x-icon",
-            [b'G', b'I', b'F', b'8', ..] => "image/gif",
-            [0xFF, 0xD8, 0xFF, ..] => "image/jpeg",
-            [
-                b'R',
-                b'I',
-                b'F',
-                b'F',
-                _,
-                _,
-                _,
-                _,
-                b'W',
-                b'E',
-                b'B',
-                b'P',
-                ..,
-            ] => "image/webp",
-            _ => return None,
-        };
+        let content_type = image_type::sniff(&body)?;
         Some(Self { content_type, body })
     }
 }

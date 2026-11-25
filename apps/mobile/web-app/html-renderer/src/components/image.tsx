@@ -5,6 +5,7 @@ import { useMemo, useRef, useState } from "react"
 import { Blurhash } from "react-blurhash"
 
 import { entryAtom } from "~/atoms"
+import { useImageSrc } from "~/common/useImageSrc"
 import { useWrappedElementSize } from "~/common/WrappedElementProvider"
 
 import { calculateDimensions } from "./__internal/calculateDimensions"
@@ -17,6 +18,8 @@ export const MarkdownImage = (props: ComponentProps<"img">) => {
   const entry = useAtomValue(entryAtom)
 
   const [isLoading, setIsLoading] = useState(true)
+  // The original `src` keeps naming the image: for its size and the preview
+  const shown = useImageSrc(src)
 
   const image = entry?.media?.find((media) => media.url === src)
 
@@ -70,6 +73,7 @@ export const MarkdownImage = (props: ComponentProps<"img">) => {
       <img
         {...rest}
         onLoad={() => setIsLoading(false)}
+        onError={shown.fallBack}
         style={{
           width: scaleWidth || undefined,
           height: scaleHeight || undefined,
@@ -81,7 +85,7 @@ export const MarkdownImage = (props: ComponentProps<"img">) => {
           scaleWidth && scaleHeight && "absolute inset-0",
         )}
         crossOrigin="anonymous"
-        src={src}
+        src={shown.src}
         ref={imageRef}
       />
     </button>

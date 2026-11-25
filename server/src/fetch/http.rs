@@ -3,7 +3,7 @@ use std::{error::Error, time::Duration};
 use chrono::{DateTime, Utc};
 use reqwest::{Client, Response, StatusCode, Url, header, redirect};
 
-const MAX_REDIRECTS: usize = 5;
+pub(crate) const MAX_REDIRECTS: usize = 5;
 /// Large podcast feeds and the RSSHub catalog stay well below its body size.
 pub(crate) const LIMITS: Limits = Limits {
     timeout: Duration::from_secs(60),

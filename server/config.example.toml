@@ -49,3 +49,13 @@ enabled = false
 # Leave out for servers that need none, such as Ollama at http://localhost:11434/v1.
 # api_key = ""
 # model = "gpt-5-mini"
+
+# The image proxy (optional) that apps may load images through, for hosts their network can't reach or that refuse
+# hotlinking. It runs as yanrr-image-proxy, which reads this table too.
+# [image_proxy]
+# The proxy's address as the apps reach it; https:// for the web app.
+# url = "https://img.example.com"
+# At least 32 random characters, the same for YANRR and the proxy.
+# key = ""
+# Where yanrr-image-proxy listens; YANRR ignores it.
+# listen = "127.0.0.1:3001"

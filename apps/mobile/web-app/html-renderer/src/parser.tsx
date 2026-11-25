@@ -3,9 +3,11 @@ import { resolveContentUrl } from "@follow/utils/content-url"
 import { parseHtml as parseHtmlGeneral } from "@follow/utils/html"
 import type { Parent } from "hast"
 import type { Components } from "hast-util-to-jsx-runtime"
+import type { ComponentProps } from "react"
 import { createElement } from "react"
 import { renderToString } from "react-dom/server"
 
+import { useImageSrc } from "./common/useImageSrc"
 import { createHeadingRenderer, MarkdownLink, MarkdownP } from "./components"
 import { MarkdownImage } from "./components/image"
 import { Math } from "./components/math"
@@ -201,14 +203,15 @@ export const parseHtml = (
             className: "w-full my-0",
           }),
         ),
-      video: ({ node, ...props }) =>
-        createElement("video", {
-          ...props,
-          controls: true,
-        }),
+      video: ({ node, ...props }) => createElement(Video, props),
     },
   })
 }
+
+/** A video whose poster loads like the images do */
+const Video = (props: ComponentProps<"video">) =>
+  createElement("video", { ...props, poster: useImageSrc(props.poster).src, controls: true })
+
 function extractCodeFromHtml(htmlString: string) {
   const tempDiv = document.createElement("div")
   tempDiv.innerHTML = htmlString

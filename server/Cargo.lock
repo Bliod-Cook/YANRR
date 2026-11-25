@@ -6633,6 +6633,7 @@ name = "yanrr"
 version = "0.2.4"
 dependencies = [
  "axum",
+ "base64 0.22.1",
  "better-auth",
  "chrono",
  "dom_query",
@@ -6642,6 +6643,7 @@ dependencies = [
  "figment",
  "flate2",
  "futures",
+ "hmac 0.12.1",
  "isolang",
  "jsonwebtoken",
  "log",

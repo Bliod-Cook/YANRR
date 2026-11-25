@@ -353,7 +353,7 @@ const DownloadVideo = () => {
     try {
       if (IN_ELECTRON && ipcServices) {
         // The main process asks where to save it and reports the result itself
-        await ipcServices.app.download(src).catch(() => {})
+        await ipcServices.app.download(src, src).catch(() => {})
         return
       }
       const res = await fetch(src)

@@ -2,6 +2,8 @@ import { getImageInfo } from "@follow/store/image/getters"
 import { imageActions } from "@follow/store/image/store"
 import ImageColors from "react-native-image-colors"
 
+import { toImageSrc } from "@/src/lib/image-proxy"
+
 class ImageSyncService {
   async getColors(url?: string | null) {
     if (!url) {
@@ -12,7 +14,7 @@ class ImageSyncService {
       return existing
     }
 
-    const result = await ImageColors.getColors(url, { cache: true })
+    const result = await ImageColors.getColors(toImageSrc(url), { cache: true })
     await imageActions.upsertMany([{ url, colors: result }])
     return result
   }

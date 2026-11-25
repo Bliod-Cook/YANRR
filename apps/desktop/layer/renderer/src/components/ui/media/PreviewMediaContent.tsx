@@ -17,6 +17,7 @@ import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch"
 import { m } from "~/components/common/Motion"
 import { GlassButton } from "~/components/ui/button/GlassButton"
 import { COPY_MAP } from "~/constants"
+import { useImageSrc } from "~/hooks/biz/useImageSrc"
 import { ipcServices } from "~/lib/client"
 
 import { useCurrentModal } from "../modal/stacked/hooks"
@@ -57,6 +58,7 @@ const PreviewWrapperDragContext = React.createContext<{
 
 const Wrapper: FC<{
   src: string
+  isVideo: boolean
   children:
     | [React.ReactNode, React.ReactNode | undefined]
     | React.ReactNode
@@ -66,7 +68,7 @@ const Wrapper: FC<{
   className?: string
   onZoomChange?: (isZoomed: boolean) => void
   canDragClose?: boolean
-}> = ({ children, src, onZoomChange, canDragClose = true }) => {
+}> = ({ children, src, isVideo, onZoomChange, canDragClose = true }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const { dismiss } = useCurrentModal()
   const controls = useAnimationControls()
@@ -158,7 +160,7 @@ const Wrapper: FC<{
   return (
     <PreviewWrapperDragContext value={dragCtxValue}>
       <div ref={containerRef} className="fixed inset-0">
-        <HeaderActions src={src} />
+        <HeaderActions src={src} isVideo={isVideo} />
         <m.div
           variants={modalVariants}
           initial="initial"
@@ -206,8 +208,10 @@ const headerActionsVariants = {
 const GLASS_BUTTON_CLASS = tw`group-hover/left:opacity-100 opacity-0`
 const HeaderActions: FC<{
   src: string
-}> = ({ src }) => {
+  isVideo: boolean
+}> = ({ src, isVideo }) => {
   const { t } = useTranslation(["shortcuts", "common"])
+  const image = useImageSrc(isVideo ? undefined : src)
 
   const { dismiss } = useCurrentModal()
   return (
@@ -235,7 +239,7 @@ const HeaderActions: FC<{
           className={GLASS_BUTTON_CLASS}
           description={t("common:words.download")}
           onClick={() => {
-            ipcServices?.app.download(src)
+            ipcServices?.app.download(image.src ?? src, src)
           }}
         >
           <i className="i-mgc-download-2-cute-re" />
@@ -327,7 +331,7 @@ export const PreviewMediaContent: FC<{
     const { type } = media[0]!
     const isVideo = type === "video"
     return (
-      <Wrapper src={src} onZoomChange={onZoomChange} canDragClose={!isVideo}>
+      <Wrapper src={src} isVideo={isVideo} onZoomChange={onZoomChange} canDragClose={!isVideo}>
         {(handleZoomChange) => [
           <Fragment key={src}>
             {isVideo ? (
@@ -359,7 +363,12 @@ export const PreviewMediaContent: FC<{
     )
   }
   return (
-    <Wrapper src={currentMedia!.url} onZoomChange={onZoomChange} canDragClose={false}>
+    <Wrapper
+      src={currentMedia!.url}
+      isVideo={currentMedia!.type === "video"}
+      onZoomChange={onZoomChange}
+      canDragClose={false}
+    >
       {(handleZoomChange) => [
         <div key={"left"} className="group size-full overflow-hidden" ref={emblaRef}>
           <div className="flex size-full">
@@ -443,21 +452,23 @@ const FallbackableImage: FC<
     setIsAllError(false)
   }
 
+  const image = useImageSrc(currentSrc)
   const handleError = useCallback(() => {
+    if (image.fallBack()) return
     if (fallbackUrl && currentSrc !== fallbackUrl) {
       setCurrentSrc(fallbackUrl)
     } else {
       setIsAllError(true)
     }
-  }, [currentSrc, fallbackUrl])
+  }, [currentSrc, fallbackUrl, image])
 
   return (
     <div className={cn("relative size-full", containerClassName)}>
-      {!isAllError && currentSrc && (
+      {!isAllError && image.src && (
         <DOMImageViewer
           minZoom={1}
           maxZoom={2}
-          src={currentSrc}
+          src={image.src}
           alt={t("media.preview")}
           loading={loading}
           highResLoaded={!isLoading}

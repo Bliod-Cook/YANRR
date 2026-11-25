@@ -115,12 +115,16 @@ export class AppService extends IpcService {
     return clipboard.readText()
   }
 
+  /**
+   * Saves the file at `input`, named after `nameUrl`: the original of an image the proxy serves.
+   * Both are required, as the IPC types see a method with one optional more as taking one.
+   */
   @IpcMethod()
-  async download(input: string): Promise<void> {
+  async download(input: string, nameUrl: string): Promise<void> {
     const { sender } = getIpcContext()
     const senderWindow = (sender as Sender).getOwnerBrowserWindow()
     const dialogOptions: Electron.SaveDialogOptions = {
-      defaultPath: getDownloadFileName(input),
+      defaultPath: getDownloadFileName(nameUrl),
     }
     // Attached to the window it was asked from, like the PDF export
     const result = senderWindow

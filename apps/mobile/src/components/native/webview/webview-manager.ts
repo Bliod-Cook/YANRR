@@ -61,6 +61,13 @@ export const WebViewManager = {
   },
 
   /**
+   * Set where the page loads images from: through the image proxy or from their hosts
+   */
+  setImageProxy(value: AppToPagePayloads["setImageProxy"]): void {
+    dispatch("setImageProxy", value)
+  },
+
+  /**
    * Set reader render inline style preference
    */
   setReaderRenderInlineStyle(value: boolean): void {

@@ -97,7 +97,9 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: server-${{ matrix.arch }}
-          path: server/target/release/yanrr
+          path: |
+            server/target/release/yanrr
+            server/target/release/yanrr-image-proxy
           if-no-files-found: error
 
   docker:
@@ -125,8 +127,10 @@ jobs:
         env:
           VERSION: ${{ needs.version.outputs.version }}
         run: |
-          image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/yanrr
-          echo "tags=$image:$VERSION,$image:${VERSION%.*},$image:latest" >> "$GITHUB_OUTPUT"
+          for name in yanrr yanrr-image-proxy; do
+            image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/$name
+            echo "$name=$image:$VERSION,$image:${VERSION%.*},$image:latest" >> "$GITHUB_OUTPUT"
+          done
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         if: github.ref_type == 'tag'
@@ -143,7 +147,17 @@ jobs:
           file: server/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: ${{ github.ref_type == 'tag' }}
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: ${{ steps.tags.outputs.yanrr }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+      - uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: context
+          file: server/image-proxy.Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ github.ref_type == 'tag' }}
+          tags: ${{ steps.tags.outputs.yanrr-image-proxy }}
           labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
 
   desktop:
@@ -275,7 +289,7 @@ jobs:
           for arch in amd64 arm64; do
             dir=yanrr-server-$VERSION-linux-$arch
             mkdir "$dir"
-            install -m 755 "artifacts/server-$arch/yanrr" "$dir/yanrr"
+            install -m 755 "artifacts/server-$arch/yanrr" "artifacts/server-$arch/yanrr-image-proxy" "$dir/"
             cp -r artifacts/web "$dir/web"
             cp server/config.example.toml "$dir/"
             tar -czf "$dir.tar.gz" "$dir"
@@ -288,5 +302,6 @@ jobs:
             artifacts/desktop-*/**/Yanrr-*
             artifacts/android/Yanrr-*.apk
             server/compose.yaml
+            server/compose.image-proxy.yaml
             server/example.env
             server/config.example.toml

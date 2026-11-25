@@ -67,6 +67,11 @@ vi.mock("./toast", () => ({
   toast: { error: mocks.toastError },
 }))
 
+// Off by default: artwork loads from its host
+vi.mock("./image-proxy", () => ({
+  toImageSrc: (src: string) => src,
+}))
+
 vi.mock("i18next", () => ({
   t: (key: string) => key,
 }))

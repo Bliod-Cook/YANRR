@@ -5,6 +5,7 @@ import { cn } from "@follow/utils/utils"
 import { useMemo } from "react"
 
 import { VideoPlayer as NativeVideoPlayer } from "~/components/ui/media/VideoPlayer"
+import { useImageSrc } from "~/hooks/biz/useImageSrc"
 import { getDefaultLanguage } from "~/lib/language"
 
 const ViewTag = IN_ELECTRON ? "webview" : "iframe"
@@ -21,6 +22,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ entryId, className }) 
     video: state.media?.find((media) => media.type === "video"),
   }))
 
+  const poster = useImageSrc(entry?.video?.preview_image_url)
   const lang = getDefaultLanguage()
   const embedSrc = useMemo(
     () =>
@@ -49,7 +51,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ entryId, className }) 
       ) : entry.video ? (
         <NativeVideoPlayer
           src={entry.video.url}
-          poster={entry.video.preview_image_url}
+          poster={poster.src}
           className="size-full rounded-md object-contain"
         />
       ) : null}

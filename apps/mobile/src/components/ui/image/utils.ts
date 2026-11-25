@@ -9,6 +9,7 @@ import { nanoid } from "nanoid/non-secure"
 import { useCallback } from "react"
 
 import { toSecureImageUrl } from "@/src/lib/image"
+import { toImageSrc } from "@/src/lib/image-proxy"
 import { isNative } from "@/src/lib/platform"
 import { serverEnv } from "@/src/lib/server-env"
 import { toast } from "@/src/lib/toast"
@@ -30,18 +31,27 @@ function isImageSourceWithUri(
   )
 }
 
-export const getSafeSource = (source: ImageProps["source"]) => {
+/**
+ * The source to load the image from: through the image proxy when the settings say so, unless
+ * `direct`, else from its host over HTTPS, with the headers hosts want.
+ */
+export const getSafeSource = (
+  source: ImageProps["source"],
+  { direct = false, ...settings }: Parameters<typeof toImageSrc>[1] & { direct?: boolean } = {},
+) => {
   if (!isImageSourceWithUri(source)) {
     console.warn("Invalid image source", source)
     return
   }
 
-  source.uri = toSecureImageUrl(source.uri)
+  const proxied = direct ? source.uri : toImageSrc(source.uri, settings)
+  const uri = proxied === source.uri ? toSecureImageUrl(source.uri) : proxied
 
   return {
     ...source,
+    uri,
     headers: {
-      ...buildSafeHeaders({ url: source.uri }),
+      ...buildSafeHeaders({ url: uri }),
       ...source.headers,
     },
   } satisfies ImageProps["source"]
@@ -58,10 +68,10 @@ const readHead = async (file: string) => {
 
 /**
  * Runs `task` with the original file of the image, removed once `task` is done: the one the image
- * views cached, or else a download with the headers they load the image with.
+ * views cached, or else a download from where and with the headers they load the image.
  */
 const withImageFile = async <T>(uri: string, task: (file: string) => Promise<T>) => {
-  const url = toSecureImageUrl(uri)
+  const url = getSafeSource({ uri })!.uri
   const dir = `${FileSystem.cacheDirectory}image-${nanoid()}/`
   await FileSystem.makeDirectoryAsync(dir)
   try {
@@ -75,7 +85,8 @@ const withImageFile = async <T>(uri: string, task: (file: string) => Promise<T>)
       })
       if (status < 200 || status >= 300) throw new Error(`HTTP ${status}`)
     }
-    const file = `${dir}${getImageFileName(url, await readHead(downloaded))}`
+    // Named after the image, not the proxy URL
+    const file = `${dir}${getImageFileName(uri, await readHead(downloaded))}`
     await FileSystem.moveAsync({ from: downloaded, to: file })
     return await task(file)
   } finally {

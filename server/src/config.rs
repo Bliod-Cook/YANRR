@@ -8,7 +8,7 @@ use figment::{
     Figment,
     providers::{Env, Format, Toml},
 };
-use serde::Deserialize;
+use serde::{Deserialize, de::DeserializeOwned};
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
@@ -29,6 +29,8 @@ pub struct Config {
     pub ai: Option<AiConfig>,
     #[serde(default)]
     pub mcp: McpConfig,
+    /// Clients may load images through `yanrr-image-proxy` only when configured.
+    pub image_proxy: Option<ImageProxyConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -132,6 +134,27 @@ pub struct McpConfig {
     pub enabled: bool,
 }
 
+/// The `yanrr-image-proxy` that signed-in clients may load images through.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ImageProxyConfig {
+    /// The URL clients reach the proxy at.
+    pub url: String,
+    /// Clients sign image URLs with it; the proxy has the same.
+    pub key: String,
+}
+
+/// What `yanrr-image-proxy` reads: the `[image_proxy]` table of the server's config, with where to listen.
+#[derive(Debug, Deserialize)]
+pub struct StandaloneImageProxyConfig {
+    pub image_proxy: ImageProxyListenConfig,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ImageProxyListenConfig {
+    pub listen: SocketAddr,
+    pub key: String,
+}
+
 fn fcm_url() -> String {
     "https://fcm.googleapis.com".into()
 }
@@ -141,16 +164,20 @@ fn enabled() -> bool {
 }
 
 impl Config {
-    /// Reads the TOML file at `path` if it exists; `YANRR_<SECTION>__<KEY>` environment variables override it.
     pub fn load(path: &str) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        let mut figment = Figment::new();
-        if Path::new(path).exists() {
-            figment = figment.merge(Toml::file_exact(path));
-        }
-        Ok(figment
-            .merge(Env::prefixed("YANRR_").split("__"))
-            .extract()?)
+        load(path)
     }
+}
+
+/// Reads the TOML file at `path` if it exists; `YANRR_<SECTION>__<KEY>` environment variables override it.
+pub fn load<T: DeserializeOwned>(path: &str) -> Result<T, Box<dyn Error + Send + Sync>> {
+    let mut figment = Figment::new();
+    if Path::new(path).exists() {
+        figment = figment.merge(Toml::file_exact(path));
+    }
+    Ok(figment
+        .merge(Env::prefixed("YANRR_").split("__"))
+        .extract()?)
 }
 
 #[cfg(test)]

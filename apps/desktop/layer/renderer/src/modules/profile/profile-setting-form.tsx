@@ -19,9 +19,23 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 import { z } from "zod"
 
+import { useImageSrc } from "~/hooks/biz/useImageSrc"
 import { toastFetchError } from "~/lib/error-parser"
 
 const formItemLabelClassName = tw`pl-3`
+
+const AvatarPreview = ({ src, initial }: { src?: string; initial?: string }) => {
+  const image = useImageSrc(src || undefined)
+  return (
+    <Avatar className="size-8 shrink-0">
+      <AvatarImage
+        src={image.src}
+        onLoadingStatusChange={(status) => status === "error" && image.fallBack()}
+      />
+      <AvatarFallback>{initial || ""}</AvatarFallback>
+    </Avatar>
+  )
+}
 
 const profileFormSchema = z.object({
   name: z.string().trim().min(1),
@@ -84,10 +98,7 @@ export const ProfileSettingForm = () => {
               <FormControl>
                 <div className="flex items-center gap-4">
                   <Input {...field} placeholder="https://" />
-                  <Avatar className="size-8 shrink-0">
-                    <AvatarImage src={field.value} />
-                    <AvatarFallback>{user?.name?.[0] || ""}</AvatarFallback>
-                  </Avatar>
+                  <AvatarPreview src={field.value} initial={user?.name?.[0]} />
                 </div>
               </FormControl>
               <FormMessage />

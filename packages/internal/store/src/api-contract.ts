@@ -1,3 +1,4 @@
+import type { ImageProxy } from "@follow/utils/image-proxy"
 import type {
   DeleteMessagingTokenResponse,
   EntryGetByIdResponse as SdkEntryGetByIdResponse,
@@ -105,6 +106,10 @@ const ownRoutesOf = (client: FollowClient) => ({
       }),
     delete: (body: { id: string }) =>
       client.request<Done>("/mcp/tokens", { method: "DELETE", body }),
+  },
+  imageProxy: {
+    /** The image proxy signed-in apps may load images through; `null` without one */
+    get: () => client.request<StructuredSuccessResponse<ImageProxy | null>>("/image-proxy"),
   },
   readingHistory: {
     /** The user opened the entry, which agents then list among their recent reads */

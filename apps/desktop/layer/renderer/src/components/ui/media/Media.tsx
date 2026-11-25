@@ -6,6 +6,7 @@ import { Blurhash, BlurhashCanvas } from "react-blurhash"
 import { Trans, useTranslation } from "react-i18next"
 import { useEventCallback } from "usehooks-ts"
 
+import { useImageSrc } from "~/hooks/biz/useImageSrc"
 import { saveImageDimensionsToDb } from "~/store/image/db"
 
 import { ErrorBoundary } from "../../common/ErrorBoundary"
@@ -72,8 +73,11 @@ const MediaImpl: FC<MediaProps> = ({
 
   const [isError, setIsError] = useState(false)
   const [mediaLoadState, setMediaLoadState] = useState<"loading" | "loaded">("loading")
+  // The original `src` keeps naming the photo: for its size, preview and fallback link
+  const photo = useImageSrc(type === "photo" ? src : undefined)
 
   const errorHandle: React.ReactEventHandler<HTMLImageElement> = useEventCallback((e) => {
+    if (photo.fallBack()) return
     setIsError(true)
 
     if (import.meta.env.DEV) {
@@ -153,7 +157,7 @@ const MediaImpl: FC<MediaProps> = ({
               "!my-0",
               mediaContainerClassName,
             )}
-            src={src}
+            src={photo.src}
             onLoad={handleOnLoad}
             onClick={handleClick}
           />
@@ -291,11 +295,11 @@ const FallbackMedia: FC<MediaProps> = ({ type, mediaContainerClassName, classNam
         className={cn(
           "size-full",
           "center rounded bg-material-ultra-thick",
-          "not-prose !flex max-h-full flex-col space-y-1 p-4 @container",
+          "not-prose @container !flex max-h-full flex-col space-y-1 p-4",
           mediaContainerClassName,
         )}
       >
-        <div className="hidden @sm:hidden @md:contents">
+        <div className="@sm:hidden @md:contents hidden">
           <i className="i-mgc-close-cute-re text-xl text-red" />
           <p>{t("media.load_failed")}</p>
           <div className="space-x-1 break-all px-4 text-sm">
@@ -378,6 +382,7 @@ const VideoPreview: FC<{
   const [hovered, setHovered] = useState(false)
   const [isPaused, setIsPaused] = useState(true)
   const [videoRef, setVideoRef] = useState<VideoPlayerRef | null>(null)
+  const poster = useImageSrc(previewImageUrl)
 
   // The player mounts on the first hover, so playback follows the state, not the mouse event
   useEffect(() => {
@@ -399,13 +404,17 @@ const VideoPreview: FC<{
       onMouseLeave={() => setHovered(false)}
     >
       {!isInitVideoPlayer ? (
-        <img src={previewImageUrl} className={cn("size-full object-cover", videoClassName)} />
+        <img
+          src={poster.src}
+          onError={poster.fallBack}
+          className={cn("size-full object-cover", videoClassName)}
+        />
       ) : (
         <VideoPlayer
           variant={thumbnail ? "thumbnail" : "preview"}
           controls={false}
           src={src}
-          poster={previewImageUrl}
+          poster={poster.src}
           ref={setVideoRef}
           muted
           onPlay={() => setIsPaused(false)}

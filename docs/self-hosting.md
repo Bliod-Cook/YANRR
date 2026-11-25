@@ -97,6 +97,23 @@ The public `rsshub.app` is rate limited. To run your own, add this under `servic
 
 Then set `YANRR_RSSHUB__URL=http://rsshub:1200` in `.env` and run `docker compose up -d`. Existing `rsshub://` feeds move to the new instance automatically.
 
+## Image proxy
+
+Some images may not load: the device's network can't reach their host, or the host refuses hotlinking, which the web app and the Android article view can't get around. The optional image proxy fetches them instead. Each device chooses under **Settings → General** whether to use it, for hotlink-protected hosts only or for all images. It serves only image URLs signed with its key, which YANRR gives to signed-in apps, and fetches from public addresses only.
+
+**On the YANRR server**: in `.env`, uncomment `YANRR_IMAGE_PROXY__URL` and `YANRR_IMAGE_PROXY__KEY`, set the key to the output of `openssl rand -hex 32`, add `image-proxy` to `COMPOSE_PROFILES`, and run `docker compose up -d`. The bundled Caddy serves the proxy under `/image-proxy/` of your address. With your own reverse proxy, route that path, prefix stripped, to `127.0.0.1:3001`.
+
+**On another machine**, e.g. a VPS that reaches image hosts your server can't, with a domain of its own:
+
+```sh
+mkdir yanrr-image-proxy && cd yanrr-image-proxy
+curl -fLo compose.yaml https://github.com/Bliod-Cook/YANRR/releases/latest/download/compose.image-proxy.yaml
+```
+
+Create a `.env` there with `YANRR_IMAGE_PROXY__URL=https://img.example.com` and the key, and run `docker compose up -d`. Then set the same two variables in YANRR's `.env` and run `docker compose up -d` there too.
+
+The proxy's address must use `https://` for the web app. Changing the key makes the apps load every proxied image again once they have the new one, which they fetch at start. Without Docker, run `yanrr-image-proxy` from the release archive with a `config.toml` that has the `[image_proxy]` table.
+
 ## Upgrade
 
 Back up first (see below), then:

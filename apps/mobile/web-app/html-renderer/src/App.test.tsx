@@ -2,7 +2,7 @@ import { WEBVIEW_BRIDGE_VERSION } from "@follow/shared/webview-bridge"
 import { act, useLayoutEffect } from "react"
 import { createRoot } from "react-dom/client"
 import { renderToStaticMarkup } from "react-dom/server"
-import { beforeEach, describe, expect, test, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
 import type { EntryModel } from "../types"
 import { App } from "./App"
@@ -66,6 +66,39 @@ describe("links", () => {
     const withoutUrl = renderEntry({ content })
     expect(withoutUrl?.querySelector("a")?.hasAttribute("href")).toBe(false)
     expect(withoutUrl?.querySelector("img")?.hasAttribute("src")).toBe(false)
+  })
+})
+
+describe("image proxy", () => {
+  afterEach(() => {
+    window.__FO_BRIDGE__.dispatch("setImageProxy", {
+      mode: "off",
+      proxy: null,
+      serverUrl: "",
+      fallback: false,
+    })
+  })
+
+  test("loads images through the proxy, then once from their host when it fails", async () => {
+    window.__FO_BRIDGE__.dispatch("setImageProxy", {
+      mode: "all",
+      proxy: { url: "https://img.example.com", key: "test-key" },
+      serverUrl: "https://rss.example.com/api",
+      fallback: true,
+    })
+    window.__FO_BRIDGE__.dispatch("setEntry", {
+      content: '<p><img src="https://example.com/a.png"></p>',
+    })
+    const container = document.createElement("div")
+    const root = createRoot(container)
+    await act(async () => root.render(<App />))
+    const image = () => container.querySelector("img")
+
+    expect(image()?.getAttribute("src")).toMatch(/^https:\/\/img\.example\.com\//)
+    await act(async () => image()!.dispatchEvent(new Event("error")))
+    expect(image()?.getAttribute("src")).toBe("https://example.com/a.png")
+
+    await act(async () => root.unmount())
   })
 })
 

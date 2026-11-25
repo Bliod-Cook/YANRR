@@ -24,6 +24,7 @@ import { getUIKitAlphaVariables } from "../lib/uikit-colors"
 import { TimelineSelectorDragProgressProvider } from "../modules/screen/atoms"
 import { ApiConnectionNotice } from "./ApiConnectionNotice"
 import { FontScalingProvider } from "./FontScalingProvider"
+import { ImageProxyLoader } from "./ImageProxyLoader"
 import { ServerConfigsLoader } from "./ServerConfigsLoader"
 import { StartupProvider } from "./startup"
 
@@ -56,6 +57,7 @@ export const RootProviders = ({ children }: { children: ReactNode }) => {
       <ComposeContextProvider contexts={contexts}>
         {children}
         <ServerConfigsLoader />
+        <ImageProxyLoader />
         <ApiConnectionNotice />
       </ComposeContextProvider>
     </View>

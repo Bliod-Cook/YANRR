@@ -11,6 +11,7 @@ import {
   codeThemeDarkAtom,
   codeThemeLightAtom,
   entryAtom,
+  imageProxyAtom,
   noMediaAtom,
   readerRenderInlineStyleAtom,
   readerStyleAtom,
@@ -86,6 +87,13 @@ export class WebViewBridgeManager {
   }
 
   /**
+   * Set where images load from: through the image proxy or from their hosts
+   */
+  setImageProxy = (value: AppToPagePayloads["setImageProxy"]) => {
+    this.store.set(imageProxyAtom, value)
+  }
+
+  /**
    * Set root font size for the WebView
    */
   setRootFontSize = (size: number) => {
@@ -107,6 +115,7 @@ export class WebViewBridgeManager {
         setNoMedia: this.setNoMedia,
         setReaderStyle: this.setReaderStyle,
         setRootFontSize: this.setRootFontSize,
+        setImageProxy: this.setImageProxy,
       }
 
       const handle = (type: string, payload: unknown) => {

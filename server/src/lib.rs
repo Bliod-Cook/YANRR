@@ -7,6 +7,8 @@ pub mod fetch;
 mod html;
 mod icons;
 mod id;
+pub mod image_proxy;
+mod image_type;
 mod migration;
 pub mod opml;
 mod push;
@@ -26,6 +28,7 @@ use log::LevelFilter;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use sea_orm_migration::MigratorTrait;
 use tower_http::compression::CompressionLayer;
+use tracing_subscriber::EnvFilter;
 
 use crate::{auth::Auth, config::Config, migration::Migrator};
 
@@ -72,6 +75,37 @@ pub async fn init(config: Config) -> Result<AppState, Box<dyn Error + Send + Syn
         push,
         search,
     })
+}
+
+/// Logs at INFO unless `RUST_LOG` says otherwise.
+pub fn init_logging() {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .init();
+}
+
+/// Resolves once the server is told to stop: by ctrl-c, or by SIGTERM, which Docker and systemd stop it with.
+/// Requests under way are then answered before it exits.
+pub async fn stopped() {
+    let interrupted = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("ctrl-c can be listened for");
+    };
+    #[cfg(unix)]
+    let terminated = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("SIGTERM can be listened for")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let terminated = std::future::pending::<()>();
+    tokio::select! {
+        () = interrupted => {}
+        () = terminated => {}
+    }
+    tracing::info!("stopping");
 }
 
 pub fn router(state: AppState) -> Router {

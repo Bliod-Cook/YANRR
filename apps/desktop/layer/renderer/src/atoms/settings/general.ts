@@ -79,7 +79,13 @@ export function useHideAllReadSubscriptions() {
 }
 
 /** Device-local general settings: every other general setting syncs to the account. */
-export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = ["appLaunchOnStartup", "language"]
+export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = [
+  "appLaunchOnStartup",
+  "language",
+  // Whether images load through the proxy depends on the device's network
+  "imageProxyMode",
+  "imageProxyFallback",
+]
 
 export const enhancedGeneralSettingKeys = new Set<keyof GeneralSettings>([
   "groupByDate",

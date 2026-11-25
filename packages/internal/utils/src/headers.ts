@@ -1,4 +1,4 @@
-import { imageRefererMatches } from "./image-referer"
+import { imageRefererMatches, imageUserAgent } from "./image-referer"
 
 export const createBuildSafeHeaders =
   (webUrl: string, selfRefererMatches: string[]) =>
@@ -9,8 +9,7 @@ export const createBuildSafeHeaders =
         .replace(/\s?Electron\/[\d.]+/, "")
         .replace(/\s?Yanrr\/[\d.a-zA-Z-]+/, "")
     } else {
-      headers["User-Agent"] =
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36"
+      headers["User-Agent"] = imageUserAgent
     }
 
     // referer and origin

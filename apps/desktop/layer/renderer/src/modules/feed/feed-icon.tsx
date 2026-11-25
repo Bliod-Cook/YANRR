@@ -10,6 +10,8 @@ import * as AvatarPrimitive from "@radix-ui/react-avatar"
 import type { ReactNode } from "react"
 import { useEffect, useMemo } from "react"
 
+import { useImageSrc } from "~/hooks/biz/useImageSrc"
+
 const { Avatar, AvatarFallback, AvatarImage } = AvatarPrimitive
 
 // Size-responsive border radius utility function
@@ -132,6 +134,7 @@ export function FeedIcon({
     siteUrl,
     fallbackUrl,
   })
+  const image = useImageSrc(iconProps.type === "image" ? iconProps.src : undefined)
 
   const colors = useMemo(
     () => getBackgroundGradient(target?.title || (target as FeedModel)?.url || siteUrl || ""),
@@ -228,7 +231,12 @@ export function FeedIcon({
   if (finalSrc) {
     return (
       <Avatar className={cn("shrink-0 [&_*]:select-none", marginClassName)} style={sizeStyle}>
-        <AvatarImage className={cn("object-cover", getBorderRadius(size))} asChild src={finalSrc}>
+        <AvatarImage
+          className={cn("object-cover", getBorderRadius(size))}
+          asChild
+          src={image.src}
+          onLoadingStatusChange={(status) => status === "error" && image.fallBack()}
+        >
           {imageElement}
         </AvatarImage>
         <AvatarFallback delayMs={200} asChild>

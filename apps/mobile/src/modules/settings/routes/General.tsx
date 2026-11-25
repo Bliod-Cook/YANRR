@@ -1,10 +1,12 @@
 import { ACTION_LANGUAGE_KEYS } from "@follow/shared"
+import type { GeneralSettings } from "@follow/shared/settings/interface"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { MobileSupportedLanguages } from "@/src/@types/constants"
 import { currentSupportedLanguages } from "@/src/@types/constants"
 import { defaultResources } from "@/src/@types/default-resource"
+import { useImageProxy } from "@/src/atoms/image-proxy"
 import { useAiEnabled } from "@/src/atoms/server-configs"
 import { setGeneralSetting, useGeneralSettingKey } from "@/src/atoms/settings/general"
 import {
@@ -116,6 +118,32 @@ function TranslationModeSetting() {
   )
 }
 
+function ImageProxySetting() {
+  const { t } = useTranslation("settings")
+  const imageProxyMode = useGeneralSettingKey("imageProxyMode")
+
+  return (
+    <GroupedInsetListCell
+      label={t("general.image_proxy.label")}
+      description={t("general.image_proxy.description")}
+      leftClassName={settingLabelClassName}
+      rightClassName={settingSelectWrapperClassName}
+    >
+      <Select
+        value={imageProxyMode}
+        onValueChange={(value) => {
+          setGeneralSetting("imageProxyMode", value as GeneralSettings["imageProxyMode"])
+        }}
+        options={[
+          { label: t("general.image_proxy.off"), value: "off" },
+          { label: t("general.image_proxy.hotlink"), value: "hotlink" },
+          { label: t("general.image_proxy.all"), value: "all" },
+        ]}
+      />
+    </GroupedInsetListCell>
+  )
+}
+
 export const GeneralScreen: NavigationControllerView = () => {
   const { t } = useTranslation("settings")
   const aiEnabled = useAiEnabled()
@@ -130,6 +158,9 @@ export const GeneralScreen: NavigationControllerView = () => {
   const markAsReadWhenScrolling = useGeneralSettingKey("scrollMarkUnread")
   const markAsReadWhenInView = useGeneralSettingKey("renderMarkUnread")
   const openLinksInExternalApp = useGeneralSettingKey("openLinksInExternalApp")
+  const hasImageProxy = !!useImageProxy()
+  const imageProxyMode = useGeneralSettingKey("imageProxyMode")
+  const imageProxyFallback = useGeneralSettingKey("imageProxyFallback")
 
   return (
     <SafeNavigationScrollView
@@ -296,6 +327,29 @@ export const GeneralScreen: NavigationControllerView = () => {
           />
         </GroupedInsetListCell>
       </GroupedInsetListCard>
+
+      {hasImageProxy && (
+        <>
+          <GroupedInsetListSectionHeader label={t("general.network")} />
+          <GroupedInsetListCard>
+            <ImageProxySetting />
+            {imageProxyMode !== "off" && (
+              <GroupedInsetListCell
+                label={t("general.image_proxy_fallback.label")}
+                description={t("general.image_proxy_fallback.description")}
+              >
+                <Switch
+                  size="sm"
+                  value={imageProxyFallback}
+                  onValueChange={(value) => {
+                    setGeneralSetting("imageProxyFallback", value)
+                  }}
+                />
+              </GroupedInsetListCell>
+            )}
+          </GroupedInsetListCard>
+        </>
+      )}
     </SafeNavigationScrollView>
   )
 }

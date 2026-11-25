@@ -2,6 +2,7 @@ import { ResponsiveSelect } from "@follow/components/ui/select/responsive.js"
 import { useTypeScriptHappyCallback } from "@follow/hooks"
 import { ACTION_LANGUAGE_MAP } from "@follow/shared"
 import { IN_ELECTRON } from "@follow/shared/constants"
+import type { GeneralSettings } from "@follow/shared/settings/interface"
 import { cn } from "@follow/utils/utils"
 import dayjs from "dayjs"
 import { useEffect, useState } from "react"
@@ -9,6 +10,7 @@ import { useTranslation } from "react-i18next"
 
 import { currentSupportedLanguages } from "~/@types/constants"
 import { defaultResources } from "~/@types/default-resource"
+import { useImageProxy } from "~/atoms/image-proxy"
 import { useServerCapability } from "~/atoms/server-configs"
 import {
   DEFAULT_ACTION_LANGUAGE,
@@ -63,6 +65,8 @@ export const SettingGeneral = () => {
   )
 
   const aiEnabled = useServerCapability("ai")
+  const hasImageProxy = !!useImageProxy()
+  const imageProxyMode = useGeneralSettingKey("imageProxyMode")
   const { ask } = useDialog()
   const reRenderKey = useGeneralSettingKey("enhancedSettings")
 
@@ -155,6 +159,13 @@ export const SettingGeneral = () => {
 
           { type: "title", value: t("general.network") },
           IN_ELECTRON && NettingSetting,
+          hasImageProxy && ImageProxySelector,
+          hasImageProxy &&
+            imageProxyMode !== "off" &&
+            defineSettingItem("imageProxyFallback", {
+              label: t("general.image_proxy_fallback.label"),
+              description: t("general.image_proxy_fallback.description"),
+            }),
 
           { type: "title", value: t("general.advanced") },
 
@@ -270,6 +281,33 @@ const TranslationModeSelector = () => {
         />
       </div>
       <SettingDescription>{t("general.translation_mode.description")}</SettingDescription>
+    </>
+  )
+}
+
+const ImageProxySelector = () => {
+  const { t } = useTranslation("settings")
+  const imageProxyMode = useGeneralSettingKey("imageProxyMode")
+
+  return (
+    <>
+      <div className="mt-4 flex items-center justify-between">
+        <span className="shrink-0 text-sm font-medium">{t("general.image_proxy.label")}</span>
+        <ResponsiveSelect
+          size="sm"
+          triggerClassName="w-48"
+          value={imageProxyMode}
+          onValueChange={(value) => {
+            setGeneralSetting("imageProxyMode", value as GeneralSettings["imageProxyMode"])
+          }}
+          items={[
+            { label: t("general.image_proxy.off"), value: "off" },
+            { label: t("general.image_proxy.hotlink"), value: "hotlink" },
+            { label: t("general.image_proxy.all"), value: "all" },
+          ]}
+        />
+      </div>
+      <SettingDescription>{t("general.image_proxy.description")}</SettingDescription>
     </>
   )
 }

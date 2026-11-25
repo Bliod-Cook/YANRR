@@ -12,7 +12,13 @@ export const getSettingStorageKey = (settingKey: string) => `follow-rn-${setting
 export const SETTING_SYNC_QUEUE_STORAGE_KEY = "setting_sync_queue"
 
 /** Device-local general settings: every other general setting syncs to the account. */
-export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = ["language", "appLaunchOnStartup"]
+export const generalLocalOnlyKeys: (keyof GeneralSettings)[] = [
+  "language",
+  "appLaunchOnStartup",
+  // Whether images load through the proxy depends on the device's network
+  "imageProxyMode",
+  "imageProxyFallback",
+]
 
 /** Device-local appearance settings: every other appearance setting syncs to the account. */
 export const uiLocalOnlyKeys: (keyof UISettings)[] = [

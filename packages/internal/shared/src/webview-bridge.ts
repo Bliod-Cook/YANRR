@@ -4,11 +4,12 @@
  * injected on Android (`apps/mobile/src/components/native/webview/injected-js.ts`) keep their own
  * copies of these names and payloads: change them together, and bump the version.
  */
+import type { GeneralSettings } from "./settings/interface"
 import type { ReaderStylePayload } from "./settings/reader-style"
 import type { SpotlightRule } from "./spotlight"
 
 /** Bumped on any change to the messages below or to the page's `__FO_BRIDGE__` handlers */
-export const WEBVIEW_BRIDGE_VERSION = 2
+export const WEBVIEW_BRIDGE_VERSION = 3
 
 /** App to page: `__FO_BRIDGE__.dispatch(type, JSON.stringify(payload))` */
 export interface AppToPagePayloads {
@@ -20,6 +21,15 @@ export interface AppToPagePayloads {
   setNoMedia: boolean
   setReaderStyle: ReaderStylePayload
   setRootFontSize: number
+  /** Where the page loads images from, as `getImageSrc` of `@follow/utils/image-proxy` decides */
+  setImageProxy: {
+    mode: GeneralSettings["imageProxyMode"]
+    proxy: { url: string; key: string } | null
+    /** The YANRR server, whose own images never go through the proxy */
+    serverUrl: string
+    /** Loads an image from its host once when the proxy fails */
+    fallback: boolean
+  }
 }
 
 export type AppToPageType = keyof AppToPagePayloads

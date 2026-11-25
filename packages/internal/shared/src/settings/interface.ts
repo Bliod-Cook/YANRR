@@ -31,6 +31,11 @@ export interface GeneralSettings {
 
   // @mobile
   openLinksInExternalApp: boolean
+
+  /** Which images this device loads through the server's image proxy */
+  imageProxyMode: "off" | "hotlink" | "all"
+  /** Loads an image straight from its host once when the proxy fails */
+  imageProxyFallback: boolean
 }
 
 export type AccentColor =

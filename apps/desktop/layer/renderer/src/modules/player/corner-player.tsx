@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next"
 
 import { AudioPlayer, useAudioPlayerAtomSelector, useAudioPlayerAtomValue } from "~/atoms/player"
 import { VolumeSlider } from "~/components/ui/media/VolumeSlider"
+import { toImageSrc } from "~/hooks/biz/useImageSrc"
 import type { NavigateEntryOptions } from "~/hooks/biz/useNavigateEntry"
 import { useNavigateEntry } from "~/hooks/biz/useNavigateEntry"
 import type { FeedIconEntry } from "~/modules/feed/feed-icon"
@@ -116,7 +117,7 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
       artist: feed?.title || undefined,
       artwork: [
         {
-          src: coverImage || "",
+          src: coverImage ? toImageSrc(coverImage) : "",
         },
       ],
     })
