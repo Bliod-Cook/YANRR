@@ -75,7 +75,7 @@ export const PersonalizePromptSection = () => {
             }`}
           />
           <div
-            className={`absolute bottom-2 right-2 text-xs ${
+            className={`absolute right-2 bottom-2 text-xs ${
               isOverLimit
                 ? "text-red"
                 : currentLength > MAX_CHARACTERS * 0.8
@@ -129,7 +129,7 @@ export const PersonalizePromptSection = () => {
 
                 {/* Content */}
                 <div className="relative flex w-fit max-w-full items-center justify-between gap-3 px-5 py-3">
-                  <span className="whitespace-nowrap text-xs text-text-secondary sm:text-sm">
+                  <span className="text-xs whitespace-nowrap text-text-secondary sm:text-sm">
                     {t("words.unsaved_changes", { ns: "common" })}
                   </span>
                   <Button

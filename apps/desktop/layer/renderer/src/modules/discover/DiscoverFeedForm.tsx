@@ -73,7 +73,7 @@ const FeedMaintainers = ({ maintainers }: { maintainers?: string[] }) => {
                   className="inline-flex cursor-pointer items-center text-text-secondary duration-200 hover:text-accent"
                 >
                   @{maintainer}
-                  <i className="i-mgc-external-link-cute-re ml-0.5" />
+                  <i className="ml-0.5 i-mgc-external-link-cute-re" />
                 </a>
               ))}
             </span>
@@ -259,7 +259,7 @@ export const DiscoverFeedForm = ({
                       name={keyItem.name}
                       render={({ field }) => (
                         <FormItem className="flex flex-col space-y-2">
-                          <FormLabel className="pl-3 text-headline capitalize text-text">
+                          <FormLabel className="pl-3 text-headline text-text capitalize">
                             {keyItem.name}
                             {!keyItem.optional && <sup className="ml-1 align-sub text-red">*</sup>}
                           </FormLabel>
@@ -305,7 +305,7 @@ export const DiscoverFeedForm = ({
                           )}
                           <FormMessage className="pl-3" />
                           {!!parameters && (
-                            <Markdown className="w-full max-w-full whitespace-normal break-all pl-3 text-footnote text-text-secondary">
+                            <Markdown className="w-full max-w-full pl-3 text-footnote break-all whitespace-normal text-text-secondary">
                               {parameters.description}
                             </Markdown>
                           )}
@@ -321,7 +321,7 @@ export const DiscoverFeedForm = ({
                         key={`${routeParamsKeyPrefix}${key}`}
                         className="flex flex-col space-y-2"
                       >
-                        <FormLabel className="pl-3 text-headline capitalize text-text">
+                        <FormLabel className="pl-3 text-headline text-text capitalize">
                           {key}
                         </FormLabel>
                         <Input
@@ -330,7 +330,7 @@ export const DiscoverFeedForm = ({
                           className="grow-0"
                         />
                         {!!value.description && (
-                          <Markdown className="w-full max-w-full text-wrap pl-3 text-footnote text-text-secondary">
+                          <Markdown className="w-full max-w-full pl-3 text-footnote text-wrap text-text-secondary">
                             {value.description}
                           </Markdown>
                         )}
@@ -386,7 +386,7 @@ const ReadmeAside = ({ description }: { description?: string }) => {
           </h3>
           <ScrollArea.ScrollArea viewportClassName="px-4 pb-4" rootClassName="h-0 grow">
             <div className="pr-4">
-              <Markdown className="w-full cursor-text select-text break-words prose-p:my-1">
+              <Markdown className="w-full cursor-text break-words select-text prose-p:my-1">
                 {/* Fix markdown directive */}
                 {description.replaceAll("::: ", ":::")}
               </Markdown>
@@ -417,9 +417,9 @@ const PreviewUrl: FC<{
   const renderedPath = `${routePrefix}${fullPath}`
   return (
     <div className="group relative min-w-0 px-1 pb-2">
-      <pre className="relative w-full whitespace-pre-line break-words rounded bg-material-medium p-2 text-xs text-text-secondary">
+      <pre className="relative w-full rounded bg-material-medium p-2 text-xs break-words whitespace-pre-line text-text-secondary">
         {renderedPath}
-        <div className="absolute right-1 top-1/2 -translate-y-1/2">
+        <div className="absolute top-1/2 right-1 -translate-y-1/2">
           <CopyButton
             variant="outline"
             value={renderedPath}

@@ -9,7 +9,7 @@ import { getSkeletonItemComponentByView } from "./Items/getSkeletonItemComponent
 import { girdClassNames } from "./styles"
 
 const LoadingCircleFallback = (
-  <div className="center mt-2">
+  <div className="mt-2 center">
     <LoadingCircle size="medium" />
   </div>
 )

@@ -61,7 +61,7 @@ export function DiscoverTransform() {
 
   if (isLoading) {
     return (
-      <div className="center mt-12 flex w-full flex-col gap-8">
+      <div className="mt-12 center flex w-full flex-col gap-8">
         <LoadingCircle size="large" />
       </div>
     )

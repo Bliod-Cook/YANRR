@@ -88,7 +88,7 @@
       @apply relative break-all;
 
       &::before {
-        @apply absolute left-0 top-0 h-full w-0.5;
+        @apply absolute top-0 left-0 h-full w-0.5;
         content: "";
       }
     }

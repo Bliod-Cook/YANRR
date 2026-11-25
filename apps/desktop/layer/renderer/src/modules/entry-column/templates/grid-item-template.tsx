@@ -98,7 +98,7 @@ export const GridItemFooter = ({
         />
         <div
           className={cn(
-            "relative mb-1 mt-1.5 flex w-full items-center gap-1 truncate font-medium",
+            "relative mt-1.5 mb-1 flex w-full items-center gap-1 truncate font-medium",
             titleClassName,
           )}
         >

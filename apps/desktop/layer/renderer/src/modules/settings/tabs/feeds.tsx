@@ -167,7 +167,7 @@ const SubscriptionFeedsSection = () => {
       </div>
 
       {filteredFeeds.length > 0 && (
-        <div className="mt-6 space-y-0.5 @container">
+        <div className="@container mt-6 space-y-0.5">
           {/* Header - Sticky */}
           <div
             className={clsx(
@@ -488,7 +488,7 @@ const FeedListItem = memo(
               {feed?.errorAt ? (
                 <Tooltip>
                   <TooltipTrigger>
-                    <EllipsisHorizontalTextWithTooltip className="text-sm font-medium leading-tight text-red">
+                    <EllipsisHorizontalTextWithTooltip className="text-sm leading-tight font-medium text-red">
                       {subscription.title || feed?.title}
                     </EllipsisHorizontalTextWithTooltip>
                   </TooltipTrigger>
@@ -499,7 +499,7 @@ const FeedListItem = memo(
                   </TooltipPortal>
                 </Tooltip>
               ) : (
-                <EllipsisHorizontalTextWithTooltip className="text-sm font-medium leading-tight text-text">
+                <EllipsisHorizontalTextWithTooltip className="text-sm leading-tight font-medium text-text">
                   {subscription.title || feed?.title}
                 </EllipsisHorizontalTextWithTooltip>
               )}
@@ -531,7 +531,7 @@ const FeedListItem = memo(
         </div>
         {!!subscription.createdAt && (
           <div
-            className={clsx("whitespace-nowrap pr-1 text-center text-xs", DATE_COLUMN_CLASSNAME)}
+            className={clsx("pr-1 text-center text-xs whitespace-nowrap", DATE_COLUMN_CLASSNAME)}
           >
             <RelativeDay date={new Date(subscription.createdAt)} />
           </div>

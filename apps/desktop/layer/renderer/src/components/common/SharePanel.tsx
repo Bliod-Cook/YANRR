@@ -172,12 +172,12 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
   return (
     <div className="pointer-events-auto max-w-[400px] px-2">
       <div className="mb-4 flex flex-col text-center">
-        <h3 className="mb-2 mt-1 font-semibold text-text">{t("share.title")}</h3>
+        <h3 className="mt-1 mb-2 font-semibold text-text">{t("share.title")}</h3>
         {(() => {
           const entry = getEntry(entryId)
           const title = entry?.title
           return title ? (
-            <p className="mt-1 min-w-0 text-wrap text-left text-sm font-medium text-text-secondary">
+            <p className="mt-1 min-w-0 text-left text-sm font-medium text-wrap text-text-secondary">
               {title}
             </p>
           ) : null
@@ -186,7 +186,7 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
 
       <div className="mb-6">
         <div className="mb-3">
-          <h4 className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+          <h4 className="text-xs font-medium tracking-wide text-text-secondary uppercase">
             {t("share.social_media")}
           </h4>
         </div>
@@ -216,7 +216,7 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
 
       <div>
         <div className="mb-3">
-          <h4 className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+          <h4 className="text-xs font-medium tracking-wide text-text-secondary uppercase">
             {t("share.actions")}
           </h4>
         </div>
@@ -226,8 +226,8 @@ export const SharePanel = ({ entryId }: SharePanelProps) => {
               key={option.id}
               type="button"
               className={cn(
-                "relative flex cursor-button select-none items-center rounded-lg",
-                "text-sm outline-none transition-all duration-200",
+                "relative flex cursor-button items-center rounded-lg select-none",
+                "text-sm transition-all duration-200 outline-none",
                 "hover:bg-fill-secondary/80 active:bg-fill-secondary",
                 "group",
               )}

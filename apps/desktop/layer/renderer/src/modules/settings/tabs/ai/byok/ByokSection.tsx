@@ -127,7 +127,7 @@ export const ByokSection = () => {
             <Label className="text-sm font-medium text-text">{t("byok.providers.title")}</Label>
             {byok.providers.length < PROVIDER_OPTIONS.length && (
               <Button variant="outline" size="sm" onClick={handleAddProvider}>
-                <i className="i-mgc-add-cute-re mr-2 size-4" />
+                <i className="mr-2 i-mgc-add-cute-re size-4" />
                 {t("byok.providers.add")}
               </Button>
             )}

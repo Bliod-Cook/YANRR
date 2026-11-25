@@ -70,7 +70,7 @@ function ViewSubscriptionsDropdown({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="no-drag-region -ml-1 inline-flex size-6 items-center justify-center rounded text-text-tertiary transition-colors hover:text-text focus-visible:bg-fill/60"
+          className="-ml-1 inline-flex size-6 items-center justify-center rounded text-text-tertiary transition-colors no-drag-region hover:text-text focus-visible:bg-fill/60"
           aria-label={t("entry_content.breadcrumb.open_view_subscriptions")}
         >
           <i className="i-mingcute-down-line size-4" />
@@ -162,7 +162,7 @@ function FeedEntriesDropdown({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="no-drag-region -ml-2 inline-flex size-6 items-center justify-center rounded text-text-tertiary transition-colors hover:text-text focus-visible:bg-fill/60"
+          className="-ml-2 inline-flex size-6 items-center justify-center rounded text-text-tertiary transition-colors no-drag-region hover:text-text focus-visible:bg-fill/60"
           aria-label={t("entry_content.breadcrumb.open_feed_entries")}
         >
           <i className="i-mingcute-down-line size-4" />
@@ -204,7 +204,7 @@ export function EntryHeaderBreadcrumb() {
   const showEntryDetailsColumn = useShowEntryDetailsColumn()
   if (showEntryDetailsColumn && meta?.entryTitle) {
     return (
-      <EllipsisHorizontalTextWithTooltip className="min-w-0 truncate px-1.5 py-0.5 text-lg font-bold leading-tight text-text opacity-0 transition-opacity duration-200 group-data-[at-top=false]/header:opacity-100">
+      <EllipsisHorizontalTextWithTooltip className="min-w-0 truncate px-1.5 py-0.5 text-lg leading-tight font-bold text-text opacity-0 transition-opacity duration-200 group-data-[at-top=false]/header:opacity-100">
         {meta.entryTitle}
       </EllipsisHorizontalTextWithTooltip>
     )
@@ -222,7 +222,7 @@ export function EntryHeaderBreadcrumb() {
           <button
             type="button"
             aria-label={t("words.close", { ns: "common" })}
-            className="no-drag-region inline-flex shrink-0 items-center rounded-full bg-transparent p-2 text-text-secondary hover:bg-fill/50 hover:text-text focus-visible:bg-fill/60"
+            className="inline-flex shrink-0 items-center rounded-full bg-transparent p-2 text-text-secondary no-drag-region hover:bg-fill/50 hover:text-text focus-visible:bg-fill/60"
             onClick={() => navigate({ entryId: null, view })}
           >
             <i className="i-mingcute-close-line size-5" />
@@ -232,7 +232,7 @@ export function EntryHeaderBreadcrumb() {
               <button
                 type="button"
                 className={cn(
-                  "no-drag-region inline-flex max-w-[40vw] items-center truncate rounded bg-transparent px-1.5 py-0.5 text-sm text-text-secondary transition-colors hover:bg-fill/50 hover:text-text focus-visible:bg-fill/60",
+                  "inline-flex max-w-[40vw] items-center truncate rounded bg-transparent px-1.5 py-0.5 text-sm text-text-secondary transition-colors no-drag-region hover:bg-fill/50 hover:text-text focus-visible:bg-fill/60",
                 )}
                 onClick={() => navigate({ entryId: null, view })}
               >
@@ -249,7 +249,7 @@ export function EntryHeaderBreadcrumb() {
                 <button
                   type="button"
                   className={cn(
-                    "no-drag-region inline-flex max-w-[40vw] items-center truncate rounded bg-transparent px-1.5 py-0.5 text-sm text-text-secondary transition-colors hover:bg-fill/50 hover:text-text focus-visible:bg-fill/60",
+                    "inline-flex max-w-[40vw] items-center truncate rounded bg-transparent px-1.5 py-0.5 text-sm text-text-secondary transition-colors no-drag-region hover:bg-fill/50 hover:text-text focus-visible:bg-fill/60",
                   )}
                   onClick={() => navigate({ entryId: null, feedId: meta.feedId })}
                   title={meta.feedTitle}
@@ -268,7 +268,7 @@ export function EntryHeaderBreadcrumb() {
                 <>
                   <span className="hidden shrink-0 @[700px]:inline">{Slash}</span>
                   <span
-                    className="min-w-0 max-w-[30vw] truncate px-1.5 py-0.5 text-sm text-text"
+                    className="max-w-[30vw] min-w-0 truncate px-1.5 py-0.5 text-sm text-text"
                     title={meta.entryTitle}
                   >
                     {meta.entryTitle}

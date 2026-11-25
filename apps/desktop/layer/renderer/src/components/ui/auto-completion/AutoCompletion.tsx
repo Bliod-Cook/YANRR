@@ -87,8 +87,8 @@ export const Autocomplete = ({
                     onWheel={stopPropagation}
                     className={cn(
                       "pointer-events-auto bg-material-medium text-text backdrop-blur-background",
-                      "shadow-context-menu min-w-32 overflow-hidden rounded-[6px] border p-1",
-                      "text-body motion-scale-in-75 motion-duration-150 lg:animate-none",
+                      "min-w-32 overflow-hidden rounded-[6px] border p-1 shadow-context-menu",
+                      "motion-scale-in-75 text-body motion-duration-150 lg:animate-none",
                       "w-[var(--input-width)] empty:invisible",
                     )}
                   >
@@ -116,7 +116,7 @@ const MemoizedComboboxOption = memo(({ suggestion }: { suggestion: Suggestion })
       className={cn(
         "cursor-menu focus:bg-theme-selection-active focus:text-theme-selection-foreground",
         "data-[focus]:bg-theme-selection-hover data-[focus]:text-theme-selection-foreground",
-        "relative flex select-none items-center rounded-[5px] px-2.5 py-1.5 outline-none",
+        "relative flex items-center rounded-[5px] px-2.5 py-1.5 outline-none select-none",
         "h-[28px]",
       )}
     >

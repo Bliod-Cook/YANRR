@@ -45,7 +45,7 @@ export const RuleCard = ({
   }
 
   return (
-    <div className="group/rule flex size-full flex-col @container">
+    <div className="group/rule @container flex size-full flex-col">
       <div className="shrink-0 border-b border-fill-tertiary px-5 py-4">
         <RuleCardToolbar index={index} onDelete={onDelete} />
       </div>
@@ -117,7 +117,7 @@ const CompactRuleCard = ({
         </div>
         <div className="flex items-center gap-2">
           {disabled && (
-            <span className="rounded-md border border-fill-secondary bg-fill-quaternary px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-text-secondary">
+            <span className="rounded-md border border-fill-secondary bg-fill-quaternary px-2 py-0.5 text-[10px] font-medium tracking-wide text-text-secondary uppercase">
               {t("actions.action_card.summary.disabled")}
             </span>
           )}

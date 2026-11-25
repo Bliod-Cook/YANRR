@@ -41,7 +41,7 @@ export const SettingsTitle = ({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 pb-2 pt-6 text-xl font-bold",
+        "flex items-center gap-2 pt-6 pb-2 text-xl font-bold",
         "sticky top-0 mb-4",
         className,
       )}

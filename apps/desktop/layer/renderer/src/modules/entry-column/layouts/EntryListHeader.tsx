@@ -87,7 +87,7 @@ export const EntryListHeader: FC<{
   const titleInfo = !!headerTitle && (
     <div
       className={clsx(
-        "flex min-w-0 items-center break-all text-lg font-bold leading-tight",
+        "flex min-w-0 items-center text-lg leading-tight font-bold break-all",
         "-ml-3",
       )}
     >
@@ -194,11 +194,11 @@ export const EntryListHeader: FC<{
   return (
     <div
       className={cn(
-        "@[700px]:pr-3 @[1024px]:pr-4 flex w-full flex-col pl-7 pr-2.5 pt-2",
+        "flex w-full flex-col pt-2 pr-2.5 pl-7 @[700px]:pr-3 @[1024px]:pr-4",
         !feedColumnShow && "macos:mt-4 macos:pt-margin-macos-traffic-light-y",
         view === FeedViewType.SocialMedia && "pr-5",
         isPreview
-          ? "@[700px]:px-3 @[1024px]:px-4 h-top-header-in-preview-with-border-b px-2.5"
+          ? "h-top-header-in-preview-with-border-b px-2.5 @[700px]:px-3 @[1024px]:px-4"
           : "h-top-header-with-border-b",
         view === FeedViewType.All &&
           "border-b border-transparent data-[scrolled-beyond-threshold=true]:border-b-border",
@@ -311,7 +311,7 @@ const PreviewHeaderInfoWrapper: Component = ({ children }) => {
             e.stopPropagation()
             navigate(getPreviewBackPath() || "/")
           }}
-          className="no-drag-region mr-1 inline-flex items-center gap-1 whitespace-nowrap duration-200 hover:text-accent"
+          className="mr-1 inline-flex items-center gap-1 whitespace-nowrap duration-200 no-drag-region hover:text-accent"
         >
           <i className="i-mingcute-left-line" />
           <span className="text-sm font-medium">{tCommon("words.back")}</span>

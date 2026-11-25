@@ -161,7 +161,7 @@ export function SubscriptionColumn({
         <RootPortal to={rootContainerElement}>
           <ActionButton
             tooltip={t("app.toggle_sidebar")}
-            className="center absolute left-0 top-2.5 z-0 hidden -translate-x-2 text-zinc-500 macos:flex macos:left-macos-traffic-light-2"
+            className="absolute top-2.5 left-0 z-0 center hidden -translate-x-2 text-zinc-500 macos:left-macos-traffic-light-2 macos:flex"
             onClick={() => setTimelineColumnShow(true)}
           >
             <i className="i-mgc-layout-leftbar-open-cute-re" />
@@ -169,7 +169,7 @@ export function SubscriptionColumn({
         </RootPortal>
       )}
 
-      <div className="relative mb-2 mt-3">
+      <div className="relative mt-3 mb-2">
         <TabsRow />
       </div>
       <div

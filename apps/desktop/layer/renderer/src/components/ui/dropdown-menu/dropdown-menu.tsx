@@ -72,7 +72,7 @@ const DropdownMenuSubTrigger = ({
   <DropdownMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-menu select-none items-center rounded-[5px] px-2.5 py-1.5 outline-none focus:bg-accent/30 data-[state=open]:bg-accent/30",
+      "flex cursor-menu items-center rounded-[5px] px-2.5 py-1.5 outline-none select-none focus:bg-accent/30 data-[state=open]:bg-accent/30",
       inset && "pl-8",
       "center gap-2",
       className,
@@ -81,7 +81,7 @@ const DropdownMenuSubTrigger = ({
     {...props}
   >
     {children}
-    <i className="i-mingcute-right-line -mr-1 ml-auto size-3.5" />
+    <i className="-mr-1 ml-auto i-mingcute-right-line size-3.5" />
   </DropdownMenuPrimitive.SubTrigger>
 )
 DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName
@@ -137,7 +137,7 @@ const DropdownMenuContent = ({
         className={cn(
           "z-[60] min-w-32 overflow-hidden rounded-[6px] p-1 text-text",
           "backdrop-blur-2xl",
-          "text-body motion-scale-in-75 motion-duration-150 lg:animate-none",
+          "motion-scale-in-75 text-body motion-duration-150 lg:animate-none",
           "relative",
           "dark:border dark:border-border/50",
           className,
@@ -179,8 +179,8 @@ const DropdownMenuItem = ({
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-menu select-none items-center rounded-[5px] px-2.5 py-1 outline-none focus:bg-accent/30 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-      "focus-within:outline-transparent data-[highlighted]:text-accent data-[highlighted]:bg-mix-background-accent-9-1",
+      "relative flex cursor-menu items-center rounded-[5px] px-2.5 py-1 outline-none select-none focus:bg-accent/30 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "focus-within:outline-transparent data-[highlighted]:bg-mix-background-accent-9-1 data-[highlighted]:text-accent",
       "h-[28px]",
       inset && "pl-8",
       className,
@@ -226,7 +226,7 @@ const DropdownMenuCheckboxItem = ({
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-checkbox select-none items-center rounded-[5px] px-8 py-1.5 outline-none focus:bg-accent/30 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-checkbox items-center rounded-[5px] px-8 py-1.5 outline-none select-none focus:bg-accent/30 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       "focus-within:outline-transparent",
       "h-[28px]",
       className,

@@ -74,7 +74,7 @@ export const DiscoverFeedCard: FC<DiscoverFeedCardProps> = memo(({ item, classNa
     <Card
       data-feed-id={item.feed?.id}
       className={cn(
-        "select-text overflow-hidden border border-zinc-200/50 bg-white/80 backdrop-blur-xl transition-all duration-300 dark:border-zinc-800/50 dark:bg-neutral-800/50",
+        "overflow-hidden border border-zinc-200/50 bg-white/80 backdrop-blur-xl transition-all duration-300 select-text dark:border-zinc-800/50 dark:bg-neutral-800/50",
         className,
       )}
     >
@@ -158,7 +158,7 @@ export const SearchResultContent: FC<{
       </div>
       <div className="flex flex-1 flex-col justify-between p-3">
         {entry.title ? (
-          <div className="line-clamp-2 text-xs font-medium leading-4 text-zinc-900 group-hover:text-black dark:text-zinc-200 dark:group-hover:text-white">
+          <div className="line-clamp-2 text-xs leading-4 font-medium text-zinc-900 group-hover:text-black dark:text-zinc-200 dark:group-hover:text-white">
             {entry.title}
           </div>
         ) : (

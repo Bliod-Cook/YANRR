@@ -107,13 +107,13 @@ export const SocialMediaItem: EntryListItemFC = ({ entryId, translation }) => {
         "relative flex py-4",
         "group",
         !asRead &&
-          "before:absolute before:-left-3 before:top-8 before:block before:size-2 before:rounded-full before:bg-accent",
+          "before:absolute before:top-8 before:-left-3 before:block before:size-2 before:rounded-full before:bg-accent",
       )}
     >
       <FeedIcon fallback target={feed} entry={iconEntry} size={32} className="mt-1" />
       <div ref={ref} className="ml-2 min-w-0 flex-1">
         <div className="-mt-0.5 flex-1 text-sm">
-          <div className="flex select-none flex-wrap space-x-1 leading-6" ref={titleRef}>
+          <div className="flex flex-wrap space-x-1 leading-6 select-none" ref={titleRef}>
             <span className="inline-flex min-w-0 items-center gap-1 text-base font-semibold">
               <FeedTitle feed={feed} title={authorTitle} />
               {parsed?.type === "x" && (
@@ -145,7 +145,7 @@ export const SocialMediaItem: EntryListItemFC = ({ entryId, translation }) => {
                   as="div"
                   className={cn(
                     "prose align-middle dark:prose-invert",
-                    "cursor-auto select-text text-sm leading-relaxed prose-blockquote:mt-0",
+                    "cursor-auto text-sm leading-relaxed select-text prose-blockquote:mt-0",
                   )}
                   noMedia
                   style={renderStyle}
@@ -154,7 +154,7 @@ export const SocialMediaItem: EntryListItemFC = ({ entryId, translation }) => {
                 </HTML>
               </EntryContentUrlProvider>
             </EntryContentWrapper>
-            {isInCollection && <StarIcon className="absolute right-0 top-0" />}
+            {isInCollection && <StarIcon className="absolute top-0 right-0" />}
           </div>
         </div>
         <MediaGallery entryId={entryId} />
@@ -168,10 +168,10 @@ SocialMediaItem.wrapperClassName = cn(readableContentMaxWidth, "pl-6 pr-3 @[1024
 export function SocialMediaItemStateLess({ entry, feed }: EntryItemStatelessProps) {
   return (
     <div className="relative flex py-4">
-      <FeedIcon fallback target={feed} size={32} className="mr-2 mt-1" />
+      <FeedIcon fallback target={feed} size={32} className="mt-1 mr-2" />
       <div className="min-w-0 flex-1">
         <div className="-mt-0.5 flex-1 text-sm">
-          <div className="flex select-none flex-wrap space-x-1 leading-6">
+          <div className="flex flex-wrap space-x-1 leading-6 select-none">
             <span className="inline-flex min-w-0 items-center gap-1 text-base font-semibold">
               <FeedTitle feed={feed} />
             </span>
@@ -181,7 +181,7 @@ export function SocialMediaItemStateLess({ entry, feed }: EntryItemStatelessProp
             </span>
           </div>
           <div className="relative mt-1 text-base">
-            <div className="prose cursor-auto select-text truncate align-middle text-sm leading-relaxed dark:prose-invert prose-blockquote:mt-0">
+            <div className="prose cursor-auto truncate align-middle text-sm leading-relaxed select-text dark:prose-invert prose-blockquote:mt-0">
               {entry.description}
             </div>
           </div>
@@ -267,7 +267,7 @@ const CollapsedSocialMediaItem: Component<{
         {children}
       </div>
       {isOverflow && !isShowMore && (
-        <div className="absolute inset-x-0 -bottom-2 flex select-none justify-center py-2 duration-200">
+        <div className="absolute inset-x-0 -bottom-2 flex justify-center py-2 duration-200 select-none">
           <button
             type="button"
             onClick={(e) => {

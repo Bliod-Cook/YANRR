@@ -245,7 +245,7 @@ const FeedItemImpl = ({ view, feedId, className, isPreview }: FeedItemProps) => 
         <FeedTitle feed={feed} />
         {showFeedErrorIndicator && (
           <ErrorTooltip errorAt={feed.errorAt} errorMessage={feed.errorMessage}>
-            <i className="i-mingcute-close-circle-fill ml-1 shrink-0 text-base" />
+            <i className="ml-1 i-mingcute-close-circle-fill shrink-0 text-base" />
           </ErrorTooltip>
         )}
       </div>
@@ -344,7 +344,7 @@ const InboxItemImpl: Component<InboxItemProps> = ({ view, inboxId, className, ic
       data-sub={`inbox-${inboxId}`}
       data-inbox-id={inboxId}
       className={cn(
-        "flex w-full cursor-menu items-center justify-between rounded-md pr-2.5 text-base font-medium leading-loose lg:text-sm",
+        "flex w-full cursor-menu items-center justify-between rounded-md pr-2.5 text-base leading-loose font-medium lg:text-sm",
         feedColumnStyles.item,
         "py-0.5 pl-2.5",
         className,

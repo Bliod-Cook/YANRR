@@ -114,15 +114,15 @@ export const AIChatMessage: React.FC<AIChatMessageProps> = React.memo(
         <div className="relative flex w-full max-w-full flex-col gap-2 text-text">
           {/* Normal message display */}
           <div className="w-full text-text">
-            <div className="flex cursor-text select-text flex-col gap-2 text-sm">
+            <div className="flex cursor-text flex-col gap-2 text-sm select-text">
               <AIMessageParts message={message} isLastMessage={isLastMessage} />
             </div>
           </div>
 
           {/* Action buttons. A reply stopped midway never gets a finish time, but it can still be copied. */}
           {(hasFinished || !isStreaming) && (
-            <div className="absolute -left-2 bottom-1 right-0 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-              <span className="whitespace-nowrap px-2 py-1 text-[11px] leading-none text-text-tertiary">
+            <div className="absolute right-0 bottom-1 -left-2 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              <span className="px-2 py-1 text-[11px] leading-none whitespace-nowrap text-text-tertiary">
                 <RelativeTime date={originalMessage.createdAt} />
               </span>
               <button

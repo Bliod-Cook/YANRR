@@ -143,7 +143,7 @@ export function OpmlAbstractGraphic({ className }: { className?: string }) {
       {/* Right side Logo */}
       <m.div
         ref={logoRef}
-        className="absolute right-[15%] top-1/2 z-10 -translate-y-1/2"
+        className="absolute top-1/2 right-[15%] z-10 -translate-y-1/2"
         initial={{ scale: 0, opacity: 0, x: 50 }}
         animate={{ scale: 1, opacity: 1, x: 0 }}
         transition={{ ...Spring.presets.smooth, delay: 0.3 }}

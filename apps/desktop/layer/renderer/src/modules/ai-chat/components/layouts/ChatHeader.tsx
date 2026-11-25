@@ -92,7 +92,7 @@ const ChatHeaderLayout = ({
           <div className="mr-2 flex min-w-0 items-center">
             {(hasMessages || currentTitle) && (
               <div onClick={() => settingModalPresent("ai")}>
-                <AIIcon className="no-drag-region -mx-1 -mb-1 mr-1 size-9" />
+                <AIIcon className="-mx-1 mr-1 -mb-1 size-9 no-drag-region" />
               </div>
             )}
             <ChatHistoryDropdown

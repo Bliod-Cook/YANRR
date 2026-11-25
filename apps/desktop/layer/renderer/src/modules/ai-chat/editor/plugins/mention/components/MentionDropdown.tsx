@@ -55,7 +55,7 @@ const MentionSuggestionItem = React.memo(
     return (
       <div
         className={cn(
-          "relative flex cursor-menu select-none items-center rounded-[5px] px-2.5 py-1 outline-none",
+          "relative flex cursor-menu items-center rounded-[5px] px-2.5 py-1 outline-none select-none",
           "focus-within:outline-transparent",
           "focus:bg-theme-selection-active focus:text-theme-selection-foreground data-[highlighted]:bg-theme-selection-hover data-[highlighted]:text-theme-selection-foreground",
           "h-[28px]",
@@ -109,7 +109,7 @@ const MentionGroupHeader = React.memo(({ type }: { type: MentionData["type"] }) 
   }, [type, t])
 
   return (
-    <div className="mb-1 mt-2 px-2.5 text-xs font-medium text-text-tertiary first:mt-0">
+    <div className="mt-2 mb-1 px-2.5 text-xs font-medium text-text-tertiary first:mt-0">
       {label}
     </div>
   )

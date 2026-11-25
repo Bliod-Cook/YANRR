@@ -87,7 +87,7 @@ export const CSSEditor: Component<{
     return (
       <div className="flex size-full flex-col">
         <div className="-mt-2 mb-1 text-center text-sm text-text-tertiary">
-          <i className="i-mingcute-warning-line mr-0.5 translate-y-[2px]" />
+          <i className="mr-0.5 i-mingcute-warning-line translate-y-[2px]" />
           {t("editor.css_highlight_unsupported")}
         </div>
         <div className="relative h-0 grow">
@@ -107,7 +107,7 @@ export const CSSEditor: Component<{
       className={cn(
         "size-full",
 
-        "ring-accent/20 duration-200 focus:border-accent/80 focus:outline-none focus:ring-2",
+        "ring-accent/20 duration-200 focus:border-accent/80 focus:ring-2 focus:outline-none",
         "focus:!bg-accent/5",
         "border border-border",
         "placeholder:text-text-tertiary dark:bg-zinc-700/[0.15] dark:text-zinc-200",

@@ -49,7 +49,7 @@ export const SessionItem = ({ session, onClick, onDelete }: SessionItemProps) =>
 export const EmptyState = ({ message }: EmptyStateProps) => {
   return (
     <div className="flex flex-col items-center py-8 text-center">
-      <i className="i-mgc-time-cute-re mb-2 block size-8 text-text-secondary" />
+      <i className="mb-2 i-mgc-time-cute-re block size-8 text-text-secondary" />
       <p className="text-sm text-text-secondary">{message}</p>
     </div>
   )

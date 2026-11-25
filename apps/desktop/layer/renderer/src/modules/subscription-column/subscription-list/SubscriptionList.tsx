@@ -275,7 +275,7 @@ const SubscriptionImpl = ({
           </div>
         )}
         {isFeedPreview && feedId && (
-          <FeedItem feedId={feedId} view={view} className="pl-2.5 pr-0.5" isPreview />
+          <FeedItem feedId={feedId} view={view} className="pr-0.5 pl-2.5" isPreview />
         )}
         <DraggableContext value={draggableContextValue}>
           <div className="space-y-px" id="feeds-area" ref={setNodeRef}>

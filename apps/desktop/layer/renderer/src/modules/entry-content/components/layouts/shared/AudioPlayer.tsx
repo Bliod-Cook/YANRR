@@ -168,7 +168,7 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
                   "transition-all duration-300",
                   !isCurrentAudio && "cursor-not-allowed bg-transparent opacity-40",
                   isCurrentAudio &&
-                    "hover:[background:linear-gradient(to_right,hsl(var(--fo-a)/0.08),hsl(var(--fo-a)/0.05))_!important] hover:[border-color:hsl(var(--fo-a)/0.25)_!important]",
+                    "hover:[border-color:hsl(var(--fo-a)/0.25)_!important] hover:[background:linear-gradient(to_right,hsl(var(--fo-a)/0.08),hsl(var(--fo-a)/0.05))_!important]",
                 )}
                 style={{
                   background: !isCurrentAudio
@@ -217,7 +217,7 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
                   "transition-all duration-300",
                   !isCurrentAudio && "cursor-not-allowed bg-transparent opacity-40",
                   isCurrentAudio &&
-                    "hover:[background:linear-gradient(to_right,hsl(var(--fo-a)/0.08),hsl(var(--fo-a)/0.05))_!important] hover:[border-color:hsl(var(--fo-a)/0.25)_!important]",
+                    "hover:[border-color:hsl(var(--fo-a)/0.25)_!important] hover:[background:linear-gradient(to_right,hsl(var(--fo-a)/0.08),hsl(var(--fo-a)/0.05))_!important]",
                 )}
                 style={{
                   background: !isCurrentAudio
@@ -235,7 +235,7 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
             <div className="flex-1">
               {displayHasValidDuration ? (
                 <Slider.Root
-                  className="group relative flex h-2.5 w-full touch-none select-none items-center"
+                  className="group relative flex h-2.5 w-full touch-none items-center select-none"
                   min={0}
                   max={displayDuration}
                   step={0.1}
@@ -255,7 +255,7 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
                   </Slider.Track>
 
                   <Slider.Thumb
-                    className="block size-3.5 rounded-full border-2 border-white bg-accent opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none group-hover:opacity-100"
+                    className="block size-3.5 rounded-full border-2 border-white bg-accent opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none"
                     aria-label={t("player.progress")}
                   />
                 </Slider.Root>
@@ -292,7 +292,7 @@ export const ArticleAudioPlayer: React.FC<AudioPlayerProps> = ({ entryId, classN
               <button
                 type="button"
                 onClick={handleDownload}
-                className="group relative flex size-8 items-center justify-center rounded-full bg-transparent transition-all duration-300 hover:[background:linear-gradient(to_right,hsl(var(--fo-a)/0.08),hsl(var(--fo-a)/0.05))] hover:[border-color:hsl(var(--fo-a)/0.25)]"
+                className="group relative flex size-8 items-center justify-center rounded-full bg-transparent transition-all duration-300 hover:[border-color:hsl(var(--fo-a)/0.25)] hover:[background:linear-gradient(to_right,hsl(var(--fo-a)/0.08),hsl(var(--fo-a)/0.05))]"
                 title={t("player.download")}
               >
                 <i className="i-mgc-download-2-cute-re size-4 text-text-secondary transition-colors group-hover:text-text" />

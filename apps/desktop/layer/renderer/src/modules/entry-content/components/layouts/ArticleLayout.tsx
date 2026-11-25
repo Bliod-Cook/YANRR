@@ -74,7 +74,7 @@ export const ArticleLayout: React.FC<EntryLayoutProps> = ({
       />
 
       <WrappedElementProvider>
-        <div className="mx-auto mb-32 mt-6 max-w-full cursor-auto text-[0.94rem]">
+        <div className="mx-auto mt-6 mb-32 max-w-full cursor-auto text-[0.94rem]">
           {aiEnabled && (
             <Suspense>
               <ArticleAISummary entryId={entryId} />

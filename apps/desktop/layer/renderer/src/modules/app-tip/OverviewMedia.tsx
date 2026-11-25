@@ -146,7 +146,7 @@ export const OverviewMedia: React.FC = () => {
       {/* Top centered Logo */}
       <m.div
         ref={logoRef}
-        className="absolute left-1/2 top-[20%] z-10 -translate-x-1/2"
+        className="absolute top-[20%] left-1/2 z-10 -translate-x-1/2"
         animate={{ opacity: 1 }}
         initial={{ opacity: 0 }}
         onAnimationComplete={() => markAnimationDone("logo")}

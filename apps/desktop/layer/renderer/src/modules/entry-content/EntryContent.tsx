@@ -112,7 +112,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
 
   const scrollerRefObject = React.useMemo(() => ({ current: scrollerRef }), [scrollerRef])
   return (
-    <div className={cn(className, "flex flex-col @container")}>
+    <div className={cn(className, "@container flex flex-col")}>
       <EntryTitleMetaHandler entryId={entryId} />
       <EntryCommandShortcutRegister entryId={entryId} view={view} />
 
@@ -121,7 +121,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
       <Focusable
         ref={focusableRef}
         scope={HotkeyScope.EntryRender}
-        className="relative flex min-h-0 w-full flex-1 flex-col overflow-hidden @container print:size-auto print:overflow-visible"
+        className="@container relative flex min-h-0 w-full flex-1 flex-col overflow-hidden print:size-auto print:overflow-visible"
       >
         <RootPortal to={panelPortalElement}>
           <EntryScrollingAndNavigationHandler entryId={entryId} scrollerRef={scrollerRefObject} />
@@ -131,7 +131,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
           {/* Indicator for the entry */}
           {isInHasTimelineView && (
             <>
-              <div className="absolute inset-y-0 left-0 z-[9] flex w-12 items-center justify-center opacity-0 duration-200 hover:opacity-100 group-hover:opacity-40">
+              <div className="absolute inset-y-0 left-0 z-[9] flex w-12 items-center justify-center opacity-0 duration-200 group-hover:opacity-40 hover:opacity-100">
                 <GlassButton
                   size="sm"
                   description={t("command.entry.previous_entry.title", { ns: "shortcuts" })}
@@ -144,7 +144,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
                 </GlassButton>
               </div>
 
-              <div className="absolute inset-y-0 right-0 z-[9] flex w-12 items-center justify-center opacity-0 duration-200 hover:opacity-100 group-hover:opacity-40">
+              <div className="absolute inset-y-0 right-0 z-[9] flex w-12 items-center justify-center opacity-0 duration-200 group-hover:opacity-40 hover:opacity-100">
                 <GlassButton
                   size="sm"
                   description={t("command.entry.next_entry.title", { ns: "shortcuts" })}
@@ -168,7 +168,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({
             <article
               data-testid="entry-render"
               onContextMenu={stopPropagation}
-              className={"relative w-full min-w-0 pb-10 pt-12 print:pt-0"}
+              className={"relative w-full min-w-0 pt-12 pb-10 print:pt-0"}
             >
               <ApplyEntryActions entryId={entryId} view={view} key={`actions-${entryId}`} />
               <EntryPrintHeader entryId={entryId} />

@@ -95,7 +95,7 @@ export const AISummaryCardBase: React.FC<AISummaryCardBaseProps> = ({
         {headerContent || (
           <div className="flex items-center gap-3">
             {/* Glowing AI icon */}
-            <div className="center relative">
+            <div className="relative center">
               <i
                 className={cn(
                   "i-mgc-ai-cute-re text-lg",

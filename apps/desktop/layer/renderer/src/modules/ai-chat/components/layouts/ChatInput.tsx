@@ -184,7 +184,7 @@ export const ChatInput = memo(
               namespace="AIChatRichEditor"
             />
           </ScrollArea>
-          <div className="absolute right-3 top-3">
+          <div className="absolute top-3 right-3">
             <AIChatSendButton
               onClick={isProcessing ? stop : handleSendClick}
               disabled={isSubmitDisabled}

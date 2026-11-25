@@ -53,7 +53,7 @@ export const VirtualRowItem: FC<VirtualRowItemProps> = memo(
             className={clsx(
               isActiveStickyItem
                 ? "sticky top-0 z-[1]"
-                : "absolute left-0 top-0 w-full will-change-transform",
+                : "absolute top-0 left-0 w-full will-change-transform",
             )}
             style={
               !isActiveStickyItem

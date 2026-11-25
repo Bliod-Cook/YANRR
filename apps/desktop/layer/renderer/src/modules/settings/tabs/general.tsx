@@ -212,7 +212,7 @@ export const LanguageSelector = ({
     : fallbackLanguage
 
   return (
-    <div className={cn("mb-3 mt-4 flex w-full items-center", containerClassName)}>
+    <div className={cn("mt-4 mb-3 flex w-full items-center", containerClassName)}>
       <div className="flex grow flex-col gap-1">
         <span className="shrink-0 text-sm font-medium">{t("general.language.title")}</span>
         {showDescription && (
@@ -317,7 +317,7 @@ const ActionLanguageSelector = () => {
   const actionLanguage = useGeneralSettingKey("actionLanguage")
 
   return (
-    <div className="mb-3 mt-4 flex w-full gap-1">
+    <div className="mt-4 mb-3 flex w-full gap-1">
       <div className="flex grow flex-col gap-1">
         <span className="shrink-0 text-sm font-medium">{t("general.action_language.label")}</span>
         <SettingDescription>{t("general.action_language.description")}</SettingDescription>

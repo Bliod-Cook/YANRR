@@ -71,12 +71,12 @@ const TocHoverCard: React.FC<TocHoverCardProps> = ({
   const [hoverShow, setHoverShow] = useState(false)
 
   return (
-    <div className="flex grow flex-col scroll-smooth px-2 scrollbar-none">
+    <div className="scrollbar-none flex grow flex-col scroll-smooth px-2">
       <HoverCard.Root openDelay={100} open={hoverShow} onOpenChange={setHoverShow}>
         <HoverCard.Trigger asChild>
           <div
             className={cn(
-              "group overflow-auto opacity-60 duration-200 scrollbar-none group-hover:opacity-100",
+              "group scrollbar-none overflow-auto opacity-60 duration-200 group-hover:opacity-100",
               className,
             )}
           >
@@ -104,8 +104,8 @@ const TocHoverCard: React.FC<TocHoverCardProps> = ({
                     className={cn(
                       "relative z-10 -mt-1 rounded-xl border",
                       "px-3 py-1 text-xs",
-                      "shadow-context-menu bg-material-ultra-thick backdrop-blur-background",
-                      "max-h-[calc(100svh-4rem)] overflow-auto scrollbar-none",
+                      "bg-material-ultra-thick shadow-context-menu backdrop-blur-background",
+                      "scrollbar-none max-h-[calc(100svh-4rem)] overflow-auto",
                     )}
                   >
                     {toc.map((heading, index) => (
@@ -130,11 +130,11 @@ const TocHoverCard: React.FC<TocHoverCardProps> = ({
                             })
                           }}
                         >
-                          <EllipsisHorizontalTextWithTooltip className="max-w-prose select-none truncate duration-200 group-hover:text-accent/80">
+                          <EllipsisHorizontalTextWithTooltip className="max-w-prose truncate duration-200 select-none group-hover:text-accent/80">
                             {heading.title}
                           </EllipsisHorizontalTextWithTooltip>
 
-                          <span className="ml-4 select-none text-[8px] opacity-50">
+                          <span className="ml-4 text-[8px] opacity-50 select-none">
                             H{heading.depth}
                           </span>
                         </button>

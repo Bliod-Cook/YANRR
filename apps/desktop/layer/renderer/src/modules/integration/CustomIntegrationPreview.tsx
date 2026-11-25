@@ -113,7 +113,7 @@ export const CustomIntegrationPreview = ({
                     {t("integration.custom_integrations.preview.body")}
                   </h4>
                   <div className="max-h-40 overflow-auto rounded bg-material-medium p-2">
-                    <pre className="whitespace-pre-wrap font-mono text-sm text-text-secondary">
+                    <pre className="font-mono text-sm whitespace-pre-wrap text-text-secondary">
                       {preview.body}
                     </pre>
                   </div>

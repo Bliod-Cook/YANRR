@@ -25,7 +25,7 @@ export function NotificationItemStateLess({ entry, feed }: EntryItemStatelessPro
           <span>·</span>
           <span>{!!entry.publishedAt && <RelativeTime date={entry.publishedAt} />}</span>
         </div>
-        <div className="relative my-0.5 truncate break-words font-medium text-text">
+        <div className="relative my-0.5 truncate font-medium break-words text-text">
           {entry.title}
         </div>
       </div>

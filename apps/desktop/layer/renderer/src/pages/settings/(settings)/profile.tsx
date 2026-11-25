@@ -17,7 +17,7 @@ export function Component() {
     <section className="mt-4">
       <ProfileSettingForm />
 
-      <Divider className="mb-6 mt-8" />
+      <Divider className="mt-8 mb-6" />
 
       <UpdatePasswordForm />
     </section>

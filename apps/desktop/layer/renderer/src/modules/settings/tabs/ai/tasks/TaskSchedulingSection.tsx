@@ -29,7 +29,7 @@ export const TaskSchedulingSection = () => {
           onClick={handleCreateTask}
           buttonClassName="!-translate-y-7 shrink-0"
         >
-          <i className="i-mgc-add-cute-re mr-2 size-4" />
+          <i className="mr-2 i-mgc-add-cute-re size-4" />
           {t("tasks.actions.new_task")}
         </Button>
       </div>

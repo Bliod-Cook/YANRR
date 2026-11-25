@@ -145,7 +145,7 @@ export const EditableMessage = ({
         </ScrollArea>
 
         {/* Action buttons */}
-        <div className="absolute right-2 top-1/2 flex -translate-y-1/2 gap-1">
+        <div className="absolute top-1/2 right-2 flex -translate-y-1/2 gap-1">
           <button
             type="button"
             onClick={handleCancel}
@@ -169,7 +169,7 @@ export const EditableMessage = ({
 
       {/* Helper text */}
       <div className="relative mt-2">
-        <div className="absolute -inset-x-2 -bottom-2 -top-8 z-[-1] bg-background" />
+        <div className="absolute -inset-x-2 -top-8 -bottom-2 z-[-1] bg-background" />
         <div className="relative z-[1] text-xs text-text-secondary">
           <Trans
             t={t}

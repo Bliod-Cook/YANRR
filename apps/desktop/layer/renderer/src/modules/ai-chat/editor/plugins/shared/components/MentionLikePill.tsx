@@ -39,7 +39,7 @@ export const MentionLikePill = ({
         <span
           className={cn(
             "flex items-center justify-center",
-            variant === "command" ? "mr-1 size-3" : "absolute left-0.5 top-0 size-5",
+            variant === "command" ? "mr-1 size-3" : "absolute top-0 left-0.5 size-5",
           )}
         >
           {icon}

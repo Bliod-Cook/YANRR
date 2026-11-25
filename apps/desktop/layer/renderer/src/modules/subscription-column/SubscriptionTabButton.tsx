@@ -186,7 +186,7 @@ const ViewAllSwitchButton: FC<{
     >
       {item.icon}
       {showSidebarUnreadCount ? (
-        <div className="text-[0.625rem] font-medium leading-none">
+        <div className="text-[0.625rem] leading-none font-medium">
           {unreadByView > 99 ? <span className="-mr-0.5">99+</span> : unreadByView}
         </div>
       ) : (
@@ -250,7 +250,7 @@ const ViewSwitchButton: FC<{
     >
       {item.icon}
       {showSidebarUnreadCount ? (
-        <div className="text-[0.625rem] font-medium leading-none">
+        <div className="text-[0.625rem] leading-none font-medium">
           {unreadByView > 99 ? <span className="-mr-0.5">99+</span> : unreadByView}
         </div>
       ) : (

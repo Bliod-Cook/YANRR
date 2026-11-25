@@ -207,7 +207,7 @@ const ShikiCode: FC<
 
       {/* Compact Header */}
       <div
-        className="relative flex items-center justify-between border-b py-0 pl-3 pr-1"
+        className="relative flex items-center justify-between border-b py-0 pr-1 pl-3"
         style={{
           borderColor: "hsl(var(--fo-a) / 0.3)",
           backgroundColor: "hsl(var(--fo-a) / 0.05)",
@@ -216,7 +216,7 @@ const ShikiCode: FC<
         {language === "plaintext" ? (
           <div className="h-4" />
         ) : (
-          <div className="flex items-center gap-1.5 text-xs font-medium uppercase text-accent">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-accent uppercase">
             <span className="center [&_svg]:size-3.5">{getLanguageIcon(language)}</span>
             <span>{language}</span>
           </div>

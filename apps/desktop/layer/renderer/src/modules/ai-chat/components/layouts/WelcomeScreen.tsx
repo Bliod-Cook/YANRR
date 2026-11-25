@@ -72,7 +72,7 @@ const DefaultWelcomeHeader = ({ title, description }: { title: string; descripti
           <Wordmark /> {title}
         </h1>
 
-        <p className="text-balance text-sm text-text-secondary">{description}</p>
+        <p className="text-sm text-balance text-text-secondary">{description}</p>
       </div>
     </div>
   </m.div>

@@ -38,7 +38,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({ error, className }) 
             </div>
 
             {/* Error message - always visible but subtle */}
-            <div className="cursor-text select-text text-sm leading-relaxed text-text-secondary">
+            <div className="cursor-text text-sm leading-relaxed text-text-secondary select-text">
               {getChatErrorMessage(error)}
             </div>
           </div>

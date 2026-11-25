@@ -25,7 +25,7 @@ export const CurrentServer = () => {
       <button
         data-testid="server-change"
         type="button"
-        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+        className="text-accent hover:underline focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none"
         onClick={() => present({ title: t("server.title"), content: ChangeServerForm })}
       >
         {t("server.change")}

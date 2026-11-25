@@ -17,14 +17,14 @@ export const Titlebar = () => {
   return (
     <div
       onContextMenu={preventDefault}
-      className="drag-region absolute right-0 flex items-center justify-end overflow-hidden"
+      className="absolute right-0 flex items-center justify-end overflow-hidden drag-region"
       style={{
         height: `${ElECTRON_CUSTOM_TITLEBAR_HEIGHT}px`,
         left: `${feedColWidth}px`,
       }}
     >
       <button
-        className="no-drag-region pointer-events-auto flex h-full w-[50px] items-center justify-center duration-200 hover:bg-theme-item-active"
+        className="pointer-events-auto flex h-full w-[50px] items-center justify-center duration-200 no-drag-region hover:bg-theme-item-active"
         type="button"
         aria-label={t("words.minimize")}
         onClick={() => {
@@ -37,7 +37,7 @@ export const Titlebar = () => {
       <button
         type="button"
         aria-label={isMaximized ? t("words.restore") : t("words.maximize")}
-        className="no-drag-region pointer-events-auto flex h-full w-[50px] items-center justify-center duration-200 hover:bg-theme-item-active"
+        className="pointer-events-auto flex h-full w-[50px] items-center justify-center duration-200 no-drag-region hover:bg-theme-item-active"
         onClick={async () => {
           await ipcServices?.app.windowAction({ action: "maximum" })
         }}
@@ -52,7 +52,7 @@ export const Titlebar = () => {
       <button
         type="button"
         aria-label={t("words.close")}
-        className="no-drag-region pointer-events-auto flex h-full w-[50px] items-center justify-center duration-200 hover:bg-red-500 hover:!text-white"
+        className="pointer-events-auto flex h-full w-[50px] items-center justify-center duration-200 no-drag-region hover:bg-red-500 hover:!text-white"
         onClick={() => {
           ipcServices?.app.windowAction({ action: "close" })
         }}
@@ -69,7 +69,7 @@ export const WindowTitlebarRegion = () => {
   return (
     <div
       className={cn(
-        "drag-region fixed inset-x-0 top-0 h-12 shrink-0",
+        "fixed inset-x-0 top-0 h-12 shrink-0 drag-region",
         isWindows && "pointer-events-none z-[9999]",
       )}
       aria-hidden

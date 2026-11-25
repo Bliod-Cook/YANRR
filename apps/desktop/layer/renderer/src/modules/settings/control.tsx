@@ -50,7 +50,7 @@ export const SettingInput: Component<{
       )}
     >
       <Label
-        className={cn("shrink-0 text-sm font-medium leading-none", labelClassName)}
+        className={cn("shrink-0 text-sm leading-none font-medium", labelClassName)}
         htmlFor={id}
       >
         {titleCaseIfEnglish(label)}
@@ -80,7 +80,7 @@ export const SettingTabbedSegment: Component<{
   return (
     <>
       <div className={cn("mb-3 flex items-center justify-between gap-4", className)}>
-        <label className="text-sm font-medium leading-none">
+        <label className="text-sm leading-none font-medium">
           {typeof label === "string" ? titleCaseIfEnglish(label) : label}
         </label>
 
@@ -122,7 +122,7 @@ export const SettingActionItem = ({
   const titleCaseIfEnglish = useTitleCaseIfEnglish()
 
   return (
-    <div className={cn("relative mb-2 mt-4 flex items-center justify-between gap-4")}>
+    <div className={cn("relative mt-4 mb-2 flex items-center justify-between gap-4")}>
       <div className="text-sm font-medium">
         {typeof label === "string" ? titleCaseIfEnglish(label) : label}
       </div>

@@ -79,8 +79,8 @@ const ObsidianVaultPathPicker: FC = () => {
 
   return (
     <SettingItemGroup>
-      <div className="mb-2 mt-4 flex flex-col gap-3">
-        <label className="shrink-0 text-sm font-medium leading-none">
+      <div className="mt-4 mb-2 flex flex-col gap-3">
+        <label className="shrink-0 text-sm leading-none font-medium">
           {t("integration.obsidian.vaultPath.label")}
         </label>
         <div className="flex items-center gap-2">
@@ -532,7 +532,7 @@ export const SettingIntegration = () => {
         </>
       ) : (
         <div className="text-center">
-          <i className="i-mingcute-document-line mb-3 text-2xl text-text-tertiary" />
+          <i className="mb-3 i-mingcute-document-line text-2xl text-text-tertiary" />
           <p className="mb-2 text-sm font-medium text-text-tertiary">
             {t("integration.builtin.search_empty")}
           </p>
@@ -635,7 +635,7 @@ const BottomTip = () => {
             onClick={handleExport}
             buttonClassName="flex items-center gap-2"
           >
-            <i className="i-mgc-download-2-cute-re mr-2 size-4" />
+            <i className="mr-2 i-mgc-download-2-cute-re size-4" />
             {t("integration.export.button")}
           </Button>
           <Button
@@ -644,7 +644,7 @@ const BottomTip = () => {
             onClick={handleImport}
             buttonClassName="flex items-center gap-2"
           >
-            <i className="i-mgc-file-upload-cute-re mr-2 size-4" />
+            <i className="mr-2 i-mgc-file-upload-cute-re size-4" />
             {t("integration.import.button")}
           </Button>
         </div>

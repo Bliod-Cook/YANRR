@@ -13,13 +13,13 @@ const RSSHubErrorFallback: FC<AppErrorFallbackProps> = (props) => {
   return (
     <div className="flex flex-col items-center justify-center">
       <div className="m-auto max-w-prose text-center">
-        <p className="center my-3 gap-2 font-bold">
+        <p className="my-3 center gap-2 font-bold">
           <i className="i-mgc-bug-cute-re text-red-500" />
           {t("errors_page.rsshub_problem")}
         </p>
         <div className="text-lg">{message}</div>
         {import.meta.env.DEV && stack ? (
-          <pre className="mt-4 max-h-48 cursor-text overflow-auto whitespace-pre-line rounded-md bg-red-50 p-4 text-left font-mono text-sm text-red-600">
+          <pre className="mt-4 max-h-48 cursor-text overflow-auto rounded-md bg-red-50 p-4 text-left font-mono text-sm whitespace-pre-line text-red-600">
             {attachOpenInEditor(stack)}
           </pre>
         ) : null}

@@ -80,10 +80,10 @@ export const LoginModalContent = (props: LoginModalContentProps) => {
         <button
           type="button"
           aria-label={t("words.close", { ns: "common" })}
-          className="absolute -right-2 -top-2 flex size-8 items-center justify-center rounded-lg border-0 bg-transparent transition-colors hover:bg-fill/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
+          className="absolute -top-2 -right-2 flex size-8 items-center justify-center rounded-lg border-0 bg-transparent transition-colors hover:bg-fill/20 focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2 focus-visible:outline-none"
           onClick={modal.dismiss}
         >
-          <i aria-hidden className="i-mgc-close-cute-re pointer-events-none size-4" />
+          <i aria-hidden className="pointer-events-none i-mgc-close-cute-re size-4" />
         </button>
       )}
       <m.div

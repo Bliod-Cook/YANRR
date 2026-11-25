@@ -53,7 +53,7 @@ const Scrollbar = ({
       {...rest}
       ref={forwardedRef}
       className={cn(
-        "flex w-2.5 touch-none select-none p-0.5",
+        "flex w-2.5 touch-none p-0.5 select-none",
         orientation === "horizontal" ? `h-2.5 w-full flex-col` : `w-2.5 flex-row`,
         "animate-in data-[state=hidden]:animate-out data-[state=hidden]:fade-out data-[state=visible]:fade-in",
         className,

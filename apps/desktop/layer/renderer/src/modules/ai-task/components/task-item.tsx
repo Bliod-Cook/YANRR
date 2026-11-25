@@ -205,11 +205,11 @@ export const TaskItem = memo(({ task }: { task: AITask }) => {
                 statusColorClass,
               )}
             >
-              {status === "completed" && <i className="i-mgc-check-cute-re mr-1 size-3" />}
+              {status === "completed" && <i className="mr-1 i-mgc-check-cute-re size-3" />}
               {status === "scheduled" && (
-                <i className="i-mgc-calendar-time-add-cute-re mr-1 size-3" />
+                <i className="mr-1 i-mgc-calendar-time-add-cute-re size-3" />
               )}
-              {status === "paused" && <i className="i-mgc-pause-cute-re mr-1 size-3" />}
+              {status === "paused" && <i className="mr-1 i-mgc-pause-cute-re size-3" />}
               <span>{t(`tasks.status.${status}`)}</span>
             </span>
           </div>

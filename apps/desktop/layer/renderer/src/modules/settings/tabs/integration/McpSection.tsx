@@ -43,7 +43,7 @@ export const McpSection = () => {
 
 const CopyableCode = ({ value }: { value: string }) => (
   <div className="flex items-center gap-2">
-    <code className="min-w-0 flex-1 break-all rounded bg-fill px-2 py-1 font-mono text-xs">
+    <code className="min-w-0 flex-1 rounded bg-fill px-2 py-1 font-mono text-xs break-all">
       {value}
     </code>
     <CopyButton value={value} variant="outline" />
@@ -89,7 +89,7 @@ const McpTokens = () => {
       <p className="text-sm text-text-secondary">{t("integration.mcp_server.description")}</p>
       <CopyableCode value={ENDPOINT} />
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium leading-none">
+        <span className="text-sm leading-none font-medium">
           {t("integration.mcp_server.tokens")}
         </span>
         <Button
@@ -98,7 +98,7 @@ const McpTokens = () => {
           onClick={handleCreate}
           buttonClassName="flex items-center"
         >
-          <i className="i-mgc-add-cute-re mr-2" />
+          <i className="mr-2 i-mgc-add-cute-re" />
           {t("integration.mcp_server.create")}
         </Button>
       </div>

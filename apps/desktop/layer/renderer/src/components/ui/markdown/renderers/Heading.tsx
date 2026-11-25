@@ -24,9 +24,9 @@ export const createHeadingRenderer =
         {rest.children}
         <span
           className={cn(
-            "cursor-pointer select-none text-accent opacity-0 transition-opacity duration-200 group-hover:opacity-100",
+            "cursor-pointer text-accent opacity-0 transition-opacity duration-200 select-none group-hover:opacity-100",
             "relative ml-2",
-            "@2xl:absolute @2xl:left-[-1.5em] @2xl:top-0 @2xl:opacity-0",
+            "@2xl:absolute @2xl:top-0 @2xl:left-[-1.5em] @2xl:opacity-0",
           )}
           aria-hidden
           onClick={() => {
@@ -39,8 +39,8 @@ export const createHeadingRenderer =
             )
           }}
         >
-          <i className="i-mingcute-hashtag-line invisible" />
-          <span className="center absolute inset-0">
+          <i className="invisible i-mingcute-hashtag-line" />
+          <span className="absolute inset-0 center">
             <i className="i-mingcute-hashtag-line" />
           </span>
         </span>

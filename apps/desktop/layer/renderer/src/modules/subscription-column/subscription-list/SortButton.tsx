@@ -108,7 +108,7 @@ export const SortButton = () => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.98, y: 10 }}
                 transition={{ type: "spring", duration: 0.3 }}
-                className="shadow-context-menu relative z-10 rounded-md border border-border bg-theme-background p-3"
+                className="relative z-10 rounded-md border border-border bg-theme-background p-3 shadow-context-menu"
               >
                 <Popover.Arrow className="-translate-x-4 fill-border" />
                 <section className="w-[170px] text-center">
@@ -133,7 +133,7 @@ export const SortButton = () => {
                             "center flex aspect-square rounded border border-border",
 
                             "ring-0 ring-accent/20 duration-200",
-                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40",
+                            "focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:outline-none",
                             active && "border-accent bg-accent/5 ring-2",
                           )}
                         >

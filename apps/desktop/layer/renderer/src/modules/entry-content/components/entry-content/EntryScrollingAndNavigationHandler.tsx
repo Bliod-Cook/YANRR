@@ -171,7 +171,7 @@ export const EntryScrollingAndNavigationHandler = ({
             type="button"
             className={"group pointer-events-auto flex items-center gap-2"}
           >
-            <i className="i-mingcute-arrow-down-fill mr-1 size-5 text-text/90" />
+            <i className="mr-1 i-mingcute-arrow-down-fill size-5 text-text/90" />
             <span className="text-left text-[13px] font-medium text-text/90">
               {t("entry_content.scrolled_to_bottom")}
               <br />

@@ -69,10 +69,10 @@ export const ActionButton = ({
       // @see https://github.com/radix-ui/primitives/issues/2248#issuecomment-2147056904
       onFocusCapture={stopPropagation}
       className={cn(
-        "no-drag-region pointer-events-auto inline-flex items-center justify-center",
+        "pointer-events-auto inline-flex items-center justify-center no-drag-region",
         active && typeof icon !== "function" && "bg-zinc-500/15 hover:bg-zinc-500/20",
         "rounded-md duration-200 hover:bg-theme-item-hover data-[state=open]:bg-theme-item-active",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-border focus-visible:ring-offset-2",
+        "focus-visible:ring-2 focus-visible:ring-border focus-visible:ring-offset-2 focus-visible:outline-none",
         "disabled:cursor-not-allowed disabled:opacity-50",
         clickableDisabled && "cursor-not-allowed opacity-50",
         shouldHighlightMotion &&

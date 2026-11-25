@@ -7,11 +7,12 @@ export default {
   trailingComma: "all",
   objectWrap: "preserve",
   plugins: ["prettier-plugin-tailwindcss"],
-  tailwindConfig: "./apps/desktop/tailwind.config.ts",
+  tailwindStylesheet: "./apps/desktop/layer/renderer/src/styles/main.css",
   overrides: [
     {
       files: "apps/mobile/**/*.{css,js,jsx,ts,tsx}",
       options: {
+        tailwindStylesheet: undefined,
         tailwindConfig: "./apps/mobile/tailwind.config.ts",
       },
     },

@@ -178,7 +178,7 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
           />
           <div
             className={cn(
-              "center absolute inset-0 w-full opacity-0 transition-all duration-200 ease-in-out",
+              "absolute inset-0 center w-full opacity-0 transition-all duration-200 ease-in-out",
               isMobile ? "opacity-100" : "group-hover:opacity-100",
             )}
           >
@@ -216,7 +216,7 @@ const CornerPlayerImpl = ({ hideControls, rounded }: ControlButtonProps) => {
           </Marquee>
           <div
             className={cn(
-              "mt-0.5 overflow-hidden truncate text-xs text-text-secondary",
+              "mt-0.5 truncate overflow-hidden text-xs text-text-secondary",
               !isMobile && "group-hover:opacity-0",
             )}
           >

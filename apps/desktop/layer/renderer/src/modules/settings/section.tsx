@@ -64,7 +64,7 @@ export const SettingSectionTitle: FC<{
       data-highlighted={isHighlighted ? "true" : undefined}
       className={cn(
         "relative shrink-0 text-headline font-bold text-text/60 first:mt-0",
-        margin === "compact" ? "mb-2 mt-8" : "mb-4 mt-10",
+        margin === "compact" ? "mt-8 mb-2" : "mt-10 mb-4",
         className,
       )}
     >

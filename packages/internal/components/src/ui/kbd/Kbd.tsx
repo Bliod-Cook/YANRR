@@ -97,7 +97,7 @@ export const Kbd: FC<{
   return (
     <kbd
       className={cn(
-        "kbd box-border h-5 space-x-1 font-sans text-[0.7rem] tabular-nums text-text transition-all duration-200",
+        "box-border kbd h-5 space-x-1 font-sans text-[0.7rem] text-text tabular-nums transition-all duration-200",
         className,
       )}
       {...(abbr && { title: abbr })}

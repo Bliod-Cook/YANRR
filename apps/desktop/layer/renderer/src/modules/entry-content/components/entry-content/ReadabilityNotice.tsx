@@ -31,9 +31,9 @@ export const ReadabilityNotice = ({ entryId }: { entryId: string }) => {
       ) : (
         <>
           {status === ReadabilityStatus.FAILURE ? (
-            <div className="center mt-36 flex flex-col items-center gap-3">
+            <div className="mt-36 center flex flex-col items-center gap-3">
               <i className="i-mgc-warning-cute-re text-4xl text-red" />
-              <span className="text-balance text-center text-sm">
+              <span className="text-center text-sm text-balance">
                 {t("entry_content.fetching_content_failed")}
               </span>
               <Button
@@ -48,12 +48,12 @@ export const ReadabilityNotice = ({ entryId }: { entryId: string }) => {
               </Button>
             </div>
           ) : status === ReadabilityStatus.WAITING ? (
-            <div className="center mt-32 flex flex-col gap-2">
+            <div className="mt-32 center flex flex-col gap-2">
               <LoadingWithIcon size="large" icon={<i className="i-mgc-docment-cute-re" />} />
               <span className="text-sm">{t("entry_content.fetching_content")}</span>
             </div>
           ) : (
-            <div className="center mt-32">
+            <div className="mt-32 center">
               <span className="text-sm">{t("entry_content.no_content")}</span>
             </div>
           )}

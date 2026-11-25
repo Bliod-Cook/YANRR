@@ -35,7 +35,7 @@ export const SourceContentView = ({ src }: { src: string }) => {
   return (
     <div className="relative flex size-full flex-col">
       {loading && (
-        <div className="center absolute inset-0 mt-16 min-w-0">
+        <div className="absolute inset-0 mt-16 center min-w-0">
           <EntryContentLoading icon={src} />
         </div>
       )}
@@ -80,7 +80,7 @@ export const SourceContentPanel = ({ src }: { src: string | null }) => {
   const showSourceContent = useShowSourceContent()
   if (!showSourceContent || !src) return null
   return (
-    <div data-hide-in-print className="absolute left-0 top-0 z-[1] size-full bg-theme-background">
+    <div data-hide-in-print className="absolute top-0 left-0 z-[1] size-full bg-theme-background">
       <SourceContentView src={src} />
     </div>
   )

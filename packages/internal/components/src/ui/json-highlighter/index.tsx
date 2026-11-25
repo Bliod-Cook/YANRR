@@ -57,7 +57,7 @@ export const JsonHighlighter = ({
       <code className="block">
         {showLineNumbers ? (
           <div className="flex">
-            <div className="mr-4 select-none border-r border-fill pr-4 text-text-tertiary">
+            <div className="mr-4 border-r border-fill pr-4 text-text-tertiary select-none">
               {lines.map((_, index) => (
                 <div key={index} className="text-right">
                   {index + 1}

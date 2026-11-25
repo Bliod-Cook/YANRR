@@ -170,7 +170,7 @@ export const CustomIntegrationSection = memo(({ searchQuery }: CustomIntegration
   if (settings.enableCustomIntegration && !customIntegrationsMatchesSearch) {
     return (
       <div className="text-center">
-        <i className="i-mgc-webhook-cute-re mb-3 text-2xl text-text-tertiary" />
+        <i className="mb-3 i-mgc-webhook-cute-re text-2xl text-text-tertiary" />
         <p className="mb-2 text-sm font-medium text-text-tertiary">
           {t("integration.custom_integrations.search_empty")}
         </p>
@@ -228,7 +228,7 @@ const CustomIntegrationsSection = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium leading-none">
+        <span className="text-sm leading-none font-medium">
           {t("integration.custom_integrations.list.title")}
         </span>
         <Button
@@ -237,14 +237,14 @@ const CustomIntegrationsSection = ({
           onClick={onCreateIntegration}
           buttonClassName="flex items-center"
         >
-          <i className="i-mgc-add-cute-re mr-2" />
+          <i className="mr-2 i-mgc-add-cute-re" />
           {t("integration.custom_integrations.add.button")}
         </Button>
       </div>
 
       {integrations.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-fill-secondary py-12">
-          <i className="i-mgc-webhook-cute-re mb-3 text-2xl text-text-tertiary" />
+          <i className="mb-3 i-mgc-webhook-cute-re text-2xl text-text-tertiary" />
           <p className="mb-2 text-sm font-medium text-text-tertiary">
             {t("integration.custom_integrations.list.empty.title")}
           </p>

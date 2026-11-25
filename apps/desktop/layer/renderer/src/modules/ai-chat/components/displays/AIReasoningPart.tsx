@@ -19,11 +19,11 @@ export const AIReasoningPart: React.FC<AIReasoningPartProps> = React.memo(
     if (!text) return null
 
     return (
-      <div className={cn("min-w-0 max-w-full text-left", className)}>
+      <div className={cn("max-w-full min-w-0 text-left", className)}>
         <div className="w-[calc(var(--ai-chat-message-container-width,65ch))] max-w-full" />
         <div className="text-xs">
           <ScrollArea mask viewportClassName="max-h-[30vh]" ref={scrollAreaRef}>
-            <pre className="overflow-x-auto whitespace-pre-wrap rounded bg-material-medium p-3 text-[11px] leading-relaxed text-text-secondary">
+            <pre className="overflow-x-auto rounded bg-material-medium p-3 text-[11px] leading-relaxed whitespace-pre-wrap text-text-secondary">
               {text}
             </pre>
           </ScrollArea>

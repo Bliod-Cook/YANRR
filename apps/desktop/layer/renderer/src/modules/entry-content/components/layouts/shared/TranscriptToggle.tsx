@@ -16,7 +16,7 @@ export const TranscriptToggle: React.FC<TranscriptToggleProps> = ({
   if (!hasTranscript) return null
 
   return (
-    <div className="mb-6 mt-4 flex items-center gap-2">
+    <div className="mt-4 mb-6 flex items-center gap-2">
       <SegmentGroup
         value={showTranscript ? "transcript" : "content"}
         onValueChanged={(value) => onToggle(value === "transcript")}

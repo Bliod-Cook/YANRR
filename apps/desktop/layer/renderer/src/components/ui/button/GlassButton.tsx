@@ -103,7 +103,7 @@ export const GlassButton: FC<GlassButtonProps> = ({
           whileTap={{ scale: 0.95 }}
           transition={Spring.presets.snappy}
         >
-          <div className="center relative z-10 flex">{children}</div>
+          <div className="relative z-10 center flex">{children}</div>
         </m.button>
       </TooltipTrigger>
       {description && (

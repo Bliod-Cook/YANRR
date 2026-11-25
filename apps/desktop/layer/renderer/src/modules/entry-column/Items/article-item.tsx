@@ -26,7 +26,7 @@ export function ArticleItemStateLess({ entry, feed }: EntryItemStatelessProps) {
           <span>·</span>
           <span>{!!entry.publishedAt && <RelativeTime date={entry.publishedAt} />}</span>
         </div>
-        <div className="relative my-0.5 truncate break-words font-medium text-text">
+        <div className="relative my-0.5 truncate font-medium break-words text-text">
           {entry.title}
         </div>
         <div className="truncate text-[13px] text-text-secondary">{entry.description}</div>
@@ -60,7 +60,7 @@ export const ArticleItemSkeleton = (
             <span>·</span>
             <Skeleton className="h-3 w-12 shrink-0" />
           </div>
-          <div className="relative my-1 break-words font-medium">
+          <div className="relative my-1 font-medium break-words">
             <Skeleton className="h-3.5 w-full" />
             <Skeleton className="mt-1 h-3.5 w-3/4" />
           </div>

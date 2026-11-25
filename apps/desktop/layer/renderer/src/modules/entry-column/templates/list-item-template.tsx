@@ -185,7 +185,7 @@ export function ListItem({
       className={cn(
         "group relative flex cursor-menu py-3.5",
         !isRead &&
-          "before:absolute before:-left-3 before:top-5 before:block before:size-2 before:rounded-full before:bg-accent",
+          "before:absolute before:top-5 before:-left-3 before:block before:size-2 before:rounded-full before:bg-accent",
       )}
     >
       <FeedIcon target={related} fallback entry={iconEntry} size={24} />
@@ -224,7 +224,7 @@ export function ListItem({
         >
           {entry?.title ? (
             <EntryTranslation
-              className={cn("autospace-normal hyphens-auto font-medium", lineClamp.title)}
+              className={cn("autospace-normal font-medium hyphens-auto", lineClamp.title)}
               source={titleCaseIfEnglish(entry?.title ?? "", entry?.language)}
               target={titleCaseIfEnglish(translation?.title ?? "", actionLanguage)}
             />
@@ -235,7 +235,7 @@ export function ListItem({
               target={translation?.description}
             />
           )}
-          {!!isInCollection && <StarIcon className="absolute right-0 top-0" />}
+          {!!isInCollection && <StarIcon className="absolute top-0 right-0" />}
         </div>
         {!simple && (
           <div
@@ -282,7 +282,7 @@ export function ListItem({
           src={entry.firstMedia.url}
           type={entry.firstMedia.type}
           previewImageUrl={entry.firstMedia.preview_image_url}
-          className={cn("center ml-2 flex shrink-0 rounded", "size-20")}
+          className={cn("ml-2 center flex shrink-0 rounded", "size-20")}
           mediaContainerClassName={cn(
             "size-auto rounded",
             thumbnailRatio === "square" && "aspect-square object-cover",
@@ -342,7 +342,7 @@ function AudioCover({
 
       <div
         className={cn(
-          "center absolute inset-0 w-full transition-all duration-200 ease-in-out group-hover:opacity-100",
+          "absolute inset-0 center w-full transition-all duration-200 ease-in-out group-hover:opacity-100",
           playStatus || isMobile ? "opacity-100" : "opacity-0",
         )}
         onClick={handleClickPlay}
@@ -365,7 +365,7 @@ function AudioCover({
         <div className="absolute bottom-0 w-full overflow-hidden rounded-b-sm text-center">
           <div
             className={cn(
-              "absolute left-0 top-0 size-full bg-material-ultra-thick opacity-0 duration-200 group-hover:opacity-100",
+              "absolute top-0 left-0 size-full bg-material-ultra-thick opacity-0 duration-200 group-hover:opacity-100",
               isMobile && "opacity-100",
             )}
           />

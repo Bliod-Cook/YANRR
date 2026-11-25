@@ -51,7 +51,7 @@ export const WhenSection = ({ index }: WhenSectionProps) => {
           <span className="flex size-5 items-center justify-center rounded-full bg-orange text-[11px] font-bold text-white shadow-sm">
             1
           </span>
-          <span className="text-sm font-bold uppercase tracking-wide text-text">
+          <span className="text-sm font-bold tracking-wide text-text uppercase">
             {t("actions.action_card.when_feeds_match")}
           </span>
         </div>
@@ -131,7 +131,7 @@ export const WhenSection = ({ index }: WhenSectionProps) => {
                         </div>
                         {conditionIdx !== orConditions.length - 1 && (
                           <div className="flex items-center text-xs text-text-secondary">
-                            <span className="rounded-md border border-border bg-material-medium px-2 py-0.5 font-bold uppercase tracking-wide">
+                            <span className="rounded-md border border-border bg-material-medium px-2 py-0.5 font-bold tracking-wide uppercase">
                               {t("actions.action_card.and")}
                             </span>
                           </div>
@@ -151,13 +151,13 @@ export const WhenSection = ({ index }: WhenSectionProps) => {
                       })
                     }}
                   >
-                    <i className="i-mgc-add-cute-re mr-2" />
+                    <i className="mr-2 i-mgc-add-cute-re" />
                     {t("actions.action_card.and")}
                   </Button>
                 </div>
                 {orConditionIdx !== condition.length - 1 && (
                   <div className="flex items-center justify-center">
-                    <span className="rounded-md border border-border bg-material-medium px-3 py-1 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    <span className="rounded-md border border-border bg-material-medium px-3 py-1 text-xs font-semibold tracking-wide text-text-secondary uppercase">
                       {t("actions.action_card.or")}
                     </span>
                   </div>
@@ -174,7 +174,7 @@ export const WhenSection = ({ index }: WhenSectionProps) => {
             }}
             disabled={disabled}
           >
-            <i className="i-mgc-add-cute-re mr-2" />
+            <i className="mr-2 i-mgc-add-cute-re" />
             {t("actions.action_card.or")}
           </Button>
         </div>

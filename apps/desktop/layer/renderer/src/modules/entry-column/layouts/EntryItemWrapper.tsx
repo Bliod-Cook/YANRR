@@ -234,9 +234,9 @@ const ActionBar = ({
   return (
     <div
       className={cn(
-        "absolute -right-2 top-0 -translate-y-1/2 rounded-lg border border-gray-200 bg-white/90 p-1 shadow-sm backdrop-blur-sm dark:border-neutral-900 dark:bg-neutral-900",
-        isFirstItem && "-right-2 top-4",
-        view === FeedViewType.All && "right-1 top-1/2",
+        "absolute top-0 -right-2 -translate-y-1/2 rounded-lg border border-gray-200 bg-white/90 p-1 shadow-sm backdrop-blur-sm dark:border-neutral-900 dark:bg-neutral-900",
+        isFirstItem && "top-4 -right-2",
+        view === FeedViewType.All && "top-1/2 right-1",
       )}
       onClick={(e) => {
         e.stopPropagation()

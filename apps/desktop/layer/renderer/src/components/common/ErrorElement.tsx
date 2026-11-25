@@ -37,17 +37,17 @@ export function ErrorElement() {
   }
 
   return (
-    <div className="m-auto flex min-h-full max-w-prose select-text flex-col p-8 pt-24">
-      <div className="drag-region fixed inset-x-0 top-0 h-12" />
+    <div className="m-auto flex min-h-full max-w-prose flex-col p-8 pt-24 select-text">
+      <div className="fixed inset-x-0 top-0 h-12 drag-region" />
       <div className="center flex flex-col">
         <i className="i-mgc-bug-cute-re size-12 text-red-400" />
-        <h2 className="mb-4 mt-12 text-2xl">
+        <h2 className="mt-12 mb-4 text-2xl">
           {t("errors_page.crashed_title", { appName: APP_NAME })}
         </h2>
       </div>
       <h3 className="text-xl">{message}</h3>
       {import.meta.env.DEV && stack ? (
-        <pre className="mt-4 max-h-48 cursor-text overflow-auto whitespace-pre-line rounded-md bg-red-50 p-4 text-left font-mono text-sm text-red-600">
+        <pre className="mt-4 max-h-48 cursor-text overflow-auto rounded-md bg-red-50 p-4 text-left font-mono text-sm whitespace-pre-line text-red-600">
           {attachOpenInEditor(stack)}
         </pre>
       ) : null}

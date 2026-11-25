@@ -42,7 +42,7 @@ export const InputV2 = ({
   return (
     <div className="group relative">
       {icon && (
-        <div className="absolute left-3 top-1/2 flex -translate-y-1/2 items-center justify-center text-text-tertiary">
+        <div className="absolute top-1/2 left-3 flex -translate-y-1/2 items-center justify-center text-text-tertiary">
           {icon}
         </div>
       )}
@@ -52,7 +52,7 @@ export const InputV2 = ({
         className={cn(
           "min-w-0 flex-auto appearance-none rounded-lg text-sm",
           "bg-theme-background py-[calc(theme(spacing.2)-1px)]",
-          "ring-accent/20 duration-200 focus:border-accent/80 focus:outline-none focus:ring-2",
+          "ring-accent/20 duration-200 focus:border-accent/80 focus:ring-2 focus:outline-none",
           "focus:!bg-accent/5",
           "border border-border",
           "placeholder:text-text-tertiary dark:bg-zinc-700/[0.15] dark:text-zinc-200",
@@ -73,7 +73,7 @@ export const InputV2 = ({
         <button
           type="button"
           onClick={handleClear}
-          className="absolute right-3 top-1/2 hidden -translate-y-1/2 items-center text-text-tertiary transition-colors hover:text-text-secondary group-focus-within:flex"
+          className="absolute top-1/2 right-3 hidden -translate-y-1/2 items-center text-text-tertiary transition-colors group-focus-within:flex hover:text-text-secondary"
           tabIndex={-1}
         >
           <i className="i-mingcute-close-circle-fill" />

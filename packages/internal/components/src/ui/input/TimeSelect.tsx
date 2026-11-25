@@ -80,7 +80,7 @@ export const TimeSelect = memo<TimeSelectProps>(
             ))}
           </SelectContent>
         </Select>
-        <span className="mx-0.5 select-none text-xs text-text-secondary">:</span>
+        <span className="mx-0.5 text-xs text-text-secondary select-none">:</span>
         <Select disabled={disabled} value={minuteValue} onValueChange={(m) => update(hourValue, m)}>
           <SelectTrigger
             aria-label={label ? `${label} minute` : "Minute"}

@@ -36,7 +36,7 @@ export const EmptyFeedList = memo(({ onClick }: { onClick?: (e: React.MouseEvent
           onClick={handleClick}
         >
           <i className="i-mgc-arrow-right-up-cute-re text-3xl" />
-          <span className="text-balance text-center text-sm">
+          <span className="text-center text-sm text-balance">
             {t("sidebar.already_on_discover_page")}
           </span>
         </div>
@@ -66,7 +66,7 @@ export const SubscriptionLoadError = ({
   return (
     <div className="mt-12 flex flex-col items-center gap-3 text-text-secondary">
       <i className="i-mgc-warning-cute-re text-3xl text-red" />
-      <span className="text-balance text-center text-sm">{t("sidebar.load_failed")}</span>
+      <span className="text-center text-sm text-balance">{t("sidebar.load_failed")}</span>
       <Button variant="outline" size="sm" isLoading={isRetrying} onClick={onRetry}>
         {t("retry", { ns: "common" })}
       </Button>

@@ -136,7 +136,7 @@ export function SimpleDiscoverModal({ dismiss }: { dismiss: () => void }) {
                     <SegmentItem value="rsshub" label={t("words.rsshub")} />
                   </SegmentGroup>
                 </FormControl>
-                <p className="absolute bottom-0 right-0 text-right text-sm leading-6 text-text-secondary">
+                <p className="absolute right-0 bottom-0 text-right text-sm leading-6 text-text-secondary">
                   <Trans
                     i18nKey="discover.go_to_discover_hint"
                     components={{

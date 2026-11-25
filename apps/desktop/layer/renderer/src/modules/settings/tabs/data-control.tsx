@@ -253,11 +253,11 @@ const AppCacheLimit = () => {
   const InfinitySymbol = <CarbonInfinitySymbol />
   return (
     <SettingItemGroup>
-      <div className={"mb-3 mt-4 flex items-center justify-between gap-4"}>
+      <div className={"mt-4 mb-3 flex items-center justify-between gap-4"}>
         <Label className="center flex">
           {t("data_control.app_cache_limit.label")}
 
-          <span className="center ml-2 flex shrink-0 gap-1 text-xs opacity-60">
+          <span className="ml-2 center flex shrink-0 gap-1 text-xs opacity-60">
             <span>({cacheSize}M</span> /{" "}
             <span className="center flex shrink-0">
               {cacheLimit ? `${cacheLimit}M` : InfinitySymbol})
@@ -274,7 +274,7 @@ const AppCacheLimit = () => {
             onValueCommit={onChange}
           />
           <div className="absolute bottom-[-1.5em] text-base opacity-50">{InfinitySymbol}</div>
-          <div className="absolute bottom-[-1.5em] right-0 text-xs opacity-50">500M</div>
+          <div className="absolute right-0 bottom-[-1.5em] text-xs opacity-50">500M</div>
         </div>
       </div>
       <SettingDescription>{t("data_control.app_cache_limit.description")}</SettingDescription>

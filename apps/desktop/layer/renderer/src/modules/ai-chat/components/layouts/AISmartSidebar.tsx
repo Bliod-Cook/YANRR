@@ -179,7 +179,7 @@ const AIAmbientSidebar: React.FC<{ onExpand: () => void }> = ({ onExpand }) => {
 
         {/* Subtle ambient glow */}
         <m.div
-          className="absolute bottom-6 right-6 size-32"
+          className="absolute right-6 bottom-6 size-32"
           style={{
             opacity: glowOpacity,
             background: glowBackground,
@@ -197,7 +197,7 @@ const AIAmbientSidebar: React.FC<{ onExpand: () => void }> = ({ onExpand }) => {
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 30, scale: 0.95 }}
             transition={Spring.presets.smooth}
-            className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3"
+            className="fixed right-6 bottom-6 z-50 flex flex-col items-end gap-3"
           >
             {/* Unified glass card with integrated button */}
             <m.div

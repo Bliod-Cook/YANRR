@@ -299,10 +299,10 @@ const FallbackMedia: FC<MediaProps> = ({ type, mediaContainerClassName, classNam
           mediaContainerClassName,
         )}
       >
-        <div className="@sm:hidden @md:contents hidden">
+        <div className="hidden @sm:hidden @md:contents">
           <i className="i-mgc-close-cute-re text-xl text-red" />
           <p>{t("media.load_failed")}</p>
-          <div className="space-x-1 break-all px-4 text-sm">
+          <div className="space-x-1 px-4 text-sm break-all">
             <Trans
               t={t}
               i18nKey="media.open_original"
@@ -425,7 +425,7 @@ const VideoPreview: FC<{
 
       <div
         className={cn(
-          "absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-3xl text-white/80 duration-200",
+          "absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/50 p-2 text-3xl text-white/80 duration-200",
           isPaused ? "opacity-100" : "opacity-0",
         )}
       >

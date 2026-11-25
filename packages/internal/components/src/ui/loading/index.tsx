@@ -94,7 +94,7 @@ export const LoadingWithIcon: Component<
             />
           </span>
           <span
-            className={cn("absolute bottom-0 right-0", "animate-pulse duration-700")}
+            className={cn("absolute right-0 bottom-0", "animate-pulse duration-700")}
             style={smallIconStyle}
           >
             {cloneElement(icon, {

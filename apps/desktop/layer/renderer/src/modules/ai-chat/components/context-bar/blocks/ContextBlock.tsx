@@ -65,7 +65,7 @@ const BlockContainer: FC<{
         <button
           type="button"
           onClick={onRemove}
-          className="absolute inset-y-0 right-1 flex-shrink-0 cursor-button text-text/90 opacity-0 transition-all ease-in hover:text-text group-hover:opacity-100"
+          className="absolute inset-y-0 right-1 flex-shrink-0 cursor-button text-text/90 opacity-0 transition-all ease-in group-hover:opacity-100 hover:text-text"
         >
           <i className="i-mgc-close-cute-re size-3" />
         </button>

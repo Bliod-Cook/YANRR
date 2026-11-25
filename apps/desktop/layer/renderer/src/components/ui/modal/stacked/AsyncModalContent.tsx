@@ -54,7 +54,7 @@ export function AsyncModalContent<T>({
   if (isLoading || !data) {
     return (
       loadingComponent || (
-        <div className="center absolute inset-0 flex-col gap-8">
+        <div className="absolute inset-0 center flex-col gap-8">
           <LoadingCircle size="large" />
           <m.div
             exit={{

@@ -127,8 +127,8 @@ export const AIChainOfThought: React.FC<AIChainOfThoughtProps> = React.memo(
 
                 return (
                   <div key={innerCollapseId} className="relative pb-3 pl-8 last:pb-0">
-                    <div aria-hidden className={"absolute left-2 top-2 size-2 -translate-x-1/2"}>
-                      <i className="i-mgc-brain-cute-re absolute top-1/2 -translate-x-1/4 -translate-y-1/2" />
+                    <div aria-hidden className={"absolute top-2 left-2 size-2 -translate-x-1/2"}>
+                      <i className="absolute top-1/2 i-mgc-brain-cute-re -translate-x-1/4 -translate-y-1/2" />
                     </div>
 
                     <AIInnerReasoningPart

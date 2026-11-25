@@ -143,8 +143,8 @@ const ChatInterfaceContent = ({ centerInputOnEmpty, visualOffsetY }: ChatInterfa
   const { handleScroll } = useAttachScrollBeyond()
 
   return (
-    <div className="flex size-full flex-col @container">
-      <GlobalFileDropZone className="flex size-full flex-col @container">
+    <div className="@container flex size-full flex-col">
+      <GlobalFileDropZone className="@container flex size-full flex-col">
         <div className="flex min-h-0 flex-1 flex-col" ref={scrollContainerParentRef}>
           <ChatMessageContainer
             currentChatId={currentChatId}

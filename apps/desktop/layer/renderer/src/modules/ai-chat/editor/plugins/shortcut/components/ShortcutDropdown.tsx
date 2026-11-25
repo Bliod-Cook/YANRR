@@ -46,7 +46,7 @@ const ShortcutSuggestionItem = React.memo(
     return (
       <div
         className={cn(
-          "relative flex cursor-menu select-none items-center rounded-[5px] px-2.5 py-1 outline-none",
+          "relative flex cursor-menu items-center rounded-[5px] px-2.5 py-1 outline-none select-none",
           "focus-within:outline-transparent",
           "focus:bg-theme-selection-active focus:text-theme-selection-foreground data-[highlighted]:bg-theme-selection-hover data-[highlighted]:text-theme-selection-foreground",
           "h-[28px]",
@@ -61,7 +61,7 @@ const ShortcutSuggestionItem = React.memo(
           {matched?.icon ? (
             <i className={cn("text-[16px]", matched.icon)} />
           ) : (
-            <span className="inline-flex size-4 items-center justify-center rounded-full bg-blue/10 text-xs font-semibold leading-none">
+            <span className="inline-flex size-4 items-center justify-center rounded-full bg-blue/10 text-xs leading-none font-semibold">
               <i className="i-mgc-hotkey-cute-re" />
             </span>
           )}

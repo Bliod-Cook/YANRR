@@ -88,7 +88,7 @@ function Switch({
           animate={isChecked ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
           transition={{ type: "spring", bounce: 0 }}
           className={cn(
-            "absolute left-1 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500",
+            "absolute top-1/2 left-1 -translate-y-1/2 text-neutral-400 dark:text-neutral-500",
             size === "sm" ? "[&_svg]:size-2.5" : "[&_svg]:size-3",
           )}
         >
@@ -102,7 +102,7 @@ function Switch({
           animate={isChecked ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
           transition={{ type: "spring", bounce: 0 }}
           className={cn(
-            "absolute right-1 top-1/2 -translate-y-1/2 text-neutral-500 dark:text-neutral-400",
+            "absolute top-1/2 right-1 -translate-y-1/2 text-neutral-500 dark:text-neutral-400",
             size === "sm" ? "[&_svg]:size-2.5" : "[&_svg]:size-3",
           )}
         >

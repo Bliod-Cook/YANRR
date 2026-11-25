@@ -90,11 +90,11 @@ export const AIDisplayFlowPart = toolMemo(({ part }: { part: ToolWithState<any> 
         type="button"
         onClick={handleOpenModal}
         className={cn(
-          "absolute right-2 top-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5",
+          "absolute top-2 right-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5",
           "bg-material-thick text-sm font-medium text-text-secondary",
           "opacity-0 transition-all duration-200 group-hover:opacity-100",
           "hover:bg-material-medium hover:text-text focus:opacity-100",
-          "focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-1",
+          "focus:ring-2 focus:ring-blue focus:ring-offset-1 focus:outline-none",
         )}
         title={t("chat.flow_chart.open_full_screen")}
       >

@@ -24,7 +24,7 @@ export const SubscriptionColumnHeader = memo(() => {
   return (
     <div
       className={cn(
-        "ml-5 mr-3 flex items-center",
+        "mr-3 ml-5 flex items-center",
 
         normalStyle ? "ml-4 justify-between" : "justify-end",
       )}

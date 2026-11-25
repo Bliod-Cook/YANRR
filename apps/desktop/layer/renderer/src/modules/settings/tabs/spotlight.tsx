@@ -223,7 +223,7 @@ const SpotlightColorButton = ({
       type="button"
       data-spotlight-color-option={preset.value}
       aria-label={t("spotlight.select_color", { color: preset.value })}
-      className="relative size-9 rounded-full border border-fill-secondary shadow-sm transition-transform duration-200 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2"
+      className="relative size-9 rounded-full border border-fill-secondary shadow-sm transition-transform duration-200 hover:scale-105 focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 focus-visible:outline-none"
       style={{
         backgroundColor: preset.value,
         boxShadow: selected ? "0 0 0 2px hsl(var(--fo-a) / 0.8)" : undefined,
@@ -231,7 +231,7 @@ const SpotlightColorButton = ({
       onClick={onClick}
     >
       {selected && (
-        <span className="center absolute -bottom-1 -right-1 size-5 rounded-full bg-blue text-white shadow-sm">
+        <span className="absolute -right-1 -bottom-1 center size-5 rounded-full bg-blue text-white shadow-sm">
           <i className="i-mgc-check-cute-re text-xs" />
         </span>
       )}

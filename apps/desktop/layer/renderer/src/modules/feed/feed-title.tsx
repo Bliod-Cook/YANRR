@@ -21,7 +21,7 @@ export const FeedTitle = ({
   if (!feed) return null
 
   return (
-    <div className={cn("flex select-none items-center truncate", className)} style={style}>
+    <div className={cn("flex items-center truncate select-none", className)} style={style}>
       <EllipsisHorizontalTextWithTooltip className={cn("truncate", titleClassName)}>
         {title || getPreferredTitle(feed)}
       </EllipsisHorizontalTextWithTooltip>

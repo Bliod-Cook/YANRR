@@ -109,7 +109,7 @@ export const ContainerToc = memo(
       <RootPortal to={wrappedElement!}>
         <div
           className={cn(
-            "group absolute right-[-130px] top-0 hidden h-full w-[100px] @[770px]:block",
+            "group absolute top-0 right-[-130px] hidden h-full w-[100px] @[770px]:block",
             className,
           )}
           data-hide-in-print
@@ -118,8 +118,8 @@ export const ContainerToc = memo(
             <Toc
               ref={ref}
               className={cn(
-                "flex flex-col items-end animate-in fade-in-0 slide-in-from-bottom-12 easing-spring spring-soft",
-                "max-h-[calc(100vh-100px)] overflow-auto scrollbar-none",
+                "flex flex-col items-end animate-in easing-spring spring-soft fade-in-0 slide-in-from-bottom-12",
+                "scrollbar-none max-h-[calc(100vh-100px)] overflow-auto",
                 "@[700px]:-translate-x-12 @[800px]:-translate-x-4 @[900px]:translate-x-0 @[900px]:items-start",
               )}
             />

@@ -123,7 +123,7 @@ export const URLSchemePreview = ({ urlSchemeTemplate, className }: URLSchemePrev
               {/* Usage Note */}
               <div className="rounded border border-blue/20 bg-blue/10 p-3">
                 <div className="flex items-start gap-2">
-                  <i className="i-mgc-information-cute-re mt-0.5 flex-shrink-0 text-blue" />
+                  <i className="mt-0.5 i-mgc-information-cute-re flex-shrink-0 text-blue" />
                   <div className="text-sm text-blue">
                     <div className="mb-1 font-medium">
                       {t("integration.custom_integrations.preview.url_scheme_behavior_title")}

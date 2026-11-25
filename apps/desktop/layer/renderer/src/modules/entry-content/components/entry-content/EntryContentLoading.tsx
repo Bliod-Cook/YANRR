@@ -8,7 +8,7 @@ export const EntryContentLoading = (props: { icon?: string | null }) => {
     return <LoadingWithIcon size="large" icon={<i className="i-mgc-docment-cute-re" />} />
   }
   return (
-    <div className="center mb-14 flex flex-col gap-4">
+    <div className="mb-14 center flex flex-col gap-4">
       <Avatar className="animate-pulse rounded-sm">
         <AvatarImage src={getSiteIconUrl(env.VITE_API_URL, props.icon)} />
       </Avatar>

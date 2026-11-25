@@ -89,7 +89,7 @@ const NotificationChannels = () => {
 
           {!isLoading && (!data?.data || data.data.length === 0) ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-material-medium py-12">
-              <i className="i-mgc-notification-cute-re mb-3 text-4xl text-text-quaternary" />
+              <i className="mb-3 i-mgc-notification-cute-re text-4xl text-text-quaternary" />
               <p className="text-sm font-medium text-text">
                 {t.settings("notifications.empty.title")}
               </p>

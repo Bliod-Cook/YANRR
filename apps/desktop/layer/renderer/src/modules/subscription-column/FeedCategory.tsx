@@ -280,7 +280,7 @@ function FeedCategoryImpl({
                   onClick={() => {
                     setIsCategoryEditing(false)
                   }}
-                  className="center -ml-1 flex size-5 shrink-0 rounded-lg hover:bg-material-ultra-thick"
+                  className="-ml-1 center flex size-5 shrink-0 rounded-lg hover:bg-material-ultra-thick"
                 >
                   <i className="i-mgc-close-cute-re text-red" />
                 </MotionButtonBase>
@@ -301,7 +301,7 @@ function FeedCategoryImpl({
                 {isCategoryIsWaiting ? (
                   <LoadingCircle size="small" className="mr-2 size-[16px]" />
                 ) : (
-                  <div className="center mr-2 size-[16px]">
+                  <div className="mr-2 center size-[16px]">
                     <i className="i-mgc-right-cute-fi transition-transform" />
                   </div>
                 )}

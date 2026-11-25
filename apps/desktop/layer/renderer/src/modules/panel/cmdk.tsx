@@ -197,7 +197,7 @@ export const SearchCmdK: React.FC = () => {
         "h-[600px] max-h-[80vh] w-[800px] max-w-[100vw] rounded-none md:h-screen md:max-h-[60vh] md:max-w-[80vw]",
         "flex min-h-[50vh] flex-col bg-material-ultra-thick shadow-2xl backdrop-blur-background md:rounded-xl",
         "border-0 border-border md:border",
-        "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+        "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
       )}
     >
       <div className="flex shrink-0 items-center border-b border-border">
@@ -205,7 +205,7 @@ export const SearchCmdK: React.FC = () => {
         <Command.Input
           className={cn(
             "min-w-0 flex-1 bg-transparent p-4 text-lg leading-4",
-            scope ? "pl-3 pr-5" : "px-5",
+            scope ? "pr-5 pl-3" : "px-5",
           )}
           ref={inputRef}
           placeholder={t("search.placeholder")}
@@ -234,7 +234,7 @@ export const SearchCmdK: React.FC = () => {
           scrollbarClassName="mb-6"
         >
           <Command.List className="flex w-full min-w-0 flex-col">
-            <Command.Empty className="center absolute inset-0">
+            <Command.Empty className="absolute inset-0 center">
               {!keyword ? (
                 <Logo className="size-12 opacity-80 grayscale" />
               ) : entries.isError || entries.isFetching ? null : (
@@ -296,7 +296,7 @@ const SearchScopeChip: FC<{ scope: SearchScope; onClear: () => void }> = ({ scop
   const { t } = useTranslation()
   const title = useTimelineTitle(scope.feedId, scope.view)
   return (
-    <div className="ml-4 flex min-w-0 max-w-[40%] shrink-0 items-center gap-1.5 rounded-md bg-fill-secondary py-1 pl-2 pr-1 text-sm">
+    <div className="ml-4 flex max-w-[40%] min-w-0 shrink-0 items-center gap-1.5 rounded-md bg-fill-secondary py-1 pr-1 pl-2 text-sm">
       <SearchScopeIcon scope={scope} />
       <span className="truncate">{title}</span>
       <button
@@ -406,7 +406,7 @@ const SearchItem: FC<{
       `before:absolute before:inset-0 before:rounded-md before:content-[""]`,
       "hover:before:bg-zinc-200/60 dark:hover:before:bg-zinc-800/80",
       "data-[selected=true]:before:bg-zinc-200/60 data-[selected=true]:dark:before:bg-zinc-800/80",
-      "min-w-0 max-w-full",
+      "max-w-full min-w-0",
       styles["content-visually"],
     )}
     value={value}
@@ -426,7 +426,7 @@ const SearchItem: FC<{
           {action}
         </div>
         {snippet && (
-          <p className="mt-0.5 line-clamp-2 break-words text-xs text-text-secondary">{snippet}</p>
+          <p className="mt-0.5 line-clamp-2 text-xs break-words text-text-secondary">{snippet}</p>
         )}
       </div>
     </div>

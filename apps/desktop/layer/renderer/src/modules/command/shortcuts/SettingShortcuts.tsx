@@ -14,7 +14,7 @@ export const ShortcutsGuideline = () => {
     <div className="mt-4 space-y-6">
       {Object.entries(commandShortcuts).map(([type, commands]) => (
         <section key={type}>
-          <div className="mb-2 pl-3 text-sm font-medium capitalize text-text-secondary">
+          <div className="mb-2 pl-3 text-sm font-medium text-text-secondary capitalize">
             {t(type as CommandCategory)}
           </div>
           <div className="rounded-md border text-[13px] text-text">

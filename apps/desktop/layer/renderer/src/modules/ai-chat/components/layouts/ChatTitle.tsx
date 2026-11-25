@@ -30,8 +30,8 @@ export const AIHeaderTitle = ({
         aria-haspopup="menu"
         aria-label={ariaLabel}
         className={cn(
-          "group/button no-drag-region flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md bg-transparent p-0 text-left",
-          "outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-border focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "group/button flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md bg-transparent p-0 text-left no-drag-region",
+          "transition-opacity outline-none hover:opacity-80 focus-visible:ring-2 focus-visible:ring-border focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           className,
         )}
       >

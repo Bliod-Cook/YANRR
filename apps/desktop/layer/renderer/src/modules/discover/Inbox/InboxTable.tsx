@@ -21,15 +21,15 @@ export const InboxTable = () => {
   const inboxes = useInboxList()
   if (isLoading && inboxes.length === 0)
     return (
-      <div className="center mb-8 min-h-24">
+      <div className="mb-8 center min-h-24">
         <LoadingCircle size="large" />
       </div>
     )
   if (inboxes.length === 0)
     return (
-      <div className="center mb-4 flex flex-col gap-2 text-sm text-text-secondary">
+      <div className="mb-4 center flex flex-col gap-2 text-sm text-text-secondary">
         <i className="i-mingcute-empty-box-line text-3xl" />
-        <span className="center max-w-sm text-balance text-center text-sm text-text-secondary">
+        <span className="center max-w-sm text-center text-sm text-balance text-text-secondary">
           {t("discover.inbox.no_inbox")}
         </span>
       </div>
@@ -38,10 +38,10 @@ export const InboxTable = () => {
     <Table containerClassName="overflow-auto mb-8">
       <TableHeader>
         <TableRow>
-          <TableHead className="pl-0 pr-6">{t("discover.inbox.handle")}</TableHead>
-          <TableHead className="pl-0 pr-6">{t("discover.inbox.email")}</TableHead>
-          <TableHead className="pl-0 pr-6">{t("discover.inbox.title")}</TableHead>
-          <TableHead className="pl-0 pr-6">{t("discover.inbox.secret")}</TableHead>
+          <TableHead className="pr-6 pl-0">{t("discover.inbox.handle")}</TableHead>
+          <TableHead className="pr-6 pl-0">{t("discover.inbox.email")}</TableHead>
+          <TableHead className="pr-6 pl-0">{t("discover.inbox.title")}</TableHead>
+          <TableHead className="pr-6 pl-0">{t("discover.inbox.secret")}</TableHead>
           <TableHead className="center px-0">{t("discover.inbox.actions")}</TableHead>
         </TableRow>
       </TableHeader>

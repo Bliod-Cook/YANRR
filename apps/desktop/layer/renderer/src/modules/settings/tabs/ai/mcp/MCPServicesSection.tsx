@@ -390,7 +390,7 @@ export const MCPServicesSection = () => {
                 )}
               </Button>
               <Button variant="outline" size="sm" onClick={handleAddService}>
-                <i className="i-mgc-add-cute-re mr-2 size-4" />
+                <i className="mr-2 i-mgc-add-cute-re size-4" />
                 {t("integration.mcp.services.add")}
               </Button>
             </div>

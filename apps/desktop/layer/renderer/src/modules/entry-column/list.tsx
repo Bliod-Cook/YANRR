@@ -71,7 +71,7 @@ export const EntryEmptyList = ({
         </div>
       ) : unreadOnly ? (
         <>
-          <i className="i-mgc-celebrate-cute-re -mt-11 text-3xl" />
+          <i className="-mt-11 i-mgc-celebrate-cute-re text-3xl" />
           <span className="text-base">{t("entry_list.zero_unread")}</span>
         </>
       ) : (
@@ -327,7 +327,7 @@ export const EntryList: FC<EntryListProps> = memo(
             return (
               <div
                 ref={rowVirtualizer.measureElement}
-                className="absolute left-0 top-0 w-full will-change-transform"
+                className="absolute top-0 left-0 w-full will-change-transform"
                 key={virtualRow.key}
                 data-index={virtualRow.index}
                 style={{

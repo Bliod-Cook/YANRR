@@ -18,13 +18,13 @@ const EntryNotFoundErrorFallback: FC<AppErrorFallbackProps> = ({ resetError, err
   const { t } = useTranslation()
   return (
     <div className="flex w-full flex-1 flex-col items-center justify-center rounded-md bg-theme-background p-2">
-      <div className="center m-auto flex max-w-prose flex-col gap-4 text-center">
-        <div className="center mb-8 flex">
+      <div className="m-auto center flex max-w-prose flex-col gap-4 text-center">
+        <div className="mb-8 center flex">
           <Logo className="size-20" />
         </div>
         <p className="font-semibold">{t("errors_page.entry_not_found")}</p>
 
-        <div className="center mt-12 gap-4">
+        <div className="mt-12 center gap-4">
           <Button
             variant="outline"
             onClick={() => {

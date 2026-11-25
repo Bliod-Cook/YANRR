@@ -99,7 +99,7 @@ export const EnvironmentIndicator = () => {
             })
           }}
         >
-          <div className="center fixed bottom-0 right-0 z-[99999] flex rounded-tl bg-folo px-1 py-0.5 text-xs text-white">
+          <div className="fixed right-0 bottom-0 z-[99999] center flex rounded-tl bg-folo px-1 py-0.5 text-xs text-white">
             {DEV && <i className="i-mgc-bug-cute-re size-3" />}
             {MODE}
           </div>

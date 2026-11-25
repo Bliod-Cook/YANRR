@@ -218,7 +218,7 @@ const HeaderActions: FC<{
     // `safe-inset-top` keeps the actions below the custom Windows title bar, whose window
     // controls would otherwise cover the close button
     <m.div
-      className="pointer-events-none absolute inset-x-0 z-[100] flex h-16 items-center justify-end gap-2 px-3 safe-inset-top"
+      className="pointer-events-none absolute inset-x-0 safe-inset-top z-[100] flex h-16 items-center justify-end gap-2 px-3"
       variants={headerActionsVariants}
       initial="initial"
       animate="animate"
@@ -403,7 +403,7 @@ export const PreviewMediaContent: FC<{
           {currentSlideIndex > 0 && (
             <GlassButton
               description={t("media.previous")}
-              className={`absolute left-2 top-1/2 z-[100] flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-white opacity-0 backdrop-blur-sm duration-200 hover:bg-black/40 group-hover:opacity-100 lg:left-4 lg:size-10`}
+              className={`absolute top-1/2 left-2 z-[100] flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-white opacity-0 backdrop-blur-sm duration-200 group-hover:opacity-100 hover:bg-black/40 lg:left-4 lg:size-10`}
               onClick={() => {
                 emblaApi?.scrollPrev()
               }}
@@ -415,7 +415,7 @@ export const PreviewMediaContent: FC<{
           {currentSlideIndex < media.length - 1 && (
             <GlassButton
               description={t("media.next")}
-              className={`absolute right-2 top-1/2 z-[100] flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-white opacity-0 backdrop-blur-sm duration-200 hover:bg-black/40 group-hover:opacity-100 lg:right-4 lg:size-10`}
+              className={`absolute top-1/2 right-2 z-[100] flex size-8 -translate-y-1/2 items-center justify-center rounded-full text-white opacity-0 backdrop-blur-sm duration-200 group-hover:opacity-100 hover:bg-black/40 lg:right-4 lg:size-10`}
               onClick={() => {
                 emblaApi?.scrollNext()
               }}
@@ -479,7 +479,7 @@ const FallbackableImage: FC<
       )}
       {isAllError && (
         <div
-          className="center pointer-events-none absolute inset-0 flex-col gap-3"
+          className="pointer-events-none absolute inset-0 center flex-col gap-3"
           onClick={stopPropagation}
           tabIndex={-1}
         >

@@ -43,7 +43,7 @@ export const AIIndicator: FC = () => {
             transition={Spring.presets.smooth}
             onClick={handleClick}
             className={clsx(
-              "fixed bottom-8 right-8 z-40",
+              "fixed right-8 bottom-8 z-40",
               "rounded-2xl",
               "size-16",
               "hover:scale-105",

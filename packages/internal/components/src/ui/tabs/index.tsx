@@ -150,7 +150,7 @@ const TabsTrigger = ({
     <TabsPrimitive.Trigger
       ref={triggerRef as any}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap px-3 text-sm font-medium ring-offset-background transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-text",
+        "inline-flex items-center justify-center px-3 text-sm font-medium whitespace-nowrap ring-offset-background transition-all disabled:pointer-events-none disabled:opacity-50 data-[state=active]:text-text",
         "group relative z-[1]",
         tabsTriggerVariants({ variant }),
       )}

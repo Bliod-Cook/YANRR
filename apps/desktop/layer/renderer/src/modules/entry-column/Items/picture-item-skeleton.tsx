@@ -9,8 +9,8 @@ export const PictureItemSkeleton = (
             <Skeleton className="size-full overflow-hidden" />
           </div>
         </div>
-        <div className="relative flex-1 px-2 pb-3 pt-1 text-sm">
-          <div className="relative mb-1 mt-1.5 truncate font-medium leading-none">
+        <div className="relative flex-1 px-2 pt-1 pb-3 text-sm">
+          <div className="relative mt-1.5 mb-1 truncate leading-none font-medium">
             <Skeleton className="h-4 w-3/4" />
           </div>
           <div className="mt-1 flex items-center gap-1 truncate text-[13px]">

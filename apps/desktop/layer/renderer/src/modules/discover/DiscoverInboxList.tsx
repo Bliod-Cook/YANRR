@@ -15,7 +15,7 @@ export function DiscoverInboxList() {
     <div className="mx-auto w-full">
       <div className="mb-4 text-sm text-zinc-500">{t("discover.inbox.description")}</div>
       <InboxTable />
-      <div className="center mt-4 flex">
+      <div className="mt-4 center flex">
         {/* New Inbox */}
         <Button
           textClassName="flex items-center gap-2"

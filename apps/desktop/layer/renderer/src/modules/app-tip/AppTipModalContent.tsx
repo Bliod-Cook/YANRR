@@ -71,24 +71,24 @@ export function AppTipModalContent() {
   }
 
   return (
-    <section className="shadow-modal relative grid min-h-[500px] overflow-hidden rounded-lg border border-border bg-background text-text lg:grid-cols-[1.2fr,1fr]">
+    <section className="relative grid min-h-[500px] overflow-hidden rounded-lg border border-border bg-background text-text shadow-modal lg:grid-cols-[1.2fr,1fr]">
       <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-background">
         <div className="absolute inset-0 aspect-square w-full overflow-hidden bg-material-medium">
           {activeStepData.media}
         </div>
       </div>
 
-      <div className="relative flex w-[500px] flex-col border-t border-border bg-background lg:border-l lg:border-t-0">
+      <div className="relative flex w-[500px] flex-col border-t border-border bg-background lg:border-t-0 lg:border-l">
         <GlassButton
           onClick={dismiss}
-          className="absolute right-4 top-4 z-10"
+          className="absolute top-4 right-4 z-10"
           aria-label={t("new_user_dialog.actions.close")}
         >
           <i className="i-mgc-close-cute-re" />
         </GlassButton>
         <div className="flex flex-1 flex-col gap-6 p-8">
           <div className="flex flex-col gap-3">
-            <h2 className="text-2xl font-semibold leading-tight text-text">
+            <h2 className="text-2xl leading-tight font-semibold text-text">
               {activeStepData.title}
             </h2>
             <p className="text-sm leading-relaxed text-text-secondary">

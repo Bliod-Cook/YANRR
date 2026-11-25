@@ -27,7 +27,7 @@ export const ConfirmDestroyModalContent = ({ id }: { id: string }) => {
   return (
     <div className="w-full max-w-[540px]">
       <div className="mb-4">
-        <i className="i-mingcute-warning-fill -mb-1 mr-1 size-5 text-red-500" />
+        <i className="mr-1 -mb-1 i-mingcute-warning-fill size-5 text-red-500" />
         {t("discover.inbox_destroy_warning")}
       </div>
       <div className="flex justify-end">

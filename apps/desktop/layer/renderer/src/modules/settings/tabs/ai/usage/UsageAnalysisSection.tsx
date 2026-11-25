@@ -37,7 +37,7 @@ export const UsageAnalysisSection = () => {
                 modalContentClassName: "-mx-6 -mb-4",
               })
             }
-            className="absolute right-4 top-4 flex items-center gap-1 text-sm text-text-secondary duration-200 hover:text-text"
+            className="absolute top-4 right-4 flex items-center gap-1 text-sm text-text-secondary duration-200 hover:text-text"
           >
             {t("usage_analysis.view_details")}
             <i className="i-mingcute-right-line" />

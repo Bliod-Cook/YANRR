@@ -102,7 +102,7 @@ function SortableTabItem({ id }: { id: UniqueIdentifier }) {
       style={style}
       className={cn(
         isDragging ? "cursor-grabbing" : "cursor-grab",
-        "rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+        "rounded-xl focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none",
       )}
       aria-label={`${t("sidebar.timeline_tabs.drag_tab")}: ${t(meta.name as any, { ns: "common" })}`}
       {...attributes}

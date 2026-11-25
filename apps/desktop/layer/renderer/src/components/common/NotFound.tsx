@@ -61,9 +61,9 @@ const NotFoundContent = () => {
   }
 
   return (
-    <div className="prose center m-auto size-full flex-col dark:prose-invert">
+    <div className="m-auto prose center size-full flex-col dark:prose-invert">
       <main className="flex grow flex-col items-center justify-center">
-        <div className="center mb-8 flex">
+        <div className="mb-8 center flex">
           <Logo className="size-20" />
         </div>
         <p className="font-semibold">{t("errors_page.not_found.description")}</p>
@@ -80,7 +80,7 @@ const NotFoundContent = () => {
         </p>
       </main>
 
-      <PoweredByFooter className="center -mt-12 flex gap-2 py-8" />
+      <PoweredByFooter className="-mt-12 center flex gap-2 py-8" />
     </div>
   )
 }

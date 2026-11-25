@@ -37,7 +37,7 @@ const EntryContentImpl: Component<EntryContentProps> = ({ entryId, noMedia, comp
   const view = useEntryView(entryId)
 
   return (
-    <div className="relative flex size-full flex-col @container print:size-auto print:overflow-visible">
+    <div className="@container relative flex size-full flex-col print:size-auto print:overflow-visible">
       <article
         onContextMenu={stopPropagation}
         className={clsx("relative m-auto min-w-0 select-text", "w-full max-w-full")}

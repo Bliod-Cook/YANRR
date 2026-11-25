@@ -42,11 +42,11 @@ export const InboxForm: Component<{
     <div
       className={cn(
         "flex h-full flex-col",
-        asWidget ? "mx-auto min-h-[210px] w-full max-w-[550px]" : "px-[18px] pb-[18px] pt-12",
+        asWidget ? "mx-auto min-h-[210px] w-full max-w-[550px]" : "px-[18px] pt-12 pb-[18px]",
       )}
     >
       {!asWidget && (
-        <div className="mb-4 mt-2 flex items-center gap-2 text-[22px] font-bold">
+        <div className="mt-2 mb-4 flex items-center gap-2 text-[22px] font-bold">
           <Logo className="size-8" />
           {isSubscribed ? t("feed_form.update_follow") : t("feed_form.add_follow")}
         </div>

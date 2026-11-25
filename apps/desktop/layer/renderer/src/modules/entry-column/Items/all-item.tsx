@@ -157,7 +157,7 @@ export function AllItem({ entryId, translation, currentFeedTitle }: UniversalIte
       className={cn(
         "group relative flex cursor-menu items-center py-2",
         !isRead &&
-          "before:absolute before:-left-4 before:top-[14px] before:block before:size-2 before:rounded-full before:bg-accent",
+          "before:absolute before:top-[14px] before:-left-4 before:block before:size-2 before:rounded-full before:bg-accent",
       )}
     >
       {currentFeedTitle !== thisFeedTitle && (
@@ -179,7 +179,7 @@ export function AllItem({ entryId, translation, currentFeedTitle }: UniversalIte
             {entry?.title ? (
               <EntryTranslation
                 className={cn(
-                  "inline-flex min-w-0 items-center hyphens-auto font-medium",
+                  "inline-flex min-w-0 items-center font-medium hyphens-auto",
                   lineClamp.title,
                 )}
                 source={titleCaseIfEnglish(entry?.title ?? "", entry?.language)}
@@ -193,7 +193,7 @@ export function AllItem({ entryId, translation, currentFeedTitle }: UniversalIte
               />
             )}
           </EllipsisHorizontalTextWithTooltip>
-          {!!isInCollection && <StarIcon className="absolute right-0 top-0" />}
+          {!!isInCollection && <StarIcon className="absolute top-0 right-0" />}
         </div>
         <div
           className={cn(
@@ -231,7 +231,7 @@ export function AllItemStateLess({ entry, feed }: EntryItemStatelessProps) {
           <span>·</span>
           <span>{!!entry.publishedAt && <RelativeTime date={entry.publishedAt} />}</span>
         </div>
-        <div className="relative my-0.5 truncate break-words font-medium text-text">
+        <div className="relative my-0.5 truncate font-medium break-words text-text">
           <HighlightedText rules={spotlightRules} text={entry.title} />
         </div>
       </div>
@@ -286,7 +286,7 @@ function VideoIcon({ src }: { src: string }) {
     <Tooltip>
       <TooltipRoot>
         <TooltipTrigger asChild>
-          <i className="i-mgc-video-cute-fi mr-1 shrink-0 text-base text-text/90" />
+          <i className="mr-1 i-mgc-video-cute-fi shrink-0 text-base text-text/90" />
         </TooltipTrigger>
         <TooltipPortal>
           <TooltipContent className="flex-col gap-1" side={"bottom"}>

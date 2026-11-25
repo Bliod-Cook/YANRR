@@ -45,7 +45,7 @@ export const ShortcutSetting = () => {
 
   return (
     <div>
-      <p className="mb-6 mt-4 space-y-2 text-sm">{t("settings.shortcuts.description")}</p>
+      <p className="mt-4 mb-6 space-y-2 text-sm">{t("settings.shortcuts.description")}</p>
 
       {Object.entries(commandShortcuts).map(([type, commands]) => (
         <section key={type} className="mb-8">

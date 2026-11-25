@@ -42,11 +42,11 @@ export const LocalDatabaseErrorScreen = ({ error }: { error: unknown }) => {
   return (
     <div className="flex h-screen items-center justify-center bg-background p-8">
       {IN_ELECTRON && <WindowTitlebarRegion />}
-      <div className="flex w-full max-w-prose select-text flex-col items-center gap-4 text-center">
+      <div className="flex w-full max-w-prose flex-col items-center gap-4 text-center select-text">
         <i className="i-mgc-warning-cute-re size-12 text-red" />
         <h1 className="text-xl font-semibold">{t("local_database_error.title")}</h1>
         <p className="text-sm text-text-secondary">{t("local_database_error.description")}</p>
-        <pre className="max-h-32 w-full overflow-auto whitespace-pre-wrap rounded-md bg-fill-secondary p-3 text-left font-mono text-xs text-text-secondary">
+        <pre className="max-h-32 w-full overflow-auto rounded-md bg-fill-secondary p-3 text-left font-mono text-xs whitespace-pre-wrap text-text-secondary">
           {error instanceof Error ? error.message : String(error)}
         </pre>
         {unsentChanges && (

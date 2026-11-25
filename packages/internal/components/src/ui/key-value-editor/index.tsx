@@ -156,7 +156,7 @@ export const KeyValueEditor = ({
         disabled={disabled}
         buttonClassName="w-full h-8"
       >
-        <i className="i-mgc-add-cute-re mr-2" />
+        <i className="mr-2 i-mgc-add-cute-re" />
         {addButtonText}
       </Button>
     </div>

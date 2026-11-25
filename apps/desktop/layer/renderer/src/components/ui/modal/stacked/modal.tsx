@@ -48,7 +48,7 @@ import { ModalOverlay } from "./overlay"
 import type { ModalOverlayOptions, ModalProps } from "./types"
 
 const DragBar = ELECTRON_BUILD ? (
-  <span className="drag-region fixed left-0 right-36 top-0 h-8" />
+  <span className="fixed top-0 right-36 left-0 h-8 drag-region" />
 ) : null
 export const ModalInternal = memo(function Modal({
   ref,
@@ -302,8 +302,8 @@ export const ModalInternal = memo(function Modal({
                 scope={HotkeyScope.Modal}
                 ref={setEdgeElementRef}
                 className={cn(
-                  "no-drag-region fixed",
-                  modal ? "inset-0 overflow-auto" : "left-0 top-0",
+                  "fixed no-drag-region",
+                  modal ? "inset-0 overflow-auto" : "top-0 left-0",
                   isClosing ? "!pointer-events-none" : "!pointer-events-auto",
                   modalContainerClassName,
                 )}
@@ -358,7 +358,7 @@ export const ModalInternal = memo(function Modal({
               onContextMenu={preventDefault}
               className={cn(
                 "fixed flex",
-                modal ? "inset-0 overflow-auto" : "left-0 top-0",
+                modal ? "inset-0 overflow-auto" : "top-0 left-0",
                 isClosing && "!pointer-events-none",
                 modalContainerClassName,
                 !isResizeable && "center",
@@ -417,7 +417,7 @@ export const ModalInternal = memo(function Modal({
                   <div className={"relative flex flex-col"}>
                     <div className={"flex items-center"}>
                       <Dialog.Title
-                        className="flex w-0 max-w-full grow items-center gap-2 px-2 pb-1 pt-2 text-base font-medium text-text"
+                        className="flex w-0 max-w-full grow items-center gap-2 px-2 pt-2 pb-1 text-base font-medium text-text"
                         onPointerDownCapture={handleDrag}
                         onPointerDown={relocateModal}
                       >
@@ -430,7 +430,7 @@ export const ModalInternal = memo(function Modal({
                         <Dialog.DialogClose
                           data-testid="modal-close"
                           aria-label={t("words.close")}
-                          className="center z-[2] -mr-1 rounded-lg p-2 text-text-secondary hover:bg-fill-quaternary hover:text-text"
+                          className="z-[2] -mr-1 center rounded-lg p-2 text-text-secondary hover:bg-fill-quaternary hover:text-text"
                           onClick={(event) => {
                             // Radix would close the dialog at once, without asking about changes
                             event.preventDefault()
@@ -449,7 +449,7 @@ export const ModalInternal = memo(function Modal({
 
                   <div
                     className={cn(
-                      "-mx-2 min-h-0 shrink grow overflow-auto overflow-x-hidden px-4 pb-4 pt-3 text-sm text-text",
+                      "-mx-2 min-h-0 shrink grow overflow-auto overflow-x-hidden px-4 pt-3 pb-4 text-sm text-text",
                       modalContentClassName,
                     )}
                   >

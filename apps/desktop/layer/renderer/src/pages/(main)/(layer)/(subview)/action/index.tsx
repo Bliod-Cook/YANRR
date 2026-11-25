@@ -16,7 +16,7 @@ export function Component() {
       </div>
 
       {/* Content */}
-      <div className="relative mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col @container">
+      <div className="@container relative mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col">
         <ActionSetting />
       </div>
     </div>

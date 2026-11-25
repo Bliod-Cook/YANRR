@@ -142,7 +142,7 @@ export const ShortcutModalContent = ({ shortcut, onSave, onCancel }: ShortcutMod
               <i className={icon || "i-mgc-hotkey-cute-re"} />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="shadow-context-menu w-[280px] p-2">
+          <PopoverContent align="end" className="w-[280px] p-2 shadow-context-menu">
             <div className="grid grid-cols-7 gap-1.5">
               {PRESET_ICONS.map((klass) => (
                 <PopoverClose asChild key={klass}>
@@ -164,7 +164,7 @@ export const ShortcutModalContent = ({ shortcut, onSave, onCancel }: ShortcutMod
       {isServer ? (
         <div className="space-y-2">
           <Label className="text-xs text-text">{t("shortcuts.default_prompt.label")}</Label>
-          <div className="select-text whitespace-pre-wrap rounded-md border border-border bg-material-thin px-3 py-2 text-xs leading-relaxed text-text">
+          <div className="rounded-md border border-border bg-material-thin px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap text-text select-text">
             {shortcut?.defaultPrompt}
           </div>
         </div>

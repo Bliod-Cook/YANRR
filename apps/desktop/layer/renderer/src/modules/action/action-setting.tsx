@@ -84,7 +84,7 @@ const EmptyActionPlaceholder = ({ onCreateRule }: { onCreateRule: () => void }) 
 
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button onClick={onCreateRule}>
-            <i className="i-mgc-add-cute-re mr-2 size-4" />
+            <i className="mr-2 i-mgc-add-cute-re size-4" />
             {t("actions.action_card.empty.cta")}
           </Button>
         </div>
@@ -160,7 +160,7 @@ export const ActionSetting = () => {
       {ruleCount === 0 ? (
         <EmptyActionPlaceholder onCreateRule={createRule} />
       ) : isWide ? (
-        <div className="absolute inset-x-0 bottom-0 top-12 flex overflow-hidden rounded-lg border border-fill-secondary">
+        <div className="absolute inset-x-0 top-12 bottom-0 flex overflow-hidden rounded-lg border border-fill-secondary">
           <RuleList
             selectedIndex={selectedRuleIndex}
             onSelect={setSelectedRuleIndex}
@@ -278,20 +278,20 @@ const ShareImportSection = () => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={handleExport} disabled={!hasActions}>
-            <i className="i-mgc-download-2-cute-re mr-3 size-4" />
+            <i className="mr-3 i-mgc-download-2-cute-re size-4" />
             {t("actions.action_card.summary.export")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleImport}>
-            <i className="i-mgc-file-upload-cute-re mr-3 size-4" />
+            <i className="mr-3 i-mgc-file-upload-cute-re size-4" />
             {t("actions.action_card.summary.import_file")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleCopyToClipboard} disabled={!hasActions}>
-            <i className="i-mgc-copy-2-cute-re mr-3 size-4" />
+            <i className="mr-3 i-mgc-copy-2-cute-re size-4" />
             {t("actions.action_card.summary.copy")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleImportFromClipboard}>
-            <i className="i-mgc-paste-cute-re mr-3 size-4" />
+            <i className="mr-3 i-mgc-paste-cute-re size-4" />
             {t("actions.action_card.summary.import_clipboard")}
           </DropdownMenuItem>
         </DropdownMenuContent>

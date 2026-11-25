@@ -137,7 +137,7 @@ const createAiMessageMarkdownElementsRender = (canAnimate: boolean) => {
       return (
         <th
           {...props}
-          className="whitespace-nowrap px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-text-secondary"
+          className="px-4 py-3 text-left text-xs font-medium tracking-wider whitespace-nowrap text-text-secondary uppercase"
         >
           {children}
         </th>
@@ -159,7 +159,7 @@ const createAiMessageMarkdownElementsRender = (canAnimate: boolean) => {
     },
     td: ({ children, ref, node, ...props }) => {
       return (
-        <td {...props} className="whitespace-nowrap px-4 py-3 text-sm text-text">
+        <td {...props} className="px-4 py-3 text-sm whitespace-nowrap text-text">
           {textAnimator(children as any)}
         </td>
       )
@@ -279,7 +279,7 @@ const RelatedEntryLink = (props: LinkProps) => {
   return (
     <button
       type="button"
-      className="follow-link--underline cursor-pointer font-semibold text-text no-underline"
+      className="cursor-pointer follow-link--underline font-semibold text-text no-underline"
       onClick={() => {
         peekModal(entryId, "modal")
       }}

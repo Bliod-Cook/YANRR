@@ -28,7 +28,7 @@ export function PictureItemStateLess({ entry }: EntryItemStatelessProps) {
   const currentItemWidth = (bounds.width - 12) / 2
 
   return (
-    <div className="relative w-full select-none text-text" ref={ref}>
+    <div className="relative w-full text-text select-none" ref={ref}>
       <MasonryItemWidthContext value={currentItemWidth}>
         {}
         <MasonryItemsAspectRatioContext.Provider value={masonryItemsRadio}>

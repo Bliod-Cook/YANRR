@@ -131,7 +131,7 @@ export const SettingAbout = () => {
             }}
             className="inline-flex items-center rounded-full px-3 py-1 text-xs text-text-tertiary transition-colors hover:bg-fill-secondary hover:text-text-secondary"
           >
-            <i className="i-mgc-copy-cute-re mr-1.5" />
+            <i className="mr-1.5 i-mgc-copy-cute-re" />
             {t("about.copyEnvironment")}
           </button>
         </div>
@@ -148,7 +148,7 @@ export const SettingAbout = () => {
             <div className="text-sm font-medium">{t("about.appTip")}</div>
             <div className="text-xs text-text-tertiary">{t("about.appTipDescription")}</div>
           </div>
-          <i className="i-mingcute-sparkles-2-line text-base text-text-tertiary transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-accent" />
+          <i className="i-mingcute-sparkles-2-line text-base text-text-tertiary transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-accent" />
         </button>
       </div>
 

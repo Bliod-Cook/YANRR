@@ -271,7 +271,7 @@ function EntryColumnContent() {
     <Focusable
       scope={HotkeyScope.Timeline}
       data-hide-in-print
-      className="relative flex h-full flex-1 flex-col @container"
+      className="@container relative flex h-full flex-1 flex-col"
       onClick={() =>
         navigate({
           view,

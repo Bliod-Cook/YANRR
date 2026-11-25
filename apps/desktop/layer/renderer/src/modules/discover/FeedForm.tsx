@@ -131,7 +131,7 @@ export const FeedForm: Component<{
                 <i className="i-mgc-close-cute-re size-7 text-red" />
                 <p>{t("feed_form.error_fetching_feed")}</p>
                 {/* Why, such as an address that is not a feed */}
-                <p className="cursor-text select-text break-all px-8 text-center text-sm text-text-secondary">
+                <p className="cursor-text px-8 text-center text-sm break-all text-text-secondary select-text">
                   {getFetchErrorMessage(feedQuery.error)}
                 </p>
               </div>
@@ -140,7 +140,7 @@ export const FeedForm: Component<{
           default: {
             return (
               <div className="center h-full grow flex-col">
-                <i className="i-mgc-question-cute-re mb-6 size-12 text-zinc-500" />
+                <i className="mb-6 i-mgc-question-cute-re size-12 text-zinc-500" />
                 <p>{t("feed_form.feed_not_found")}</p>
               </div>
             )

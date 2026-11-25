@@ -20,7 +20,7 @@ export const EntryNoContent: FC<{
     return <ReadabilityAutoToggleEffect url={url} id={id} />
   }
   return (
-    <div className="center mt-16 text-balance text-center text-sm text-zinc-400">
+    <div className="mt-16 center text-center text-sm text-balance text-zinc-400">
       {t("entry_content.no_content")}
     </div>
   )

@@ -89,7 +89,7 @@ const SocialMediaDateItem = ({
       Wrapper={({ children }) => (
         <div
           className={cn(
-            "m-auto flex w-full max-w-[645px] select-none gap-3 pl-2 text-base lg:text-lg",
+            "m-auto flex w-full max-w-[645px] gap-3 pl-2 text-base select-none lg:text-lg",
           )}
         >
           {children}

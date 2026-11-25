@@ -18,7 +18,7 @@ export function Recommendations() {
               }}
             >
               <CardContent className="group relative flex aspect-square flex-col overflow-hidden p-0">
-                <div className="absolute right-2 top-2 size-12 rotate-12 opacity-20">
+                <div className="absolute top-2 right-2 size-12 rotate-12 opacity-20">
                   <div className="text-5xl">{CategoryMap[cat]?.emoji}</div>
                 </div>
                 <div className="flex size-full flex-col items-start justify-end p-6 text-left">

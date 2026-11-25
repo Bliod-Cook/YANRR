@@ -116,23 +116,23 @@ export const EntryTitle = ({ entryId, compact, containerClassName }: EntryLinkPr
         <LinkTarget
           {...linkProps}
           className={cn(
-            "inline-block cursor-link select-text break-words text-[1.7rem] font-bold leading-normal duration-200",
+            "inline-block cursor-link text-[1.7rem] leading-normal font-bold break-words duration-200 select-text",
             populatedFullHref
-              ? "cursor-link hover:multi-[scale-[1.01];opacity-95]"
+              ? "hover:multi-[scale-[1.01];opacity-95] cursor-link"
               : "cursor-default",
           )}
         >
           <EntryTranslation
             source={titleCaseIfEnglish(entry.title ?? "", entry.language)}
             target={titleCaseIfEnglish(translation?.title ?? "", actionLanguage)}
-            className="autospace-normal inline-block select-text hyphens-auto text-text duration-200"
+            className="autospace-normal inline-block hyphens-auto text-text duration-200 select-text"
             inline={false}
           />
         </LinkTarget>
 
         {/* Meta Information with improved layout */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-          <div className="flex flex-wrap items-center gap-4 text-text-secondary [&>div:hover]:multi-[text-text] [&>div]:transition-colors">
+          <div className="flex flex-wrap items-center gap-4 text-text-secondary [&>div]:transition-colors [&>div:hover]:multi-[text-text]">
             <div
               className="flex items-center text-xs font-medium"
               onClick={() =>

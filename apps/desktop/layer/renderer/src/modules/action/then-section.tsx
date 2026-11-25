@@ -65,7 +65,7 @@ export const ThenSection = ({ index }: { index: number }) => {
           <span className="flex size-5 items-center justify-center rounded-full bg-orange text-[11px] font-bold text-white shadow-sm">
             2
           </span>
-          <span className="text-sm font-bold uppercase tracking-wide text-text">
+          <span className="text-sm font-bold tracking-wide text-text uppercase">
             {t("actions.action_card.then_do")}
           </span>
         </div>
@@ -98,12 +98,12 @@ export const ThenSection = ({ index }: { index: number }) => {
                         <i className={cn(action.iconClassname, "text-base")} />
                       </div>
                       {!isLast && (
-                        <div className="absolute left-1/2 top-9 h-[calc(100%+0.75rem)] w-0.5 -translate-x-1/2 bg-gradient-to-b from-fill-secondary to-transparent" />
+                        <div className="absolute top-9 left-1/2 h-[calc(100%+0.75rem)] w-0.5 -translate-x-1/2 bg-gradient-to-b from-fill-secondary to-transparent" />
                       )}
                     </div>
 
                     {/* Action content */}
-                    <div className="flex min-w-0 flex-1 flex-col gap-3 pb-6 pt-0.5">
+                    <div className="flex min-w-0 flex-1 flex-col gap-3 pt-0.5 pb-6">
                       <div className="flex items-center gap-4">
                         {/* Label */}
                         <span className="flex h-9 items-center text-sm font-medium text-text">
@@ -177,7 +177,7 @@ const AddActionMenu = ({
     <DropdownMenu>
       <DropdownMenuTrigger asChild disabled={disabled}>
         <Button variant="outline" size="sm" buttonClassName="border-dashed">
-          <i className="i-mgc-add-cute-re mr-2" />
+          <i className="mr-2 i-mgc-add-cute-re" />
           {t("actions.action_card.add")}
         </Button>
       </DropdownMenuTrigger>
@@ -232,7 +232,7 @@ const RewriteRulesConfig = ({ index, disabled }: ActionConfigProps) => {
         return (
           <div key={rewriteIdx} className="flex flex-col gap-3 rounded-lg bg-fill-quaternary p-4">
             <div className="grid gap-3 @[520px]:grid-cols-2">
-              <label className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+              <label className="text-xs font-medium tracking-wide text-text-secondary uppercase">
                 {t("actions.action_card.from")}
                 <Input
                   disabled={disabled}
@@ -241,7 +241,7 @@ const RewriteRulesConfig = ({ index, disabled }: ActionConfigProps) => {
                   onChange={(event) => change("from", event.target.value)}
                 />
               </label>
-              <label className="text-xs font-medium uppercase tracking-wide text-text-secondary">
+              <label className="text-xs font-medium tracking-wide text-text-secondary uppercase">
                 {t("actions.action_card.to")}
                 <Input
                   disabled={disabled}

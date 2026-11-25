@@ -69,7 +69,7 @@ export const EllipsisTextWithTooltip = (props: EllipsisProps) => {
 
       <TooltipPortal>
         <TooltipContent>
-          <span className="whitespace-pre-line break-all" onClick={(e) => e.stopPropagation()}>
+          <span className="break-all whitespace-pre-line" onClick={(e) => e.stopPropagation()}>
             {children}
           </span>
         </TooltipContent>

@@ -73,8 +73,8 @@ export const EntryToastPreview = ({ entryId }: { entryId: string }) => {
       exit="exit"
       layout="size"
       className={cn(
-        "shadow-perfect relative flex flex-col items-center rounded-xl border bg-theme-background p-8",
-        "mr-4 mt-4 max-h-[500px] w-[60ch] max-w-full overflow-auto",
+        "relative flex flex-col items-center rounded-xl border bg-theme-background p-8 shadow-perfect",
+        "mt-4 mr-4 max-h-[500px] w-[60ch] max-w-full overflow-auto",
       )}
     >
       <div className="flex w-full gap-3">
@@ -95,7 +95,7 @@ export const EntryToastPreview = ({ entryId }: { entryId: string }) => {
           </div>
           <div
             className={cn(
-              "relative mt-0.5 whitespace-pre-line text-base",
+              "relative mt-0.5 text-base whitespace-pre-line",
               isInCollection && "pr-5",
             )}
           >

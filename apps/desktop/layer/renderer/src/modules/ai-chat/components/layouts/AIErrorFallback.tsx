@@ -32,7 +32,7 @@ export const AIErrorFallback: FallbackRender = (props) => {
             <summary className="mb-2 cursor-pointer text-xs text-text-tertiary hover:text-text-secondary">
               Show technical details
             </summary>
-            <pre className="max-h-32 cursor-text select-text overflow-auto whitespace-pre-wrap rounded-md border border-border/40 bg-fill p-3 font-mono text-xs text-text-secondary">
+            <pre className="max-h-32 cursor-text overflow-auto rounded-md border border-border/40 bg-fill p-3 font-mono text-xs whitespace-pre-wrap text-text-secondary select-text">
               {attachOpenInEditor(stack)}
             </pre>
           </details>

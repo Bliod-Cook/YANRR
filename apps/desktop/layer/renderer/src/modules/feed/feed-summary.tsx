@@ -42,12 +42,12 @@ export function FollowSummary({
   }
 
   return (
-    <div className={cn("flex select-text flex-col gap-2 text-sm", className)}>
+    <div className={cn("flex flex-col gap-2 text-sm select-text", className)}>
       <div className="flex items-center">
         <FeedIcon
           target={feed}
           fallbackUrl={docs}
-          className="mask-squircle mask shrink-0 rounded-none"
+          className="shrink-0 rounded-none mask-squircle mask"
           size={32}
         />
         <div className="min-w-0 flex-1 leading-tight">

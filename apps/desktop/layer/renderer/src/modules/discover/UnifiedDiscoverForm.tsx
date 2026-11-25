@@ -72,7 +72,7 @@ function ToolLink({ icon, label, onClick }: ToolLinkProps) {
       className={cn(
         "inline-flex items-center gap-1.5 rounded-md px-2 py-1 transition-colors",
         "text-text-secondary hover:bg-fill-secondary hover:text-text",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1",
+        "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1 focus-visible:outline-none",
       )}
     >
       <i className={cn(icon, "size-3.5 shrink-0")} />

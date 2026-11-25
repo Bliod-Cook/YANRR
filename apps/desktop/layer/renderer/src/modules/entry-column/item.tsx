@@ -82,7 +82,7 @@ export const EntryVirtualListItem = ({
   const isFirstItem = props["data-index"] === 0
 
   return (
-    <div className="absolute left-0 top-0 w-full will-change-transform" ref={ref} {...props}>
+    <div className="absolute top-0 left-0 w-full will-change-transform" ref={ref} {...props}>
       <EntryItemImpl
         entryId={entryId}
         view={view}

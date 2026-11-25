@@ -300,7 +300,7 @@ export function TypeaheadDropdown<TItem, TGroupKey = string>({
           <div
             ref={dropdownRef}
             className={cn(
-              "shadow-context-menu bg-material-medium text-text backdrop-blur-background",
+              "bg-material-medium text-text shadow-context-menu backdrop-blur-background",
               "min-w-32 overflow-hidden rounded-[6px] border p-1",
               "text-body",
             )}
@@ -310,7 +310,7 @@ export function TypeaheadDropdown<TItem, TGroupKey = string>({
             }}
           >
             {showSearchInput && onQueryChange && (
-              <div className="-mx-1 mb-1 border-b border-border px-3.5 pb-1.5 pt-1">
+              <div className="-mx-1 mb-1 border-b border-border px-3.5 pt-1 pb-1.5">
                 <input
                   type="text"
                   value={query}

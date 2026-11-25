@@ -166,7 +166,7 @@ const CollapseCssContent: FC<CollapseContentProps> = ({
       id={id}
       ref={contentRef}
       className={cn(
-        "overflow-hidden [interpolate-size:allow-keywords] [transition-behavior:allow-discrete]",
+        "overflow-hidden [transition-behavior:allow-discrete] [interpolate-size:allow-keywords]",
         "transition-[height,opacity,display] duration-300 ease-in-out",
         "[@starting-style]:h-0 [@starting-style]:opacity-0",
         className,

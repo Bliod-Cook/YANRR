@@ -115,13 +115,13 @@ export function SettingModalLayout(props: PropsWithChildren) {
             minHeight={400}
             minWidth={minWidth}
             maxWidth="95vw"
-            className="flex !select-none flex-col"
+            className="flex flex-col !select-none"
           >
             {draggable && (
               <div className="absolute inset-x-0 top-0 z-[1] h-8" onPointerDown={handleDrag} />
             )}
             <div className="flex h-0 flex-1" ref={elementRef}>
-              <div className="flex min-h-0 min-w-44 max-w-[20ch] flex-col rounded-l-xl border-r border-r-border bg-sidebar px-2 py-6 backdrop-blur-background">
+              <div className="flex min-h-0 max-w-[20ch] min-w-44 flex-col rounded-l-xl border-r border-r-border bg-sidebar px-2 py-6 backdrop-blur-background">
                 <div className="mb-4 flex h-8 items-center gap-2 px-2 font-bold">
                   <Logo className="mr-1 size-6" />
                   <Wordmark className="text-lg" />
@@ -143,7 +143,7 @@ export function SettingModalLayout(props: PropsWithChildren) {
               </div>
             </div>
 
-            <LetsIconsResizeDownRightLight className="pointer-events-none absolute bottom-0 right-0 size-6 translate-x-px translate-y-px text-border" />
+            <LetsIconsResizeDownRightLight className="pointer-events-none absolute right-0 bottom-0 size-6 translate-x-px translate-y-px text-border" />
           </Resizable>
         </SettingContext.Provider>
       </m.div>
@@ -173,7 +173,7 @@ const SettingItemButtonImpl = (props: {
         "my-0.5 flex w-full items-center rounded-lg px-2.5 py-0.5 leading-loose text-text",
         isActive && "!bg-theme-item-active !text-text",
         !IN_ELECTRON && "duration-200 hover:bg-theme-item-hover",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/30",
+        "focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:outline-none focus-visible:ring-inset",
         guestLocked && "opacity-50",
       )}
       type="button"

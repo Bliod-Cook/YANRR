@@ -117,7 +117,7 @@ export function VideoItem({ entryId, translation }: UniversalItemProps) {
             </div>
           )}
           {!!entry.duration && (
-            <div className="absolute bottom-2 right-2 rounded-md bg-black/50 px-1 py-0.5 text-xs font-medium text-white">
+            <div className="absolute right-2 bottom-2 rounded-md bg-black/50 px-1 py-0.5 text-xs font-medium text-white">
               {entry.duration}
             </div>
           )}
@@ -158,7 +158,7 @@ export function VideoItemStateLess({ entry, feed }: EntryItemStatelessProps) {
       <div className="relative px-2 text-sm">
         <div className="flex items-center">
           <div className="mr-1 size-1.5 shrink-0 self-center rounded-full bg-accent duration-200" />
-          <div className="relative mb-1 mt-1.5 flex w-full items-center gap-1 truncate font-medium">
+          <div className="relative mt-1.5 mb-1 flex w-full items-center gap-1 truncate font-medium">
             <span className="min-w-0 grow truncate">{entry.title}</span>
           </div>
         </div>
@@ -186,8 +186,8 @@ export const VideoItemSkeleton = (
             <Skeleton className="aspect-video w-full shrink-0 overflow-hidden" />
           </div>
         </div>
-        <div className="relative flex-1 px-2 pb-3 pt-1 text-sm">
-          <div className="relative mb-1 mt-1.5 truncate font-medium leading-none">
+        <div className="relative flex-1 px-2 pt-1 pb-3 text-sm">
+          <div className="relative mt-1.5 mb-1 truncate leading-none font-medium">
             <Skeleton className="h-4 w-3/4" />
           </div>
           <div className="mt-1 flex items-center gap-1 truncate text-[13px]">

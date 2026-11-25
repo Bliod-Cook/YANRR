@@ -30,7 +30,7 @@ export const ShortcutModalContent = () => {
         cursor: "grabbing",
       }}
       className={clsx(
-        "center absolute inset-0 m-auto flex max-h-[80vh] w-[60ch] max-w-[90vw] flex-col rounded-xl border bg-background",
+        "absolute inset-0 m-auto center flex max-h-[80vh] w-[60ch] max-w-[90vw] flex-col rounded-xl border bg-background",
 
         !modalOverlay && "shadow-modal",
       )}
@@ -44,7 +44,7 @@ export const ShortcutModalContent = () => {
       <MotionButtonBase
         aria-label={t("words.close", { ns: "common" })}
         onClick={dismiss}
-        className="absolute right-3 top-2 p-2"
+        className="absolute top-2 right-3 p-2"
       >
         <i className="i-mgc-close-cute-re" />
       </MotionButtonBase>

@@ -70,7 +70,7 @@ export const MCPPresetSelectionModal = ({
       {/* Future Services Hint */}
       <div className="rounded-lg bg-fill-secondary/50 p-4">
         <div className="flex items-start space-x-3">
-          <i className="i-mgc-information-cute-re mt-0.5 size-4 text-text-secondary" />
+          <i className="mt-0.5 i-mgc-information-cute-re size-4 text-text-secondary" />
           <div className="space-y-1">
             <p className="text-xs font-medium text-text">
               {t("integration.mcp.preset.coming_soon.title")}

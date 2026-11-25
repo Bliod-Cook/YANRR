@@ -110,7 +110,7 @@ const CategoryPage = ({ category }: { category: (typeof RSSHubCategories)[number
           <LoadingCircle size="large" />
         </div>
       ) : items.length > 0 ? (
-        <div className="w-full px-8 pb-8 pt-4">
+        <div className="w-full px-8 pt-4 pb-8">
           <Input
             placeholder={t("words.search", { ns: "common" })}
             className="mb-4"
@@ -246,7 +246,7 @@ const RecommendationListItem = memo(
 
           {maintainers.length > 0 && (
             <div className="mt-2 flex items-center text-xs text-text-secondary">
-              <i className="i-mgc-hammer-cute-re mr-1 shrink-0 translate-y-0.5 self-start" />
+              <i className="mr-1 i-mgc-hammer-cute-re shrink-0 translate-y-0.5 self-start" />
               <span>
                 {maintainers.map((m, i) => (
                   <span key={m}>

@@ -145,7 +145,7 @@ export function DiscoverImport() {
             collapseId="other"
             title={
               <div className="flex h-14 items-center justify-normal gap-2 border-border font-medium">
-                <i className="i-mgc-rss-cute-fi ml-[-0.14rem] size-6 text-orange-500" />
+                <i className="ml-[-0.14rem] i-mgc-rss-cute-fi size-6 text-orange-500" />
                 {t("discover.import.opml_step1_other")}
                 <div className="absolute inset-x-0 bottom-0 h-px bg-border" />
               </div>

@@ -174,7 +174,7 @@ function SubviewLayoutInner() {
             description={t("words.back", { ns: "common" })}
             onClick={backHandler}
             className={cn(
-              "no-drag-region shrink-0",
+              "shrink-0 no-drag-region",
               isHeaderElevated ? "opacity-100" : "opacity-80",
             )}
             size="md"
@@ -237,7 +237,7 @@ const ScrollProgressFAB = ({
   return (
     <div
       className={cn(
-        "group/fab fixed bottom-6 right-6 z-50 duration-200",
+        "group/fab fixed right-6 bottom-6 z-50 duration-200",
         showProgress && "visible opacity-100",
         !showProgress && "invisible opacity-0",
       )}

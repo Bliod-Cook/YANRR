@@ -153,7 +153,7 @@ export const UserChatMessage: React.FC<UserChatMessageProps> = React.memo(({ mes
               ref={messageBubbleRef}
               className="rounded-2xl bg-fill-tertiary px-4 py-2.5 text-text"
             >
-              <div className="flex select-text flex-col gap-2 text-sm">
+              <div className="flex flex-col gap-2 text-sm select-text">
                 <UserMessageParts message={message} />
               </div>
             </div>
@@ -161,14 +161,14 @@ export const UserChatMessage: React.FC<UserChatMessageProps> = React.memo(({ mes
             {/* Action buttons - only show when not editing */}
             {!isEditing && (
               <m.div
-                className="absolute bottom-1 right-0 flex items-center gap-1"
+                className="absolute right-0 bottom-1 flex items-center gap-1"
                 initial={{ opacity: 0 }}
                 animate={{
                   opacity: isHovered ? 1 : 0,
                 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
               >
-                <span className="whitespace-nowrap px-2 py-1 text-[11px] leading-none text-text-tertiary">
+                <span className="px-2 py-1 text-[11px] leading-none whitespace-nowrap text-text-tertiary">
                   <RelativeTime date={message.createdAt} />
                 </span>
                 <button

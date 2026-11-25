@@ -113,7 +113,7 @@ export const RenameCategoryForm = ({
         <MotionButtonBase
           type="submit"
           aria-label={t("words.save", { ns: "common" })}
-          className="center -mr-1 flex size-5 shrink-0 rounded-lg text-green hover:bg-material-ultra-thick"
+          className="-mr-1 center flex size-5 shrink-0 rounded-lg text-green hover:bg-material-ultra-thick"
         >
           <i className="i-mgc-check-filled size-3" />
         </MotionButtonBase>

@@ -122,7 +122,7 @@ export function LoginWithPassword({
                   <button
                     data-testid="login-switch-register"
                     type="button"
-                    className="inline-flex cursor-pointer items-center gap-1 text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
+                    className="inline-flex cursor-pointer items-center gap-1 text-accent hover:underline focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2 focus-visible:outline-none"
                     onClick={() => onLoginStateChange("register")}
                   />
                 ),
@@ -265,7 +265,7 @@ export function RegisterForm({
               <button
                 data-testid="register-switch-login"
                 type="button"
-                className="inline-flex cursor-pointer items-center gap-1 text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2"
+                className="inline-flex cursor-pointer items-center gap-1 text-accent hover:underline focus-visible:ring-2 focus-visible:ring-accent/30 focus-visible:ring-offset-2 focus-visible:outline-none"
                 onClick={() => onLoginStateChange("login")}
               />
             ),

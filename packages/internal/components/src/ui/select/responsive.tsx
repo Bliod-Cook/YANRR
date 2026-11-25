@@ -65,8 +65,8 @@ export const ResponsiveSelect = ({
         disabled={disabled}
         onClick={() => realSelectRef?.click()}
         className={cn(
-          "flex w-full items-center justify-between whitespace-nowrap rounded-md bg-transparent placeholder:text-text-secondary disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
-          "ring-accent/20 duration-200 focus:border-accent/80 focus:outline-none focus:ring-2",
+          "flex w-full items-center justify-between rounded-md bg-transparent whitespace-nowrap placeholder:text-text-secondary disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+          "ring-accent/20 duration-200 focus:border-accent/80 focus:ring-2 focus:outline-none",
           "border border-border",
           size === "sm" ? "h-7 p-2 text-sm" : "h-9 px-3 py-2 text-sm",
           "hover:border-accent/80",
@@ -80,7 +80,7 @@ export const ResponsiveSelect = ({
             <span className="text-text-tertiary">{placeholder}</span>
           )}
         </span>
-        <i className="i-mingcute-down-line ml-2 size-4 shrink-0 opacity-50" />
+        <i className="ml-2 i-mingcute-down-line size-4 shrink-0 opacity-50" />
         <select
           ref={setRealSelectRef}
           data-testid={nativeSelectTestId}

@@ -163,12 +163,12 @@ export const VideoPlayer = ({
 
   return (
     <Focusable
-      className="group center relative size-full"
+      className="group relative center size-full"
       ref={wrapperRef}
       scope={HotkeyScope.VideoPlayer}
     >
       {element}
-      <div className="center pointer-events-none absolute inset-0">
+      <div className="pointer-events-none absolute inset-0 center">
         <m.div
           className="center flex size-20 rounded-full bg-black p-3"
           style={{ scale: scaleValue, opacity: opacityValue }}
@@ -217,7 +217,7 @@ const FloatMutedButton = () => {
   const isMuted = ctx.state.muted
   return (
     <MotionButtonBase
-      className="center absolute right-4 top-4 z-10 size-7 rounded-full bg-black/50 opacity-0 duration-200 group-hover:opacity-100"
+      className="absolute top-4 right-4 z-10 center size-7 rounded-full bg-black/50 opacity-0 duration-200 group-hover:opacity-100"
       onClick={(e) => {
         e.stopPropagation()
         if (isMuted) {
@@ -267,7 +267,7 @@ const ControlBar = memo(() => {
       <ActionIcon
         shortcut="Space"
         label={isPaused ? t("player.play") : t("player.pause")}
-        className="center relative flex"
+        className="relative center flex"
         onClick={() => {
           if (isPaused) {
             controls.play()

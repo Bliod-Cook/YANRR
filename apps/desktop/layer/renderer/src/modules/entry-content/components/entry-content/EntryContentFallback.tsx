@@ -45,9 +45,9 @@ export const EntryContentFallback = memo(({ entryId, children }: EntryContentFal
     // The request failed and there is nothing cached to show
     if (!hasLocalEntry && isUnauthorized(error)) {
       return (
-        <div className="center absolute inset-0 flex flex-col gap-3">
+        <div className="absolute inset-0 center flex flex-col gap-3">
           <i className="i-mgc-user-3-cute-re text-4xl text-text-secondary" />
-          <span className="text-balance text-center text-sm">
+          <span className="text-center text-sm text-balance">
             {t("entry_content.login_required")}
           </span>
           <Button variant="outline" onClick={presentLoginModal}>
@@ -59,9 +59,9 @@ export const EntryContentFallback = memo(({ entryId, children }: EntryContentFal
 
     if (!hasLocalEntry) {
       return (
-        <div className="center absolute inset-0 flex flex-col gap-3">
+        <div className="absolute inset-0 center flex flex-col gap-3">
           <i className="i-mgc-warning-cute-re text-4xl text-red" />
-          <span className="text-balance text-center text-sm">
+          <span className="text-center text-sm text-balance">
             {t("entry_content.network_error")}
           </span>
           <Button variant="outline" isLoading={isFetching} onClick={() => refetch()}>

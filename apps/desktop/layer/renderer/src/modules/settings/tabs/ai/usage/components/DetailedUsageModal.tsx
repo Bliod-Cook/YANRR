@@ -122,7 +122,7 @@ export const DetailedUsageModal = () => {
 function Metric({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
     <div>
-      <div className="text-[11px] uppercase tracking-wide text-text-secondary">{label}</div>
+      <div className="text-[11px] tracking-wide text-text-secondary uppercase">{label}</div>
       <div className="text-lg font-semibold text-text">
         {value}
         {unit ? <span className="ml-1 text-sm text-text-tertiary">{unit}</span> : null}

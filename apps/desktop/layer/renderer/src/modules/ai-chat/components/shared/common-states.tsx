@@ -20,7 +20,7 @@ export const LoadingState = ({ description }: LoadingStateProps) => {
 export const ErrorState = ({ error }: ErrorStateProps) => {
   const { t } = useTranslation("ai")
   return (
-    <div className="flex h-32 items-center justify-center rounded-lg text-sm text-text-tertiary bg-mix-red-background-1-4">
+    <div className="flex h-32 items-center justify-center rounded-lg bg-mix-red-background-1-4 text-sm text-text-tertiary">
       {error ?? t("chat.state.error")}
     </div>
   )

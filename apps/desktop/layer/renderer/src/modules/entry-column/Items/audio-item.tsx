@@ -13,7 +13,7 @@ export function AudioItem({ entryId, translation }: UniversalItemProps) {
 AudioItem.wrapperClassName = cn(readableContentMaxWidth, "pl-6")
 
 export const AudioItemSkeleton = (
-  <div className={cn("relative w-full select-none rounded-md", AudioItem.wrapperClassName)}>
+  <div className={cn("relative w-full rounded-md select-none", AudioItem.wrapperClassName)}>
     <div className="relative">
       <div className="group relative flex py-4">
         <div className="-mt-0.5 line-clamp-4 flex-1 text-sm leading-tight">
@@ -22,7 +22,7 @@ export const AudioItemSkeleton = (
             <span>·</span>
             <Skeleton className="h-3 w-10" />
           </div>
-          <div className="relative my-0.5 break-words font-medium">
+          <div className="relative my-0.5 font-medium break-words">
             <Skeleton className="h-4 w-full" />
             <Skeleton className="mt-2 h-4 w-3/4" />
           </div>
