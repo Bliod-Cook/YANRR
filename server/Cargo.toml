@@ -17,6 +17,8 @@ feed-rs = "3"
 figment = { version = "0.10", features = ["toml", "env"] }
 futures = "0.3"
 hmac = "0.12"
+# Its proxy matcher is reqwest's, so the image proxy routes each request as reqwest does.
+hyper-util = { version = "0.1", default-features = false, features = ["client-proxy"] }
 isolang = { version = "2", default-features = false }
 jsonwebtoken = { version = "11", default-features = false, features = ["rust_crypto", "use_pem"] }
 log = "0.4"

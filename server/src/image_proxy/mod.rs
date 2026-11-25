@@ -11,13 +11,14 @@ use axum::{
     Router,
     body::{Body, Bytes},
     extract::{Path, State},
-    http::{StatusCode, header},
+    http::{StatusCode, Uri, header},
     response::{IntoResponse, Response},
     routing::get,
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use futures::{StreamExt, stream};
 use hmac::{Hmac, Mac};
+use hyper_util::client::proxy::matcher::Matcher;
 use reqwest::Url;
 use sha2::Sha256;
 
@@ -38,26 +39,36 @@ const LIMITS: Limits = Limits {
 #[derive(Clone)]
 pub struct ImageProxy {
     key: Arc<str>,
-    client: reqwest::Client,
+    /// Which URLs go through the proxy the environment sets, decided as reqwest decides it.
+    proxies: Arc<Matcher>,
+    /// Through that proxy, which then decides what it reaches.
+    proxied: reqwest::Client,
+    /// Straight to the image host.
+    direct: reqwest::Client,
     limits: &'static Limits,
-    /// Off only for tests, whose servers are local.
+    /// Whether straight requests may reach public addresses only.
     public_only: bool,
 }
 
 impl ImageProxy {
-    /// A proxy for URLs signed with `key` that fetches from public addresses only.
-    pub fn new(key: &str) -> Result<Self, String> {
+    /// A proxy for URLs signed with `key` that fetches straight from public addresses only, unless
+    /// `allow_private_addresses`, and through the proxy the environment sets (`HTTPS_PROXY`, `HTTP_PROXY`, `ALL_PROXY`,
+    /// `NO_PROXY`) from whatever that proxy reaches.
+    pub fn new(key: &str, allow_private_addresses: bool) -> Result<Self, String> {
         // Anyone who guesses the key can have the proxy fetch for them
         if key.len() < MIN_KEY_LEN {
             return Err(format!(
                 "image_proxy.key must be at least {MIN_KEY_LEN} characters"
             ));
         }
+        let public_only = !allow_private_addresses;
         Ok(Self {
             key: key.into(),
-            client: target::public_client(),
+            proxies: Arc::new(Matcher::from_env()),
+            proxied: target::proxied_client(),
+            direct: target::direct_client(public_only),
             limits: &LIMITS,
-            public_only: true,
+            public_only,
         })
     }
 }
@@ -151,15 +162,20 @@ impl ImageProxy {
         Ok((headers, Body::from_stream(body)).into_response())
     }
 
-    /// The successful answer for `url`, following redirects to public addresses only.
+    /// The successful answer for `url`, following redirects, each on its own route.
     async fn follow(&self, mut url: Url) -> Result<reqwest::Response, String> {
         for _ in 0..=MAX_REDIRECTS {
-            if self.public_only && !target::allows(&url).await {
+            let uri: Uri = url.as_str().parse().map_err(|_| "Not a valid URI")?;
+            let client = if self.proxies.intercept(&uri).is_some() {
+                // What the operator's proxy reaches is theirs to decide
+                &self.proxied
+            } else if !self.public_only || target::allows(&url) {
+                &self.direct
+            } else {
                 return Err("Not a public address".into());
-            }
+            };
             let referer = referer::referer(&url);
-            let response = self
-                .client
+            let response = client
                 .get(url.clone())
                 .header(header::USER_AGENT, referer::user_agent())
                 .header(header::ACCEPT, ACCEPT_IMAGES)
@@ -226,28 +242,23 @@ mod tests {
         url
     }
 
-    /// A client that reaches the local servers the tests run, whatever proxy the environment sets.
-    fn direct() -> reqwest::Client {
-        reqwest::Client::builder()
-            .no_proxy()
-            .redirect(reqwest::redirect::Policy::none())
-            .build()
-            .unwrap()
+    /// Reaches the local servers the tests run, whatever proxy the environment sets.
+    async fn request(url: String) -> reqwest::Response {
+        let client = target::direct_client(false);
+        client.get(url).send().await.unwrap()
     }
 
-    async fn request(url: String) -> reqwest::Response {
-        direct().get(url).send().await.unwrap()
+    /// The proxy `new` makes, with smaller limits, and routed straight whatever proxy the environment sets.
+    fn made(allow_private_addresses: bool) -> ImageProxy {
+        let mut proxy = ImageProxy::new(KEY, allow_private_addresses).unwrap();
+        proxy.proxies = Arc::new(Matcher::builder().build());
+        proxy.limits = &SMALL;
+        proxy
     }
 
     /// A proxy that may reach the local servers.
     async fn local_proxy() -> String {
-        let proxy = ImageProxy {
-            key: KEY.into(),
-            client: direct(),
-            limits: &SMALL,
-            public_only: false,
-        };
-        serve(router(proxy)).await
+        serve(router(made(true))).await
     }
 
     fn signed(proxy: &str, url: &str) -> String {
@@ -380,21 +391,50 @@ mod tests {
 
     #[test]
     fn refuses_keys_short_enough_to_guess() {
-        assert!(ImageProxy::new("").is_err());
-        assert!(ImageProxy::new(&KEY[..31]).is_err());
-        assert!(ImageProxy::new(KEY).is_ok());
+        assert!(ImageProxy::new("", false).is_err());
+        assert!(ImageProxy::new(&KEY[..31], false).is_err());
+        assert!(ImageProxy::new(KEY, false).is_ok());
     }
 
     #[tokio::test]
-    async fn fetches_from_public_addresses_only() {
+    async fn fetches_straight_from_private_addresses_only_when_allowed() {
         let (image, count) = upstream(PNG, "image/png").await;
         let by_name = image.replace("127.0.0.1", "localhost");
-        let proxy = serve(router(ImageProxy::new(KEY).unwrap())).await;
+        let public_only = serve(router(made(false))).await;
+        let allowed = serve(router(made(true))).await;
 
-        for url in [image, by_name] {
-            let res = request(signed(&proxy, &url)).await;
+        let urls = [image, by_name];
+        for url in &urls {
+            let res = request(signed(&public_only, url)).await;
             assert_eq!(res.status(), 502, "{url}");
         }
         assert_eq!(count.load(Ordering::Relaxed), 0);
+        for url in &urls {
+            let res = request(signed(&allowed, url)).await;
+            assert_eq!(res.status(), 200, "{url}");
+        }
+    }
+
+    #[tokio::test]
+    async fn leaves_targets_to_the_environment_proxy_and_checks_only_straight_ones() {
+        // A forward proxy that answers every request itself
+        let (forward, count) = upstream(PNG, "image/png").await;
+        let forward = forward
+            .replace("127.0.0.1", "localhost")
+            .replace("/image", "");
+        let proxied = reqwest::Client::builder()
+            .proxy(reqwest::Proxy::http(&forward).unwrap())
+            .build()
+            .unwrap();
+        let mut proxy = made(false);
+        proxy.proxied = proxied;
+        proxy.proxies = Arc::new(Matcher::builder().http(&forward).no("10.0.0.2").build());
+        let proxy = serve(router(proxy)).await;
+
+        let through = request(signed(&proxy, "http://10.0.0.1/image")).await;
+        assert_eq!(through.status(), 200);
+        let straight = request(signed(&proxy, "http://10.0.0.2/image")).await;
+        assert_eq!(straight.status(), 502);
+        assert_eq!(count.load(Ordering::Relaxed), 1);
     }
 }

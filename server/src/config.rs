@@ -153,6 +153,9 @@ pub struct StandaloneImageProxyConfig {
 pub struct ImageProxyListenConfig {
     pub listen: SocketAddr,
     pub key: String,
+    /// Lets straight requests reach private and local addresses too, which anyone with a signed URL can then reach.
+    #[serde(default)]
+    pub allow_private_addresses: bool,
 }
 
 fn fcm_url() -> String {

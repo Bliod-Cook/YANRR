@@ -1,5 +1,6 @@
-//! Keeps the proxy on the public internet. Signed URLs come from feeds, which may point anywhere, and the proxy must
-//! reach neither the machine it runs on nor the network behind it.
+//! Keeps the proxy's own requests on the public internet. Signed URLs come from feeds, which may point anywhere, and
+//! the proxy must reach neither the machine it runs on nor the network behind it. Requests that go through the proxy
+//! the environment sets are that proxy's to allow or refuse, as its address is often a local one.
 
 use std::{
     error::Error,
@@ -13,27 +14,36 @@ use reqwest::{
     redirect,
 };
 
-/// A client that connects only to public addresses. Redirects are left to the caller, which checks each target with
-/// [`allows`].
-pub fn public_client() -> Client {
+/// A client that connects straight, if `public_only` to public addresses only. Redirects are left to the caller, which
+/// checks each target with [`allows`].
+pub fn direct_client(public_only: bool) -> Client {
+    let mut builder = Client::builder()
+        .no_proxy()
+        .redirect(redirect::Policy::none());
+    if public_only {
+        builder = builder.dns_resolver(Arc::new(PublicOnly));
+    }
+    builder.build().expect("TLS backend initializes")
+}
+
+/// A client that goes through the proxy the environment sets, whatever its address.
+pub fn proxied_client() -> Client {
     Client::builder()
         .redirect(redirect::Policy::none())
-        .dns_resolver(Arc::new(PublicOnly))
         .build()
         .expect("TLS backend initializes")
 }
 
-/// Whether `url` may be fetched. Besides the client's resolver, which addresses written in a URL skip, host names
-/// are checked here: through a proxy from the environment, that proxy resolves them instead.
-pub async fn allows(url: &Url) -> bool {
+/// Whether [`direct_client`] may fetch `url`: its resolver leaves out the addresses written in URLs.
+pub fn allows(url: &Url) -> bool {
     let Some(host) = url.host_str() else {
         return false;
     };
     // IPv6 addresses come bracketed
-    match host.trim_start_matches('[').trim_end_matches(']').parse() {
-        Ok(ip) => is_public(ip),
-        Err(_) => public_addresses(host).await.is_ok(),
-    }
+    host.trim_start_matches('[')
+        .trim_end_matches(']')
+        .parse()
+        .map_or(true, is_public)
 }
 
 async fn public_addresses(host: &str) -> Result<Vec<SocketAddr>, Box<dyn Error + Send + Sync>> {
@@ -121,18 +131,19 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn allows_only_urls_of_public_addresses() {
+    #[test]
+    fn allows_only_public_addresses_written_in_urls() {
         let cases = [
             ("http://93.184.215.14/a.png", true),
             ("http://127.0.0.1:8080/a.png", false),
             ("http://[::1]/a.png", false),
             // A decimal address is still an address
             ("http://2130706433/a.png", false),
-            ("http://localhost/a.png", false),
+            // Host names are the resolver's
+            ("http://example.com/a.png", true),
         ];
         for (url, allowed) in cases {
-            assert_eq!(allows(&Url::parse(url).unwrap()).await, allowed, "{url}");
+            assert_eq!(allows(&Url::parse(url).unwrap()), allowed, "{url}");
         }
     }
 

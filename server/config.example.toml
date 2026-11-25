@@ -59,3 +59,6 @@ enabled = false
 # key = ""
 # Where yanrr-image-proxy listens; YANRR ignores it.
 # listen = "127.0.0.1:3001"
+# Lets yanrr-image-proxy connect straight to private and local addresses too, e.g. for images on your own network;
+# image URLs in feeds can then reach that network. Requests through an HTTP proxy are that proxy's to allow anyway.
+# allow_private_addresses = false

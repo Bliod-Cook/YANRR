@@ -99,7 +99,7 @@ Then set `YANRR_RSSHUB__URL=http://rsshub:1200` in `.env` and run `docker compos
 
 ## Image proxy
 
-Some images may not load: the device's network can't reach their host, or the host refuses hotlinking, which the web app and the Android article view can't get around. The optional image proxy fetches them instead. Each device chooses under **Settings → General** whether to use it, for hotlink-protected hosts only or for all images. It serves only image URLs signed with its key, which YANRR gives to signed-in apps, and fetches from public addresses only.
+Some images may not load: the device's network can't reach their host, or the host refuses hotlinking, which the web app and the Android article view can't get around. The optional image proxy fetches them instead. Each device chooses under **Settings → General** whether to use it, for hotlink-protected hosts only or for all images. It serves only image URLs signed with its key, which YANRR gives to signed-in apps, and connects straight only to public addresses.
 
 **On the YANRR server**: in `.env`, uncomment `YANRR_IMAGE_PROXY__URL` and `YANRR_IMAGE_PROXY__KEY`, set the key to the output of `openssl rand -hex 32`, add `image-proxy` to `COMPOSE_PROFILES`, and run `docker compose up -d`. The bundled Caddy serves the proxy under `/image-proxy/` of your address. With your own reverse proxy, route that path, prefix stripped, to `127.0.0.1:3001`.
 
@@ -111,6 +111,8 @@ curl -fLo compose.yaml https://github.com/Bliod-Cook/YANRR/releases/latest/downl
 ```
 
 Create a `.env` there with `YANRR_IMAGE_PROXY__URL=https://img.example.com` and the key, and run `docker compose up -d`. Then set the same two variables in YANRR's `.env` and run `docker compose up -d` there too.
+
+To send its requests through an HTTP proxy, add `HTTPS_PROXY`, `HTTP_PROXY` or `ALL_PROXY`, and `NO_PROXY` for hosts to reach straight, under `environment:` of the `image-proxy` service. That proxy then decides what the image proxy reaches: one on your machine or network that connects local addresses itself lets image URLs in feeds reach your local network too. For images on your own network without such a proxy, `YANRR_IMAGE_PROXY__ALLOW_PRIVATE_ADDRESSES=true` there lets the image proxy connect straight to private and local addresses, with the same effect.
 
 The proxy's address must use `https://` for the web app. Changing the key makes the apps load every proxied image again once they have the new one, which they fetch at start. Without Docker, run `yanrr-image-proxy` from the release archive with a `config.toml` that has the `[image_proxy]` table.
 

@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let StandaloneImageProxyConfig {
         image_proxy: config,
     } = config::load(&path)?;
-    let proxy = ImageProxy::new(&config.key)?;
+    let proxy = ImageProxy::new(&config.key, config.allow_private_addresses)?;
     let listener = tokio::net::TcpListener::bind(config.listen).await?;
     tracing::info!("listening on {}", listener.local_addr()?);
     axum::serve(listener, image_proxy::router(proxy))
