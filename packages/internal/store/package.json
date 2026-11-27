@@ -106,11 +106,11 @@
     "@follow/models": "workspace:*",
     "@follow/shared": "workspace:*",
     "@follow/utils": "workspace:*",
-    "@tanstack/react-query": "5.108.3",
+    "@tanstack/react-query": "5.108.4",
     "@yornaath/batshit": "0.14.0",
     "es-toolkit": "1.53.2",
     "i18next": "26.7.2",
-    "immer": "11.1.18",
+    "immer": "11.2.10",
     "jotai": "3.0.2",
     "sf-symbols-typescript": "2.2.0",
     "zustand": "5.1.0"

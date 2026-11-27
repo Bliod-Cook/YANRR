@@ -34,10 +34,10 @@
   "devDependencies": {
     "@follow/models": "workspace:*",
     "@follow/types": "workspace:*",
-    "@types/node": "26.6.2",
+    "@types/node": "26.6.6",
     "electron": "44.11.5",
     "electron-devtools-installer": "4.0.0",
-    "js-yaml": "5.4.2",
+    "js-yaml": "5.5.0",
     "typescript": "catalog:"
   }
 }
