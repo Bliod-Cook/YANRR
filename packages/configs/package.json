@@ -12,9 +12,9 @@
   },
   "dependencies": {
     "@egoist/tailwindcss-icons": "1.9.2",
-    "@iconify-json/logos": "1.2.14",
-    "@iconify-json/mingcute": "1.2.8",
-    "@iconify-json/simple-icons": "1.2.97",
+    "@iconify-json/logos": "1.2.20",
+    "@iconify-json/mingcute": "1.2.10",
+    "@iconify-json/simple-icons": "1.2.103",
     "@iconify/tools": "5.0.14",
     "@iconify/utils": "3.1.7",
     "@tailwindcss/typography": "0.5.20",
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "postcss": "8.5.33",
-    "postcss-js": "5.1.0",
+    "postcss-js": "5.1.1",
     "tailwindcss": "4.3.5",
     "workspace-root": "3.3.1"
   }
